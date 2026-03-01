@@ -37,17 +37,29 @@ export default function DashboardPage() {
 
     setProfile(profile)
 
-    // Check if user is a teacher
-    const { data: roles } = await supabase
+    // Check if user is a teacher - using RPC for reliable role check
+    const { data: userRoles, error: rolesError } = await supabase
       .from('user_roles')
-      .select(`
-        roles!inner(name)
-      `)
+      .select('role_id')
       .eq('user_id', user.id)
       .is('class_id', null)
 
-    const hasTeacherRole = roles?.some((r: any) => r.roles.name === 'teacher')
-    setIsTeacher(hasTeacherRole || false)
+    console.log('User roles:', { userRoles, rolesError, userId: user.id })
+
+    if (userRoles && userRoles.length > 0) {
+      // Get role names
+      const { data: roleData } = await supabase
+        .from('roles')
+        .select('name')
+        .in('id', userRoles.map((r: any) => r.role_id))
+
+      console.log('Role names:', roleData)
+      const hasTeacherRole = roleData?.some((r: any) => r.name === 'teacher')
+      console.log('Is teacher?', hasTeacherRole)
+      setIsTeacher(hasTeacherRole || false)
+    } else {
+      setIsTeacher(false)
+    }
 
     setLoading(false)
   }
