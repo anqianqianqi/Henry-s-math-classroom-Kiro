@@ -32,48 +32,74 @@ export default function ChallengesPage() {
       return
     }
 
-    // Get user's classes
-    const { data: classMembers, error: classMembersError } = await supabase
-      .from('class_members')
-      .select('class_id')
+    // Check if user is teacher
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role_id')
       .eq('user_id', user.id)
+      .is('class_id', null)
 
-    console.log('Class members:', classMembers, 'Error:', classMembersError)
+    let isTeacher = false
+    if (roles && roles.length > 0) {
+      const { data: roleData } = await supabase
+        .from('roles')
+        .select('name')
+        .in('id', roles.map((r: any) => r.role_id))
 
-    const classIds = classMembers?.map(cm => cm.class_id) || []
-
-    if (classIds.length === 0) {
-      console.log('No classes found for user')
-      setLoading(false)
-      return
+      isTeacher = roleData?.some((r: any) => r.name === 'teacher') || false
     }
 
-    // Get challenges assigned to user's classes
-    const { data: assignments, error: assignmentsError } = await supabase
-      .from('challenge_assignments')
-      .select('challenge_id')
-      .in('class_id', classIds)
+    if (isTeacher) {
+      // Teachers see ALL challenges (not just their own)
+      const { data: challengesData } = await supabase
+        .from('daily_challenges')
+        .select('*')
+        .order('challenge_date', { ascending: false })
 
-    console.log('Assignments:', assignments, 'Error:', assignmentsError)
+      console.log('All challenges loaded:', challengesData)
+      console.log('Current user ID:', user.id)
+      setChallenges(challengesData || [])
+    } else {
+      // Students see challenges assigned to their classes
+      const { data: classMembers } = await supabase
+        .from('class_members')
+        .select('class_id')
+        .eq('user_id', user.id)
 
-    const challengeIds = assignments?.map(a => a.challenge_id) || []
+      console.log('Class members:', classMembers)
 
-    if (challengeIds.length === 0) {
-      console.log('No challenge assignments found')
-      setLoading(false)
-      return
+      const classIds = classMembers?.map(cm => cm.class_id) || []
+
+      if (classIds.length === 0) {
+        setLoading(false)
+        return
+      }
+
+      const { data: assignments } = await supabase
+        .from('challenge_assignments')
+        .select('challenge_id')
+        .in('class_id', classIds)
+
+      console.log('Assignments:', assignments)
+
+      const challengeIds = assignments?.map(a => a.challenge_id) || []
+
+      if (challengeIds.length === 0) {
+        setLoading(false)
+        return
+      }
+
+      const { data: challengesData } = await supabase
+        .from('daily_challenges')
+        .select('*')
+        .in('id', challengeIds)
+        .order('challenge_date', { ascending: false })
+
+      console.log('Challenges:', challengesData)
+
+      setChallenges(challengesData || [])
     }
-
-    // Get challenge details
-    const { data: challengesData, error: challengesError } = await supabase
-      .from('daily_challenges')
-      .select('*')
-      .in('id', challengeIds)
-      .order('challenge_date', { ascending: false })
-
-    console.log('Challenges:', challengesData, 'Error:', challengesError)
-
-    setChallenges(challengesData || [])
+    
     setLoading(false)
   }
 
@@ -89,7 +115,9 @@ export default function ChallengesPage() {
   }
 
   const today = new Date().toISOString().split('T')[0]
-  const todayChallenge = challenges.find(c => c.challenge_date === today)
+  const todayChallenges = challenges.filter(c => c.challenge_date === today)
+  const upcomingChallenges = challenges.filter(c => c.challenge_date > today)
+  const pastChallenges = challenges.filter(c => c.challenge_date < today)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
@@ -113,35 +141,42 @@ export default function ChallengesPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Today's Challenge */}
-        {todayChallenge ? (
-          <Card className="mb-8 border-2 border-primary-500">
-            <Card.Header>
-              <div className="flex items-center justify-between">
-                <Card.Title className="flex items-center gap-2">
-                  <span>🔥</span>
-                  Today's Challenge
-                </Card.Title>
-                <span className="text-sm text-primary-600 font-semibold">
-                  Active Now
-                </span>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                {todayChallenge.title}
-              </h3>
-              <p className="text-gray-600 mb-4 line-clamp-2">
-                {todayChallenge.description}
-              </p>
-              <Button
-                onClick={() => router.push(`/challenges/${todayChallenge.id}`)}
-                fullWidth
-              >
-                <span className="mr-2">🚀</span>
-                Start Challenge
-              </Button>
-            </Card.Body>
-          </Card>
+        {todayChallenges.length > 0 ? (
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span>🔥</span>
+              Today's Challenges ({todayChallenges.length})
+            </h2>
+            <div className="space-y-4">
+              {todayChallenges.map(challenge => (
+                <Card key={challenge.id} className="border-2 border-primary-500">
+                  <Card.Header>
+                    <div className="flex items-center justify-between">
+                      <Card.Title className="flex items-center gap-2">
+                        <span>🔥</span>
+                        {challenge.title}
+                      </Card.Title>
+                      <span className="text-sm text-primary-600 font-semibold">
+                        Active Now
+                      </span>
+                    </div>
+                  </Card.Header>
+                  <Card.Body>
+                    <p className="text-gray-600 mb-4 line-clamp-2">
+                      {challenge.description}
+                    </p>
+                    <Button
+                      onClick={() => router.push(`/challenges/${challenge.id}`)}
+                      fullWidth
+                    >
+                      <span className="mr-2">🚀</span>
+                      View Challenge
+                    </Button>
+                  </Card.Body>
+                </Card>
+              ))}
+            </div>
+          </div>
         ) : (
           <Card className="mb-8 bg-gray-50">
             <Card.Body className="text-center py-8">
@@ -157,44 +192,87 @@ export default function ChallengesPage() {
         )}
 
         {/* Past Challenges */}
-        {challenges.filter(c => c.challenge_date !== today).length > 0 && (
+        {(upcomingChallenges.length > 0 || pastChallenges.length > 0) && (
           <>
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span>📚</span>
-              Past Challenges
-            </h2>
-            <div className="space-y-4">
-              {challenges
-                .filter(c => c.challenge_date !== today)
-                .map(challenge => (
-                  <Card
-                    key={challenge.id}
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => router.push(`/challenges/${challenge.id}`)}
-                  >
-                    <Card.Body>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 mb-1">
-                            {challenge.title}
-                          </h3>
-                          <p className="text-sm text-gray-600 line-clamp-1 mb-2">
-                            {challenge.description}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(challenge.challenge_date).toLocaleDateString('en-US', {
-                              month: 'long',
-                              day: 'numeric',
-                              year: 'numeric'
-                            })}
-                          </p>
+            {/* Upcoming Challenges */}
+            {upcomingChallenges.length > 0 && (
+              <>
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <span>📅</span>
+                  Upcoming Challenges
+                </h2>
+                <div className="space-y-4 mb-8">
+                  {upcomingChallenges.map(challenge => (
+                    <Card
+                      key={challenge.id}
+                      className="cursor-pointer hover:shadow-lg transition-shadow"
+                      onClick={() => router.push(`/challenges/${challenge.id}`)}
+                    >
+                      <Card.Body>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 mb-1">
+                              {challenge.title}
+                            </h3>
+                            <p className="text-sm text-gray-600 line-clamp-1 mb-2">
+                              {challenge.description}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(challenge.challenge_date).toLocaleDateString('en-US', {
+                                month: 'long',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </p>
+                          </div>
+                          <span className="text-2xl ml-4">→</span>
                         </div>
-                        <span className="text-2xl ml-4">→</span>
-                      </div>
-                    </Card.Body>
-                  </Card>
-                ))}
-            </div>
+                      </Card.Body>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Past Challenges */}
+            {pastChallenges.length > 0 && (
+              <>
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <span>📚</span>
+                  Past Challenges
+                </h2>
+                <div className="space-y-4">
+                  {pastChallenges.map(challenge => (
+                    <Card
+                      key={challenge.id}
+                      className="cursor-pointer hover:shadow-lg transition-shadow"
+                      onClick={() => router.push(`/challenges/${challenge.id}`)}
+                    >
+                      <Card.Body>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 mb-1">
+                              {challenge.title}
+                            </h3>
+                            <p className="text-sm text-gray-600 line-clamp-1 mb-2">
+                              {challenge.description}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(challenge.challenge_date).toLocaleDateString('en-US', {
+                                month: 'long',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </p>
+                          </div>
+                          <span className="text-2xl ml-4">→</span>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
 

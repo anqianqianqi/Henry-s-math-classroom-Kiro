@@ -10,6 +10,7 @@ import { FormField } from '@/components/ui/FormField'
 interface Class {
   id: string
   name: string
+  created_by: string
 }
 
 export default function NewChallengePage() {
@@ -38,6 +39,7 @@ export default function NewChallengePage() {
       return
     }
 
+    console.log('User ID:', user.id)
     setUserId(user.id)
 
     // Check if user is teacher
@@ -47,11 +49,15 @@ export default function NewChallengePage() {
       .eq('user_id', user.id)
       .is('class_id', null)
 
+    console.log('User roles:', roles)
+
     if (roles && roles.length > 0) {
       const { data: roleData } = await supabase
         .from('roles')
         .select('name')
         .in('id', roles.map((r: any) => r.role_id))
+
+      console.log('Role data:', roleData)
 
       const hasTeacherRole = roleData?.some((r: any) => r.name === 'teacher')
       
@@ -64,13 +70,15 @@ export default function NewChallengePage() {
       return
     }
 
-    // Load classes created by this teacher
-    const { data: classesData } = await supabase
+    // Load ALL active classes (simplified query to avoid RLS issues)
+    const { data: classesData, error: classesError } = await supabase
       .from('classes')
-      .select('id, name')
-      .eq('created_by', user.id)
+      .select('id, name, created_by, is_active')
       .eq('is_active', true)
       .order('name')
+
+    console.log('Classes query result:', { classesData, classesError })
+    console.log('Number of classes found:', classesData?.length || 0)
 
     setClasses(classesData || [])
     
@@ -125,6 +133,9 @@ export default function NewChallengePage() {
         .select()
         .single()
 
+      console.log('Challenge created:', challenge)
+      console.log('Challenge error:', challengeError)
+
       if (challengeError) {
         setError(challengeError.message)
         setSubmitting(false)
@@ -138,16 +149,24 @@ export default function NewChallengePage() {
         assigned_by: userId
       }))
 
-      const { error: assignError } = await supabase
+      console.log('Attempting to insert assignments:', assignments)
+
+      const { data: assignmentData, error: assignError } = await supabase
         .from('challenge_assignments')
         .insert(assignments)
+        .select()
+
+      console.log('Assignment result:', assignmentData)
+      console.log('Assignment error:', assignError)
 
       if (assignError) {
-        setError(assignError.message)
+        console.error('Assignment failed:', assignError)
+        setError(`Challenge created but assignment failed: ${assignError.message}`)
         setSubmitting(false)
         return
       }
 
+      console.log('Success! Redirecting...')
       // Success! Redirect to challenges
       router.push('/challenges')
     } catch (err) {
@@ -240,9 +259,20 @@ export default function NewChallengePage() {
               />
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Assign to Classes
-                </label>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Assign to Classes
+                  </label>
+                  {classes.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => router.push('/classes/new')}
+                      className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                    >
+                      + Create New Class
+                    </button>
+                  )}
+                </div>
                 {classes.length > 0 ? (
                   <div className="space-y-2">
                     {classes.map(cls => (
@@ -264,18 +294,32 @@ export default function NewChallengePage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-6 bg-gray-50 rounded-2xl text-center">
-                    <div className="text-4xl mb-3">📚</div>
-                    <p className="text-gray-600 mb-4">
-                      You need to create a class first
+                  <div className="p-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl text-center border-2 border-dashed border-gray-300">
+                    <div className="text-6xl mb-4">📚</div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      No Classes Yet
+                    </h3>
+                    <p className="text-gray-600 mb-6 max-w-sm mx-auto">
+                      You need to create a class before you can assign challenges to students.
                     </p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => router.push('/classes/new')}
-                    >
-                      Create Class
-                    </Button>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <Button
+                        type="button"
+                        onClick={() => router.push('/classes/new')}
+                        size="lg"
+                      >
+                        <span className="mr-2">✨</span>
+                        Create Your First Class
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => router.push('/classes')}
+                        size="lg"
+                      >
+                        View All Classes
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

@@ -39,10 +39,86 @@ export default function ChallengePage() {
   const [isTeacher, setIsTeacher] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [showCelebration, setShowCelebration] = useState(false)
+  const [totalStudents, setTotalStudents] = useState(0)
+  const [showStudentList, setShowStudentList] = useState(false)
+  const [studentList, setStudentList] = useState<Array<{
+    id: string
+    name: string
+    submitted: boolean
+    submittedAt?: string
+  }>>([])
 
   useEffect(() => {
     loadChallenge()
   }, [params.id])
+
+  async function loadStudentList() {
+    console.log('loadStudentList called')
+    
+    if (studentList.length > 0) {
+      // Already loaded, just toggle
+      console.log('Toggling student list')
+      setShowStudentList(!showStudentList)
+      return
+    }
+
+    console.log('Loading student list for challenge:', params.id)
+
+    // Get classes this challenge is assigned to
+    const { data: assignments } = await supabase
+      .from('challenge_assignments')
+      .select('class_id')
+      .eq('challenge_id', params.id)
+
+    console.log('Challenge assignments:', assignments)
+
+    if (!assignments || assignments.length === 0) return
+
+    const classIds = assignments.map(a => a.class_id)
+
+    // Get all students in these classes
+    const { data: members } = await supabase
+      .from('class_members')
+      .select(`
+        user_id,
+        profiles:user_id(full_name)
+      `)
+      .in('class_id', classIds)
+
+    console.log('Class members:', members)
+
+    if (!members) return
+
+    // Get submissions for this challenge
+    const { data: submissions } = await supabase
+      .from('challenge_submissions')
+      .select('user_id, submitted_at')
+      .eq('challenge_id', params.id)
+
+    console.log('Submissions:', submissions)
+
+    const submissionMap = new Map(
+      submissions?.map(s => [s.user_id, s.submitted_at]) || []
+    )
+
+    const students = members.map(m => ({
+      id: m.user_id,
+      name: m.profiles.full_name,
+      submitted: submissionMap.has(m.user_id),
+      submittedAt: submissionMap.get(m.user_id)
+    }))
+
+    // Sort: submitted first, then by name
+    students.sort((a, b) => {
+      if (a.submitted !== b.submitted) return a.submitted ? -1 : 1
+      return a.name.localeCompare(b.name)
+    })
+
+    console.log('Final student list:', students)
+
+    setStudentList(students)
+    setShowStudentList(true)
+  }
 
   async function loadChallenge() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -54,23 +130,6 @@ export default function ChallengePage() {
 
     setUserId(user.id)
 
-    // Check if user is teacher
-    const { data: roles } = await supabase
-      .from('user_roles')
-      .select('role_id')
-      .eq('user_id', user.id)
-      .is('class_id', null)
-
-    if (roles && roles.length > 0) {
-      const { data: roleData } = await supabase
-        .from('roles')
-        .select('name')
-        .in('id', roles.map((r: any) => r.role_id))
-
-      const hasTeacherRole = roleData?.some((r: any) => r.name === 'teacher')
-      setIsTeacher(hasTeacherRole || false)
-    }
-
     // Load challenge
     const { data: challengeData } = await supabase
       .from('daily_challenges')
@@ -80,7 +139,25 @@ export default function ChallengePage() {
 
     setChallenge(challengeData)
 
-    // Load user's submission
+    // Check if user is teacher first
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role_id')
+      .eq('user_id', user.id)
+      .is('class_id', null)
+
+    let teacherRole = false
+    if (roles && roles.length > 0) {
+      const { data: roleData } = await supabase
+        .from('roles')
+        .select('name')
+        .in('id', roles.map((r: any) => r.role_id))
+
+      teacherRole = roleData?.some((r: any) => r.name === 'teacher') || false
+      setIsTeacher(teacherRole)
+    }
+
+    // Load user's submission (for both students and teachers)
     const { data: submissionData } = await supabase
       .from('challenge_submissions')
       .select(`
@@ -89,29 +166,62 @@ export default function ChallengePage() {
       `)
       .eq('challenge_id', params.id)
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (submissionData) {
       setUserSubmission(submissionData)
       setSolution(submissionData.content)
+    }
+
+    // Teachers always see all submissions, students only after submitting
+    if (teacherRole) {
+      await loadOtherSubmissions(user.id, true)
       
-      // Load other submissions only if user has submitted or is teacher
-      await loadOtherSubmissions(user.id)
+      // Get total number of students in classes this challenge is assigned to
+      const { data: assignments } = await supabase
+        .from('challenge_assignments')
+        .select('class_id')
+        .eq('challenge_id', params.id)
+
+      console.log('Challenge assignments:', assignments)
+
+      if (assignments && assignments.length > 0) {
+        const classIds = assignments.map(a => a.class_id)
+        
+        console.log('Class IDs:', classIds)
+        
+        const { count, error: countError } = await supabase
+          .from('class_members')
+          .select('*', { count: 'exact', head: true })
+          .in('class_id', classIds)
+
+        console.log('Student count query:', { count, countError })
+
+        setTotalStudents(count || 0)
+      }
+    } else if (submissionData) {
+      await loadOtherSubmissions(user.id, false)
     }
 
     setLoading(false)
   }
 
-  async function loadOtherSubmissions(currentUserId: string) {
-    const { data: submissions } = await supabase
+  async function loadOtherSubmissions(currentUserId: string, isTeacher: boolean = false) {
+    const query = supabase
       .from('challenge_submissions')
       .select(`
         *,
         profiles!inner(full_name)
       `)
       .eq('challenge_id', params.id)
-      .neq('user_id', currentUserId)
       .order('submitted_at', { ascending: false })
+
+    // Teachers see ALL submissions, students see others' submissions
+    if (!isTeacher) {
+      query.neq('user_id', currentUserId)
+    }
+
+    const { data: submissions } = await query
 
     setOtherSubmissions(submissions || [])
   }
@@ -208,6 +318,10 @@ export default function ChallengePage() {
 
   const hasSubmitted = !!userSubmission
   const canSeeOthers = hasSubmitted || isTeacher
+  // For teachers, otherSubmissions already includes all submissions
+  // For students, otherSubmissions excludes their own, so we add 1 if they submitted
+  const submissionCount = isTeacher ? otherSubmissions.length : otherSubmissions.length + (hasSubmitted ? 1 : 0)
+  const completionRate = totalStudents > 0 ? Math.round((submissionCount / totalStudents) * 100) : 0
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
@@ -225,6 +339,14 @@ export default function ChallengePage() {
               <span className="text-3xl">📚</span>
               <h1 className="text-2xl font-bold text-gray-900">Daily Challenge</h1>
             </div>
+            {isTeacher && (
+              <div className="ml-auto">
+                <span className="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold">
+                  <span>👨‍🏫</span>
+                  Teacher View
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -267,78 +389,156 @@ export default function ChallengePage() {
           </Card.Body>
         </Card>
 
-        {/* Submission Section */}
-        {hasSubmitted && !isEditing ? (
-          // Show submitted solution
-          <Card className="mb-6 border-2 border-primary-500">
-            <Card.Header>
-              <div className="flex items-center justify-between">
-                <Card.Title className="flex items-center gap-2">
-                  <span>✅</span>
-                  Your Solution
-                </Card.Title>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(true)}
-                >
-                  Edit
-                </Button>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <p className="text-gray-700 whitespace-pre-wrap mb-3">
-                {userSubmission.content}
-              </p>
-              <p className="text-sm text-gray-500">
-                Submitted {formatTimeAgo(userSubmission.submitted_at)}
-              </p>
-            </Card.Body>
-          </Card>
-        ) : (
-          // Show submission form
-          <Card className="mb-6">
+        {/* Teacher Stats Dashboard */}
+        {isTeacher && (
+          <Card className="mb-6 bg-gradient-to-r from-primary-50 to-accent-blue/10">
             <Card.Header>
               <Card.Title className="flex items-center gap-2">
-                <span>✍️</span>
-                {hasSubmitted ? 'Edit Your Solution' : 'Your Solution'}
+                <span>📊</span>
+                Submission Stats
               </Card.Title>
             </Card.Header>
             <Card.Body>
-              <textarea
-                value={solution}
-                onChange={(e) => setSolution(e.target.value)}
-                placeholder="Write your solution here... Show your work!"
-                className="w-full h-48 p-4 border-2 border-gray-200 rounded-2xl 
-                         focus:border-primary-500 focus:ring-2 focus:ring-primary-200
-                         resize-none transition-colors"
-              />
-              <div className="flex gap-3 mt-4">
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!solution.trim() || submitting}
-                  isLoading={submitting}
-                  fullWidth
-                  size="lg"
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="text-center p-4 bg-white rounded-2xl">
+                  <div className="text-3xl font-bold text-primary-600 mb-1">
+                    {submissionCount}
+                  </div>
+                  <div className="text-sm text-gray-600">Submitted</div>
+                </div>
+                <button
+                  onClick={loadStudentList}
+                  type="button"
+                  className="text-center p-4 bg-white rounded-2xl hover:bg-gray-50 hover:shadow-md transition-all cursor-pointer border-2 border-transparent hover:border-primary-200"
                 >
-                  <span className="mr-2">🚀</span>
-                  {hasSubmitted ? 'Update Solution' : 'Submit Solution'}
-                </Button>
-                {isEditing && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsEditing(false)
-                      setSolution(userSubmission?.content || '')
-                    }}
-                    size="lg"
-                  >
-                    Cancel
-                  </Button>
-                )}
+                  <div className="text-3xl font-bold text-gray-600 mb-1">
+                    {completionRate}%
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {submissionCount} of {totalStudents} students
+                  </div>
+                  <div className="text-xs text-primary-600 mt-1 font-semibold">
+                    👆 Click to see details
+                  </div>
+                </button>
               </div>
+
+              {/* Student List */}
+              {showStudentList && (
+                <div className="mt-4 p-4 bg-white rounded-2xl">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-900">Student Status</h4>
+                    <button
+                      onClick={() => setShowStudentList(false)}
+                      className="text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Hide
+                    </button>
+                  </div>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {studentList.map(student => (
+                      <div
+                        key={student.id}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">
+                            {student.submitted ? '✅' : '⏳'}
+                          </span>
+                          <span className="font-medium text-gray-900">
+                            {student.name}
+                          </span>
+                        </div>
+                        {student.submitted && student.submittedAt && (
+                          <span className="text-xs text-gray-500">
+                            {formatTimeAgo(student.submittedAt)}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </Card.Body>
           </Card>
+        )}
+
+        {/* Submission Section */}
+        {!isTeacher && (
+          <>
+            {hasSubmitted && !isEditing ? (
+              // Show submitted solution
+              <Card className="mb-6 border-2 border-primary-500">
+                <Card.Header>
+                  <div className="flex items-center justify-between">
+                    <Card.Title className="flex items-center gap-2">
+                      <span>✅</span>
+                      Your Solution
+                    </Card.Title>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                </Card.Header>
+                <Card.Body>
+                  <p className="text-gray-700 whitespace-pre-wrap mb-3">
+                    {userSubmission.content}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Submitted {formatTimeAgo(userSubmission.submitted_at)}
+                  </p>
+                </Card.Body>
+              </Card>
+            ) : (
+              // Show submission form
+              <Card className="mb-6">
+                <Card.Header>
+                  <Card.Title className="flex items-center gap-2">
+                    <span>✍️</span>
+                    {hasSubmitted ? 'Edit Your Solution' : 'Your Solution'}
+                  </Card.Title>
+                </Card.Header>
+                <Card.Body>
+                  <textarea
+                    value={solution}
+                    onChange={(e) => setSolution(e.target.value)}
+                    placeholder="Write your solution here... Show your work!"
+                    className="w-full h-48 p-4 border-2 border-gray-200 rounded-2xl 
+                             focus:border-primary-500 focus:ring-2 focus:ring-primary-200
+                             resize-none transition-colors"
+                  />
+                  <div className="flex gap-3 mt-4">
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={!solution.trim() || submitting}
+                      isLoading={submitting}
+                      fullWidth
+                      size="lg"
+                    >
+                      <span className="mr-2">🚀</span>
+                      {hasSubmitted ? 'Update Solution' : 'Submit Solution'}
+                    </Button>
+                    {isEditing && (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditing(false)
+                          setSolution(userSubmission?.content || '')
+                        }}
+                        size="lg"
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                </Card.Body>
+              </Card>
+            )}
+          </>
         )}
 
         {/* Other Submissions Section */}
@@ -348,7 +548,7 @@ export default function ChallengePage() {
             <Card.Header>
               <Card.Title className="flex items-center gap-2">
                 <span>💬</span>
-                Other Students' Solutions ({otherSubmissions.length})
+                {isTeacher ? 'All Student Submissions' : 'Other Students\' Solutions'} ({otherSubmissions.length})
               </Card.Title>
             </Card.Header>
             <Card.Body>

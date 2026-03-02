@@ -14,6 +14,11 @@ interface Class {
   start_date: string
   end_date: string | null
   created_at: string
+  created_by: string
+  creator?: {
+    full_name: string
+    email: string
+  }
 }
 
 export default function ClassesPage() {
@@ -29,14 +34,19 @@ export default function ClassesPage() {
 
   async function loadClasses() {
     try {
+      // Simple query without join to avoid RLS issues
       const { data, error } = await supabase
         .from('classes')
         .select('*')
         .order('created_at', { ascending: false })
 
+      console.log('Classes loaded:', data)
+      console.log('Error:', error)
+
       if (error) throw error
       setClasses(data || [])
     } catch (err) {
+      console.error('Load classes error:', err)
       setError(err instanceof Error ? err.message : 'Failed to load classes')
     } finally {
       setLoading(false)

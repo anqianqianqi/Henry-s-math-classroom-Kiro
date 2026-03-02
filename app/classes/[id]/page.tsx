@@ -60,28 +60,32 @@ export default function ClassDetailPage() {
 
   async function loadMembers() {
     try {
+      console.log('Loading members for class:', classId)
+      
       const { data, error } = await supabase
-        .from('user_roles')
+        .from('class_members')
         .select(`
-          id,
           user_id,
-          roles!inner(name),
-          profiles!inner(full_name, email)
+          joined_at,
+          profiles:user_id(full_name, email)
         `)
         .eq('class_id', classId)
+
+      console.log('Members query result:', { data, error })
 
       if (error) throw error
       
       const formattedMembers = data?.map(item => ({
-        id: item.id,
+        id: item.user_id,
         user_id: item.user_id,
-        role_name: (item.roles as any).name,
+        role_name: 'student',
         profiles: {
           full_name: (item.profiles as any).full_name,
           email: (item.profiles as any).email
         }
       })) || []
 
+      console.log('Formatted members:', formattedMembers)
       setMembers(formattedMembers)
     } catch (err) {
       console.error('Failed to load members:', err)
