@@ -1,8 +1,8 @@
 # Project Handoff - Henry's Math Classroom
 
-**Last Updated**: 2026-03-01  
-**Status**: Phase 3 Complete - Daily Challenge Feature Working  
-**Next Agent**: Ready to continue
+**Last Updated**: 2026-03-02  
+**Status**: Phase 3 Complete + Teacher Challenge Management (67%) + Enhanced Class Schedule  
+**Next Agent**: Ready to continue - Test new features and implement enhanced challenge list
 
 ---
 
@@ -49,6 +49,29 @@ http://localhost:3000
 - Create/edit/view classes
 - Enroll students
 - View class members
+- **Enhanced Schedule System** (NEW)
+  - Multiple meeting times per class
+  - Day of week (Monday-Sunday) + start/end time
+  - Format: `[{day: "Monday", startTime: "09:00", endTime: "10:30"}]`
+  - Stored as JSONB, displayed as "Mondays 09:00 - 10:30"
+
+### Phase 3: Daily Challenge ✅
+- Teachers create challenges (`/challenges/new`)
+- Students see assigned challenges (`/challenges`)
+- "Post to see others" mechanic (must submit to unlock)
+- Teacher stats dashboard (submission count, completion rate, student list)
+- Edit submissions
+- Celebration animation on first submit
+- Duolingo-style UI (green #22c55e, rounded, emojis)
+- **Edit challenges** (NEW - `/challenges/[id]/edit`)
+  - Update title, description, date, class assignments
+  - Warning banner if challenge has submissions
+  - Preserves existing submissions
+- **Delete challenges** (NEW - confirmation modal)
+  - Shows submission count before delete
+  - Cascade deletes submissions and assignments
+  - Teacher-only access
+- View class members
 
 ### Phase 3: Daily Challenge ✅
 - Teachers create challenges (`/challenges/new`)
@@ -68,6 +91,32 @@ http://localhost:3000
 - **Schema**: `supabase/schema.sql`
 - **RLS Policies**: `supabase/fixes/fix-all-rls.sql` (simplified to authenticated users)
 - **Profile Creation**: Auto-trigger on signup
+- **Schedule Field**: JSONB - supports structured data, no migration needed
+
+### Schedule Format
+```typescript
+// TypeScript interface
+interface ScheduleSlot {
+  day: string         // "Monday", "Tuesday", etc.
+  startTime: string   // "09:00" (24-hour format)
+  endTime: string     // "10:30" (24-hour format)
+}
+
+// Database storage (JSONB)
+[
+  {day: "Monday", startTime: "09:00", endTime: "10:30"},
+  {day: "Wednesday", startTime: "09:00", endTime: "10:30"}
+]
+
+// Display format
+"Mondays 09:00 - 10:30"
+"Wednesdays 09:00 - 10:30"
+```
+
+### Challenge Management
+- **Edit**: Preserves all submissions, updates challenge data and class assignments
+- **Delete**: Cascade deletes submissions and assignments (ON DELETE CASCADE configured)
+- **Permissions**: Teacher-only (checked in component, not RLS)
 
 ### RLS Policy Approach
 - Simplified from complex permission checks to `authenticated` users can read most tables
@@ -77,13 +126,17 @@ http://localhost:3000
 ### Key Files
 - Challenge list: `app/challenges/page.tsx`
 - Challenge detail: `app/challenges/[id]/page.tsx`
+- Challenge edit: `app/challenges/[id]/edit/page.tsx` (NEW)
 - Challenge creation: `app/challenges/new/page.tsx`
-- Class detail: `app/classes/[id]/page.tsx`
+- Class creation: `app/classes/new/page.tsx` (updated schedule)
+- Class edit: `app/classes/[id]/edit/page.tsx` (updated schedule)
+- Class detail: `app/classes/[id]/page.tsx` (updated schedule display)
+- Class list: `app/classes/page.tsx` (updated schedule display)
 - Supabase client: `lib/supabase/client.ts`
 
 ### UI Style
 - Duolingo-inspired: bright green (#22c55e), rounded corners (rounded-2xl, rounded-3xl)
-- Emojis everywhere (🎯, 🔥, 📚, ✅, 🔒, 🎉)
+- Emojis everywhere (🎯, 🔥, 📚, ✅, 🔒, 🎉, 📅)
 - Gradient backgrounds
 - Celebration animations
 
@@ -107,42 +160,30 @@ http://localhost:3000
 
 ## Next Priorities
 
-### High Priority
-1. **Teacher Challenge Management**
-   - Edit existing challenges
-   - Delete challenges
-   - Assign to multiple classes
-   - Bulk operations
+### High Priority (Do Next)
+1. **Test New Features** (30 min)
+   - Test edit challenge functionality
+   - Test delete challenge with confirmation
+   - Test new schedule format (create/edit class)
+   - Verify schedule displays correctly
+   - See `TESTING_EDIT_DELETE.md` for test cases
 
-2. **Student Enhancements**
-   - Submission history
-   - Challenge calendar view
-   - Streak tracking
-   - Points/badges
-
-3. **Class Materials** (deferred from Phase 2)
-   - Upload files
-   - Storage bucket setup
-   - File management
+2. **Enhanced Challenge List** (2-3 hours)
+   - Add stats preview on challenge cards (submission count, completion %)
+   - Add filters (class, date range, status)
+   - Add search by title
+   - Add sorting options (date, submissions, completion rate)
+   - See `.kiro/specs/teacher-challenge-management/plan.md` section 1.3
 
 ### Medium Priority
-4. **Notifications**
-   - New challenge alerts
-   - Submission reminders
-   - Email notifications
-
-5. **Analytics**
-   - Student progress tracking
-   - Challenge difficulty analysis
-   - Engagement metrics
+3. **Duplicate Challenge** feature (1 hour)
+4. **Challenge Templates** feature (2 hours)
+5. **Student Enrollment** improvements
 
 ### Low Priority
-6. **Polish**
-   - Loading skeletons
-   - Error boundaries
-   - Accessibility audit
-   - Mobile optimization
-   - Tests
+6. **Notifications** system
+7. **Analytics** dashboard
+8. **Bulk Operations**
 
 ---
 
@@ -206,8 +247,29 @@ WHERE challenge_id = '<challenge_id>';
 3. **RLS is simplified** - Don't overcomplicate policies, app logic handles permissions
 4. **UI style is Duolingo** - Keep it bright, playful, emoji-heavy
 5. **Check browser console** - Supabase errors show there with codes (42P17, etc)
-6. **SQL files are messy** - Ignore organization for now, focus on features
-7. **Read PROJECT_STATUS.md** - Has full progress breakdown
+6. **Read CURRENT_STATUS.md** - Has complete project state and next steps
+7. **Schedule is JSONB** - Old classes may have text/null, teachers can update via edit
+8. **Test new features first** - Edit/delete challenges and new schedule format need testing
+
+---
+
+## Documentation
+
+### For Next Agent
+- **CURRENT_STATUS.md** - Complete project state, what to do next
+- **TESTING_EDIT_DELETE.md** - Comprehensive test suite for new features
+- **QUICK_TEST.md** - 5-minute smoke test
+- **IMPLEMENTATION_UPDATE.md** - Technical details of edit/delete features
+- **SCHEDULE_UPDATE.md** - Schedule system documentation
+
+### For Development
+- **PROJECT_STATUS.md** - Overall progress (80% complete)
+- **TODO.md** - Task checklist
+- **.kiro/specs/** - Feature specifications
+
+### For Setup
+- **QUICKSTART.md** - Get running in 10 minutes
+- **SETUP.md** - Detailed setup instructions
 
 ---
 
