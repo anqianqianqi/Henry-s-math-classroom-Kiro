@@ -86,10 +86,18 @@
 ## 🎯 Phase 3: Daily Challenge (Priority Feature)
 
 ### Challenge Creation (Teacher)
-- [ ] Create `/app/challenges/page.tsx` (list challenges)
-- [ ] Create `/app/challenges/new/page.tsx` (create challenge)
-- [ ] Add challenge assignment to classes
-- [ ] Implement edit/delete
+- [x] Create `/app/challenges/page.tsx` (list challenges)
+- [x] Create `/app/challenges/new/page.tsx` (create challenge)
+- [x] Add challenge assignment to classes
+- [x] Implement edit/delete
+
+### Challenge Management (Teacher)
+- [x] Edit existing challenges (`/challenges/[id]/edit`)
+- [x] Delete challenges with confirmation
+- [ ] Enhanced challenge list with stats preview
+- [ ] Filter challenges by class/date
+- [ ] Search challenges by title
+- [ ] Duplicate challenge feature
 
 ### Challenge View (Student)
 - [ ] Create student challenge view
@@ -195,10 +203,13 @@
 - **Overall: 0%**
 
 ### Phase 3: Daily Challenge
-- [ ] Challenge creation - 0%
-- [ ] Submission system - 0%
-- [ ] Discussion view - 0%
-- **Overall: 0%**
+- [x] Challenge creation - 100%
+- [x] Submission system - 100%
+- [x] Discussion view - 100%
+- [x] Edit challenge - 100%
+- [x] Delete challenge - 100%
+- [ ] Enhanced list view - 0%
+- **Overall: 83%**
 
 ### Phase 4: Polish
 - [ ] Notifications - 0%

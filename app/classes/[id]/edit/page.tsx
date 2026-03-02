@@ -8,14 +8,23 @@ import { Card } from '@/components/ui/Card'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
 
+interface ScheduleSlot {
+  id: string
+  day: string
+  startTime: string
+  endTime: string
+}
+
 export default function EditClassPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    schedule: '',
     start_date: '',
     end_date: ''
   })
+  const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([
+    { id: crypto.randomUUID(), day: '', startTime: '', endTime: '' }
+  ])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -41,15 +50,42 @@ export default function EditClassPage() {
       setFormData({
         name: data.name,
         description: data.description || '',
-        schedule: data.schedule || '',
         start_date: data.start_date,
         end_date: data.end_date || ''
       })
+
+      // Load schedule slots from JSONB
+      if (data.schedule && Array.isArray(data.schedule) && data.schedule.length > 0) {
+        setScheduleSlots(
+          data.schedule.map((slot: any) => ({
+            id: crypto.randomUUID(),
+            day: slot.day || '',
+            startTime: slot.startTime || '',
+            endTime: slot.endTime || ''
+          }))
+        )
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load class')
     } finally {
       setLoading(false)
     }
+  }
+
+  function addScheduleSlot() {
+    setScheduleSlots([...scheduleSlots, { id: crypto.randomUUID(), day: '', startTime: '', endTime: '' }])
+  }
+
+  function removeScheduleSlot(id: string) {
+    if (scheduleSlots.length > 1) {
+      setScheduleSlots(scheduleSlots.filter(slot => slot.id !== id))
+    }
+  }
+
+  function updateScheduleSlot(id: string, field: 'day' | 'startTime' | 'endTime', value: string) {
+    setScheduleSlots(scheduleSlots.map(slot =>
+      slot.id === id ? { ...slot, [field]: value } : slot
+    ))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -58,12 +94,21 @@ export default function EditClassPage() {
     setError(null)
 
     try {
+      // Filter out empty schedule slots and format them
+      const validSlots = scheduleSlots
+        .filter(slot => slot.day && slot.startTime && slot.endTime)
+        .map(slot => ({
+          day: slot.day,
+          startTime: slot.startTime,
+          endTime: slot.endTime
+        }))
+
       const { error } = await supabase
         .from('classes')
         .update({
           name: formData.name,
           description: formData.description || null,
-          schedule: formData.schedule || null,
+          schedule: validSlots.length > 0 ? validSlots : null,
           start_date: formData.start_date,
           end_date: formData.end_date || null
         })
@@ -134,14 +179,86 @@ export default function EditClassPage() {
                 />
               </FormField>
 
-              <FormField label="Schedule">
-                <Input
-                  type="text"
-                  value={formData.schedule}
-                  onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
-                  placeholder="e.g., Mon/Wed/Fri 10:00 AM - 11:30 AM"
-                />
-              </FormField>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Class Schedule
+                </label>
+                <p className="text-sm text-gray-600 mb-4">
+                  Add one or more meeting times for your class
+                </p>
+                
+                <div className="space-y-3">
+                  {scheduleSlots.map((slot, index) => (
+                    <div key={slot.id} className="flex gap-3 items-start">
+                      <div className="flex-1 space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Day of Week
+                          </label>
+                          <select
+                            value={slot.day}
+                            onChange={(e) => updateScheduleSlot(slot.id, 'day', e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="">Select day...</option>
+                            <option value="Monday">Monday</option>
+                            <option value="Tuesday">Tuesday</option>
+                            <option value="Wednesday">Wednesday</option>
+                            <option value="Thursday">Thursday</option>
+                            <option value="Friday">Friday</option>
+                            <option value="Saturday">Saturday</option>
+                            <option value="Sunday">Sunday</option>
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Start Time
+                            </label>
+                            <input
+                              type="time"
+                              value={slot.startTime}
+                              onChange={(e) => updateScheduleSlot(slot.id, 'startTime', e.target.value)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              End Time
+                            </label>
+                            <input
+                              type="time"
+                              value={slot.endTime}
+                              onChange={(e) => updateScheduleSlot(slot.id, 'endTime', e.target.value)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      {scheduleSlots.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeScheduleSlot(slot.id)}
+                          className="mt-8 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Remove this time slot"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={addScheduleSlot}
+                  className="mt-4 flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 
+                           rounded-lg transition-colors font-medium text-sm"
+                >
+                  <span>➕</span>
+                  <span>Add Another Meeting Time</span>
+                </button>
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField label="Start Date" required>

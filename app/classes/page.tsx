@@ -10,7 +10,7 @@ interface Class {
   id: string
   name: string
   description: string | null
-  schedule: string | null
+  schedule: Array<{ day: string; startTime: string; endTime: string }> | null
   start_date: string
   end_date: string | null
   created_at: string
@@ -109,10 +109,17 @@ export default function ClassesPage() {
                     {cls.description || 'No description'}
                   </p>
                   <div className="space-y-2 text-sm">
-                    {cls.schedule && (
-                      <p className="text-gray-500">
-                        <span className="font-medium">Schedule:</span> {cls.schedule}
-                      </p>
+                    {cls.schedule && cls.schedule.length > 0 && (
+                      <div className="text-gray-500">
+                        <span className="font-medium">Schedule:</span>
+                        <div className="mt-1 space-y-1">
+                          {cls.schedule.map((slot, index) => (
+                            <div key={index} className="text-xs">
+                              {slot.day}s {slot.startTime} - {slot.endTime}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                     <p className="text-gray-500">
                       <span className="font-medium">Starts:</span>{' '}

@@ -10,7 +10,7 @@ interface Class {
   id: string
   name: string
   description: string | null
-  schedule: string | null
+  schedule: Array<{ day: string; startTime: string; endTime: string }> | null
   start_date: string
   end_date: string | null
   created_at: string
@@ -152,8 +152,15 @@ export default function ClassDetailPage() {
         <div className="flex justify-between items-start mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{classData.name}</h1>
-            {classData.schedule && (
-              <p className="text-gray-600">{classData.schedule}</p>
+            {classData.schedule && classData.schedule.length > 0 && (
+              <div className="text-gray-600 space-y-1">
+                {classData.schedule.map((slot, index) => (
+                  <p key={index} className="flex items-center gap-2">
+                    <span>📅</span>
+                    <span>{slot.day}s {slot.startTime} - {slot.endTime}</span>
+                  </p>
+                ))}
+              </div>
             )}
           </div>
           <div className="flex gap-2">
@@ -183,6 +190,21 @@ export default function ClassDetailPage() {
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Description</dt>
                     <dd className="mt-1 text-gray-900">{classData.description}</dd>
+                  </div>
+                )}
+                {classData.schedule && classData.schedule.length > 0 && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Meeting Times</dt>
+                    <dd className="mt-1 space-y-2">
+                      {classData.schedule.map((slot, index) => (
+                        <div key={index} className="flex items-center gap-2 text-gray-900">
+                          <span>📅</span>
+                          <span className="font-medium">{slot.day}s</span>
+                          <span className="text-gray-500">•</span>
+                          <span>{slot.startTime} - {slot.endTime}</span>
+                        </div>
+                      ))}
+                    </dd>
                   </div>
                 )}
                 <div>
