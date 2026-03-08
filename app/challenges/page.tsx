@@ -62,6 +62,8 @@ export default function ChallengesPage() {
       .eq('user_id', user.id)
       .is('class_id', null)
 
+    console.log('🔍 Admin Debug - User roles query:', { roles, userId: user.id })
+
     let teacherRole = false
     let adminRole = false
     if (roles && roles.length > 0) {
@@ -70,12 +72,15 @@ export default function ChallengesPage() {
         .select('name')
         .in('id', roles.map((r: any) => r.role_id))
 
+      console.log('🔍 Admin Debug - Role names:', roleData)
       teacherRole = roleData?.some((r: any) => r.name === 'teacher') || false
       adminRole = roleData?.some((r: any) => r.name === 'administrator') || false
+      console.log('🔍 Admin Debug - Is teacher?', teacherRole, 'Is admin?', adminRole)
     }
     
     // Treat admin as teacher for UI purposes
     const canSeeAll = teacherRole || adminRole
+    console.log('🔍 Admin Debug - Can see all challenges?', canSeeAll)
     setIsTeacher(canSeeAll)
 
     if (canSeeAll) {
