@@ -9,6 +9,7 @@
 - ✅ Duplicate challenges (creates copy for next day)
 - ✅ View challenge details
 - ✅ List all challenges with filters
+- ✅ Image upload for challenges (create, edit, view, delete)
 
 ### Enhanced Challenge List
 - ✅ Search by title/description
@@ -41,21 +42,22 @@
 - ✅ Student list with submission status
 - ✅ Click to see which students submitted
 
+### Image Upload
+- ✅ Upload images when creating challenges
+- ✅ Upload/change/delete images when editing challenges
+- ✅ Display images in challenge view
+- ✅ Image preview before upload
+- ✅ Validation (type and size limits)
+- ✅ Secure storage with RLS policies
+- ✅ User-specific folder structure
+
 ## 🚧 CHALLENGES - IN PROGRESS
 
-### Image Upload (Partial)
-- ✅ Database migration created (add-challenge-images.sql)
-- ✅ Storage bucket setup (challenge-images)
-- ✅ Storage policies defined
-- ⏳ Create form - image upload UI added (needs testing)
-- ⏳ Edit form - needs image upload implementation
-- ⏳ Challenge view - needs image display
-- ⏳ Run migration in Supabase
+None! All challenge features are complete.
 
 ## 📋 CHALLENGES - TODO (Low Priority)
 
 - Re-enable RLS for submission_comments table (currently disabled for testing)
-- Add image upload completion (if needed)
 - Add file attachments for submissions (optional)
 - Add rich text editor for descriptions (optional)
 
