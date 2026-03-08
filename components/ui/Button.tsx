@@ -31,7 +31,7 @@ export function Button({
   
   const variantStyles = {
     primary: 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500 shadow-float active:shadow-none',
-    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500 shadow-float active:shadow-none',
+    secondary: 'bg-accent-blue text-white hover:bg-accent-blue/90 focus:ring-accent-blue shadow-float active:shadow-none',
     danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500 shadow-float active:shadow-none',
     ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
     outline: 'bg-transparent border-2 border-primary-500 text-primary-500 hover:bg-primary-50 focus:ring-primary-500',
