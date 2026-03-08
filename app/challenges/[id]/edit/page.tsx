@@ -13,6 +13,7 @@ interface Challenge {
   description: string
   challenge_date: string
   created_by: string
+  image_url?: string | null
 }
 
 interface Class {
@@ -95,6 +96,7 @@ export default function EditChallengePage() {
     setTitle(challengeData.title)
     setDescription(challengeData.description)
     setChallengeDate(challengeData.challenge_date)
+    setCurrentImageUrl(challengeData.image_url || null)
 
     // Load submission count
     const { count } = await supabase
@@ -131,6 +133,87 @@ export default function EditChallengePage() {
     )
   }
 
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setError('Please select an image file')
+        return
+      }
+      
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image size must be less than 5MB')
+        return
+      }
+
+      setImageFile(file)
+      
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  function removeImage() {
+    setImageFile(null)
+    setImagePreview(null)
+  }
+
+  async function uploadImage(): Promise<string | null> {
+    if (!imageFile || !userId) return null
+
+    setUploadingImage(true)
+    try {
+      const fileExt = imageFile.name.split('.').pop()
+      const fileName = `${userId}/${params.id}.${fileExt}`
+      
+      const { data, error } = await supabase.storage
+        .from('challenge-images')
+        .upload(fileName, imageFile, {
+          upsert: true,
+          contentType: imageFile.type
+        })
+
+      if (error) {
+        console.error('Error uploading image:', error)
+        return null
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('challenge-images')
+        .getPublicUrl(fileName)
+
+      return publicUrl
+    } catch (err) {
+      console.error('Error uploading image:', err)
+      return null
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  async function deleteImage() {
+    if (!currentImageUrl || !userId) return
+
+    try {
+      const fileName = `${userId}/${params.id}`
+      await supabase.storage
+        .from('challenge-images')
+        .remove([fileName])
+      
+      await supabase
+        .from('daily_challenges')
+        .update({ image_url: null })
+        .eq('id', params.id)
+      
+      setCurrentImageUrl(null)
+    } catch (err) {
+      console.error('Error deleting image:', err)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
@@ -155,13 +238,23 @@ export default function EditChallengePage() {
     setSubmitting(true)
 
     try {
+      // Upload new image if provided
+      let imageUrl = currentImageUrl
+      if (imageFile) {
+        const uploadedUrl = await uploadImage()
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl
+        }
+      }
+
       // Update challenge
       const { error: updateError } = await supabase
         .from('daily_challenges')
         .update({
           title: title.trim(),
           description: description.trim(),
-          challenge_date: challengeDate
+          challenge_date: challengeDate,
+          image_url: imageUrl
         })
         .eq('id', params.id)
 
@@ -308,6 +401,69 @@ export default function EditChallengePage() {
                            resize-none transition-colors"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Challenge Image (Optional)
+                </label>
+                {imagePreview || currentImageUrl ? (
+                  <div className="relative">
+                    <img
+                      src={imagePreview || currentImageUrl || ''}
+                      alt="Challenge preview"
+                      className="w-full h-64 object-contain bg-gray-50 rounded-2xl border-2 border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (imagePreview) {
+                          removeImage()
+                        } else if (currentImageUrl) {
+                          deleteImage()
+                        }
+                      }}
+                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full 
+                               hover:bg-red-600 transition-colors shadow-lg"
+                    >
+                      🗑️
+                    </button>
+                    {!imagePreview && currentImageUrl && (
+                      <label className="absolute bottom-2 right-2 bg-primary-500 text-white px-4 py-2 rounded-full 
+                                     hover:bg-primary-600 transition-colors shadow-lg cursor-pointer">
+                        Change Image
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                        />
+                      </label>
+                    )}
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-64 
+                                  border-2 border-dashed border-gray-300 rounded-2xl 
+                                  hover:border-primary-500 hover:bg-primary-50/50 
+                                  cursor-pointer transition-all">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <span className="text-5xl mb-3">📸</span>
+                      <p className="mb-2 text-sm text-gray-600">
+                        <span className="font-semibold">Click to upload</span> or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                    />
+                  </label>
+                )}
+                <p className="mt-2 text-sm text-gray-500">
+                  Add a diagram, graph, or visual aid to help students understand the problem
+                </p>
               </div>
 
               <FormField

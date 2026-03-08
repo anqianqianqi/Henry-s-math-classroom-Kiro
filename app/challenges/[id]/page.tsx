@@ -13,6 +13,7 @@ interface Challenge {
   description: string
   challenge_date: string
   created_by: string
+  image_url?: string | null
 }
 
 interface Submission {
@@ -608,6 +609,15 @@ export default function ChallengePage() {
             </div>
           </Card.Header>
           <Card.Body>
+            {challenge.image_url && (
+              <div className="mb-4">
+                <img
+                  src={challenge.image_url}
+                  alt="Challenge visual"
+                  className="w-full max-h-96 object-contain bg-gray-50 rounded-2xl border-2 border-gray-200"
+                />
+              </div>
+            )}
             <p className="text-gray-700 whitespace-pre-wrap">
               {challenge.description}
             </p>
