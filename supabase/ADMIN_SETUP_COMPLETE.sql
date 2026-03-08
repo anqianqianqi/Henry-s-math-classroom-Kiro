@@ -16,9 +16,11 @@ WHERE p.email = 'admin@test.com'
 ON CONFLICT DO NOTHING;
 
 -- Step 3: Add RLS policies for admin access
+-- Drop existing policies if they exist, then create new ones
 
 -- Classes
-CREATE POLICY IF NOT EXISTS "Administrators can view all classes"
+DROP POLICY IF EXISTS "Administrators can view all classes" ON classes;
+CREATE POLICY "Administrators can view all classes"
   ON classes FOR SELECT
   USING (
     EXISTS (
@@ -31,7 +33,8 @@ CREATE POLICY IF NOT EXISTS "Administrators can view all classes"
   );
 
 -- Daily Challenges
-CREATE POLICY IF NOT EXISTS "Administrators can view all challenges"
+DROP POLICY IF EXISTS "Administrators can view all challenges" ON daily_challenges;
+CREATE POLICY "Administrators can view all challenges"
   ON daily_challenges FOR SELECT
   USING (
     EXISTS (
@@ -44,7 +47,8 @@ CREATE POLICY IF NOT EXISTS "Administrators can view all challenges"
   );
 
 -- Challenge Assignments
-CREATE POLICY IF NOT EXISTS "Administrators can view all challenge assignments"
+DROP POLICY IF EXISTS "Administrators can view all challenge assignments" ON challenge_assignments;
+CREATE POLICY "Administrators can view all challenge assignments"
   ON challenge_assignments FOR SELECT
   USING (
     EXISTS (
@@ -57,7 +61,8 @@ CREATE POLICY IF NOT EXISTS "Administrators can view all challenge assignments"
   );
 
 -- Submissions
-CREATE POLICY IF NOT EXISTS "Administrators can view all submissions"
+DROP POLICY IF EXISTS "Administrators can view all submissions" ON submissions;
+CREATE POLICY "Administrators can view all submissions"
   ON submissions FOR SELECT
   USING (
     EXISTS (
@@ -70,7 +75,8 @@ CREATE POLICY IF NOT EXISTS "Administrators can view all submissions"
   );
 
 -- Submission Comments
-CREATE POLICY IF NOT EXISTS "Administrators can view all submission comments"
+DROP POLICY IF EXISTS "Administrators can view all submission comments" ON submission_comments;
+CREATE POLICY "Administrators can view all submission comments"
   ON submission_comments FOR SELECT
   USING (
     EXISTS (
@@ -83,7 +89,8 @@ CREATE POLICY IF NOT EXISTS "Administrators can view all submission comments"
   );
 
 -- Class Members
-CREATE POLICY IF NOT EXISTS "Administrators can view all class members"
+DROP POLICY IF EXISTS "Administrators can view all class members" ON class_members;
+CREATE POLICY "Administrators can view all class members"
   ON class_members FOR SELECT
   USING (
     EXISTS (
@@ -96,7 +103,8 @@ CREATE POLICY IF NOT EXISTS "Administrators can view all class members"
   );
 
 -- Profiles
-CREATE POLICY IF NOT EXISTS "Administrators can view all profiles"
+DROP POLICY IF EXISTS "Administrators can view all profiles" ON profiles;
+CREATE POLICY "Administrators can view all profiles"
   ON profiles FOR SELECT
   USING (
     EXISTS (
@@ -109,7 +117,8 @@ CREATE POLICY IF NOT EXISTS "Administrators can view all profiles"
   );
 
 -- User Roles
-CREATE POLICY IF NOT EXISTS "Administrators can view all user roles"
+DROP POLICY IF EXISTS "Administrators can view all user roles" ON user_roles;
+CREATE POLICY "Administrators can view all user roles"
   ON user_roles FOR SELECT
   USING (
     EXISTS (
