@@ -55,7 +55,7 @@ export default function ChallengesPage() {
       return
     }
 
-    // Check if user is teacher
+    // Check if user is teacher or admin
     const { data: roles } = await supabase
       .from('user_roles')
       .select('role_id')
@@ -63,6 +63,7 @@ export default function ChallengesPage() {
       .is('class_id', null)
 
     let teacherRole = false
+    let adminRole = false
     if (roles && roles.length > 0) {
       const { data: roleData } = await supabase
         .from('roles')
@@ -70,11 +71,14 @@ export default function ChallengesPage() {
         .in('id', roles.map((r: any) => r.role_id))
 
       teacherRole = roleData?.some((r: any) => r.name === 'teacher') || false
+      adminRole = roleData?.some((r: any) => r.name === 'administrator') || false
     }
     
-    setIsTeacher(teacherRole)
+    // Treat admin as teacher for UI purposes
+    const canSeeAll = teacherRole || adminRole
+    setIsTeacher(canSeeAll)
 
-    if (teacherRole) {
+    if (canSeeAll) {
       // Load all classes for filter
       const { data: classesData } = await supabase
         .from('classes')
@@ -84,7 +88,7 @@ export default function ChallengesPage() {
       
       setClasses(classesData || [])
 
-      // Teachers see ALL challenges
+      // Teachers and admins see ALL challenges
       const { data: challengesData } = await supabase
         .from('daily_challenges')
         .select('*')
