@@ -36,6 +36,10 @@ export default function EditChallengePage() {
   const [error, setError] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const [submissionCount, setSubmissionCount] = useState(0)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     loadData()
