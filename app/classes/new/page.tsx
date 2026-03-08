@@ -18,11 +18,28 @@ export default function NewClassPage() {
     name: '',
     description: '',
     start_date: '',
-    end_date: ''
+    end_date: '',
+    // New marketing fields
+    is_public: false,
+    target_audience: '',
+    age_range: '',
+    skill_level: '',
+    prerequisites: '',
+    syllabus: '',
+    materials_provided: '',
+    homework_expectations: '',
+    teacher_bio: '',
+    teaching_style: '',
+    max_students: '',
+    price: '',
+    location: ''
   })
   const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([
     { id: crypto.randomUUID(), day: '', startTime: '', endTime: '' }
   ])
+  const [coverImage, setCoverImage] = useState<File | null>(null)
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null)
+  const [learningObjectives, setLearningObjectives] = useState<string[]>([''])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -67,6 +84,39 @@ export default function NewClassPage() {
     validateField('schedule', newSlots)
   }
 
+  function handleCoverImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image must be less than 5MB')
+        return
+      }
+      if (!file.type.startsWith('image/')) {
+        setError('File must be an image')
+        return
+      }
+      setCoverImage(file)
+      setCoverImagePreview(URL.createObjectURL(file))
+      setError(null)
+    }
+  }
+
+  function addLearningObjective() {
+    setLearningObjectives([...learningObjectives, ''])
+  }
+
+  function removeLearningObjective(index: number) {
+    if (learningObjectives.length > 1) {
+      setLearningObjectives(learningObjectives.filter((_, i) => i !== index))
+    }
+  }
+
+  function updateLearningObjective(index: number, value: string) {
+    const newObjectives = [...learningObjectives]
+    newObjectives[index] = value
+    setLearningObjectives(newObjectives)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -77,6 +127,25 @@ export default function NewClassPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
+      // Upload cover image if provided
+      let coverImageUrl = null
+      if (coverImage) {
+        const fileExt = coverImage.name.split('.').pop()
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`
+        
+        const { error: uploadError } = await supabase.storage
+          .from('class-covers')
+          .upload(fileName, coverImage)
+
+        if (uploadError) throw uploadError
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('class-covers')
+          .getPublicUrl(fileName)
+        
+        coverImageUrl = publicUrl
+      }
+
       // Filter out empty schedule slots and format them
       const validSlots = scheduleSlots
         .filter(slot => slot.day && slot.startTime && slot.endTime)
@@ -86,7 +155,10 @@ export default function NewClassPage() {
           endTime: slot.endTime
         }))
 
-      // Create class
+      // Filter out empty learning objectives
+      const validObjectives = learningObjectives.filter(obj => obj.trim() !== '')
+
+      // Create class with all fields
       const { data: newClass, error: classError } = await supabase
         .from('classes')
         .insert({
@@ -95,7 +167,23 @@ export default function NewClassPage() {
           schedule: validSlots.length > 0 ? validSlots : null,
           start_date: formData.start_date,
           end_date: formData.end_date || null,
-          created_by: user.id
+          created_by: user.id,
+          // New marketing fields
+          is_public: formData.is_public,
+          cover_image_url: coverImageUrl,
+          target_audience: formData.target_audience || null,
+          age_range: formData.age_range || null,
+          skill_level: formData.skill_level || null,
+          prerequisites: formData.prerequisites || null,
+          syllabus: formData.syllabus || null,
+          learning_objectives: validObjectives.length > 0 ? validObjectives : null,
+          materials_provided: formData.materials_provided || null,
+          homework_expectations: formData.homework_expectations || null,
+          teacher_bio: formData.teacher_bio || null,
+          teaching_style: formData.teaching_style || null,
+          max_students: formData.max_students ? parseInt(formData.max_students) : null,
+          price: formData.price ? parseFloat(formData.price) : null,
+          location: formData.location || null
         })
         .select()
         .single()
@@ -376,6 +464,333 @@ export default function NewClassPage() {
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t-2 border-gray-200 my-8"></div>
+
+              {/* Public Discovery Section */}
+              <div className="bg-blue-50 p-6 rounded-2xl space-y-6">
+                <div className="flex items-start gap-3">
+                  <span className="text-3xl">🌍</span>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                      Public Class Discovery
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Make your class discoverable to parents and students. Add details to help them decide if it's right for them.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Make Public Toggle */}
+                <div className="flex items-center gap-3 p-4 bg-white rounded-xl">
+                  <input
+                    type="checkbox"
+                    id="is_public"
+                    checked={formData.is_public}
+                    onChange={(e) => setFormData({ ...formData, is_public: e.target.checked })}
+                    className="w-6 h-6 text-primary-500 rounded focus:ring-2 focus:ring-primary-500"
+                  />
+                  <label htmlFor="is_public" className="flex-1 cursor-pointer">
+                    <div className="font-semibold text-gray-900">
+                      Make this class public
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Allow parents to discover and request trial classes
+                    </div>
+                  </label>
+                </div>
+
+                {formData.is_public && (
+                  <div className="space-y-6">
+                    {/* Cover Image */}
+                    <div>
+                      <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
+                        <span>🖼️</span>
+                        <span>Cover Image</span>
+                        <span className="text-sm font-normal text-gray-500">(recommended)</span>
+                      </label>
+                      {coverImagePreview ? (
+                        <div className="relative">
+                          <img
+                            src={coverImagePreview}
+                            alt="Cover preview"
+                            className="w-full h-48 object-cover rounded-xl"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCoverImage(null)
+                              setCoverImagePreview(null)
+                            }}
+                            className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                          >
+                            🗑️ Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleCoverImageChange}
+                            className="hidden"
+                            id="cover-image"
+                          />
+                          <label htmlFor="cover-image" className="cursor-pointer">
+                            <div className="text-4xl mb-2">📸</div>
+                            <div className="text-sm text-gray-600">
+                              Click to upload cover image (max 5MB)
+                            </div>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Target Audience */}
+                    <div>
+                      <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
+                        <span>🎯</span>
+                        <span>Who is this class for?</span>
+                      </label>
+                      <textarea
+                        value={formData.target_audience}
+                        onChange={(e) => setFormData({ ...formData, target_audience: e.target.value })}
+                        placeholder="Describe the ideal student for this class..."
+                        rows={3}
+                        className="w-full p-4 border-2 border-gray-200 rounded-xl 
+                                 focus:border-primary-500 focus:ring-4 focus:ring-primary-100
+                                 resize-none transition-all duration-200"
+                      />
+                    </div>
+
+                    {/* Age Range & Skill Level */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Age/Grade Range
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.age_range}
+                          onChange={(e) => setFormData({ ...formData, age_range: e.target.value })}
+                          placeholder="e.g., Grades 3-5 or Ages 8-10"
+                          className="w-full p-3 border-2 border-gray-200 rounded-xl 
+                                   focus:border-primary-500 focus:ring-4 focus:ring-primary-100
+                                   transition-all duration-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Skill Level
+                        </label>
+                        <select
+                          value={formData.skill_level}
+                          onChange={(e) => setFormData({ ...formData, skill_level: e.target.value })}
+                          className="w-full p-3 border-2 border-gray-200 rounded-xl 
+                                   focus:border-primary-500 focus:ring-4 focus:ring-primary-100
+                                   transition-all duration-200 bg-white"
+                        >
+                          <option value="">Select level...</option>
+                          <option value="beginner">Beginner</option>
+                          <option value="intermediate">Intermediate</option>
+                          <option value="advanced">Advanced</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Prerequisites */}
+                    <div>
+                      <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
+                        <span>📋</span>
+                        <span>Prerequisites</span>
+                        <span className="text-sm font-normal text-gray-500">(optional)</span>
+                      </label>
+                      <textarea
+                        value={formData.prerequisites}
+                        onChange={(e) => setFormData({ ...formData, prerequisites: e.target.value })}
+                        placeholder="Any required knowledge or skills..."
+                        rows={2}
+                        className="w-full p-4 border-2 border-gray-200 rounded-xl 
+                                 focus:border-primary-500 focus:ring-4 focus:ring-primary-100
+                                 resize-none transition-all duration-200"
+                      />
+                    </div>
+
+                    {/* Syllabus */}
+                    <div>
+                      <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
+                        <span>📚</span>
+                        <span>Syllabus / What's Included</span>
+                      </label>
+                      <textarea
+                        value={formData.syllabus}
+                        onChange={(e) => setFormData({ ...formData, syllabus: e.target.value })}
+                        placeholder="Course topics, modules, and what students will learn..."
+                        rows={5}
+                        className="w-full p-4 border-2 border-gray-200 rounded-xl 
+                                 focus:border-primary-500 focus:ring-4 focus:ring-primary-100
+                                 resize-none transition-all duration-200"
+                      />
+                    </div>
+
+                    {/* Learning Objectives */}
+                    <div>
+                      <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
+                        <span>🎓</span>
+                        <span>Learning Objectives</span>
+                      </label>
+                      <div className="space-y-3">
+                        {learningObjectives.map((objective, index) => (
+                          <div key={index} className="flex gap-3">
+                            <input
+                              type="text"
+                              value={objective}
+                              onChange={(e) => updateLearningObjective(index, e.target.value)}
+                              placeholder={`Objective ${index + 1}`}
+                              className="flex-1 p-3 border-2 border-gray-200 rounded-xl 
+                                       focus:border-primary-500 focus:ring-4 focus:ring-primary-100
+                                       transition-all duration-200"
+                            />
+                            {learningObjectives.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeLearningObjective(index)}
+                                className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                              >
+                                🗑️
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={addLearningObjective}
+                        className="mt-3 flex items-center gap-2 px-4 py-2 text-primary-600 hover:bg-primary-50 
+                                 rounded-xl transition-colors font-medium"
+                      >
+                        <span>➕</span>
+                        <span>Add Objective</span>
+                      </button>
+                    </div>
+
+                    {/* Materials & Homework */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Materials Provided
+                        </label>
+                        <textarea
+                          value={formData.materials_provided}
+                          onChange={(e) => setFormData({ ...formData, materials_provided: e.target.value })}
+                          placeholder="Worksheets, textbooks, etc."
+                          rows={3}
+                          className="w-full p-3 border-2 border-gray-200 rounded-xl 
+                                   focus:border-primary-500 focus:ring-4 focus:ring-primary-100
+                                   resize-none transition-all duration-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Homework Expectations
+                        </label>
+                        <textarea
+                          value={formData.homework_expectations}
+                          onChange={(e) => setFormData({ ...formData, homework_expectations: e.target.value })}
+                          placeholder="Time commitment, frequency..."
+                          rows={3}
+                          className="w-full p-3 border-2 border-gray-200 rounded-xl 
+                                   focus:border-primary-500 focus:ring-4 focus:ring-primary-100
+                                   resize-none transition-all duration-200"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Teacher Info */}
+                    <div>
+                      <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
+                        <span>👨‍🏫</span>
+                        <span>About the Teacher</span>
+                      </label>
+                      <textarea
+                        value={formData.teacher_bio}
+                        onChange={(e) => setFormData({ ...formData, teacher_bio: e.target.value })}
+                        placeholder="Your qualifications, experience, and teaching approach..."
+                        rows={4}
+                        className="w-full p-4 border-2 border-gray-200 rounded-xl 
+                                 focus:border-primary-500 focus:ring-4 focus:ring-primary-100
+                                 resize-none transition-all duration-200"
+                      />
+                    </div>
+
+                    {/* Teaching Style */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Teaching Style
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.teaching_style}
+                        onChange={(e) => setFormData({ ...formData, teaching_style: e.target.value })}
+                        placeholder="e.g., Interactive, Project-based, Lecture-style"
+                        className="w-full p-3 border-2 border-gray-200 rounded-xl 
+                                 focus:border-primary-500 focus:ring-4 focus:ring-primary-100
+                                 transition-all duration-200"
+                      />
+                    </div>
+
+                    {/* Class Details */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Max Students
+                        </label>
+                        <input
+                          type="number"
+                          value={formData.max_students}
+                          onChange={(e) => setFormData({ ...formData, max_students: e.target.value })}
+                          placeholder="20"
+                          min="1"
+                          className="w-full p-3 border-2 border-gray-200 rounded-xl 
+                                   focus:border-primary-500 focus:ring-4 focus:ring-primary-100
+                                   transition-all duration-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Price ($)
+                        </label>
+                        <input
+                          type="number"
+                          value={formData.price}
+                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                          placeholder="0.00"
+                          min="0"
+                          step="0.01"
+                          className="w-full p-3 border-2 border-gray-200 rounded-xl 
+                                   focus:border-primary-500 focus:ring-4 focus:ring-primary-100
+                                   transition-all duration-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Location
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.location}
+                          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                          placeholder="Online / In-person"
+                          className="w-full p-3 border-2 border-gray-200 rounded-xl 
+                                   focus:border-primary-500 focus:ring-4 focus:ring-primary-100
+                                   transition-all duration-200"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Submit Buttons */}
