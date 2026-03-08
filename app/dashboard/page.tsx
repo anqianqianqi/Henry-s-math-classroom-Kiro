@@ -11,6 +11,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [isTeacher, setIsTeacher] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -55,10 +56,13 @@ export default function DashboardPage() {
 
       console.log('Role names:', roleData)
       const hasTeacherRole = roleData?.some((r: any) => r.name === 'teacher')
-      console.log('Is teacher?', hasTeacherRole)
+      const hasAdminRole = roleData?.some((r: any) => r.name === 'administrator')
+      console.log('Is teacher?', hasTeacherRole, 'Is admin?', hasAdminRole)
       setIsTeacher(hasTeacherRole || false)
+      setIsAdmin(hasAdminRole || false)
     } else {
       setIsTeacher(false)
+      setIsAdmin(false)
     }
 
     setLoading(false)

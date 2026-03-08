@@ -283,7 +283,7 @@ export default function ChallengesPage() {
                 variant="outline"
                 onClick={() => router.push('/dashboard')}
               >
-                ← Back
+                ← Home
               </Button>
               <div className="flex items-center gap-3">
                 <span className="text-3xl">🎯</span>
