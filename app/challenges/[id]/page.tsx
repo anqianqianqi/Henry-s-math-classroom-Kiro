@@ -63,6 +63,7 @@ export default function ChallengePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
+  const [totalSubmissionCount, setTotalSubmissionCount] = useState(0)
   const [comments, setComments] = useState<{[submissionId: string]: Comment[]}>({})
   const [newComment, setNewComment] = useState<{[submissionId: string]: string}>({})
   const [submittingComment, setSubmittingComment] = useState<{[submissionId: string]: boolean}>({})
@@ -225,6 +226,14 @@ export default function ChallengePage() {
     } else if (submissionData) {
       await loadOtherSubmissions(user.id, false)
     }
+
+    // Load total submission count for all users (for the locked message)
+    const { count: totalCount } = await supabase
+      .from('challenge_submissions')
+      .select('*', { count: 'exact', head: true })
+      .eq('challenge_id', params.id)
+    
+    setTotalSubmissionCount(totalCount || 0)
 
     setLoading(false)
   }
@@ -862,7 +871,7 @@ export default function ChallengePage() {
               </p>
               <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
                 <span>👥</span>
-                <span>{submissionCount} {submissionCount === 1 ? 'student has' : 'students have'} submitted</span>
+                <span>{totalSubmissionCount} {totalSubmissionCount === 1 ? 'student has' : 'students have'} submitted</span>
               </div>
             </Card.Body>
           </Card>
