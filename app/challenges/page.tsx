@@ -31,6 +31,11 @@ export default function ChallengesPage() {
   const [dateFilter, setDateFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<string>('date-desc')
   
+  // Pagination state
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false)
+  const [showAllPast, setShowAllPast] = useState(false)
+  const ITEMS_PER_PAGE = 10
+  
   const router = useRouter()
   const supabase = createClient()
 
@@ -471,10 +476,10 @@ export default function ChallengesPage() {
               <>
                 <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <span>📅</span>
-                  Upcoming Challenges
+                  Upcoming Challenges ({upcomingChallenges.length})
                 </h2>
                 <div className="space-y-4 mb-8">
-                  {upcomingChallenges.map(challenge => (
+                  {upcomingChallenges.slice(0, showAllUpcoming ? undefined : ITEMS_PER_PAGE).map(challenge => (
                     <Card
                       key={challenge.id}
                       className="cursor-pointer hover:shadow-lg transition-shadow"
@@ -515,6 +520,17 @@ export default function ChallengesPage() {
                       </Card.Body>
                     </Card>
                   ))}
+                  
+                  {/* Show More Button */}
+                  {upcomingChallenges.length > ITEMS_PER_PAGE && !showAllUpcoming && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAllUpcoming(true)}
+                      fullWidth
+                    >
+                      Show More ({upcomingChallenges.length - ITEMS_PER_PAGE} more)
+                    </Button>
+                  )}
                 </div>
               </>
             )}
@@ -524,10 +540,10 @@ export default function ChallengesPage() {
               <>
                 <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <span>📚</span>
-                  Past Challenges
+                  Past Challenges ({pastChallenges.length})
                 </h2>
                 <div className="space-y-4">
-                  {pastChallenges.map(challenge => (
+                  {pastChallenges.slice(0, showAllPast ? undefined : ITEMS_PER_PAGE).map(challenge => (
                     <Card
                       key={challenge.id}
                       className="cursor-pointer hover:shadow-lg transition-shadow"
@@ -568,6 +584,17 @@ export default function ChallengesPage() {
                       </Card.Body>
                     </Card>
                   ))}
+                  
+                  {/* Show More Button */}
+                  {pastChallenges.length > ITEMS_PER_PAGE && !showAllPast && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAllPast(true)}
+                      fullWidth
+                    >
+                      Show More ({pastChallenges.length - ITEMS_PER_PAGE} more)
+                    </Button>
+                  )}
                 </div>
               </>
             )}

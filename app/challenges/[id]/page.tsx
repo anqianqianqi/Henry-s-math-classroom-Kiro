@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { CommentThread } from '@/components/CommentThread'
 
 interface Challenge {
   id: string
@@ -19,6 +20,17 @@ interface Submission {
   user_id: string
   content: string
   submitted_at: string
+  profiles: {
+    full_name: string
+  }
+}
+
+interface Comment {
+  id: string
+  submission_id: string
+  user_id: string
+  content: string
+  created_at: string
   profiles: {
     full_name: string
   }
@@ -49,6 +61,12 @@ export default function ChallengePage() {
   }>>([])
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
+  const [comments, setComments] = useState<{[submissionId: string]: Comment[]}>({})
+  const [newComment, setNewComment] = useState<{[submissionId: string]: string}>({})
+  const [submittingComment, setSubmittingComment] = useState<{[submissionId: string]: boolean}>({})
+  const [visibleComments, setVisibleComments] = useState<{[submissionId: string]: number}>({})
+  const COMMENTS_INCREMENT = 5
 
   useEffect(() => {
     loadChallenge()
@@ -173,6 +191,8 @@ export default function ChallengePage() {
     if (submissionData) {
       setUserSubmission(submissionData)
       setSolution(submissionData.content)
+      // Load comments for user's own submission
+      await loadCommentsForSubmissions([submissionData.id])
     }
 
     // Teachers always see all submissions, students only after submitting
@@ -226,6 +246,99 @@ export default function ChallengePage() {
     const { data: submissions } = await query
 
     setOtherSubmissions(submissions || [])
+    
+    // Load comments for all submissions
+    if (submissions && submissions.length > 0) {
+      await loadCommentsForSubmissions(submissions.map(s => s.id))
+    }
+  }
+
+  async function loadCommentsForSubmissions(submissionIds: string[]) {
+    console.log('Loading comments for submissions:', submissionIds)
+    const { data: commentsData } = await supabase
+      .from('submission_comments')
+      .select(`
+        *,
+        profiles!inner(full_name)
+      `)
+      .in('submission_id', submissionIds)
+      .order('created_at', { ascending: true })
+
+    console.log('Loaded comments:', commentsData)
+
+    if (commentsData) {
+      const commentsBySubmission: {[key: string]: Comment[]} = {}
+      commentsData.forEach((comment: Comment) => {
+        if (!commentsBySubmission[comment.submission_id]) {
+          commentsBySubmission[comment.submission_id] = []
+        }
+        commentsBySubmission[comment.submission_id].push(comment)
+      })
+      console.log('Comments by submission:', commentsBySubmission)
+      // MERGE with existing comments instead of replacing
+      setComments(prev => ({ ...prev, ...commentsBySubmission }))
+    }
+  }
+
+  async function handleSubmitComment(submissionId: string) {
+    const commentText = newComment[submissionId]?.trim()
+    if (!commentText || !userId) return
+
+    setSubmittingComment({ ...submittingComment, [submissionId]: true })
+
+    try {
+      const { data, error } = await supabase
+        .from('submission_comments')
+        .insert({
+          submission_id: submissionId,
+          user_id: userId,
+          content: commentText
+        })
+        .select(`
+          *,
+          profiles!inner(full_name)
+        `)
+        .single()
+
+      if (error) {
+        console.error('Error submitting comment:', error)
+        alert('Failed to submit comment: ' + error.message)
+      } else if (data) {
+        // Add comment to state
+        setComments(prev => ({
+          ...prev,
+          [submissionId]: [...(prev[submissionId] || []), data]
+        }))
+        // Clear input
+        setNewComment(prev => ({ ...prev, [submissionId]: '' }))
+        // Expand to show the new comment
+        const newCommentCount = (comments[submissionId]?.length || 0) + 1
+        if (newCommentCount > COMMENTS_INCREMENT) {
+          setVisibleComments(prev => ({
+            ...prev,
+            [submissionId]: newCommentCount
+          }))
+        }
+      }
+    } catch (err) {
+      console.error('Error submitting comment:', err)
+      alert('An unexpected error occurred')
+    } finally {
+      setSubmittingComment({ ...submittingComment, [submissionId]: false })
+    }
+  }
+
+  function handleShowMoreComments(submissionId: string) {
+    setVisibleComments(prev => {
+      const current = prev[submissionId] || COMMENTS_INCREMENT
+      const total = comments[submissionId]?.length || 0
+      // If showing all, collapse to 5. Otherwise expand by 5
+      if (current >= total) {
+        return { ...prev, [submissionId]: COMMENTS_INCREMENT }
+      } else {
+        return { ...prev, [submissionId]: Math.min(current + COMMENTS_INCREMENT, total) }
+      }
+    })
   }
 
   async function handleSubmit() {
@@ -317,6 +430,67 @@ export default function ChallengePage() {
     }
   }
 
+  async function handleDuplicate() {
+    if (!userId || !challenge) return
+    
+    setDuplicating(true)
+
+    try {
+      // Get class assignments for this challenge
+      const { data: assignments } = await supabase
+        .from('challenge_assignments')
+        .select('class_id')
+        .eq('challenge_id', params.id)
+
+      // Create new challenge with same data but new date (tomorrow)
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const newDate = tomorrow.toISOString().split('T')[0]
+
+      const { data: newChallenge, error: createError } = await supabase
+        .from('daily_challenges')
+        .insert({
+          title: challenge.title + ' (Copy)',
+          description: challenge.description,
+          challenge_date: newDate,
+          created_by: userId
+        })
+        .select()
+        .single()
+
+      if (createError || !newChallenge) {
+        console.error('Error creating duplicate:', createError)
+        alert('Failed to duplicate challenge: ' + (createError?.message || 'Unknown error'))
+        setDuplicating(false)
+        return
+      }
+
+      // Copy class assignments
+      if (assignments && assignments.length > 0) {
+        const newAssignments = assignments.map(a => ({
+          challenge_id: newChallenge.id,
+          class_id: a.class_id
+        }))
+
+        const { error: assignError } = await supabase
+          .from('challenge_assignments')
+          .insert(newAssignments)
+
+        if (assignError) {
+          console.error('Error copying assignments:', assignError)
+          // Continue anyway - challenge was created
+        }
+      }
+
+      // Redirect to edit page for the new challenge
+      router.push(`/challenges/${newChallenge.id}/edit`)
+    } catch (err) {
+      console.error('Error duplicating challenge:', err)
+      alert('An unexpected error occurred')
+      setDuplicating(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
@@ -377,6 +551,13 @@ export default function ChallengePage() {
                     onClick={() => router.push(`/challenges/${params.id}/edit`)}
                   >
                     ✏️ Edit
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleDuplicate}
+                    disabled={duplicating}
+                  >
+                    {duplicating ? '⏳ Duplicating...' : '📋 Duplicate'}
                   </Button>
                   <Button
                     variant="danger"
@@ -532,9 +713,22 @@ export default function ChallengePage() {
                   <p className="text-gray-700 whitespace-pre-wrap mb-3">
                     {userSubmission.content}
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 mb-3">
                     Submitted {formatTimeAgo(userSubmission.submitted_at)}
                   </p>
+                  
+                  <CommentThread
+                    submissionId={userSubmission.id}
+                    comments={comments[userSubmission.id] || []}
+                    visibleCount={visibleComments[userSubmission.id] || COMMENTS_INCREMENT}
+                    onShowMore={() => handleShowMoreComments(userSubmission.id)}
+                    newComment={newComment[userSubmission.id] || ''}
+                    onCommentChange={(value) => setNewComment(prev => ({ ...prev, [userSubmission.id]: value }))}
+                    onSubmitComment={() => handleSubmitComment(userSubmission.id)}
+                    isSubmitting={submittingComment[userSubmission.id] || false}
+                    formatTimeAgo={formatTimeAgo}
+                    showTitle={true}
+                  />
                 </Card.Body>
               </Card>
             ) : (
@@ -601,8 +795,7 @@ export default function ChallengePage() {
                   {otherSubmissions.map(submission => (
                     <div
                       key={submission.id}
-                      className="p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 
-                               transition-colors"
+                      className="p-4 bg-gray-50 rounded-2xl"
                     >
                       <div className="flex items-start gap-3">
                         <div className="text-2xl">👤</div>
@@ -615,9 +808,22 @@ export default function ChallengePage() {
                               {formatTimeAgo(submission.submitted_at)}
                             </p>
                           </div>
-                          <p className="text-gray-700 whitespace-pre-wrap">
+                          <p className="text-gray-700 whitespace-pre-wrap mb-3">
                             {submission.content}
                           </p>
+                          
+                          <CommentThread
+                            submissionId={submission.id}
+                            comments={comments[submission.id] || []}
+                            visibleCount={visibleComments[submission.id] || COMMENTS_INCREMENT}
+                            onShowMore={() => handleShowMoreComments(submission.id)}
+                            newComment={newComment[submission.id] || ''}
+                            onCommentChange={(value) => setNewComment(prev => ({ ...prev, [submission.id]: value }))}
+                            onSubmitComment={() => handleSubmitComment(submission.id)}
+                            isSubmitting={submittingComment[submission.id] || false}
+                            formatTimeAgo={formatTimeAgo}
+                            showTitle={false}
+                          />
                         </div>
                       </div>
                     </div>
@@ -646,7 +852,7 @@ export default function ChallengePage() {
               </p>
               <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
                 <span>👥</span>
-                <span>{otherSubmissions.length} students have submitted</span>
+                <span>{submissionCount} {submissionCount === 1 ? 'student has' : 'students have'} submitted</span>
               </div>
             </Card.Body>
           </Card>
