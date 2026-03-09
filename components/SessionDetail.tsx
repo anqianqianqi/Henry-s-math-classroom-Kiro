@@ -145,6 +145,20 @@ export default function SessionDetail({ occurrenceId, userRole, onClose }: Sessi
             .order('version', { ascending: false })
 
           if (subError) throw subError
+          
+          // Debug: Log submissions to verify comments are loaded
+          console.log('📝 Loaded student submissions:', subData)
+          if (subData && subData.length > 0) {
+            subData.forEach((sub, idx) => {
+              console.log(`  Submission ${idx + 1}:`, {
+                id: sub.id,
+                hasComments: !!sub.comments,
+                comments: sub.comments,
+                submitted_at: sub.submitted_at
+              })
+            })
+          }
+          
           setMySubmissions(subData || [])
         }
       }
@@ -491,6 +505,18 @@ export default function SessionDetail({ occurrenceId, userRole, onClose }: Sessi
                                   </a>
                                 )}
                               </div>
+
+                              {/* Student Comments */}
+                              {submission.comments && submission.comments.trim() && (
+                                <div className="mt-2 p-3 bg-blue-50 rounded border border-blue-200">
+                                  <span className="text-xs font-semibold text-blue-700 block mb-1">
+                                    💬 Your Comments:
+                                  </span>
+                                  <p className="text-sm text-blue-900 whitespace-pre-wrap">
+                                    {submission.comments}
+                                  </p>
+                                </div>
+                              )}
 
                               {/* Grade Display */}
                               {isGraded && grade && (

@@ -348,10 +348,15 @@ export default function GradingInterface({
                             Submission:
                           </label>
                           {getSubmissionContent(submission)}
-                          {submission.comments && (
-                            <p className="text-sm text-gray-600 mt-2 italic">
-                              "{submission.comments}"
-                            </p>
+                          {submission.comments && submission.comments.trim() && (
+                            <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
+                              <span className="text-xs font-semibold text-blue-700 block mb-1">
+                                💬 Student Comments:
+                              </span>
+                              <p className="text-sm text-blue-900 whitespace-pre-wrap">
+                                {submission.comments}
+                              </p>
+                            </div>
                           )}
                         </div>
 

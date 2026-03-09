@@ -164,6 +164,13 @@ export default function SubmissionForm({
         submitted_at: new Date().toISOString()
       }
 
+      // Debug: Log submission data to verify comments
+      console.log('💾 Saving submission with data:', {
+        ...submissionData,
+        hasComments: !!submissionData.comments,
+        commentsLength: submissionData.comments?.length || 0
+      })
+
       if (isUpdate) {
         // Update existing submission
         const { error: updateError } = await supabase
