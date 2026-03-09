@@ -5,6 +5,8 @@ import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import SessionsList from '@/components/SessionsList'
+import SessionDetail from '@/components/SessionDetail'
 
 interface Class {
   id: string
@@ -29,6 +31,8 @@ interface Member {
 export default function ClassDetailPage() {
   const [classData, setClassData] = useState<Class | null>(null)
   const [members, setMembers] = useState<Member[]>([])
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<'teacher' | 'student' | 'observer'>('student')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -39,6 +43,7 @@ export default function ClassDetailPage() {
   useEffect(() => {
     loadClassData()
     loadMembers()
+    loadUserRole()
   }, [classId])
 
   async function loadClassData() {
@@ -89,6 +94,43 @@ export default function ClassDetailPage() {
       setMembers(formattedMembers)
     } catch (err) {
       console.error('Failed to load members:', err)
+    }
+  }
+
+  async function loadUserRole() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Check if user is an admin
+      const { data: userRoles } = await supabase
+        .from('user_roles')
+        .select('role_id, roles(name)')
+        .eq('user_id', user.id)
+
+      const isAdmin = userRoles?.some((ur: any) => ur.roles?.name === 'admin')
+      
+      if (isAdmin) {
+        setUserRole('teacher') // Admins have teacher privileges
+        return
+      }
+
+      // Check if user is the class creator (teacher)
+      const { data: classOwner } = await supabase
+        .from('classes')
+        .select('created_by')
+        .eq('id', classId)
+        .single()
+
+      if (classOwner?.created_by === user.id) {
+        setUserRole('teacher')
+        return
+      }
+
+      // Otherwise assume student
+      setUserRole('student')
+    } catch (err) {
+      console.error('Failed to load user role:', err)
     }
   }
 
@@ -259,6 +301,20 @@ export default function ClassDetailPage() {
               )}
             </Card.Body>
           </Card>
+
+          {/* Class Sessions */}
+          {selectedSessionId ? (
+            <SessionDetail
+              occurrenceId={selectedSessionId}
+              userRole={userRole}
+              onClose={() => setSelectedSessionId(null)}
+            />
+          ) : (
+            <SessionsList
+              classId={classId}
+              onSelectSession={(sessionId) => setSelectedSessionId(sessionId)}
+            />
+          )}
         </div>
       </div>
     </div>

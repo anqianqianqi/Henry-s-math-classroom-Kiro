@@ -12,6 +12,11 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [isTeacher, setIsTeacher] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [stats, setStats] = useState({
+    classesCount: 0,
+    challengesCount: 0,
+    dayStreak: 0
+  })
   const router = useRouter()
   const supabase = createClient()
 
@@ -47,6 +52,9 @@ export default function DashboardPage() {
 
     console.log('User roles:', { userRoles, rolesError, userId: user.id })
 
+    let hasTeacherRole = false
+    let hasAdminRole = false
+
     if (userRoles && userRoles.length > 0) {
       // Get role names
       const { data: roleData } = await supabase
@@ -55,17 +63,120 @@ export default function DashboardPage() {
         .in('id', userRoles.map((r: any) => r.role_id))
 
       console.log('Role names:', roleData)
-      const hasTeacherRole = roleData?.some((r: any) => r.name === 'teacher')
-      const hasAdminRole = roleData?.some((r: any) => r.name === 'administrator')
+      hasTeacherRole = roleData?.some((r: any) => r.name === 'teacher') || false
+      hasAdminRole = roleData?.some((r: any) => r.name === 'administrator') || false
       console.log('Is teacher?', hasTeacherRole, 'Is admin?', hasAdminRole)
-      setIsTeacher(hasTeacherRole || false)
-      setIsAdmin(hasAdminRole || false)
+      setIsTeacher(hasTeacherRole)
+      setIsAdmin(hasAdminRole)
     } else {
       setIsTeacher(false)
       setIsAdmin(false)
     }
 
+    // Load stats
+    await loadStats(user.id)
+
     setLoading(false)
+  }
+
+  async function loadStats(userId: string) {
+    try {
+      // Count classes - RLS policies will determine what the user can see
+      // Admin sees all, teachers see their own, students see enrolled classes
+      const { count: classesCount, error: classesError } = await supabase
+        .from('classes')
+        .select('*', { count: 'exact', head: true })
+
+      console.log('Classes count:', classesCount, 'Error:', classesError)
+
+      // Count challenges - RLS policies will determine what the user can see
+      const { count: challengesCount, error: challengesError } = await supabase
+        .from('daily_challenges')
+        .select('*', { count: 'exact', head: true })
+
+      console.log('Challenges count:', challengesCount, 'Error:', challengesError)
+
+      // Calculate day streak from challenge submissions
+      const { data: submissions, error: submissionsError } = await supabase
+        .from('challenge_submissions')
+        .select('submitted_at')
+        .eq('student_id', userId)
+        .order('submitted_at', { ascending: false })
+
+      console.log('🔥 Streak Debug - Submissions:', submissions?.length, 'Error:', submissionsError)
+      console.log('🔥 Streak Debug - Raw submissions:', submissions)
+
+      let dayStreak = 0
+      if (submissions && submissions.length > 0) {
+        // Calculate streak by checking consecutive days
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        
+        console.log('🔥 Streak Debug - Today:', today)
+        
+        const submissionDates = submissions.map(s => {
+          const date = new Date(s.submitted_at)
+          date.setHours(0, 0, 0, 0)
+          console.log('🔥 Streak Debug - Submission date:', s.submitted_at, '→', date)
+          return date.getTime()
+        })
+        
+        // Remove duplicates (multiple submissions on same day)
+        const uniqueDates = [...new Set(submissionDates)].sort((a, b) => b - a)
+        console.log('🔥 Streak Debug - Unique dates:', uniqueDates.map(d => new Date(d).toLocaleDateString()))
+        
+        // Check if there's a submission today or yesterday (streak can continue)
+        const yesterday = new Date(today)
+        yesterday.setDate(yesterday.getDate() - 1)
+        
+        let currentDate = today.getTime()
+        const hasSubmissionToday = uniqueDates.includes(today.getTime())
+        const hasSubmissionYesterday = uniqueDates.includes(yesterday.getTime())
+        
+        console.log('🔥 Streak Debug - Has submission today?', hasSubmissionToday)
+        console.log('🔥 Streak Debug - Has submission yesterday?', hasSubmissionYesterday)
+        
+        if (!hasSubmissionToday && !hasSubmissionYesterday) {
+          // No submission today or yesterday, streak is broken
+          console.log('🔥 Streak Debug - Streak broken (no submission today or yesterday)')
+          dayStreak = 0
+        } else {
+          // Start from yesterday if no submission today, otherwise start from today
+          if (!hasSubmissionToday) {
+            currentDate = yesterday.getTime()
+          }
+          
+          console.log('🔥 Streak Debug - Starting from:', new Date(currentDate).toLocaleDateString())
+          
+          // Count consecutive days
+          for (const dateTime of uniqueDates) {
+            console.log('🔥 Streak Debug - Checking:', new Date(dateTime).toLocaleDateString(), 'vs', new Date(currentDate).toLocaleDateString())
+            if (dateTime === currentDate) {
+              dayStreak++
+              console.log('🔥 Streak Debug - Match! Streak now:', dayStreak)
+              currentDate -= 24 * 60 * 60 * 1000 // Go back one day
+            } else if (dateTime < currentDate) {
+              // Gap found, stop counting
+              console.log('🔥 Streak Debug - Gap found, stopping')
+              break
+            }
+          }
+        }
+      }
+
+      console.log('🔥 Streak Debug - Final streak:', dayStreak)
+
+      const newStats = {
+        classesCount: classesCount || 0,
+        challengesCount: challengesCount || 0,
+        dayStreak
+      }
+
+      console.log('Setting stats:', newStats)
+      setStats(newStats)
+    } catch (err) {
+      console.error('Failed to load stats:', err)
+    }
   }
 
   async function handleSignOut() {
@@ -94,7 +205,7 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
               <span className="text-3xl">📚</span>
-              <h1 className="text-2xl font-bold text-gray-900">Henry's Math</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Henry's Math Classroom</h1>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-gray-600 font-medium">
@@ -130,33 +241,32 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="text-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card 
+            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => router.push('/classes')}
+          >
             <Card.Body>
               <div className="text-5xl mb-3">📚</div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">0</div>
+              <div className="text-3xl font-bold text-gray-900 mb-1">{stats.classesCount}</div>
               <div className="text-gray-600 font-medium">Classes</div>
             </Card.Body>
           </Card>
 
-          <Card className="text-center">
+          <Card 
+            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => router.push('/challenges')}
+          >
             <Card.Body>
               <div className="text-5xl mb-3">🎯</div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">0</div>
+              <div className="text-3xl font-bold text-gray-900 mb-1">{stats.challengesCount}</div>
               <div className="text-gray-600 font-medium">Challenges</div>
-            </Card.Body>
-          </Card>
-
-          <Card className="text-center">
-            <Card.Body>
-              <div className="text-5xl mb-3">🔥</div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">0</div>
-              <div className="text-gray-600 font-medium">Day Streak</div>
             </Card.Body>
           </Card>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions - Hidden for now */}
+        {false && (
         <Card className="mb-8">
           <Card.Header>
             <Card.Title className="flex items-center gap-2">
@@ -228,10 +338,34 @@ export default function DashboardPage() {
             )}
           </Card.Body>
         </Card>
+        )}
+
+        {/* Featured: Explore Classes */}
+        <Card 
+          className="cursor-pointer mb-6 bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 shadow-xl hover:shadow-2xl transition-all"
+          onClick={() => router.push('/classes/explore')}
+        >
+          <Card.Body className="p-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-4xl">🌍</span>
+                  <h3 className="text-2xl font-bold">Explore Classes</h3>
+                </div>
+                <p className="text-white/90 text-lg">
+                  Discover amazing learning opportunities from teachers around the world
+                </p>
+              </div>
+              <div className="text-6xl opacity-20">
+                →
+              </div>
+            </div>
+          </Card.Body>
+        </Card>
 
         {/* Main Navigation Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="cursor-pointer" onClick={() => router.push('/classes')}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/classes')}>
             <Card.Header>
               <Card.Title className="flex items-center gap-2">
                 <span className="text-2xl">📚</span>
@@ -250,7 +384,7 @@ export default function DashboardPage() {
             </Card.Footer>
           </Card>
 
-          <Card className="cursor-pointer" onClick={() => router.push('/challenges')}>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/challenges')}>
             <Card.Header>
               <Card.Title className="flex items-center gap-2">
                 <span className="text-2xl">🎯</span>
@@ -265,25 +399,6 @@ export default function DashboardPage() {
             <Card.Footer>
               <span className="text-primary-600 hover:text-primary-700 font-semibold text-sm">
                 View Challenge →
-              </span>
-            </Card.Footer>
-          </Card>
-
-          <Card className="cursor-pointer" onClick={() => router.push('/materials')}>
-            <Card.Header>
-              <Card.Title className="flex items-center gap-2">
-                <span className="text-2xl">📝</span>
-                Materials
-              </Card.Title>
-            </Card.Header>
-            <Card.Body>
-              <p className="text-gray-600">
-                Access class materials and resources
-              </p>
-            </Card.Body>
-            <Card.Footer>
-              <span className="text-primary-600 hover:text-primary-700 font-semibold text-sm">
-                View Materials →
               </span>
             </Card.Footer>
           </Card>

@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { FormField } from '@/components/ui/FormField'
-import { Input } from '@/components/ui/Input'
 
 interface ScheduleSlot {
   id: string
@@ -296,17 +295,19 @@ export default function EditClassPage() {
                 </div>
               )}
 
-              <FormField label="Class Name" required>
-                <Input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Algebra 1 - Spring 2026"
-                  required
-                />
-              </FormField>
+              <FormField 
+                label="Class Name" 
+                required
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Algebra 1 - Spring 2026"
+              />
 
-              <FormField label="Description">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -314,7 +315,7 @@ export default function EditClassPage() {
                   rows={4}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-              </FormField>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -398,23 +399,21 @@ export default function EditClassPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <FormField label="Start Date" required>
-                  <Input
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    required
-                  />
-                </FormField>
+                <FormField 
+                  label="Start Date" 
+                  required
+                  type="date"
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                />
 
-                <FormField label="End Date">
-                  <Input
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                    min={formData.start_date}
-                  />
-                </FormField>
+                <FormField 
+                  label="End Date"
+                  type="date"
+                  value={formData.end_date}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  min={formData.start_date}
+                />
               </div>
 
               {/* Divider */}
@@ -494,7 +493,10 @@ export default function EditClassPage() {
                       )}
                     </div>
 
-                    <FormField label="Who is this class for?">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Who is this class for?
+                      </label>
                       <textarea
                         value={formData.target_audience}
                         onChange={(e) => setFormData({ ...formData, target_audience: e.target.value })}
@@ -502,18 +504,20 @@ export default function EditClassPage() {
                         rows={3}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
-                    </FormField>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <FormField label="Age/Grade Range">
-                        <Input
-                          type="text"
-                          value={formData.age_range}
-                          onChange={(e) => setFormData({ ...formData, age_range: e.target.value })}
-                          placeholder="e.g., Grades 3-5"
-                        />
-                      </FormField>
-                      <FormField label="Skill Level">
+                      <FormField 
+                        label="Age/Grade Range"
+                        type="text"
+                        value={formData.age_range}
+                        onChange={(e) => setFormData({ ...formData, age_range: e.target.value })}
+                        placeholder="e.g., Grades 3-5"
+                      />
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Skill Level
+                        </label>
                         <select
                           value={formData.skill_level}
                           onChange={(e) => setFormData({ ...formData, skill_level: e.target.value })}
@@ -524,10 +528,13 @@ export default function EditClassPage() {
                           <option value="intermediate">Intermediate</option>
                           <option value="advanced">Advanced</option>
                         </select>
-                      </FormField>
+                      </div>
                     </div>
 
-                    <FormField label="Prerequisites (optional)">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Prerequisites (optional)
+                      </label>
                       <textarea
                         value={formData.prerequisites}
                         onChange={(e) => setFormData({ ...formData, prerequisites: e.target.value })}
@@ -535,9 +542,12 @@ export default function EditClassPage() {
                         rows={2}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
-                    </FormField>
+                    </div>
 
-                    <FormField label="Syllabus / What's Included">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Syllabus / What's Included
+                      </label>
                       <textarea
                         value={formData.syllabus}
                         onChange={(e) => setFormData({ ...formData, syllabus: e.target.value })}
@@ -545,7 +555,7 @@ export default function EditClassPage() {
                         rows={4}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
-                    </FormField>
+                    </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -583,7 +593,10 @@ export default function EditClassPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <FormField label="Materials Provided">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Materials Provided
+                        </label>
                         <textarea
                           value={formData.materials_provided}
                           onChange={(e) => setFormData({ ...formData, materials_provided: e.target.value })}
@@ -591,8 +604,11 @@ export default function EditClassPage() {
                           rows={2}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
-                      </FormField>
-                      <FormField label="Homework Expectations">
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Homework Expectations
+                        </label>
                         <textarea
                           value={formData.homework_expectations}
                           onChange={(e) => setFormData({ ...formData, homework_expectations: e.target.value })}
@@ -600,10 +616,13 @@ export default function EditClassPage() {
                           rows={2}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
-                      </FormField>
+                      </div>
                     </div>
 
-                    <FormField label="About the Teacher">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        About the Teacher
+                      </label>
                       <textarea
                         value={formData.teacher_bio}
                         onChange={(e) => setFormData({ ...formData, teacher_bio: e.target.value })}
@@ -611,45 +630,41 @@ export default function EditClassPage() {
                         rows={3}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
-                    </FormField>
+                    </div>
 
-                    <FormField label="Teaching Style">
-                      <Input
-                        type="text"
-                        value={formData.teaching_style}
-                        onChange={(e) => setFormData({ ...formData, teaching_style: e.target.value })}
-                        placeholder="e.g., Interactive, Project-based"
-                      />
-                    </FormField>
+                    <FormField 
+                      label="Teaching Style"
+                      type="text"
+                      value={formData.teaching_style}
+                      onChange={(e) => setFormData({ ...formData, teaching_style: e.target.value })}
+                      placeholder="e.g., Interactive, Project-based"
+                    />
 
                     <div className="grid grid-cols-3 gap-4">
-                      <FormField label="Max Students">
-                        <Input
-                          type="number"
-                          value={formData.max_students}
-                          onChange={(e) => setFormData({ ...formData, max_students: e.target.value })}
-                          placeholder="20"
-                          min="1"
-                        />
-                      </FormField>
-                      <FormField label="Price ($)">
-                        <Input
-                          type="number"
-                          value={formData.price}
-                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                          placeholder="0.00"
-                          min="0"
-                          step="0.01"
-                        />
-                      </FormField>
-                      <FormField label="Location">
-                        <Input
-                          type="text"
-                          value={formData.location}
-                          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                          placeholder="Online"
-                        />
-                      </FormField>
+                      <FormField 
+                        label="Max Students"
+                        type="number"
+                        value={formData.max_students}
+                        onChange={(e) => setFormData({ ...formData, max_students: e.target.value })}
+                        placeholder="20"
+                        min="1"
+                      />
+                      <FormField 
+                        label="Price ($)"
+                        type="number"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                      />
+                      <FormField 
+                        label="Location"
+                        type="text"
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        placeholder="Online"
+                      />
                     </div>
                   </div>
                 )}
