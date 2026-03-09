@@ -63,9 +63,25 @@ Workflow:
 6. ✅ GradingInterface
 7. ✅ ProgressDashboard
 
-## 🚧 What's Next
+## 🎯 What's Next
 
-### Immediate Priority: Phase 4 & 5 Utilities
+### Immediate Priority: Test Comments Display
+**Status:** Just improved (March 9, 2026)
+**Action Required:** User testing
+
+The comments display has been enhanced with:
+- More prominent blue box styling with 💬 emoji
+- Debug logging to verify data flow
+- Better visual hierarchy
+
+**Testing Steps:**
+1. Clear browser cache (Ctrl+Shift+R)
+2. Login as student and submit homework WITH comments
+3. Check browser console for debug logs
+4. Verify blue box appears in submission history
+5. See `TEST_COMMENTS_DISPLAY.md` for detailed steps
+
+### Next Priority: Phase 4 & 5 Utilities
 **Status:** Not started (0%)
 **Estimated:** 2-3 hours each
 
@@ -123,7 +139,15 @@ Both buckets are public for `getPublicUrl()` to work:
 
 ## 📁 Key Files Modified Today
 
-### Components
+### Latest Update (Comments Display)
+- `components/SessionDetail.tsx` - Enhanced comments display + debug logs
+- `components/GradingInterface.tsx` - Improved comments styling
+- `components/SubmissionForm.tsx` - Added save debug logs
+- `supabase/check-homework-comments.sql` - Database verification
+- `TEST_COMMENTS_DISPLAY.md` - Testing guide
+- `COMMENTS_DISPLAY_IMPROVED.md` - Change summary
+
+### Previous Updates (Homework System)
 - `components/MaterialUpload.tsx` - Added link support
 - `components/SessionDetail.tsx` - Integrated submission/grading
 - `components/SubmissionForm.tsx` - Fixed overwrite logic
