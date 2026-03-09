@@ -210,6 +210,13 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-4">
               <NotificationBell />
+              <button
+                onClick={() => router.push('/settings')}
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Settings"
+              >
+                <span className="text-2xl">⚙️</span>
+              </button>
               <span className="text-gray-600 font-medium">
                 {profile?.full_name || user?.email}
               </span>
