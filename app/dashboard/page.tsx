@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import NotificationBell from '@/components/NotificationBell'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
@@ -208,6 +209,7 @@ export default function DashboardPage() {
               <h1 className="text-2xl font-bold text-gray-900">Henry's Math Classroom</h1>
             </div>
             <div className="flex items-center gap-4">
+              <NotificationBell />
               <span className="text-gray-600 font-medium">
                 {profile?.full_name || user?.email}
               </span>
