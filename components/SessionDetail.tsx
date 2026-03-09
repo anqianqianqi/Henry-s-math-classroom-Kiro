@@ -68,6 +68,17 @@ interface StudentSubmission {
   }>
 }
 
+interface SubmissionComment {
+  id: string
+  submission_id: string
+  user_id: string
+  content: string
+  created_at: string
+  profiles: {
+    full_name: string
+  }
+}
+
 interface SessionDetailProps {
   occurrenceId: string
   userRole: 'teacher' | 'student' | 'observer'
@@ -79,6 +90,9 @@ export default function SessionDetail({ occurrenceId, userRole, onClose }: Sessi
   const [materials, setMaterials] = useState<Material[]>([])
   const [homework, setHomework] = useState<HomeworkAssignment | null>(null)
   const [mySubmissions, setMySubmissions] = useState<StudentSubmission[]>([])
+  const [submissionComments, setSubmissionComments] = useState<Record<string, SubmissionComment[]>>({})
+  const [newCommentText, setNewCommentText] = useState<Record<string, string>>({})
+  const [submittingComment, setSubmittingComment] = useState<Record<string, boolean>>({})
   const [showUploadForm, setShowUploadForm] = useState(false)
   const [showHomeworkForm, setShowHomeworkForm] = useState(false)
   const [showGradingInterface, setShowGradingInterface] = useState(false)
@@ -134,32 +148,55 @@ export default function SessionDetail({ occurrenceId, userRole, onClose }: Sessi
       if (userRole === 'student' && hwData) {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
+          // Load submissions
           const { data: subData, error: subError } = await supabase
             .from('homework_submissions')
-            .select(`
-              *,
-              homework_grades(*)
-            `)
+            .select('*')
             .eq('assignment_id', hwData.id)
             .eq('student_id', user.id)
             .order('version', { ascending: false })
 
           if (subError) throw subError
           
-          // Debug: Log submissions to verify comments are loaded
-          console.log('📝 Loaded student submissions:', subData)
+          // Load published grades separately
           if (subData && subData.length > 0) {
-            subData.forEach((sub, idx) => {
+            const submissionIds = subData.map(s => s.id)
+            const { data: gradesData, error: gradesError } = await supabase
+              .from('homework_grades')
+              .select('*')
+              .in('submission_id', submissionIds)
+              .eq('status', 'published')
+            
+            if (gradesError) {
+              console.error('Error loading grades:', gradesError)
+            }
+            
+            // Attach grades to submissions
+            const subsWithGrades = subData.map(sub => ({
+              ...sub,
+              homework_grades: gradesData?.filter(g => g.submission_id === sub.id) || []
+            }))
+            
+            // Debug: Log submissions and grades
+            console.log('📝 Loaded student submissions:', subsWithGrades)
+            subsWithGrades.forEach((sub, idx) => {
               console.log(`  Submission ${idx + 1}:`, {
                 id: sub.id,
                 hasComments: !!sub.comments,
-                comments: sub.comments,
-                submitted_at: sub.submitted_at
+                submitted_at: sub.submitted_at,
+                grades: sub.homework_grades,
+                hasGrades: sub.homework_grades && sub.homework_grades.length > 0,
+                gradeStatus: sub.homework_grades?.[0]?.status
               })
             })
+            
+            setMySubmissions(subsWithGrades)
+            
+            // Load comments for submissions
+            await loadCommentsForSubmissions(submissionIds)
+          } else {
+            setMySubmissions([])
           }
-          
-          setMySubmissions(subData || [])
         }
       }
 
@@ -168,6 +205,79 @@ export default function SessionDetail({ occurrenceId, userRole, onClose }: Sessi
       setError(err instanceof Error ? err.message : 'Failed to load session')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function loadCommentsForSubmissions(submissionIds: string[]) {
+    try {
+      const { data: commentsData, error: commentsError } = await supabase
+        .from('homework_submission_comments')
+        .select(`
+          *,
+          profiles!inner(full_name)
+        `)
+        .in('submission_id', submissionIds)
+        .order('created_at', { ascending: true })
+
+      if (commentsError) {
+        console.error('Failed to load comments:', commentsError)
+        return
+      }
+
+      if (commentsData) {
+        const commentsBySubmission: Record<string, SubmissionComment[]> = {}
+        commentsData.forEach((comment: SubmissionComment) => {
+          if (!commentsBySubmission[comment.submission_id]) {
+            commentsBySubmission[comment.submission_id] = []
+          }
+          commentsBySubmission[comment.submission_id].push(comment)
+        })
+        setSubmissionComments(commentsBySubmission)
+      }
+    } catch (err) {
+      console.error('Error loading comments:', err)
+    }
+  }
+
+  async function handleSubmitComment(submissionId: string) {
+    const commentText = newCommentText[submissionId]?.trim()
+    if (!commentText) return
+
+    setSubmittingComment({ ...submittingComment, [submissionId]: true })
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const { data, error: insertError } = await supabase
+        .from('homework_submission_comments')
+        .insert({
+          submission_id: submissionId,
+          user_id: user.id,
+          content: commentText
+        })
+        .select(`
+          *,
+          profiles!inner(full_name)
+        `)
+        .single()
+
+      if (insertError) throw insertError
+
+      if (data) {
+        // Add comment to state
+        setSubmissionComments(prev => ({
+          ...prev,
+          [submissionId]: [...(prev[submissionId] || []), data]
+        }))
+        // Clear input
+        setNewCommentText(prev => ({ ...prev, [submissionId]: '' }))
+      }
+    } catch (err) {
+      console.error('Failed to submit comment:', err)
+      setError(err instanceof Error ? err.message : 'Failed to submit comment')
+    } finally {
+      setSubmittingComment({ ...submittingComment, [submissionId]: false })
     }
   }
 
@@ -539,6 +649,57 @@ export default function SessionDetail({ occurrenceId, userRole, onClose }: Sessi
                                   )}
                                 </div>
                               )}
+
+                              {/* Comments Thread */}
+                              <div className="mt-3 pt-3 border-t border-gray-300 space-y-3">
+                                <h6 className="text-sm font-medium text-gray-700">Comments</h6>
+                                
+                                {/* Display existing comments */}
+                                {submissionComments[submission.id] && submissionComments[submission.id].length > 0 && (
+                                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                                    {submissionComments[submission.id].map((comment) => (
+                                      <div key={comment.id} className="p-2 bg-white rounded border border-gray-200">
+                                        <div className="flex items-start justify-between">
+                                          <div className="flex-1">
+                                            <p className="text-xs font-semibold text-gray-700">
+                                              {comment.profiles.full_name}
+                                            </p>
+                                            <p className="text-sm text-gray-900 mt-1 whitespace-pre-wrap">
+                                              {comment.content}
+                                            </p>
+                                          </div>
+                                          <span className="text-xs text-gray-500 ml-2">
+                                            {new Date(comment.created_at).toLocaleString()}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Add new comment */}
+                                <div className="space-y-2">
+                                  <textarea
+                                    value={newCommentText[submission.id] || ''}
+                                    onChange={(e) => setNewCommentText({
+                                      ...newCommentText,
+                                      [submission.id]: e.target.value
+                                    })}
+                                    placeholder="Add a comment..."
+                                    rows={2}
+                                    disabled={submittingComment[submission.id]}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                  />
+                                  <Button
+                                    onClick={() => handleSubmitComment(submission.id)}
+                                    disabled={submittingComment[submission.id] || !newCommentText[submission.id]?.trim()}
+                                    size="sm"
+                                    variant="secondary"
+                                  >
+                                    {submittingComment[submission.id] ? 'Posting...' : 'Post Comment'}
+                                  </Button>
+                                </div>
+                              </div>
                             </div>
                           )
                         })}
