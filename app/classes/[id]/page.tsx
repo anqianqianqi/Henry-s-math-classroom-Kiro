@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import SessionsList from '@/components/SessionsList'
 import SessionDetail from '@/components/SessionDetail'
+import EnrollmentManager from '@/components/EnrollmentManager'
 
 interface Class {
   id: string
@@ -267,40 +268,44 @@ export default function ClassDetailPage() {
             </Card.Body>
           </Card>
 
-          <Card>
-            <Card.Header>
-              <div className="flex justify-between items-center">
+          {/* Members Section - Use EnrollmentManager for teachers */}
+          {userRole === 'teacher' ? (
+            <EnrollmentManager
+              classId={classId}
+              members={members}
+              onMembersUpdate={loadMembers}
+            />
+          ) : (
+            <Card>
+              <Card.Header>
                 <Card.Title>Members ({members.length})</Card.Title>
-                <Button size="sm" onClick={() => router.push(`/classes/${classId}/enroll`)}>
-                  Add Student
-                </Button>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              {members.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No members yet</p>
-              ) : (
-                <div className="space-y-3">
-                  {members.map(member => (
-                    <div
-                      key={member.id}
-                      className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-                    >
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {member.profiles.full_name}
-                        </p>
-                        <p className="text-sm text-gray-500">{member.profiles.email}</p>
+              </Card.Header>
+              <Card.Body>
+                {members.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No members yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {members.map(member => (
+                      <div
+                        key={member.id}
+                        className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {member.profiles.full_name}
+                          </p>
+                          <p className="text-sm text-gray-500">{member.profiles.email}</p>
+                        </div>
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                          {member.role_name}
+                        </span>
                       </div>
-                      <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                        {member.role_name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card.Body>
-          </Card>
+                    ))}
+                  </div>
+                )}
+              </Card.Body>
+            </Card>
+          )}
 
           {/* Class Sessions */}
           {selectedSessionId ? (
