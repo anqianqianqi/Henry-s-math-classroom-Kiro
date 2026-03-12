@@ -63,6 +63,7 @@ export default function ChallengePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
+  const [savingTemplate, setSavingTemplate] = useState(false)
   const [totalSubmissionCount, setTotalSubmissionCount] = useState(0)
   const [comments, setComments] = useState<{[submissionId: string]: Comment[]}>({})
   const [newComment, setNewComment] = useState<{[submissionId: string]: string}>({})
@@ -501,6 +502,43 @@ export default function ChallengePage() {
     }
   }
 
+  async function handleSaveAsTemplate() {
+    if (!userId || !challenge) return
+    
+    const templateTitle = prompt('Enter a name for this template:', challenge.title + ' (Template)')
+    if (!templateTitle) return // User cancelled
+    
+    setSavingTemplate(true)
+
+    try {
+      const { data: template, error } = await supabase
+        .from('challenge_templates')
+        .insert({
+          title: templateTitle,
+          description: challenge.description,
+          created_by: userId,
+          image_url: challenge.image_url,
+          is_public: false
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error saving template:', error)
+        alert('Failed to save template: ' + error.message)
+        setSavingTemplate(false)
+        return
+      }
+
+      alert(`Template "${templateTitle}" saved successfully!`)
+      setSavingTemplate(false)
+    } catch (err) {
+      console.error('Error saving template:', err)
+      alert('An unexpected error occurred')
+      setSavingTemplate(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
@@ -568,6 +606,13 @@ export default function ChallengePage() {
                     disabled={duplicating}
                   >
                     {duplicating ? '⏳ Duplicating...' : '📋 Duplicate'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleSaveAsTemplate}
+                    disabled={savingTemplate}
+                  >
+                    {savingTemplate ? '⏳ Saving...' : '💾 Save as Template'}
                   </Button>
                   <Button
                     variant="danger"

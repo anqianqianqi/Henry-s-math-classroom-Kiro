@@ -300,10 +300,16 @@ export default function ChallengesPage() {
               </div>
             </div>
             {isTeacher && (
-              <Button onClick={() => router.push('/challenges/new')}>
-                <span className="mr-2">➕</span>
-                Create Challenge
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => router.push('/challenges/new')}>
+                  <span className="mr-2">➕</span>
+                  Create Challenge
+                </Button>
+                <Button onClick={() => router.push('/challenges/templates')} variant="secondary">
+                  <span className="mr-2">📝</span>
+                  Templates
+                </Button>
+              </div>
             )}
           </div>
         </div>
