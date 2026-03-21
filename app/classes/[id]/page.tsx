@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card'
 import SessionsList from '@/components/SessionsList'
 import SessionDetail from '@/components/SessionDetail'
 import EnrollmentManager from '@/components/EnrollmentManager'
+import JoinRequestManager from '@/components/JoinRequestManager'
 
 interface Class {
   id: string
@@ -36,6 +37,9 @@ export default function ClassDetailPage() {
   const [userRole, setUserRole] = useState<'teacher' | 'student' | 'observer'>('student')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isEnrolled, setIsEnrolled] = useState(false)
+  const [joinRequestStatus, setJoinRequestStatus] = useState<'none' | 'pending' | 'approved' | 'denied'>('none')
+  const [requestingJoin, setRequestingJoin] = useState(false)
   const router = useRouter()
   const params = useParams()
   const supabase = createClient()
@@ -45,6 +49,7 @@ export default function ClassDetailPage() {
     loadClassData()
     loadMembers()
     loadUserRole()
+    checkEnrollmentStatus()
   }, [classId])
 
   async function loadClassData() {
@@ -135,6 +140,67 @@ export default function ClassDetailPage() {
     }
   }
 
+  async function checkEnrollmentStatus() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Check if enrolled
+      const { data: enrollment } = await supabase
+        .from('class_members')
+        .select('id')
+        .eq('class_id', classId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      setIsEnrolled(!!enrollment)
+
+      // Check join request status
+      const { data: joinRequest } = await supabase
+        .from('class_join_requests')
+        .select('status')
+        .eq('class_id', classId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (joinRequest) {
+        setJoinRequestStatus(joinRequest.status as any)
+      }
+    } catch (err) {
+      console.error('Failed to check enrollment status:', err)
+    }
+  }
+
+  async function handleRequestJoin() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        alert('Please log in to request to join this class')
+        return
+      }
+
+      setRequestingJoin(true)
+
+      const { error } = await supabase
+        .from('class_join_requests')
+        .insert({
+          class_id: classId,
+          user_id: user.id,
+          message: null
+        })
+
+      if (error) throw error
+
+      setJoinRequestStatus('pending')
+      alert('Join request sent! The teacher will review your request.')
+    } catch (err) {
+      console.error('Failed to request join:', err)
+      alert('Failed to send join request. You may have already requested to join this class.')
+    } finally {
+      setRequestingJoin(false)
+    }
+  }
+
   async function handleDelete() {
     if (!confirm('Are you sure you want to delete this class? This cannot be undone.')) {
       return
@@ -207,18 +273,49 @@ export default function ClassDetailPage() {
             )}
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => router.push(`/classes/${classId}/edit`)}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="danger"
-              onClick={handleDelete}
-            >
-              Delete
-            </Button>
+            {userRole === 'teacher' ? (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => router.push(`/classes/${classId}/edit`)}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={handleDelete}
+                >
+                  Delete
+                </Button>
+              </>
+            ) : (
+              <>
+                {!isEnrolled && joinRequestStatus === 'none' && (
+                  <Button
+                    onClick={handleRequestJoin}
+                    disabled={requestingJoin}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {requestingJoin ? 'Sending...' : '📝 Request to Join'}
+                  </Button>
+                )}
+                {joinRequestStatus === 'pending' && (
+                  <div className="px-4 py-2 bg-orange-100 text-orange-800 rounded-lg font-medium">
+                    ⏳ Request Pending
+                  </div>
+                )}
+                {joinRequestStatus === 'approved' && (
+                  <div className="px-4 py-2 bg-green-100 text-green-800 rounded-lg font-medium">
+                    ✓ Enrolled
+                  </div>
+                )}
+                {joinRequestStatus === 'denied' && (
+                  <div className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg font-medium">
+                    Request Denied
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 
@@ -267,6 +364,11 @@ export default function ClassDetailPage() {
               </dl>
             </Card.Body>
           </Card>
+
+          {/* Join Requests - Teachers only */}
+          {userRole === 'teacher' && (
+            <JoinRequestManager classId={classId} />
+          )}
 
           {/* Members Section - Use EnrollmentManager for teachers */}
           {userRole === 'teacher' ? (

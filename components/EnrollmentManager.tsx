@@ -31,14 +31,80 @@ export default function EnrollmentManager({ classId, members, onMembersUpdate }:
   const [bulkEnrolling, setBulkEnrolling] = useState(false)
   const [showBulkUpload, setShowBulkUpload] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [searchResults, setSearchResults] = useState<Array<{ id: string, full_name: string, email: string }>>([])
+  const [searching, setSearching] = useState(false)
+  const [showSearchResults, setShowSearchResults] = useState(false)
+  const [showAllMembers, setShowAllMembers] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
-  // Filter members based on search query
-  const filteredMembers = members.filter(member =>
-    member.profiles.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.profiles.email.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Filter members based on search query and sort alphabetically
+  const filteredMembers = members
+    .filter(member =>
+      member.profiles.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.profiles.email.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => a.profiles.full_name.localeCompare(b.profiles.full_name))
+
+  // Show first 5 members by default, or all if expanded
+  const displayedMembers = showAllMembers ? filteredMembers : filteredMembers.slice(0, 5)
+
+  // Search for users to enroll
+  async function searchUsers(query: string) {
+    setSearching(true)
+    try {
+      let supabaseQuery = supabase
+        .from('profiles')
+        .select('id, full_name, email')
+      
+      // If query provided, filter by name or email
+      if (query && query.length >= 2) {
+        supabaseQuery = supabaseQuery.or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
+      }
+      
+      const { data, error } = await supabaseQuery
+        .order('full_name', { ascending: true })
+        .limit(20)
+
+      console.log('Search query:', query)
+      console.log('Search results from DB:', data)
+      console.log('Search error:', error)
+
+      if (error) throw error
+
+      // Sort alphabetically
+      const sorted = (data || []).sort((a, b) => a.full_name.localeCompare(b.full_name))
+      
+      console.log('Sorted results:', sorted)
+      
+      setSearchResults(sorted)
+      setShowSearchResults(true)
+    } catch (err) {
+      console.error('Failed to search users:', err)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  // Handle search input change with debounce
+  function handleSearchChange(value: string) {
+    setEnrollEmail(value)
+    searchUsers(value)
+  }
+
+  // Select user from search results
+  function selectUser(user: { id: string, full_name: string, email: string }) {
+    // Check if already enrolled
+    const isEnrolled = members.some(m => m.user_id === user.id)
+    if (isEnrolled) {
+      alert(`${user.full_name} is already enrolled in this class`)
+      return
+    }
+    
+    setEnrollEmail(user.email)
+    setSearchResults([])
+    setShowSearchResults(false)
+  }
 
   async function handleEnrollStudent() {
     if (!enrollEmail.trim()) return
@@ -77,11 +143,21 @@ export default function EnrollmentManager({ classId, members, onMembersUpdate }:
       }
 
       // Enroll student
+      // First, get the student role ID
+      const { data: studentRole, error: roleError } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'student')
+        .single()
+
+      if (roleError) throw roleError
+
       const { error: enrollError } = await supabase
         .from('class_members')
         .insert({
           class_id: classId,
-          user_id: profile.id
+          user_id: profile.id,
+          role_id: studentRole.id
         })
 
       if (enrollError) throw enrollError
@@ -195,9 +271,19 @@ export default function EnrollmentManager({ classId, members, onMembersUpdate }:
       }
 
       // Enroll new students
+      // First, get the student role ID
+      const { data: studentRole, error: roleError } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'student')
+        .single()
+
+      if (roleError) throw roleError
+
       const enrollments = newStudents.map(student => ({
         class_id: classId,
-        user_id: student.id
+        user_id: student.id,
+        role_id: studentRole.id
       }))
 
       const { error: enrollError } = await supabase
@@ -304,78 +390,162 @@ export default function EnrollmentManager({ classId, members, onMembersUpdate }:
           )}
 
           {/* Single Student Enrollment */}
-          <div className="flex gap-2">
-            <Input
-              type="email"
-              placeholder="Enter student email address"
-              value={enrollEmail}
-              onChange={(e) => setEnrollEmail(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleEnrollStudent()}
-              disabled={enrolling}
-            />
-            <Button
-              onClick={handleEnrollStudent}
-              disabled={enrolling || !enrollEmail.trim()}
-            >
-              {enrolling ? 'Adding...' : 'Add Student'}
-            </Button>
-          </div>
-
-          {/* Search */}
-          <Input
-            type="text"
-            placeholder="Search by name or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-
-          {/* Members List */}
-          {filteredMembers.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-2">👥</div>
-              <p className="text-gray-500">
-                {searchQuery ? 'No students found matching your search' : 'No students enrolled yet'}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredMembers.map((member) => (
-                <div
-                  key={member.user_id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">
-                      {member.profiles.full_name}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {member.profiles.email}
-                    </div>
-                    {member.joined_at && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        Joined {new Date(member.joined_at).toLocaleDateString()}
+          <div>
+            <div className="flex gap-2 relative">
+              <div className="flex-1 relative">
+                <Input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={enrollEmail}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleEnrollStudent()}
+                  onFocus={() => {
+                    if (!showSearchResults) {
+                      searchUsers(enrollEmail)
+                    }
+                  }}
+                  onBlur={() => {
+                    // Delay hiding to allow clicking on results
+                    setTimeout(() => setShowSearchResults(false), 200)
+                  }}
+                  disabled={enrolling}
+                />
+                
+                {/* Search Results Dropdown */}
+                {showSearchResults && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                    {searching && (
+                      <div className="p-3 text-sm text-gray-500">Searching...</div>
+                    )}
+                    {!searching && searchResults.length > 0 && searchResults.map(user => {
+                      const isEnrolled = members.some(m => m.user_id === user.id)
+                      return (
+                        <button
+                          key={user.id}
+                          onMouseDown={(e) => {
+                            e.preventDefault() // Prevent blur
+                            selectUser(user)
+                          }}
+                          disabled={isEnrolled}
+                          className={`w-full text-left p-3 border-b border-gray-100 last:border-b-0 ${
+                            isEnrolled 
+                              ? 'bg-gray-100 cursor-not-allowed opacity-60' 
+                              : 'hover:bg-gray-50 cursor-pointer'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">{user.full_name}</div>
+                              <div className="text-sm text-gray-600">{user.email}</div>
+                            </div>
+                            {isEnrolled && (
+                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                ✓ Enrolled
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      )
+                    })}
+                    {!searching && searchResults.length === 0 && (
+                      <div className="p-3 text-sm text-gray-500">
+                        {enrollEmail.length >= 2 
+                          ? 'No users found. You can still enter an email address directly.'
+                          : 'Start typing to search for users...'
+                        }
                       </div>
                     )}
                   </div>
-                  <Button
-                    onClick={() => handleRemoveStudent(member.user_id, member.profiles.full_name)}
-                    disabled={removing === member.user_id}
-                    variant="danger"
-                    size="sm"
-                  >
-                    {removing === member.user_id ? 'Removing...' : 'Remove'}
-                  </Button>
-                </div>
-              ))}
+                )}
+              </div>
+              <Button
+                onClick={handleEnrollStudent}
+                disabled={enrolling || !enrollEmail.trim()}
+              >
+                {enrolling ? 'Adding...' : 'Add Student'}
+              </Button>
             </div>
-          )}
-
-          {/* Results Count */}
-          {searchQuery && (
-            <p className="text-sm text-gray-600 text-center">
-              Showing {filteredMembers.length} of {members.length} students
+            <p className="text-xs text-gray-500 mt-1">
+              Start typing a name or email to search, or enter an email address directly
             </p>
-          )}
+          </div>
+
+          {/* Filter Enrolled Members */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Filter Enrolled Students
+            </label>
+            <Input
+              type="text"
+              placeholder="Filter by name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          {/* Enrolled Students List */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Enrolled Students ({filteredMembers.length})
+              </label>
+              {filteredMembers.length > 5 && (
+                <button
+                  onClick={() => setShowAllMembers(!showAllMembers)}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  {showAllMembers ? '▲ Show Less' : `▼ Show All (${filteredMembers.length})`}
+                </button>
+              )}
+            </div>
+
+            {displayedMembers.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-4xl mb-2">👥</div>
+                <p className="text-gray-500">
+                  {searchQuery ? 'No students found matching your search' : 'No students enrolled yet'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {displayedMembers.map((member) => (
+                  <div
+                    key={member.user_id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">
+                        {member.profiles.full_name}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {member.profiles.email}
+                      </div>
+                      {member.joined_at && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Joined {new Date(member.joined_at).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      onClick={() => handleRemoveStudent(member.user_id, member.profiles.full_name)}
+                      disabled={removing === member.user_id}
+                      variant="danger"
+                      size="sm"
+                    >
+                      {removing === member.user_id ? 'Removing...' : 'Remove'}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Show count when filtered */}
+            {searchQuery && filteredMembers.length > 0 && (
+              <p className="text-sm text-gray-600 text-center mt-2">
+                Showing {displayedMembers.length} of {filteredMembers.length} students
+              </p>
+            )}
+          </div>
         </div>
       </Card.Body>
     </Card>

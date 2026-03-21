@@ -67,9 +67,59 @@
 
 ---
 
-## 🆕 What Was Just Added (This Session - March 10 Continued)
+## 🆕 What Was Just Added (This Session - March 12)
 
-### Student Enrollment Improvements ✅
+### Class Join Request System ✅
+1. **Database Schema**
+   - `class_join_requests` table with RLS policies
+   - Automatic notifications for teachers and students
+   - Auto-enrollment when request is approved
+   - Status tracking (pending/approved/denied)
+
+2. **JoinRequestManager Component**
+   - Teachers see pending requests in class detail page
+   - Approve/deny with optional messages
+   - View request history
+   - Real-time status updates
+
+3. **Student Request Flow**
+   - "Request to Join" button on explore page
+   - "Request to Join" button on class detail page
+   - Status indicators (pending/approved/enrolled)
+   - Notifications when request is processed
+
+4. **Bug Fixes**
+   - Fixed EnrollmentManager not adding students (missing role_id)
+   - Fixed bulk enrollment (missing role_id)
+   - Both single and bulk enrollment now work correctly
+
+5. **Next Step Required**
+   - ⚠️ **MUST RUN MIGRATION**: See `RUN_JOIN_REQUESTS_MIGRATION.md`
+   - Migration file: `supabase/add-join-requests.sql`
+   - Takes 2 minutes in Supabase SQL Editor
+   - Then feature will work!
+
+### Challenge Templates System ⏳ (Waiting for Migration)
+1. **Database Schema Created**
+   - `challenge_templates` table with RLS policies
+   - Helper functions for template management
+   - Public/private visibility control
+   - Usage tracking
+
+2. **ChallengeTemplates Component**
+   - Search templates by title/description
+   - Filter by creator (My Templates / Public)
+   - Create challenge from template
+   - Delete templates with confirmation
+   - Usage count display
+
+3. **Next Step Required**
+   - ⚠️ **MUST RUN MIGRATION**: See `RUN_TEMPLATES_MIGRATION.md`
+   - Migration file: `supabase/add-challenge-templates.sql`
+   - Takes 2 minutes in Supabase SQL Editor
+   - Then feature will work!
+
+### Student Enrollment Improvements ✅ (March 10)
 1. **EnrollmentManager Component**
    - Single student enrollment by email
    - Bulk enrollment from CSV file
@@ -230,17 +280,16 @@
 ### Key Files Modified Today
 ```
 app/
-  dashboard/page.tsx           ← UPDATED: Added NotificationBell and settings icon
-  settings/page.tsx            ← NEW: Settings page for preferences
+  classes/
+    [id]/page.tsx                ← UPDATED: Added join request button and manager
+    explore/page.tsx             ← UPDATED: Added request to join buttons
 components/
-  NotificationBell.tsx         ← NEW: Bell icon with dropdown
-  NotificationPreferences.tsx  ← NEW: Preferences management UI
-  GradingInterface.tsx         ← UPDATED: Comments system
-  SessionDetail.tsx            ← UPDATED: Comments system
+  JoinRequestManager.tsx         ← NEW: Manage join requests
+  EnrollmentManager.tsx          ← FIXED: Added role_id for enrollment
+  ChallengeTemplates.tsx         ← NEW: Template management
 supabase/
-  add-notifications-system.sql        ← NEW: Notifications schema
-  add-notification-preferences.sql    ← NEW: Preferences schema
-  add-homework-submission-comments.sql ← NEW: Comments schema
+  add-join-requests.sql          ← NEW: Join request system schema
+  add-challenge-templates.sql    ← NEW: Templates schema
 ```
 
 ### Documentation Created
@@ -302,8 +351,11 @@ interface Class {
 - Notification bell component renders
 - Settings page loads correctly
 - Preferences UI works
+- Enrollment manager works
+- CSV upload works
 
 ### Needs Testing ⏳
+- Challenge templates (waiting for migration)
 - Run notification migrations in Supabase
 - Test notification creation triggers
 - Test email queue system
@@ -345,7 +397,27 @@ docker stop henry-math-dev
 ## 📝 Next Priorities
 
 ### High Priority (Do Next)
-1. **Set Up Notification System** (30 min)
+1. **Run Join Requests Migration** (2 min) ⚠️ URGENT
+   - Open Supabase SQL Editor
+   - Run `supabase/add-join-requests.sql`
+   - Verify table created
+   - Test request to join feature
+   - See `RUN_JOIN_REQUESTS_MIGRATION.md` for step-by-step guide
+
+2. **Run Challenge Templates Migration** (2 min)
+   - Open Supabase SQL Editor
+   - Run `supabase/add-challenge-templates.sql`
+   - Verify table created
+   - Test template saving
+   - See `RUN_TEMPLATES_MIGRATION.md` for step-by-step guide
+
+2. **Complete Challenge Templates Feature** (30 min)
+   - Add "Save as Template" button to challenge detail page
+   - Add templates page at `/challenges/templates`
+   - Add "Create from Template" flow
+   - Test all template operations
+
+3. **Set Up Notification System** (30 min)
    - Run migrations in Supabase SQL Editor:
      - `supabase/add-notifications-system.sql`
      - `supabase/add-notification-preferences.sql`
@@ -354,14 +426,14 @@ docker stop henry-math-dev
    - Verify bell icon shows notifications
    - See `RUN_MIGRATIONS_NOW.md` for step-by-step guide
 
-2. **Email Service Integration** (1-2 hours)
+4. **Email Service Integration** (1-2 hours)
    - Choose email service (Resend recommended)
    - Create API endpoint for sending emails
    - Set up cron job (every 5 minutes)
    - Test email sending
    - See `EMAIL_NOTIFICATIONS_SETUP.md` for guide
 
-3. **Scheduled Notifications** (1 hour)
+5. **Scheduled Notifications** (1 hour)
    - Set up cron jobs for:
      - Class starting notifications (every 5 min)
      - Homework due notifications (daily)
@@ -369,12 +441,7 @@ docker stop henry-math-dev
    - Monitor email queue
 
 ### Medium Priority
-4. **Challenge Templates** (1.5 hours)
-   - Save challenges as templates
-   - Create from template
-   - Template library
-
-5. **Analytics Dashboard** (2-3 hours)
+6. **Analytics Dashboard** (2-3 hours)
    - Student progress tracking
    - Class performance metrics
    - Challenge completion rates

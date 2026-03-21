@@ -48,6 +48,7 @@ export default function NewClassPage() {
     schedule: false,
     start_date: false
   })
+  const [showValidationErrors, setShowValidationErrors] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -119,8 +120,19 @@ export default function NewClassPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    
+    // Check validation
+    if (!isFormValid) {
+      setShowValidationErrors(true)
+      setError('Please fill in all required fields')
+      // Scroll to top to show error
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    
     setLoading(true)
     setError(null)
+    setShowValidationErrors(false)
 
     try {
       // Get current user
@@ -278,6 +290,7 @@ export default function NewClassPage() {
                 <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                   <span>✨</span>
                   <span>Class Name</span>
+                  <span className="text-red-500">*</span>
                   {validFields.name && <span className="text-primary-500">✅</span>}
                 </label>
                 <input
@@ -288,15 +301,18 @@ export default function NewClassPage() {
                     validateField('name', e.target.value)
                   }}
                   placeholder="e.g., Algebra 1 - Spring 2026"
-                  className="w-full p-4 text-lg border-2 border-gray-200 rounded-2xl 
+                  className={`w-full p-4 text-lg border-2 rounded-2xl 
                            focus:border-primary-500 focus:ring-4 focus:ring-primary-100
-                           transition-all duration-200"
-                  required
+                           transition-all duration-200 ${
+                             showValidationErrors && !validFields.name
+                               ? 'border-red-300 bg-red-50'
+                               : 'border-gray-200'
+                           }`}
                 />
-                {formData.name && !validFields.name && (
-                  <p className="mt-2 text-sm text-gray-500 flex items-center gap-2">
-                    <span>💡</span>
-                    <span>Class name should be at least 3 characters</span>
+                {showValidationErrors && !validFields.name && (
+                  <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>Class name is required (at least 3 characters)</span>
                   </p>
                 )}
               </div>
@@ -333,11 +349,21 @@ export default function NewClassPage() {
                 <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                   <span>📅</span>
                   <span>Class Schedule</span>
+                  <span className="text-red-500">*</span>
                   {validFields.schedule && <span className="text-primary-500">✅</span>}
                 </label>
                 <p className="text-sm text-gray-600 mb-4">
                   Add one or more meeting times for your class
                 </p>
+                
+                {showValidationErrors && !validFields.schedule && (
+                  <div className="mb-4 p-3 bg-red-50 border-2 border-red-200 rounded-xl flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span className="text-sm text-red-700 font-medium">
+                      Please add at least one complete meeting time (day, start time, and end time)
+                    </span>
+                  </div>
+                )}
                 
                 <div className="space-y-3">
                   {scheduleSlots.map((slot, index) => (
@@ -434,7 +460,8 @@ export default function NewClassPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Start Date {validFields.start_date && <span className="text-primary-500">✅</span>}
+                      Start Date <span className="text-red-500">*</span>
+                      {validFields.start_date && <span className="text-primary-500">✅</span>}
                     </label>
                     <input
                       type="date"
@@ -443,11 +470,20 @@ export default function NewClassPage() {
                         setFormData({ ...formData, start_date: e.target.value })
                         validateField('start_date', e.target.value)
                       }}
-                      className="w-full p-4 border-2 border-gray-200 rounded-xl 
+                      className={`w-full p-4 border-2 rounded-xl 
                                focus:border-primary-500 focus:ring-4 focus:ring-primary-100
-                               transition-all duration-200"
-                      required
+                               transition-all duration-200 ${
+                                 showValidationErrors && !validFields.start_date
+                                   ? 'border-red-300 bg-red-50'
+                                   : 'border-gray-200'
+                               }`}
                     />
+                    {showValidationErrors && !validFields.start_date && (
+                      <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                        <span>⚠️</span>
+                        <span>Start date is required</span>
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -807,7 +843,7 @@ export default function NewClassPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={!isFormValid || loading}
+                  disabled={loading}
                   isLoading={loading}
                   size="lg"
                   className="flex-1"
@@ -816,12 +852,6 @@ export default function NewClassPage() {
                   Create Class
                 </Button>
               </div>
-
-              {!isFormValid && (formData.name || formData.start_date) && (
-                <p className="text-center text-sm text-gray-500">
-                  💡 Fill in the required fields to create your class
-                </p>
-              )}
             </form>
           </Card.Body>
         </Card>
