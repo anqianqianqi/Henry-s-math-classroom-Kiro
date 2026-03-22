@@ -82,41 +82,15 @@ export default function DashboardPage() {
 
   async function loadStats(userId: string) {
     try {
-      // Count classes where user is teacher (created_by) or student (class_members)
-      const { count: teachingCount } = await supabase
+      // Count classes visible to user (RLS determines access)
+      const { count: classesCount } = await supabase
         .from('classes')
         .select('*', { count: 'exact', head: true })
-        .eq('created_by', userId)
 
-      const { count: enrolledCount } = await supabase
-        .from('class_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-
-      const classesCount = (teachingCount || 0) + (enrolledCount || 0)
-
-      // Count challenges: created by user OR assigned to classes user is in
-      const { count: createdChallenges } = await supabase
+      // Count challenges visible to user (RLS determines access)
+      const { count: challengesCount } = await supabase
         .from('daily_challenges')
         .select('*', { count: 'exact', head: true })
-        .eq('created_by', userId)
-
-      let assignedChallenges = 0
-      const { data: memberClasses } = await supabase
-        .from('class_members')
-        .select('class_id')
-        .eq('user_id', userId)
-
-      if (memberClasses && memberClasses.length > 0) {
-        const classIds = memberClasses.map(m => m.class_id)
-        const { count } = await supabase
-          .from('challenge_assignments')
-          .select('challenge_id', { count: 'exact', head: true })
-          .in('class_id', classIds)
-        assignedChallenges = count || 0
-      }
-
-      const challengesCount = (createdChallenges || 0) + assignedChallenges
 
       // Calculate day streak from challenge submissions
       const { data: submissions, error: submissionsError } = await supabase
