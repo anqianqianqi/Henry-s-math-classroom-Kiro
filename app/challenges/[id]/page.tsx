@@ -21,6 +21,8 @@ interface Submission {
   user_id: string
   content: string
   image_url?: string | null
+  points?: number | null
+  is_locked?: boolean
   submitted_at: string
   profiles: {
     full_name: string
@@ -33,6 +35,7 @@ interface Comment {
   submission_id: string
   user_id: string
   content: string
+  image_url?: string | null
   created_at: string
   profiles: {
     full_name: string
@@ -297,20 +300,39 @@ export default function ChallengePage() {
     }
   }
 
-  async function handleSubmitComment(submissionId: string) {
+  async function handleSubmitComment(submissionId: string, imageFile?: File | null) {
     const commentText = newComment[submissionId]?.trim()
-    if (!commentText || !userId) return
+    if ((!commentText && !imageFile) || !userId) return
 
     setSubmittingComment({ ...submittingComment, [submissionId]: true })
 
     try {
+      // Upload comment image if provided
+      let commentImageUrl: string | null = null
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop()
+        const fileName = `comments/${userId}/${submissionId}-${Date.now()}.${fileExt}`
+        const { error: uploadError } = await supabase.storage
+          .from('challenge-images')
+          .upload(fileName, imageFile, { contentType: imageFile.type })
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('challenge-images')
+            .getPublicUrl(fileName)
+          commentImageUrl = urlData.publicUrl
+        }
+      }
+
+      const insertData: any = {
+        submission_id: submissionId,
+        user_id: userId,
+        content: commentText || ''
+      }
+      if (commentImageUrl) insertData.image_url = commentImageUrl
+
       const { data, error } = await supabase
         .from('submission_comments')
-        .insert({
-          submission_id: submissionId,
-          user_id: userId,
-          content: commentText
-        })
+        .insert(insertData)
         .select(`
           *,
           profiles!inner(full_name, nickname)
@@ -424,6 +446,37 @@ export default function ChallengePage() {
       console.error('Error submitting:', error)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handleRevealOthers() {
+    if (!userSubmission || !userId) return
+    if (!confirm('⚠️ This will lock your current submission and grade. You won\'t be able to edit your answer after this. Continue?')) return
+
+    const { error } = await supabase
+      .from('challenge_submissions')
+      .update({ is_locked: true })
+      .eq('id', userSubmission.id)
+
+    if (!error) {
+      setUserSubmission({ ...userSubmission, is_locked: true })
+      await loadOtherSubmissions(userId)
+    }
+  }
+
+  async function handleGradeSubmission(submissionId: string, points: number) {
+    const { error } = await supabase
+      .from('challenge_submissions')
+      .update({ points })
+      .eq('id', submissionId)
+
+    if (!error) {
+      setOtherSubmissions(prev => prev.map(s => 
+        s.id === submissionId ? { ...s, points } : s
+      ))
+      if (userSubmission?.id === submissionId) {
+        setUserSubmission({ ...userSubmission, points })
+      }
     }
   }
 
@@ -594,7 +647,7 @@ export default function ChallengePage() {
   }
 
   const hasSubmitted = !!userSubmission
-  const canSeeOthers = hasSubmitted || isTeacher
+  const canSeeOthers = (hasSubmitted && userSubmission?.is_locked) || isTeacher
   // For teachers, otherSubmissions already includes all submissions
   // For students, otherSubmissions excludes their own, so we add 1 if they submitted
   const submissionCount = isTeacher ? otherSubmissions.length : otherSubmissions.length + (hasSubmitted ? 1 : 0)
@@ -793,14 +846,24 @@ export default function ChallengePage() {
                     <Card.Title className="flex items-center gap-2">
                       <span>✅</span>
                       Your Solution
+                      {userSubmission?.points != null && (
+                        <span className="ml-2 px-2 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-bold">
+                          {userSubmission.points}/100
+                        </span>
+                      )}
+                      {userSubmission?.is_locked && (
+                        <span className="text-xs text-gray-500">🔒 Locked</span>
+                      )}
                     </Card.Title>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsEditing(true)}
-                    >
-                      Edit
-                    </Button>
+                    {!userSubmission?.is_locked && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEditing(true)}
+                      >
+                        Edit
+                      </Button>
+                    )}
                   </div>
                 </Card.Header>
                 <Card.Body>
@@ -821,10 +884,11 @@ export default function ChallengePage() {
                     onShowMore={() => handleShowMoreComments(userSubmission.id)}
                     newComment={newComment[userSubmission.id] || ''}
                     onCommentChange={(value) => setNewComment(prev => ({ ...prev, [userSubmission.id]: value }))}
-                    onSubmitComment={() => handleSubmitComment(userSubmission.id)}
+                    onSubmitComment={(img?: File | null) => handleSubmitComment(userSubmission.id, img)}
                     isSubmitting={submittingComment[userSubmission.id] || false}
                     formatTimeAgo={formatTimeAgo}
                     showTitle={true}
+                    allowImage={isTeacher}
                   />
                 </Card.Body>
               </Card>
@@ -941,6 +1005,32 @@ export default function ChallengePage() {
                             <img src={submission.image_url} alt="Solution" className="max-w-full max-h-64 rounded-lg border mb-3" />
                           )}
                           
+                          {/* Grading - Teacher only */}
+                          {isTeacher && (
+                            <div className="flex items-center gap-2 mb-3 p-2 bg-white rounded-lg border">
+                              <span className="text-sm font-medium text-gray-700">Points:</span>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={submission.points ?? ''}
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? null : Math.min(100, Math.max(0, parseInt(e.target.value)))
+                                  if (val !== null) handleGradeSubmission(submission.id, val)
+                                }}
+                                className="w-16 px-2 py-1 border rounded text-center text-sm"
+                                placeholder="—"
+                              />
+                              <span className="text-sm text-gray-500">/ 100</span>
+                            </div>
+                          )}
+                          {/* Show points to students */}
+                          {!isTeacher && submission.points != null && (
+                            <div className="mb-3 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm font-medium inline-block">
+                              Score: {submission.points}/100
+                            </div>
+                          )}
+
                           <CommentThread
                             submissionId={submission.id}
                             comments={comments[submission.id] || []}
@@ -948,10 +1038,11 @@ export default function ChallengePage() {
                             onShowMore={() => handleShowMoreComments(submission.id)}
                             newComment={newComment[submission.id] || ''}
                             onCommentChange={(value) => setNewComment(prev => ({ ...prev, [submission.id]: value }))}
-                            onSubmitComment={() => handleSubmitComment(submission.id)}
+                            onSubmitComment={(img?: File | null) => handleSubmitComment(submission.id, img)}
                             isSubmitting={submittingComment[submission.id] || false}
                             formatTimeAgo={formatTimeAgo}
                             showTitle={false}
+                            allowImage={isTeacher}
                           />
                         </div>
                       </div>
@@ -969,20 +1060,36 @@ export default function ChallengePage() {
             </Card.Body>
           </Card>
         ) : (
-          // Locked: Must submit first
+          // Must submit first OR must choose to reveal
           <Card className="bg-gray-50 border-2 border-dashed border-gray-300">
             <Card.Body className="text-center py-12">
               <div className="text-6xl mb-4">🔒</div>
               <h3 className="text-xl font-bold text-gray-700 mb-2">
                 Other Students' Solutions
               </h3>
-              <p className="text-gray-600 mb-4">
-                Submit your solution to see what other students wrote!
-              </p>
-              <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                <span>👥</span>
-                <span>{totalSubmissionCount} {totalSubmissionCount === 1 ? 'student has' : 'students have'} submitted</span>
-              </div>
+              {hasSubmitted ? (
+                <>
+                  <p className="text-gray-600 mb-4">
+                    Want to see what others wrote? This will lock your submission and current grade.
+                  </p>
+                  <Button onClick={handleRevealOthers}>
+                    🔓 Reveal Others' Solutions
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-3">
+                    ⚠️ You won't be able to edit your answer after revealing
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-600 mb-4">
+                    Submit your solution first!
+                  </p>
+                  <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                    <span>👥</span>
+                    <span>{totalSubmissionCount} {totalSubmissionCount === 1 ? 'student has' : 'students have'} submitted</span>
+                  </div>
+                </>
+              )}
             </Card.Body>
           </Card>
         )}
