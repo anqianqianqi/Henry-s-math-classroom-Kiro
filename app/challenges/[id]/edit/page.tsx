@@ -377,7 +377,7 @@ export default function EditChallengePage() {
               )}
 
               <FormField
-                label="Challenge Title"
+                label="Title"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -387,7 +387,7 @@ export default function EditChallengePage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Challenge Description
+                  Description
                 </label>
                 <textarea
                   value={description}
@@ -402,7 +402,7 @@ export default function EditChallengePage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Challenge Image (Optional)
+                  Image (Optional)
                 </label>
                 {imagePreview || currentImageUrl ? (
                   <div className="relative">
@@ -464,7 +464,7 @@ export default function EditChallengePage() {
               </div>
 
               <FormField
-                label="Challenge Date"
+                label="Date"
                 type="date"
                 value={challengeDate}
                 onChange={(e) => setChallengeDate(e.target.value)}
