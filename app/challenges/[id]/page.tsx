@@ -219,14 +219,13 @@ export default function ChallengePage() {
         
         console.log('Class IDs:', classIds)
         
-        const { count, error: countError } = await supabase
+        const { data: memberData } = await supabase
           .from('class_members')
-          .select('*', { count: 'exact', head: true })
+          .select('user_id')
           .in('class_id', classIds)
 
-        console.log('Student count query:', { count, countError })
-
-        setTotalStudents(count || 0)
+        const uniqueStudents = new Set(memberData?.map(m => m.user_id) || [])
+        setTotalStudents(uniqueStudents.size)
       }
     } else if (submissionData) {
       await loadOtherSubmissions(user.id, false)
