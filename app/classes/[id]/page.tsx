@@ -189,13 +189,51 @@ export default function ClassDetailPage() {
           message: null
         })
 
-      if (error) throw error
+      if (error) {
+        // Check if there's an existing request that was denied - delete and retry
+        if (error.code === '23505') {
+          const { data: existing } = await supabase
+            .from('class_join_requests')
+            .select('status')
+            .eq('class_id', classId)
+            .eq('user_id', user.id)
+            .single()
+
+          if (existing?.status === 'denied') {
+            // Remove denied request and re-submit
+            await supabase
+              .from('class_join_requests')
+              .delete()
+              .eq('class_id', classId)
+              .eq('user_id', user.id)
+
+            const { error: retryError } = await supabase
+              .from('class_join_requests')
+              .insert({
+                class_id: classId,
+                user_id: user.id,
+                message: null
+              })
+
+            if (retryError) throw retryError
+          } else {
+            alert('You already have a pending join request for this class.')
+            return
+          }
+        } else {
+          throw error
+        }
+      }
 
       setJoinRequestStatus('pending')
       alert('Join request sent! The teacher will review your request.')
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to request join:', err)
-      alert('Failed to send join request. You may have already requested to join this class.')
+      if (err?.code === 'PGRST205' || err?.code === '42P01') {
+        alert('Join requests are not yet set up. Please ask the teacher to add you directly.')
+      } else {
+        alert('Failed to send join request. Please try again.')
+      }
     } finally {
       setRequestingJoin(false)
     }
