@@ -121,8 +121,14 @@ export default function AdminRolesPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 p-8">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
+          <button
+            onClick={() => window.history.back()}
+            className="text-sm text-gray-600 hover:text-gray-900 mb-4 inline-block"
+          >
+            ← Back to Dashboard
+          </button>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">👥 User Roles</h1>
-          <p className="text-gray-600">Manage user permissions</p>
+          <p className="text-gray-600">Assign teacher or student roles to users</p>
         </div>
 
         <Card>
@@ -137,10 +143,13 @@ export default function AdminRolesPage() {
                     <p className="font-semibold text-gray-900">{user.full_name}</p>
                     <p className="text-sm text-gray-600">{user.email}</p>
                     <div className="flex gap-2 mt-2">
+                      {user.roles.length === 0 && (
+                        <Badge variant="warning">No role</Badge>
+                      )}
                       {user.roles.map(role => (
                         <Badge
                           key={role}
-                          variant={role === 'teacher' ? 'purple' : 'info'}
+                          variant={role === 'teacher' ? 'purple' : role === 'administrator' ? 'error' : 'info'}
                         >
                           {role}
                         </Badge>
@@ -148,15 +157,14 @@ export default function AdminRolesPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    {!user.roles.includes('teacher') && (
+                    {!user.roles.includes('teacher') ? (
                       <Button
                         size="sm"
                         onClick={() => assignRole(user.id, 'teacher')}
                       >
                         Make Teacher
                       </Button>
-                    )}
-                    {user.roles.includes('teacher') && (
+                    ) : (
                       <Button
                         size="sm"
                         variant="secondary"
@@ -165,9 +173,29 @@ export default function AdminRolesPage() {
                         Remove Teacher
                       </Button>
                     )}
+                    {!user.roles.includes('student') ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => assignRole(user.id, 'student')}
+                      >
+                        Make Student
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => removeRole(user.id, 'student')}
+                      >
+                        Remove Student
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
+              {users.length === 0 && (
+                <p className="text-center text-gray-500 py-8">No users found</p>
+              )}
             </div>
           </Card.Body>
         </Card>
