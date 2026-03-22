@@ -50,7 +50,12 @@ export default function ClassesPage() {
           .from('roles')
           .select('name')
           .in('id', userRoles.map((r: any) => r.role_id))
-        isTeacher = roleData?.some((r: any) => r.name === 'teacher') || false
+        isTeacher = roleData?.some((r: any) => 
+          r.name === 'teacher' || r.name === 'administrator' || r.name === 'admin'
+        ) || false
+        console.log('Classes page - roles:', roleData, 'isTeacher:', isTeacher)
+      } else {
+        console.log('Classes page - no roles found for user, userRoles:', userRoles)
       }
 
       if (isTeacher) {
