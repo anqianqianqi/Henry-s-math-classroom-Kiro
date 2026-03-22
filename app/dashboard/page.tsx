@@ -206,7 +206,7 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
               <span className="text-3xl">📚</span>
-              <h1 className="text-2xl font-bold text-gray-900">Henry's Math Classroom</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Henry&apos;s Math Classroom</h1>
             </div>
             <div className="flex items-center gap-4">
               <NotificationBell />
