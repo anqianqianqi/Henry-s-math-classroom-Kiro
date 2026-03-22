@@ -16,7 +16,8 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({
     classesCount: 0,
     challengesCount: 0,
-    dayStreak: 0
+    dayStreak: 0,
+    pendingRequests: 0
   })
   const router = useRouter()
   const supabase = createClient()
@@ -190,10 +191,22 @@ export default function DashboardPage() {
 
       console.log('🔥 Streak Debug - Final streak:', dayStreak)
 
+      // Count pending join requests for teacher's classes
+      let pendingRequests = 0
+      if (teachingClassIds && teachingClassIds.length > 0) {
+        const { count } = await supabase
+          .from('class_join_requests')
+          .select('*', { count: 'exact', head: true })
+          .in('class_id', teachingClassIds.map(c => c.id))
+          .eq('status', 'pending')
+        pendingRequests = count || 0
+      }
+
       const newStats = {
         classesCount: classesCount || 0,
         challengesCount: challengesCount || 0,
-        dayStreak
+        dayStreak,
+        pendingRequests
       }
 
       console.log('Setting stats:', newStats)
@@ -296,6 +309,29 @@ export default function DashboardPage() {
             </Card.Body>
           </Card>
         </div>
+
+        {/* Join Requests - Teacher only */}
+        {isTeacher && stats.pendingRequests > 0 && (
+          <Card 
+            className="mb-8 cursor-pointer hover:shadow-lg transition-shadow border-orange-200 bg-orange-50"
+            onClick={() => router.push('/join-requests')}
+          >
+            <Card.Body>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">📋</span>
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      {stats.pendingRequests} Pending Join Request{stats.pendingRequests !== 1 ? 's' : ''}
+                    </p>
+                    <p className="text-sm text-gray-600">Students are waiting to join your classes</p>
+                  </div>
+                </div>
+                <span className="text-gray-400">→</span>
+              </div>
+            </Card.Body>
+          </Card>
+        )}
 
         {/* Quick Actions - Hidden for now */}
         {false && (
