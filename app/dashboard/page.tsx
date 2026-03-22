@@ -17,7 +17,8 @@ export default function DashboardPage() {
     classesCount: 0,
     challengesCount: 0,
     dayStreak: 0,
-    pendingRequests: 0
+    pendingRequests: 0,
+    totalScore: 0
   })
   const router = useRouter()
   const supabase = createClient()
@@ -171,11 +172,21 @@ export default function DashboardPage() {
         }
       }
 
+      // Calculate total score from graded submissions
+      const { data: gradedSubmissions } = await supabase
+        .from('challenge_submissions')
+        .select('points')
+        .eq('user_id', userId)
+        .not('points', 'is', null)
+
+      const totalScore = gradedSubmissions?.reduce((sum, s) => sum + (s.points || 0), 0) || 0
+
       const newStats = {
         classesCount: memberCount || 0,
         challengesCount,
         dayStreak,
-        pendingRequests: 0
+        pendingRequests: 0,
+        totalScore
       }
 
       setStats(newStats)
@@ -286,6 +297,16 @@ export default function DashboardPage() {
               <div className="text-gray-600 font-medium">Challenges</div>
             </Card.Body>
           </Card>
+
+          {!isTeacher && !isAdmin && (
+            <Card className="text-center hover:shadow-lg transition-shadow">
+              <Card.Body>
+                <div className="text-5xl mb-3">⭐</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{stats.totalScore}</div>
+                <div className="text-gray-600 font-medium">Total Score</div>
+              </Card.Body>
+            </Card>
+          )}
 
           {(isTeacher || isAdmin) && (
             <Card 
