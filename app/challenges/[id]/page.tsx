@@ -859,7 +859,12 @@ export default function ChallengePage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setIsEditing(true)}
+                        onClick={() => {
+                          setIsEditing(true)
+                          if (userSubmission?.image_url) {
+                            setSolutionImagePreview(userSubmission.image_url)
+                          }
+                        }}
                       >
                         Edit
                       </Button>
