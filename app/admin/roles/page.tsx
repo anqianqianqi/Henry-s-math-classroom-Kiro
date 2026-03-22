@@ -118,7 +118,7 @@ export default function AdminRolesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 p-4 sm:p-8">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <button
@@ -127,7 +127,7 @@ export default function AdminRolesPage() {
           >
             ← Back to Dashboard
           </button>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">👥 User Roles</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">👥 User Roles</h1>
           <p className="text-gray-600">Assign teacher or student roles to users</p>
         </div>
 
@@ -137,9 +137,9 @@ export default function AdminRolesPage() {
               {users.map(user => (
                 <div
                   key={user.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
+                  className="p-4 bg-gray-50 rounded-xl space-y-3"
                 >
-                  <div className="flex-1">
+                  <div>
                     <p className="font-semibold text-gray-900">{user.full_name}</p>
                     <p className="text-sm text-gray-600">{user.email}</p>
                     <div className="flex gap-2 mt-2">
@@ -156,7 +156,7 @@ export default function AdminRolesPage() {
                       ))}
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {!user.roles.includes('teacher') ? (
                       <Button
                         size="sm"

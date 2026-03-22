@@ -126,7 +126,7 @@ export default function JoinRequestsDashboard() {
               <div className="space-y-3">
                 {pending.map(req => (
                   <div key={req.id} className="p-4 bg-orange-50 border border-orange-200 rounded-xl">
-                    <div className="flex items-center justify-between">
+                    <div className="space-y-3">
                       <div>
                         <p className="font-medium text-gray-900">{req.profiles.full_name}</p>
                         <p className="text-sm text-gray-600">{req.profiles.email}</p>
@@ -138,12 +138,12 @@ export default function JoinRequestsDashboard() {
                           <p className="text-sm text-gray-700 mt-2 italic">"{req.message}"</p>
                         )}
                       </div>
-                      <div className="flex gap-2 ml-4">
+                      <div className="flex gap-2">
                         <Button
                           size="sm"
                           onClick={() => handleAction(req.id, 'approved')}
                           disabled={processing === req.id}
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-none"
                         >
                           {processing === req.id ? '...' : '✓ Approve'}
                         </Button>
@@ -152,6 +152,7 @@ export default function JoinRequestsDashboard() {
                           variant="danger"
                           onClick={() => handleAction(req.id, 'denied')}
                           disabled={processing === req.id}
+                          className="flex-1 sm:flex-none"
                         >
                           ✗ Deny
                         </Button>
