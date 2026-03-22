@@ -582,53 +582,58 @@ export default function ChallengePage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              onClick={() => router.push('/challenges')}
-            >
-              ← Back
-            </Button>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">📚</span>
-              <h1 className="text-2xl font-bold text-gray-900">Daily Challenge</h1>
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push('/challenges')}
+              >
+                ←
+              </Button>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl sm:text-3xl">📚</span>
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Challenge</h1>
+              </div>
             </div>
             {isTeacher && (
-              <>
-                <div className="ml-auto flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => router.push(`/challenges/${params.id}/edit`)}
-                  >
-                    ✏️ Edit
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={handleDuplicate}
-                    disabled={duplicating}
-                  >
-                    {duplicating ? '⏳ Duplicating...' : '📋 Duplicate'}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={handleSaveAsTemplate}
-                    disabled={savingTemplate}
-                  >
-                    {savingTemplate ? '⏳ Saving...' : '💾 Save as Template'}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    onClick={() => setShowDeleteModal(true)}
-                  >
-                    🗑️ Delete
-                  </Button>
-                  <span className="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold">
-                    <span>👨‍🏫</span>
-                    Teacher View
-                  </span>
-                </div>
-              </>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push(`/challenges/${params.id}/edit`)}
+                >
+                  <span className="sm:hidden">✏️</span>
+                  <span className="hidden sm:inline">✏️ Edit</span>
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleDuplicate}
+                  disabled={duplicating}
+                >
+                  <span className="sm:hidden">📋</span>
+                  <span className="hidden sm:inline">{duplicating ? '⏳...' : '📋 Duplicate'}</span>
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSaveAsTemplate}
+                  disabled={savingTemplate}
+                >
+                  <span className="sm:hidden">💾</span>
+                  <span className="hidden sm:inline">{savingTemplate ? '⏳...' : '💾 Template'}</span>
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setShowDeleteModal(true)}
+                >
+                  <span className="sm:hidden">🗑️</span>
+                  <span className="hidden sm:inline">🗑️ Delete</span>
+                </Button>
+              </div>
             )}
           </div>
         </div>
