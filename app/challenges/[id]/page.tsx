@@ -20,6 +20,7 @@ interface Submission {
   id: string
   user_id: string
   content: string
+  image_url?: string | null
   submitted_at: string
   profiles: {
     full_name: string
@@ -48,6 +49,8 @@ export default function ChallengePage() {
   const [userSubmission, setUserSubmission] = useState<Submission | null>(null)
   const [otherSubmissions, setOtherSubmissions] = useState<Submission[]>([])
   const [solution, setSolution] = useState('')
+  const [solutionImage, setSolutionImage] = useState<File | null>(null)
+  const [solutionImagePreview, setSolutionImagePreview] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -361,26 +364,47 @@ export default function ChallengePage() {
     setSubmitting(true)
 
     try {
+      // Upload image if provided
+      let imageUrl: string | null = null
+      if (solutionImage) {
+        const fileExt = solutionImage.name.split('.').pop()
+        const fileName = `${userId}/${params.id}-${Date.now()}.${fileExt}`
+        const { error: uploadError } = await supabase.storage
+          .from('challenge-images')
+          .upload(fileName, solutionImage, { contentType: solutionImage.type })
+        
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('challenge-images')
+            .getPublicUrl(fileName)
+          imageUrl = urlData.publicUrl
+        }
+      }
+
       if (userSubmission) {
-        // Update existing submission
+        const updateData: any = { content: solution }
+        if (imageUrl) updateData.image_url = imageUrl
+        
         const { error } = await supabase
           .from('challenge_submissions')
-          .update({ content: solution })
+          .update(updateData)
           .eq('id', userSubmission.id)
 
         if (!error) {
-          setUserSubmission({ ...userSubmission, content: solution })
+          setUserSubmission({ ...userSubmission, content: solution, image_url: imageUrl || userSubmission.image_url })
           setIsEditing(false)
         }
       } else {
-        // Create new submission
+        const insertData: any = {
+          challenge_id: params.id,
+          user_id: userId,
+          content: solution
+        }
+        if (imageUrl) insertData.image_url = imageUrl
+
         const { data, error } = await supabase
           .from('challenge_submissions')
-          .insert({
-            challenge_id: params.id,
-            user_id: userId,
-            content: solution
-          })
+          .insert(insertData)
           .select(`
             *,
             profiles!inner(full_name, nickname)
@@ -390,14 +414,12 @@ export default function ChallengePage() {
         if (!error && data) {
           setUserSubmission(data)
           setShowCelebration(true)
-          
-          // Load other submissions now that user has submitted
           await loadOtherSubmissions(userId)
-          
-          // Hide celebration after 3 seconds
           setTimeout(() => setShowCelebration(false), 3000)
         }
       }
+      setSolutionImage(null)
+      setSolutionImagePreview(null)
     } catch (error) {
       console.error('Error submitting:', error)
     } finally {
@@ -785,6 +807,9 @@ export default function ChallengePage() {
                   <p className="text-gray-700 whitespace-pre-wrap mb-3">
                     {userSubmission.content}
                   </p>
+                  {userSubmission.image_url && (
+                    <img src={userSubmission.image_url} alt="Solution" className="max-w-full max-h-64 rounded-lg border mb-3" />
+                  )}
                   <p className="text-sm text-gray-500 mb-3">
                     Submitted {formatTimeAgo(userSubmission.submitted_at)}
                   </p>
@@ -821,6 +846,35 @@ export default function ChallengePage() {
                              focus:border-primary-500 focus:ring-2 focus:ring-primary-200
                              resize-none transition-colors"
                   />
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      📷 Attach Image (Optional)
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null
+                        setSolutionImage(file)
+                        if (file) {
+                          setSolutionImagePreview(URL.createObjectURL(file))
+                        } else {
+                          setSolutionImagePreview(null)
+                        }
+                      }}
+                      className="text-sm text-gray-600"
+                    />
+                    {solutionImagePreview && (
+                      <div className="mt-2 relative inline-block">
+                        <img src={solutionImagePreview} alt="Preview" className="max-h-40 rounded-lg border" />
+                        <button
+                          type="button"
+                          onClick={() => { setSolutionImage(null); setSolutionImagePreview(null) }}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs"
+                        >✕</button>
+                      </div>
+                    )}
+                  </div>
                   <div className="flex gap-3 mt-4">
                     <Button
                       onClick={handleSubmit}
@@ -883,6 +937,9 @@ export default function ChallengePage() {
                           <p className="text-gray-700 whitespace-pre-wrap mb-3">
                             {submission.content}
                           </p>
+                          {submission.image_url && (
+                            <img src={submission.image_url} alt="Solution" className="max-w-full max-h-64 rounded-lg border mb-3" />
+                          )}
                           
                           <CommentThread
                             submissionId={submission.id}
