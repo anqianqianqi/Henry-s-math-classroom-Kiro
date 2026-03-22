@@ -1104,40 +1104,24 @@ export default function ChallengePage() {
               )}
             </Card.Body>
           </Card>
-        ) : (
-          // Must submit first OR must choose to reveal
+        ) : !isTeacher ? (
+          // Must submit first
           <Card className="bg-gray-50 border-2 border-dashed border-gray-300">
             <Card.Body className="text-center py-12">
               <div className="text-6xl mb-4">🔒</div>
               <h3 className="text-xl font-bold text-gray-700 mb-2">
                 Other Students' Solutions
               </h3>
-              {hasSubmitted ? (
-                <>
-                  <p className="text-gray-600 mb-4">
-                    Want to see what others wrote? This will lock your submission and current grade.
-                  </p>
-                  <Button onClick={handleRevealOthers}>
-                    🔓 Reveal Others' Solutions
-                  </Button>
-                  <p className="text-xs text-gray-500 mt-3">
-                    ⚠️ You won't be able to edit your answer after revealing
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-gray-600 mb-4">
-                    Submit your solution first!
-                  </p>
-                  <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                    <span>👥</span>
-                    <span>{totalSubmissionCount} {totalSubmissionCount === 1 ? 'student has' : 'students have'} submitted</span>
-                  </div>
-                </>
-              )}
+              <p className="text-gray-600 mb-4">
+                Submit your solution first!
+              </p>
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                <span>👥</span>
+                <span>{totalSubmissionCount} {totalSubmissionCount === 1 ? 'student has' : 'students have'} submitted</span>
+              </div>
             </Card.Body>
           </Card>
-        )}
+        ) : null}
       </main>
 
       {/* Delete Confirmation Modal */}
