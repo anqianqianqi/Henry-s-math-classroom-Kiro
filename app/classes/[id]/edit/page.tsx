@@ -546,7 +546,7 @@ export default function EditClassPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Syllabus / What's Included
+                        Syllabus / What&apos;s Included
                       </label>
                       <textarea
                         value={formData.syllabus}

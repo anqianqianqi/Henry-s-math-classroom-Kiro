@@ -357,7 +357,7 @@ export default function EditChallengePage() {
                   This challenge has {submissionCount} submission{submissionCount !== 1 ? 's' : ''}
                 </h3>
                 <p className="text-sm text-yellow-800">
-                  Editing this challenge won't affect existing submissions, but students will see the updated content.
+                  Editing this challenge won&apos;t affect existing submissions, but students will see the updated content.
                 </p>
               </div>
             </div>

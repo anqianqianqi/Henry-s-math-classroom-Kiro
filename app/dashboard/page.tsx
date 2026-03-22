@@ -332,7 +332,7 @@ export default function DashboardPage() {
                   fullWidth
                 >
                   <span className="mr-2">🎯</span>
-                  Today's Challenge
+                  Today&apos;s Challenge
                 </Button>
                 <Button 
                   variant="outline"
@@ -402,7 +402,7 @@ export default function DashboardPage() {
             </Card.Header>
             <Card.Body>
               <p className="text-gray-600">
-                Today's math challenge
+                Today&apos;s math challenge
               </p>
             </Card.Body>
             <Card.Footer>

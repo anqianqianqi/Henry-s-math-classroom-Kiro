@@ -643,7 +643,7 @@ export default function SessionDetail({ occurrenceId, userRole, onClose }: Sessi
                                         Feedback:
                                       </span>
                                       <p className="text-sm text-gray-600 italic">
-                                        "{grade.feedback}"
+                                        &ldquo;{grade.feedback}&rdquo;
                                       </p>
                                     </div>
                                   )}

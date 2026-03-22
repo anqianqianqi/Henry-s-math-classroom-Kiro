@@ -411,7 +411,7 @@ export default function ChallengesPage() {
           <div className="mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span>🔥</span>
-              Today's Challenges ({todayChallenges.length})
+              Today&apos;s Challenges ({todayChallenges.length})
             </h2>
             <div className="space-y-4">
               {todayChallenges.map(challenge => (

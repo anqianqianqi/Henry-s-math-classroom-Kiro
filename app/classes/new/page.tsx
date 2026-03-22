@@ -514,7 +514,7 @@ export default function NewClassPage() {
                       Public Class Discovery
                     </h3>
                     <p className="text-sm text-gray-600">
-                      Make your class discoverable to parents and students. Add details to help them decide if it's right for them.
+                      Make your class discoverable to parents and students. Add details to help them decide if it&apos;s right for them.
                     </p>
                   </div>
                 </div>
@@ -658,7 +658,7 @@ export default function NewClassPage() {
                     <div>
                       <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                         <span>📚</span>
-                        <span>Syllabus / What's Included</span>
+                        <span>Syllabus / What&apos;s Included</span>
                       </label>
                       <textarea
                         value={formData.syllabus}
