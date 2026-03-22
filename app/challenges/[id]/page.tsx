@@ -1031,6 +1031,13 @@ export default function ChallengePage() {
                           
                           {/* Grading - Teacher only */}
                           {isTeacher && (
+                            submission.is_locked ? (
+                              <div className="flex items-center gap-2 mb-3 p-3 bg-gray-100 rounded-lg border-2 border-gray-300">
+                                <span className="text-sm font-bold text-gray-700">📝 Grade:</span>
+                                <span className="text-sm font-bold">{submission.points ?? '—'}/100</span>
+                                <span className="text-xs text-orange-600 font-medium">🔒 Student locked their grade</span>
+                              </div>
+                            ) : (
                             <div className="flex items-center gap-2 mb-3 p-3 bg-yellow-50 rounded-lg border-2 border-yellow-200 flex-wrap">
                               <span className="text-sm font-bold text-gray-700">📝 Grade:</span>
                               <input
@@ -1060,6 +1067,7 @@ export default function ChallengePage() {
                                 <span className="text-xs text-green-600 font-medium">Current: {submission.points}/100</span>
                               )}
                             </div>
+                            )
                           )}
                           {/* Show points to students */}
                           {!isTeacher && submission.points != null && (
