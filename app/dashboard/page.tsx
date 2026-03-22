@@ -317,6 +317,19 @@ export default function DashboardPage() {
               <div className="text-gray-600 font-medium">Challenges</div>
             </Card.Body>
           </Card>
+
+          {isTeacher && (
+            <Card 
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/admin/roles')}
+            >
+              <Card.Body>
+                <div className="text-5xl mb-3">👥</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">Manage</div>
+                <div className="text-gray-600 font-medium">User Roles</div>
+              </Card.Body>
+            </Card>
+          )}
         </div>
 
         {/* Join Requests - Teacher only */}
