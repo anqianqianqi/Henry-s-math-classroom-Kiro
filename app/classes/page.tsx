@@ -37,34 +37,47 @@ export default function ClassesPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Get classes user teaches
-      const { data: teachingClasses } = await supabase
-        .from('classes')
-        .select('*')
-        .eq('created_by', user.id)
-
-      // Get classes user is enrolled in
-      const { data: memberships } = await supabase
-        .from('class_members')
-        .select('class_id')
+      // Check if user is a teacher
+      const { data: userRoles } = await supabase
+        .from('user_roles')
+        .select('role_id')
         .eq('user_id', user.id)
+        .is('class_id', null)
 
-      let enrolledClasses: any[] = []
-      if (memberships && memberships.length > 0) {
-        const classIds = memberships.map(m => m.class_id)
-        const { data } = await supabase
-          .from('classes')
-          .select('*')
-          .in('id', classIds)
-        enrolledClasses = data || []
+      let isTeacher = false
+      if (userRoles && userRoles.length > 0) {
+        const { data: roleData } = await supabase
+          .from('roles')
+          .select('name')
+          .in('id', userRoles.map((r: any) => r.role_id))
+        isTeacher = roleData?.some((r: any) => r.name === 'teacher') || false
       }
 
-      // Merge and deduplicate
-      const allClasses = [...(teachingClasses || []), ...enrolledClasses]
-      const unique = allClasses.filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i)
-      unique.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      if (isTeacher) {
+        // Teachers see all classes
+        const { data, error } = await supabase
+          .from('classes')
+          .select('*')
+          .order('created_at', { ascending: false })
+        if (error) throw error
+        setClasses(data || [])
+      } else {
+        // Students see only enrolled classes
+        const { data: memberships } = await supabase
+          .from('class_members')
+          .select('class_id')
+          .eq('user_id', user.id)
 
-      setClasses(unique)
+        if (memberships && memberships.length > 0) {
+          const { data, error } = await supabase
+            .from('classes')
+            .select('*')
+            .in('id', memberships.map(m => m.class_id))
+            .order('created_at', { ascending: false })
+          if (error) throw error
+          setClasses(data || [])
+        }
+      }
     } catch (err) {
       console.error('Load classes error:', err)
       setError(err instanceof Error ? err.message : 'Failed to load classes')

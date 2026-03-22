@@ -108,27 +108,18 @@ export default function ClassDetailPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Check if user is an admin
+      // Check user's global roles
       const { data: userRoles } = await supabase
         .from('user_roles')
         .select('role_id, roles(name)')
         .eq('user_id', user.id)
+        .is('class_id', null)
 
-      const isAdmin = userRoles?.some((ur: any) => ur.roles?.name === 'admin')
+      const hasTeacherRole = userRoles?.some((ur: any) => 
+        ur.roles?.name === 'teacher' || ur.roles?.name === 'admin' || ur.roles?.name === 'administrator'
+      )
       
-      if (isAdmin) {
-        setUserRole('teacher') // Admins have teacher privileges
-        return
-      }
-
-      // Check if user is the class creator (teacher)
-      const { data: classOwner } = await supabase
-        .from('classes')
-        .select('created_by')
-        .eq('id', classId)
-        .single()
-
-      if (classOwner?.created_by === user.id) {
+      if (hasTeacherRole) {
         setUserRole('teacher')
         return
       }

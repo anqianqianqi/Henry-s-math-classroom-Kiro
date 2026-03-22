@@ -83,74 +83,71 @@ export default function DashboardPage() {
 
   async function loadStats(userId: string) {
     try {
-      // Count classes where user is teacher (created_by) or member (class_members)
-      const { count: teachingCount } = await supabase
-        .from('classes')
-        .select('*', { count: 'exact', head: true })
-        .eq('created_by', userId)
+      if (isTeacher) {
+        // Teachers see all classes and all challenges
+        const { count: classesCount } = await supabase
+          .from('classes')
+          .select('*', { count: 'exact', head: true })
 
+        const { count: challengesCount } = await supabase
+          .from('daily_challenges')
+          .select('*', { count: 'exact', head: true })
+
+        // Count pending join requests across all classes
+        const { count: pendingRequests } = await supabase
+          .from('class_join_requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending')
+
+        const newStats = {
+          classesCount: classesCount || 0,
+          challengesCount: challengesCount || 0,
+          dayStreak: 0,
+          pendingRequests: pendingRequests || 0
+        }
+        setStats(newStats)
+        return
+      }
+
+      // Students: count only their classes and challenges
       const { count: memberCount } = await supabase
         .from('class_members')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
 
-      const classesCount = (teachingCount || 0) + (memberCount || 0)
-
-      // Count challenges assigned to user's classes or created by user
       const { data: userClassIds } = await supabase
         .from('class_members')
         .select('class_id')
         .eq('user_id', userId)
 
-      const { data: teachingClassIds } = await supabase
-        .from('classes')
-        .select('id')
-        .eq('created_by', userId)
-
-      const allClassIds = [
-        ...(userClassIds?.map(m => m.class_id) || []),
-        ...(teachingClassIds?.map(c => c.id) || [])
-      ]
-
       let challengesCount = 0
-      if (allClassIds.length > 0) {
+      if (userClassIds && userClassIds.length > 0) {
         const { count } = await supabase
           .from('challenge_assignments')
           .select('challenge_id', { count: 'exact', head: true })
-          .in('class_id', allClassIds)
+          .in('class_id', userClassIds.map(m => m.class_id))
         challengesCount = count || 0
       }
-
       // Calculate day streak from challenge submissions
-      const { data: submissions, error: submissionsError } = await supabase
+      const { data: submissions } = await supabase
         .from('challenge_submissions')
         .select('submitted_at')
         .eq('student_id', userId)
         .order('submitted_at', { ascending: false })
 
-      console.log('🔥 Streak Debug - Submissions:', submissions?.length, 'Error:', submissionsError)
-      console.log('🔥 Streak Debug - Raw submissions:', submissions)
-
       let dayStreak = 0
       if (submissions && submissions.length > 0) {
-        // Calculate streak by checking consecutive days
         const today = new Date()
         today.setHours(0, 0, 0, 0)
-        
-        console.log('🔥 Streak Debug - Today:', today)
         
         const submissionDates = submissions.map(s => {
           const date = new Date(s.submitted_at)
           date.setHours(0, 0, 0, 0)
-          console.log('🔥 Streak Debug - Submission date:', s.submitted_at, '→', date)
           return date.getTime()
         })
         
-        // Remove duplicates (multiple submissions on same day)
         const uniqueDates = [...new Set(submissionDates)].sort((a, b) => b - a)
-        console.log('🔥 Streak Debug - Unique dates:', uniqueDates.map(d => new Date(d).toLocaleDateString()))
         
-        // Check if there's a submission today or yesterday (streak can continue)
         const yesterday = new Date(today)
         yesterday.setDate(yesterday.getDate() - 1)
         
@@ -158,58 +155,29 @@ export default function DashboardPage() {
         const hasSubmissionToday = uniqueDates.includes(today.getTime())
         const hasSubmissionYesterday = uniqueDates.includes(yesterday.getTime())
         
-        console.log('🔥 Streak Debug - Has submission today?', hasSubmissionToday)
-        console.log('🔥 Streak Debug - Has submission yesterday?', hasSubmissionYesterday)
-        
-        if (!hasSubmissionToday && !hasSubmissionYesterday) {
-          // No submission today or yesterday, streak is broken
-          console.log('🔥 Streak Debug - Streak broken (no submission today or yesterday)')
-          dayStreak = 0
-        } else {
-          // Start from yesterday if no submission today, otherwise start from today
+        if (hasSubmissionToday || hasSubmissionYesterday) {
           if (!hasSubmissionToday) {
             currentDate = yesterday.getTime()
           }
           
-          console.log('🔥 Streak Debug - Starting from:', new Date(currentDate).toLocaleDateString())
-          
-          // Count consecutive days
           for (const dateTime of uniqueDates) {
-            console.log('🔥 Streak Debug - Checking:', new Date(dateTime).toLocaleDateString(), 'vs', new Date(currentDate).toLocaleDateString())
             if (dateTime === currentDate) {
               dayStreak++
-              console.log('🔥 Streak Debug - Match! Streak now:', dayStreak)
-              currentDate -= 24 * 60 * 60 * 1000 // Go back one day
+              currentDate -= 24 * 60 * 60 * 1000
             } else if (dateTime < currentDate) {
-              // Gap found, stop counting
-              console.log('🔥 Streak Debug - Gap found, stopping')
               break
             }
           }
         }
       }
 
-      console.log('🔥 Streak Debug - Final streak:', dayStreak)
-
-      // Count pending join requests for teacher's classes
-      let pendingRequests = 0
-      if (teachingClassIds && teachingClassIds.length > 0) {
-        const { count } = await supabase
-          .from('class_join_requests')
-          .select('*', { count: 'exact', head: true })
-          .in('class_id', teachingClassIds.map(c => c.id))
-          .eq('status', 'pending')
-        pendingRequests = count || 0
-      }
-
       const newStats = {
-        classesCount: classesCount || 0,
-        challengesCount: challengesCount || 0,
+        classesCount: memberCount || 0,
+        challengesCount,
         dayStreak,
-        pendingRequests
+        pendingRequests: 0
       }
 
-      console.log('Setting stats:', newStats)
       setStats(newStats)
     } catch (err) {
       console.error('Failed to load stats:', err)
