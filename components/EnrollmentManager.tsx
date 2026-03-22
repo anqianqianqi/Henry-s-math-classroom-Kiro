@@ -364,7 +364,7 @@ export default function EnrollmentManager({ classId, members, onMembersUpdate }:
               <h4 className="font-semibold text-gray-900">Bulk Enrollment</h4>
               <p className="text-sm text-gray-600">
                 Upload a CSV file with student email addresses. The file can have one email per line,
-                or be formatted as "Name,Email" (name is optional).
+                or be formatted as &quot;Name,Email&quot; (name is optional).
               </p>
               <div className="flex gap-2">
                 <input
