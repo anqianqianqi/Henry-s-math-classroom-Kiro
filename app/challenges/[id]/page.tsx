@@ -311,7 +311,7 @@ export default function ChallengePage() {
       let commentImageUrl: string | null = null
       if (imageFile) {
         const fileExt = imageFile.name.split('.').pop()
-        const fileName = `comments/${userId}/${submissionId}-${Date.now()}.${fileExt}`
+        const fileName = `${userId}/comment-${submissionId}-${Date.now()}.${fileExt}`
         const { error: uploadError } = await supabase.storage
           .from('challenge-images')
           .upload(fileName, imageFile, { contentType: imageFile.type })
