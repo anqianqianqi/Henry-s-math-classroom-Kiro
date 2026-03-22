@@ -68,22 +68,22 @@ export default function DashboardPage() {
       hasTeacherRole = roleData?.some((r: any) => r.name === 'teacher') || false
       hasAdminRole = roleData?.some((r: any) => r.name === 'administrator') || false
       console.log('Is teacher?', hasTeacherRole, 'Is admin?', hasAdminRole)
-      setIsTeacher(hasTeacherRole)
+      setIsTeacher(hasTeacherRole || hasAdminRole)
       setIsAdmin(hasAdminRole)
     } else {
       setIsTeacher(false)
       setIsAdmin(false)
     }
 
-    // Load stats
-    await loadStats(user.id)
+    // Load stats - pass role directly since setState is async
+    await loadStats(user.id, hasTeacherRole || hasAdminRole)
 
     setLoading(false)
   }
 
-  async function loadStats(userId: string) {
+  async function loadStats(userId: string, teacherRole: boolean = false) {
     try {
-      if (isTeacher) {
+      if (teacherRole) {
         // Teachers see all classes and all challenges
         const { count: classesCount } = await supabase
           .from('classes')
