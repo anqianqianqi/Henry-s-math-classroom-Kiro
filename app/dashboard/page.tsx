@@ -318,7 +318,7 @@ export default function DashboardPage() {
             </Card.Body>
           </Card>
 
-          {isTeacher && (
+          {(isTeacher || isAdmin) && (
             <Card 
               className="text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/roles')}
