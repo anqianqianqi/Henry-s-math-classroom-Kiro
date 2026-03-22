@@ -1104,7 +1104,7 @@ export default function ChallengePage() {
               )}
             </Card.Body>
           </Card>
-        ) : !isTeacher ? (
+        ) : (!isTeacher && !hasSubmitted) ? (
           // Must submit first
           <Card className="bg-gray-50 border-2 border-dashed border-gray-300">
             <Card.Body className="text-center py-12">
