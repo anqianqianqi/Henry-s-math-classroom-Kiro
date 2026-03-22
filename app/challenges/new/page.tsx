@@ -211,7 +211,7 @@ export default function NewChallengePage() {
       }
 
       // Upload image if provided
-      let imageUrl = null
+      let imageUrl: string | null = null
       if (imageFile) {
         imageUrl = await uploadImage(challenge.id)
         if (imageUrl) {

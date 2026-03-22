@@ -48,7 +48,10 @@ export default function JoinRequestManager({ classId }: JoinRequestManagerProps)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setRequests(data || [])
+      setRequests((data || []).map((d: any) => ({
+        ...d,
+        profiles: Array.isArray(d.profiles) ? d.profiles[0] : d.profiles
+      })))
     } catch (err) {
       console.error('Failed to load join requests:', err)
     } finally {

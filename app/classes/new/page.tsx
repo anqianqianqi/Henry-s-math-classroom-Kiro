@@ -140,7 +140,7 @@ export default function NewClassPage() {
       if (!user) throw new Error('Not authenticated')
 
       // Upload cover image if provided
-      let coverImageUrl = null
+      let coverImageUrl: string | null = null
       if (coverImage) {
         const fileExt = coverImage.name.split('.').pop()
         const fileName = `${user.id}/${Date.now()}.${fileExt}`
