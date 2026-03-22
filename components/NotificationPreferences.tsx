@@ -91,7 +91,7 @@ export default function NotificationPreferences() {
         .eq('user_id', user.id)
         .maybeSingle()
 
-      if (error && error.code !== 'PGRST116') throw error
+      if (error && error.code !== 'PGRST116' && error.code !== 'PGRST205') throw error
 
       if (data) {
         setPreferences(data)

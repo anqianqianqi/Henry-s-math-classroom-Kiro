@@ -32,15 +32,23 @@ export default function SettingsPage() {
 
     setUser(user)
 
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, full_name, email, avatar_url')
       .eq('id', user.id)
       .single()
 
+    console.log('Settings - profile:', profile, 'error:', profileError)
+
     if (profile) {
       setProfile(profile)
-      setNickname(profile.nickname || '')
+      // Try to get nickname separately (column may not exist yet)
+      const { data: nicknameData } = await supabase
+        .from('profiles')
+        .select('nickname')
+        .eq('id', user.id)
+        .single()
+      setNickname((nicknameData as any)?.nickname || '')
     }
 
     setLoading(false)
