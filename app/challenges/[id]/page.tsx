@@ -126,7 +126,9 @@ export default function ChallengePage() {
       submissions?.map(s => [s.user_id, s.submitted_at]) || []
     )
 
-    const students = members.map((m: any) => ({
+    const students = members
+      .filter((m: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.user_id === m.user_id) === i)
+      .map((m: any) => ({
       id: m.user_id,
       name: m.profiles?.nickname || m.profiles?.full_name || 'Unknown',
       submitted: submissionMap.has(m.user_id),
