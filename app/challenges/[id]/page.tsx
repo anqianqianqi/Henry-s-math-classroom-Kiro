@@ -1015,28 +1015,34 @@ export default function ChallengePage() {
                           
                           {/* Grading - Teacher only */}
                           {isTeacher && (
-                            <div className="flex items-center gap-2 mb-3 p-3 bg-yellow-50 rounded-lg border-2 border-yellow-200">
+                            <div className="flex items-center gap-2 mb-3 p-3 bg-yellow-50 rounded-lg border-2 border-yellow-200 flex-wrap">
                               <span className="text-sm font-bold text-gray-700">📝 Grade:</span>
                               <input
                                 type="number"
                                 min={0}
                                 max={100}
                                 defaultValue={submission.points ?? undefined}
-                                onBlur={(e) => {
-                                  const val = e.target.value === '' ? null : Math.min(100, Math.max(0, parseInt(e.target.value)))
-                                  if (val !== null) handleGradeSubmission(submission.id, val)
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    const val = (e.target as HTMLInputElement).value
-                                    const num = val === '' ? null : Math.min(100, Math.max(0, parseInt(val)))
-                                    if (num !== null) handleGradeSubmission(submission.id, num)
-                                  }
-                                }}
+                                id={`grade-${submission.id}`}
                                 className="w-20 px-3 py-2 border-2 border-gray-300 rounded-lg text-center text-sm font-bold focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                                 placeholder="0"
                               />
                               <span className="text-sm font-medium text-gray-500">/ 100</span>
+                              <button
+                                onClick={() => {
+                                  const input = document.getElementById(`grade-${submission.id}`) as HTMLInputElement
+                                  const val = input?.value
+                                  if (val === '') return alert('Enter a score first')
+                                  const num = Math.min(100, Math.max(0, parseInt(val)))
+                                  handleGradeSubmission(submission.id, num)
+                                  alert(`✅ Grade saved: ${num}/100`)
+                                }}
+                                className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                              >
+                                Publish Grade
+                              </button>
+                              {submission.points != null && (
+                                <span className="text-xs text-green-600 font-medium">Current: {submission.points}/100</span>
+                              )}
                             </div>
                           )}
                           {/* Show points to students */}
