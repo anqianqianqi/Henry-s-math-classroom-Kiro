@@ -842,7 +842,8 @@ export default function ChallengePage() {
         {!isTeacher && (
           <>
             {hasSubmitted && !isEditing ? (
-              // Show submitted solution
+              <>
+              {/* Show submitted solution */}
               <Card className="mb-6 border-2 border-primary-500">
                 <Card.Header>
                   <div className="flex items-center justify-between">
@@ -900,6 +901,21 @@ export default function ChallengePage() {
                   />
                 </Card.Body>
               </Card>
+
+              {!userSubmission?.is_locked && (
+                <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-2xl text-center">
+                  <p className="text-gray-700 mb-3">
+                    🔒 Want to see what other students wrote?
+                  </p>
+                  <Button onClick={handleRevealOthers} size="sm">
+                    🔓 Reveal Others&apos; Solutions
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-2">
+                    ⚠️ This will lock your submission and grade
+                  </p>
+                </div>
+              )}
+              </>
             ) : (
               // Show submission form
               <Card className="mb-6">
