@@ -888,7 +888,7 @@ export default function ChallengePage() {
                     isSubmitting={submittingComment[userSubmission.id] || false}
                     formatTimeAgo={formatTimeAgo}
                     showTitle={true}
-                    allowImage={isTeacher}
+                    allowImage={true}
                   />
                 </Card.Body>
               </Card>
@@ -1042,7 +1042,7 @@ export default function ChallengePage() {
                             isSubmitting={submittingComment[submission.id] || false}
                             formatTimeAgo={formatTimeAgo}
                             showTitle={false}
-                            allowImage={isTeacher}
+                            allowImage={true}
                           />
                         </div>
                       </div>
