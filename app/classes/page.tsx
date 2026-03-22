@@ -93,7 +93,7 @@ export default function ClassesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
         <div className="max-w-6xl mx-auto">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
@@ -109,20 +109,22 @@ export default function ClassesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
+        <div className="flex justify-between items-center mb-6 sm:mb-8">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Button
               variant="outline"
+              size="sm"
               onClick={() => router.push('/dashboard')}
             >
-              ← Home
+              ←
             </Button>
-            <h1 className="text-3xl font-bold text-gray-900">My Classes</h1>
+            <h1 className="text-lg sm:text-3xl font-bold text-gray-900">My Classes</h1>
           </div>
-          <Button onClick={() => router.push('/classes/new')}>
-            Create New Class
+          <Button size="sm" onClick={() => router.push('/classes/new')}>
+            <span className="sm:hidden">➕</span>
+            <span className="hidden sm:inline">Create New Class</span>
           </Button>
         </div>
 

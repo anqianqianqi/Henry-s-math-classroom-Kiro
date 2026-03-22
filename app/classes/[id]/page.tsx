@@ -250,7 +250,7 @@ export default function ClassDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
         <div className="max-w-4xl mx-auto">
           <div className="animate-pulse space-y-4">
             <div className="h-8 bg-gray-200 rounded w-1/3"></div>
@@ -263,7 +263,7 @@ export default function ClassDetailPage() {
 
   if (error || !classData) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
         <div className="max-w-4xl mx-auto">
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
             {error || 'Class not found'}
@@ -277,19 +277,20 @@ export default function ClassDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="max-w-4xl mx-auto">
         <Button
           variant="ghost"
+          size="sm"
           onClick={() => router.push('/classes')}
           className="mb-4"
         >
-          ← Back to Classes
+          ← Back
         </Button>
 
-        <div className="flex justify-between items-start mb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{classData.name}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{classData.name}</h1>
             {classData.schedule && classData.schedule.length > 0 && (
               <div className="text-gray-600 space-y-1">
                 {classData.schedule.map((slot, index) => (
@@ -306,15 +307,17 @@ export default function ClassDetailPage() {
               <>
                 <Button
                   variant="secondary"
+                  size="sm"
                   onClick={() => router.push(`/classes/${classId}/edit`)}
                 >
-                  Edit
+                  ✏️ Edit
                 </Button>
                 <Button
                   variant="danger"
+                  size="sm"
                   onClick={handleDelete}
                 >
-                  Delete
+                  🗑️ Delete
                 </Button>
               </>
             ) : (
