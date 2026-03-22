@@ -84,18 +84,14 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={() => router.push('/dashboard')}
-              variant="ghost"
-              size="sm"
-            >
-              ← Back
+        <div className="max-w-4xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button onClick={() => router.push('/dashboard')} variant="ghost" size="sm">
+              ←
             </Button>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">⚙️</span>
-              <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl sm:text-3xl">⚙️</span>
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Settings</h1>
             </div>
           </div>
         </div>

@@ -272,17 +272,14 @@ export default function NewChallengePage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              onClick={() => router.push('/dashboard')}
-            >
-              ← Back
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button variant="outline" size="sm" onClick={() => router.push('/dashboard')}>
+              ←
             </Button>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🎯</span>
-              <h1 className="text-2xl font-bold text-gray-900">Create Daily Challenge</h1>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl sm:text-3xl">🎯</span>
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">New Challenge</h1>
             </div>
           </div>
         </div>

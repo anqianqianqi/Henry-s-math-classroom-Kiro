@@ -285,29 +285,26 @@ export default function ChallengesPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                onClick={() => router.push('/dashboard')}
-              >
-                ← Home
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Button variant="outline" size="sm" onClick={() => router.push('/dashboard')}>
+                ←
               </Button>
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">🎯</span>
-                <h1 className="text-2xl font-bold text-gray-900">Daily Challenges</h1>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl sm:text-3xl">🎯</span>
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Challenges</h1>
               </div>
             </div>
             {isTeacher && (
-              <div className="flex gap-2">
-                <Button onClick={() => router.push('/challenges/new')}>
-                  <span className="mr-2">➕</span>
-                  Create Challenge
+              <div className="flex gap-1 sm:gap-2">
+                <Button size="sm" onClick={() => router.push('/challenges/new')}>
+                  <span className="sm:hidden">➕</span>
+                  <span className="hidden sm:inline">➕ Create</span>
                 </Button>
-                <Button onClick={() => router.push('/challenges/templates')} variant="secondary">
-                  <span className="mr-2">📝</span>
-                  Templates
+                <Button size="sm" onClick={() => router.push('/challenges/templates')} variant="secondary">
+                  <span className="sm:hidden">📝</span>
+                  <span className="hidden sm:inline">📝 Templates</span>
                 </Button>
               </div>
             )}
