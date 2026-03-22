@@ -470,7 +470,10 @@ export default function ChallengePage() {
       .update({ points })
       .eq('id', submissionId)
 
-    if (!error) {
+    if (error) {
+      console.error('Error grading:', error)
+      alert('Failed to save grade: ' + error.message)
+    } else {
       setOtherSubmissions(prev => prev.map(s => 
         s.id === submissionId ? { ...s, points } : s
       ))
