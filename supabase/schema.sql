@@ -69,6 +69,7 @@ CREATE TABLE role_permissions (
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name TEXT NOT NULL,
+  nickname TEXT,
   email TEXT NOT NULL,
   avatar_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),

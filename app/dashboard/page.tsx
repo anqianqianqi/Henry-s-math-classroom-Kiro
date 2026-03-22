@@ -82,20 +82,41 @@ export default function DashboardPage() {
 
   async function loadStats(userId: string) {
     try {
-      // Count classes - RLS policies will determine what the user can see
-      // Admin sees all, teachers see their own, students see enrolled classes
-      const { count: classesCount, error: classesError } = await supabase
+      // Count classes where user is teacher (created_by) or student (class_members)
+      const { count: teachingCount } = await supabase
         .from('classes')
         .select('*', { count: 'exact', head: true })
+        .eq('created_by', userId)
 
-      console.log('Classes count:', classesCount, 'Error:', classesError)
+      const { count: enrolledCount } = await supabase
+        .from('class_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
 
-      // Count challenges - RLS policies will determine what the user can see
-      const { count: challengesCount, error: challengesError } = await supabase
+      const classesCount = (teachingCount || 0) + (enrolledCount || 0)
+
+      // Count challenges: created by user OR assigned to classes user is in
+      const { count: createdChallenges } = await supabase
         .from('daily_challenges')
         .select('*', { count: 'exact', head: true })
+        .eq('created_by', userId)
 
-      console.log('Challenges count:', challengesCount, 'Error:', challengesError)
+      let assignedChallenges = 0
+      const { data: memberClasses } = await supabase
+        .from('class_members')
+        .select('class_id')
+        .eq('user_id', userId)
+
+      if (memberClasses && memberClasses.length > 0) {
+        const classIds = memberClasses.map(m => m.class_id)
+        const { count } = await supabase
+          .from('challenge_assignments')
+          .select('challenge_id', { count: 'exact', head: true })
+          .in('class_id', classIds)
+        assignedChallenges = count || 0
+      }
+
+      const challengesCount = (createdChallenges || 0) + assignedChallenges
 
       // Calculate day streak from challenge submissions
       const { data: submissions, error: submissionsError } = await supabase
@@ -196,7 +217,7 @@ export default function DashboardPage() {
     )
   }
 
-  const firstName = profile?.full_name?.split(' ')[0] || 'there'
+  const firstName = profile?.nickname || profile?.full_name?.split(' ')[0] || 'there'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
@@ -218,7 +239,7 @@ export default function DashboardPage() {
                 <span className="text-2xl">⚙️</span>
               </button>
               <span className="text-gray-600 font-medium">
-                {profile?.full_name || user?.email}
+                {profile?.nickname || profile?.full_name || user?.email}
               </span>
               <button
                 onClick={handleSignOut}

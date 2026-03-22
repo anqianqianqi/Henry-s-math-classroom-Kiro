@@ -10,11 +10,13 @@ import { Card } from '@/components/ui/Card'
 export default function SignUpPage() {
   const router = useRouter()
   const [fullName, setFullName] = useState('')
+  const [nickname, setNickname] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,7 +45,9 @@ export default function SignUpPage() {
         options: {
           data: {
             full_name: fullName,
+            nickname: nickname || null,
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       })
 
@@ -59,16 +63,15 @@ export default function SignUpPage() {
           .insert({
             id: authData.user.id,
             full_name: fullName,
+            nickname: nickname || null,
             email: email,
           })
 
         if (profileError) {
           console.error('Profile creation error:', profileError)
-          // Continue anyway, profile might be created by trigger
         }
 
-        router.push('/dashboard')
-        router.refresh()
+        setEmailSent(true)
       }
     } catch (err) {
       setError('An unexpected error occurred')
@@ -88,6 +91,26 @@ export default function SignUpPage() {
           <p className="mt-2 text-gray-600">Create your account</p>
         </div>
 
+        {emailSent ? (
+          <Card>
+            <Card.Body>
+              <div className="text-center py-6 space-y-4">
+                <span className="text-5xl">📧</span>
+                <h2 className="text-xl font-semibold text-gray-900">Check your email</h2>
+                <p className="text-gray-600">
+                  We sent a confirmation link to <span className="font-medium">{email}</span>.
+                  Click the link in the email to activate your account.
+                </p>
+                <p className="text-sm text-gray-500">
+                  Didn&apos;t receive it? Check your spam folder.
+                </p>
+                <a href="/login" className="text-blue-600 hover:underline text-sm">
+                  Go to Sign In
+                </a>
+              </div>
+            </Card.Body>
+          </Card>
+        ) : (
         <Card>
           <Card.Body>
             <form onSubmit={handleSignUp} className="space-y-4">
@@ -104,6 +127,15 @@ export default function SignUpPage() {
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="John Doe"
                 required
+              />
+
+              <FormField
+                label="Nickname (shown to classmates)"
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="e.g. Johnny"
+                helperText="Optional — displayed instead of your full name to other students"
               />
 
               <FormField
@@ -154,6 +186,7 @@ export default function SignUpPage() {
             </p>
           </Card.Footer>
         </Card>
+        )}
       </div>
     </div>
   )

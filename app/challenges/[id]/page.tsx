@@ -23,6 +23,7 @@ interface Submission {
   submitted_at: string
   profiles: {
     full_name: string
+    nickname: string | null
   }
 }
 
@@ -34,6 +35,7 @@ interface Comment {
   created_at: string
   profiles: {
     full_name: string
+    nickname: string | null
   }
 }
 
@@ -104,7 +106,7 @@ export default function ChallengePage() {
       .from('class_members')
       .select(`
         user_id,
-        profiles:user_id(full_name)
+        profiles:user_id(full_name, nickname)
       `)
       .in('class_id', classIds)
 
@@ -126,7 +128,7 @@ export default function ChallengePage() {
 
     const students = members.map((m: any) => ({
       id: m.user_id,
-      name: m.profiles?.full_name || 'Unknown',
+      name: m.profiles?.nickname || m.profiles?.full_name || 'Unknown',
       submitted: submissionMap.has(m.user_id),
       submittedAt: submissionMap.get(m.user_id)
     }))
@@ -185,7 +187,7 @@ export default function ChallengePage() {
       .from('challenge_submissions')
       .select(`
         *,
-        profiles!inner(full_name)
+        profiles!inner(full_name, nickname)
       `)
       .eq('challenge_id', params.id)
       .eq('user_id', user.id)
@@ -244,7 +246,7 @@ export default function ChallengePage() {
       .from('challenge_submissions')
       .select(`
         *,
-        profiles!inner(full_name)
+        profiles!inner(full_name, nickname)
       `)
       .eq('challenge_id', params.id)
       .order('submitted_at', { ascending: false })
@@ -270,7 +272,7 @@ export default function ChallengePage() {
       .from('submission_comments')
       .select(`
         *,
-        profiles!inner(full_name)
+        profiles!inner(full_name, nickname)
       `)
       .in('submission_id', submissionIds)
       .order('created_at', { ascending: true })
@@ -307,7 +309,7 @@ export default function ChallengePage() {
         })
         .select(`
           *,
-          profiles!inner(full_name)
+          profiles!inner(full_name, nickname)
         `)
         .single()
 
@@ -380,7 +382,7 @@ export default function ChallengePage() {
           })
           .select(`
             *,
-            profiles!inner(full_name)
+            profiles!inner(full_name, nickname)
           `)
           .single()
 
@@ -866,7 +868,7 @@ export default function ChallengePage() {
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
                             <p className="font-semibold text-gray-900">
-                              {submission.profiles.full_name}
+                              {submission.profiles.nickname || submission.profiles.full_name}
                             </p>
                             <p className="text-sm text-gray-500">
                               {formatTimeAgo(submission.submitted_at)}

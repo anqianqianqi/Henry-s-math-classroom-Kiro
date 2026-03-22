@@ -34,6 +34,7 @@ interface Material {
   uploaded_at: string
   profiles: {
     full_name: string
+    nickname: string | null
   }
 }
 
@@ -76,6 +77,7 @@ interface SubmissionComment {
   created_at: string
   profiles: {
     full_name: string
+    nickname: string | null
   }
 }
 
@@ -125,7 +127,7 @@ export default function SessionDetail({ occurrenceId, userRole, onClose }: Sessi
         .from('session_materials')
         .select(`
           *,
-          profiles:uploaded_by(full_name)
+          profiles:uploaded_by(full_name, nickname)
         `)
         .eq('occurrence_id', occurrenceId)
         .eq('is_available', true)
@@ -214,7 +216,7 @@ export default function SessionDetail({ occurrenceId, userRole, onClose }: Sessi
         .from('homework_submission_comments')
         .select(`
           *,
-          profiles!inner(full_name)
+          profiles!inner(full_name, nickname)
         `)
         .in('submission_id', submissionIds)
         .order('created_at', { ascending: true })
@@ -258,7 +260,7 @@ export default function SessionDetail({ occurrenceId, userRole, onClose }: Sessi
         })
         .select(`
           *,
-          profiles!inner(full_name)
+          profiles!inner(full_name, nickname)
         `)
         .single()
 
@@ -458,7 +460,7 @@ export default function SessionDetail({ occurrenceId, userRole, onClose }: Sessi
                           </>
                         )}
                         <span>
-                          Uploaded by {material.profiles.full_name}
+                          Uploaded by {material.profiles.nickname || material.profiles.full_name}
                         </span>
                         <span>•</span>
                         <span>
@@ -662,7 +664,7 @@ export default function SessionDetail({ occurrenceId, userRole, onClose }: Sessi
                                         <div className="flex items-start justify-between">
                                           <div className="flex-1">
                                             <p className="text-xs font-semibold text-gray-700">
-                                              {comment.profiles.full_name}
+                                              {comment.profiles.nickname || comment.profiles.full_name}
                                             </p>
                                             <p className="text-sm text-gray-900 mt-1 whitespace-pre-wrap">
                                               {comment.content}

@@ -8,6 +8,7 @@ interface Comment {
   created_at: string
   profiles: {
     full_name: string
+    nickname: string | null
   }
 }
 
@@ -72,7 +73,7 @@ export function CommentThread({
               <span className="text-lg">💬</span>
               <div className="flex-1">
                 <p className="font-medium text-gray-900">
-                  {comment.profiles.full_name}
+                  {comment.profiles.nickname || comment.profiles.full_name}
                   <span className="font-normal text-gray-500 ml-2">
                     {formatTimeAgo(comment.created_at)}
                   </span>
