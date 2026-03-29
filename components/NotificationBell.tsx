@@ -165,7 +165,7 @@ export default function NotificationBell() {
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-sm text-blue-600 hover:text-blue-800"
+                  className="text-sm text-primary-600 hover:text-primary-800"
                 >
                   Mark all read
                 </button>
@@ -231,12 +231,12 @@ export default function NotificationBell() {
               <div className="px-4 py-3 border-t border-gray-200 text-center">
                 <button
                   onClick={() => {
+                    markAllAsRead()
                     setIsOpen(false)
-                    // Could navigate to a full notifications page
                   }}
-                  className="text-sm text-blue-600 hover:text-blue-800"
+                  className="text-sm text-primary-600 hover:text-primary-800"
                 >
-                  View all notifications
+                  Mark all as read & close
                 </button>
               </div>
             )}
