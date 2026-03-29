@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { generateOccurrences } from '@/lib/utils/occurrences'
 
 interface ScheduleSlot {
   id: string
@@ -238,6 +239,28 @@ export default function NewClassPage() {
 
       // Show success animation
       setShowSuccess(true)
+      
+      // Auto-generate sessions if schedule and start date exist
+      if (validSlots.length > 0 && formData.start_date) {
+        try {
+          const endDate = formData.end_date
+            ? new Date(formData.end_date)
+            : new Date(new Date(formData.start_date).getTime() + 8 * 7 * 24 * 60 * 60 * 1000) // 8 weeks
+
+          const occurrences = generateOccurrences(
+            newClass.id,
+            validSlots.map(s => ({ day: s.day, startTime: s.startTime, endTime: s.endTime })),
+            new Date(formData.start_date),
+            endDate
+          )
+
+          if (occurrences.length > 0) {
+            await supabase.from('class_occurrences').insert(occurrences)
+          }
+        } catch (err) {
+          console.error('Failed to generate sessions:', err)
+        }
+      }
       
       // Redirect after animation
       setTimeout(() => {

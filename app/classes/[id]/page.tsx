@@ -9,6 +9,7 @@ import SessionsList from '@/components/SessionsList'
 import SessionDetail from '@/components/SessionDetail'
 import EnrollmentManager from '@/components/EnrollmentManager'
 import JoinRequestManager from '@/components/JoinRequestManager'
+import { generateOccurrences } from '@/lib/utils/occurrences'
 
 interface Class {
   id: string
@@ -43,6 +44,7 @@ export default function ClassDetailPage() {
   const [isEnrolled, setIsEnrolled] = useState(false)
   const [joinRequestStatus, setJoinRequestStatus] = useState<'none' | 'pending' | 'approved' | 'denied'>('none')
   const [requestingJoin, setRequestingJoin] = useState(false)
+  const [generatingSessions, setGeneratingSessions] = useState(false)
   const router = useRouter()
   const params = useParams()
   const supabase = createClient()
@@ -234,6 +236,56 @@ export default function ClassDetailPage() {
       }
     } finally {
       setRequestingJoin(false)
+    }
+  }
+
+  async function handleGenerateSessions() {
+    if (!classData?.schedule || !classData.start_date) {
+      alert('Class needs a schedule and start date to generate sessions')
+      return
+    }
+    setGeneratingSessions(true)
+    try {
+      // Find the latest existing session date
+      const { data: latest } = await supabase
+        .from('class_occurrences')
+        .select('occurrence_date')
+        .eq('class_id', classId)
+        .order('occurrence_date', { ascending: false })
+        .limit(1)
+
+      const startFrom = latest?.[0]
+        ? new Date(new Date(latest[0].occurrence_date).getTime() + 24 * 60 * 60 * 1000)
+        : new Date(classData.start_date)
+
+      const endDate = new Date(startFrom.getTime() + 8 * 7 * 24 * 60 * 60 * 1000)
+
+      // Get current max session number
+      const { data: maxSession } = await supabase
+        .from('class_occurrences')
+        .select('session_number')
+        .eq('class_id', classId)
+        .order('session_number', { ascending: false })
+        .limit(1)
+
+      const startNumber = (maxSession?.[0]?.session_number || 0)
+
+      const occurrences = generateOccurrences(classId, classData.schedule, startFrom, endDate)
+      occurrences.forEach((o, i) => { o.session_number = startNumber + i + 1 })
+
+      if (occurrences.length > 0) {
+        const { error } = await supabase.from('class_occurrences').insert(occurrences)
+        if (error) throw error
+        alert(`Generated ${occurrences.length} new sessions`)
+        window.location.reload()
+      } else {
+        alert('No new sessions to generate')
+      }
+    } catch (err) {
+      console.error('Failed to generate sessions:', err)
+      alert('Failed to generate sessions')
+    } finally {
+      setGeneratingSessions(false)
     }
   }
 
@@ -454,6 +506,18 @@ export default function ClassDetailPage() {
           )}
 
           {/* Class Sessions */}
+          {userRole === 'teacher' && classData.schedule && (
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleGenerateSessions}
+                disabled={generatingSessions}
+              >
+                {generatingSessions ? 'Generating...' : '+ Generate More Sessions'}
+              </Button>
+            </div>
+          )}
           {selectedSessionId ? (
             <SessionDetail
               occurrenceId={selectedSessionId}
