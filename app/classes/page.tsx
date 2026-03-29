@@ -25,6 +25,7 @@ export default function ClassesPage() {
   const [classes, setClasses] = useState<Class[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isTeacher, setIsTeacher] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -54,6 +55,7 @@ export default function ClassesPage() {
           r.name === 'teacher' || r.name === 'administrator' || r.name === 'admin'
         ) || false
         console.log('Classes page - roles:', roleData, 'isTeacher:', isTeacher)
+        setIsTeacher(isTeacher)
       } else {
         console.log('Classes page - no roles found for user, userRoles:', userRoles)
       }
@@ -122,10 +124,12 @@ export default function ClassesPage() {
             </Button>
             <h1 className="text-lg sm:text-3xl font-bold text-gray-900">My Classes</h1>
           </div>
-          <Button size="sm" onClick={() => router.push('/classes/new')}>
-            <span className="sm:hidden">+ New</span>
-            <span className="hidden sm:inline">Create New Class</span>
-          </Button>
+          {isTeacher && (
+            <Button size="sm" onClick={() => router.push('/classes/new')}>
+              <span className="sm:hidden">+ New</span>
+              <span className="hidden sm:inline">Create New Class</span>
+            </Button>
+          )}
         </div>
 
         {error && (
@@ -138,10 +142,12 @@ export default function ClassesPage() {
           <Card>
             <Card.Body>
               <div className="text-center py-12">
-                <p className="text-gray-600 mb-4">No classes yet</p>
-                <Button onClick={() => router.push('/classes/new')}>
-                  Create Your First Class
-                </Button>
+                <p className="text-gray-600 mb-4">{isTeacher ? 'No classes yet' : 'You are not enrolled in any classes yet'}</p>
+                {isTeacher && (
+                  <Button onClick={() => router.push('/classes/new')}>
+                    Create Your First Class
+                  </Button>
+                )}
               </div>
             </Card.Body>
           </Card>

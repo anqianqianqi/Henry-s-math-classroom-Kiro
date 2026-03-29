@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
@@ -51,6 +51,23 @@ export default function NewClassPage() {
   const [showValidationErrors, setShowValidationErrors] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    async function checkTeacher() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/login'); return }
+      const { data: roles } = await supabase.from('user_roles').select('role_id').eq('user_id', user.id).is('class_id', null)
+      if (roles && roles.length > 0) {
+        const { data: roleData } = await supabase.from('roles').select('name').in('id', roles.map((r: any) => r.role_id))
+        if (!roleData?.some((r: any) => r.name === 'teacher' || r.name === 'administrator')) {
+          router.push('/dashboard')
+        }
+      } else {
+        router.push('/dashboard')
+      }
+    }
+    checkTeacher()
+  }, [])
 
   // Validate fields in real-time
   function validateField(field: string, value: string | ScheduleSlot[]) {
