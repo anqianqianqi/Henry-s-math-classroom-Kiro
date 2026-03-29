@@ -286,7 +286,8 @@ export function calculateOccurrenceCount(
  * @returns Formatted string like "Monday, March 10 • 3:00 PM - 4:00 PM"
  */
 export function formatOccurrenceDisplay(occurrence: ClassOccurrence): string {
-  const date = new Date(occurrence.occurrence_date)
+  const [y, m, d] = occurrence.occurrence_date.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
   const dayName = date.toLocaleDateString('en-US', { weekday: 'long' })
   const dateStr = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
   
