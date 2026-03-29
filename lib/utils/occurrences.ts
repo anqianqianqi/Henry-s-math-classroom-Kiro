@@ -38,6 +38,12 @@ const DAY_MAP: Record<string, number> = {
   'Saturday': 6
 }
 
+/** Parse 'YYYY-MM-DD' as local date, not UTC */
+function parseLocalDate(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
 /**
  * Generate class occurrences from schedule and date range
  * 
@@ -75,11 +81,8 @@ export function generateOccurrences(
   }
 
   // Convert to Date objects if strings
-  let start = typeof startDate === 'string' ? new Date(startDate) : new Date(startDate)
-  let end = typeof endDate === 'string' ? new Date(endDate) : new Date(endDate)
-  // Fix timezone offset for date-only strings
-  start = new Date(start.getTime() + start.getTimezoneOffset() * 60000)
-  end = new Date(end.getTime() + end.getTimezoneOffset() * 60000)
+  let start = typeof startDate === 'string' ? parseLocalDate(startDate) : new Date(startDate)
+  let end = typeof endDate === 'string' ? parseLocalDate(endDate) : new Date(endDate)
 
   // Validate date range
   if (isNaN(start.getTime())) {
