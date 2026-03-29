@@ -10,7 +10,7 @@ interface Notification {
   title: string
   message: string
   link: string | null
-  is_read: boolean
+  read: boolean
   created_at: string
 }
 
@@ -45,7 +45,7 @@ export default function NotificationBell() {
       if (error) throw error
 
       setNotifications(data || [])
-      setUnreadCount(data?.filter(n => !n.is_read).length || 0)
+      setUnreadCount(data?.filter(n => !n.read).length || 0)
     } catch (err) {
       console.error('Failed to load notifications:', err)
     } finally {
@@ -57,14 +57,14 @@ export default function NotificationBell() {
     try {
       const { error } = await supabase
         .from('notifications')
-        .update({ is_read: true })
+        .update({ read: true })
         .eq('id', notificationId)
 
       if (error) throw error
 
       // Update local state
       setNotifications(prev =>
-        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
       )
       setUnreadCount(prev => Math.max(0, prev - 1))
     } catch (err) {
@@ -79,15 +79,15 @@ export default function NotificationBell() {
 
       const { error } = await supabase
         .from('notifications')
-        .update({ is_read: true })
+        .update({ read: true })
         .eq('user_id', user.id)
-        .eq('is_read', false)
+        .eq('read', false)
 
       if (error) throw error
 
       // Update local state
       setNotifications(prev =>
-        prev.map(n => ({ ...n, is_read: true }))
+        prev.map(n => ({ ...n, read: true }))
       )
       setUnreadCount(0)
     } catch (err) {
@@ -96,7 +96,7 @@ export default function NotificationBell() {
   }
 
   function handleNotificationClick(notification: Notification) {
-    if (!notification.is_read) {
+    if (!notification.read) {
       markAsRead(notification.id)
     }
     
@@ -194,7 +194,7 @@ export default function NotificationBell() {
                       key={notification.id}
                       onClick={() => handleNotificationClick(notification)}
                       className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
-                        !notification.is_read ? 'bg-blue-50' : ''
+                        !notification.read ? 'bg-blue-50' : ''
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -204,11 +204,11 @@ export default function NotificationBell() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <p className={`text-sm font-medium ${
-                              !notification.is_read ? 'text-gray-900' : 'text-gray-700'
+                              !notification.read ? 'text-gray-900' : 'text-gray-700'
                             }`}>
                               {notification.title}
                             </p>
-                            {!notification.is_read && (
+                            {!notification.read && (
                               <span className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1"></span>
                             )}
                           </div>
