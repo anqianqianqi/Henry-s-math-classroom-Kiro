@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { formatOccurrenceDisplay } from '@/lib/utils/occurrences'
+import { formatOccurrenceDisplay, generateOccurrences } from '@/lib/utils/occurrences'
 
 interface Occurrence {
   id: string
@@ -48,12 +48,79 @@ export default function SessionsList({ classId, onSelectSession }: SessionsListP
 
       if (fetchError) throw fetchError
 
-      setOccurrences(data || [])
+      let allOccurrences = data || []
+
+      // Auto-generate if fewer than 5 upcoming sessions
+      const today = new Date().toISOString().split('T')[0]
+      const upcoming = allOccurrences.filter(
+        o => o.occurrence_date >= today && o.status !== 'cancelled'
+      )
+
+      if (upcoming.length < 5) {
+        const generated = await ensureFutureSessions(allOccurrences, 5 - upcoming.length)
+        if (generated) {
+          // Reload after generating
+          const { data: refreshed } = await supabase
+            .from('class_occurrences')
+            .select('*')
+            .eq('class_id', classId)
+            .order('occurrence_date', { ascending: true })
+            .order('start_time', { ascending: true })
+          allOccurrences = refreshed || allOccurrences
+        }
+      }
+
+      setOccurrences(allOccurrences)
     } catch (err) {
       console.error('Failed to load occurrences:', err)
       setError(err instanceof Error ? err.message : 'Failed to load sessions')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function ensureFutureSessions(existing: Occurrence[], needed: number): Promise<boolean> {
+    try {
+      // Get class schedule
+      const { data: cls } = await supabase
+        .from('classes')
+        .select('schedule, start_date, end_date')
+        .eq('id', classId)
+        .single()
+
+      if (!cls?.schedule || !cls.start_date) return false
+      // Don't generate past end_date
+      if (cls.end_date && new Date(cls.end_date) < new Date()) return false
+
+      const maxSession = existing.reduce((max, o) => Math.max(max, o.session_number), 0)
+      const lastDate = existing.length > 0
+        ? existing[existing.length - 1].occurrence_date
+        : null
+
+      const startFrom = lastDate
+        ? new Date(new Date(lastDate).getTime() + 24 * 60 * 60 * 1000)
+        : new Date(cls.start_date)
+
+      // Generate enough weeks to get at least `needed` sessions
+      const weeksToGenerate = Math.ceil(needed / (cls.schedule.length || 1)) + 1
+      const endDate = cls.end_date
+        ? new Date(Math.min(
+            new Date(cls.end_date).getTime(),
+            startFrom.getTime() + weeksToGenerate * 7 * 24 * 60 * 60 * 1000
+          ))
+        : new Date(startFrom.getTime() + weeksToGenerate * 7 * 24 * 60 * 60 * 1000)
+
+      const newOccurrences = generateOccurrences(classId, cls.schedule, startFrom, endDate)
+      newOccurrences.forEach((o, i) => { o.session_number = maxSession + i + 1 })
+
+      if (newOccurrences.length > 0) {
+        await supabase.from('class_occurrences').insert(newOccurrences)
+        return true
+      }
+      return false
+    } catch (err) {
+      console.error('Failed to auto-generate sessions:', err)
+      return false
     }
   }
 
