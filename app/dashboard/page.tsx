@@ -104,7 +104,8 @@ export default function DashboardPage() {
           classesCount: classesCount || 0,
           challengesCount: challengesCount || 0,
           dayStreak: 0,
-          pendingRequests: pendingRequests || 0
+          pendingRequests: pendingRequests || 0,
+          totalScore: 0
         }
         setStats(newStats)
         return
