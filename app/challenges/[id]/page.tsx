@@ -682,7 +682,7 @@ export default function ChallengePage() {
                   size="sm"
                   onClick={() => router.push(`/challenges/${params.id}/edit`)}
                 >
-                  <span className="sm:hidden">✏️</span>
+                  <span className="sm:hidden">Edit</span>
                   <span className="hidden sm:inline">✏️ Edit</span>
                 </Button>
                 <Button
@@ -691,7 +691,7 @@ export default function ChallengePage() {
                   onClick={handleDuplicate}
                   disabled={duplicating}
                 >
-                  <span className="sm:hidden">📋</span>
+                  <span className="sm:hidden">{duplicating ? '...' : 'Copy'}</span>
                   <span className="hidden sm:inline">{duplicating ? '⏳...' : '📋 Duplicate'}</span>
                 </Button>
                 <Button
@@ -700,7 +700,7 @@ export default function ChallengePage() {
                   onClick={handleSaveAsTemplate}
                   disabled={savingTemplate}
                 >
-                  <span className="sm:hidden">💾</span>
+                  <span className="sm:hidden">{savingTemplate ? '...' : 'Save'}</span>
                   <span className="hidden sm:inline">{savingTemplate ? '⏳...' : '💾 Template'}</span>
                 </Button>
                 <Button
@@ -708,7 +708,7 @@ export default function ChallengePage() {
                   size="sm"
                   onClick={() => setShowDeleteModal(true)}
                 >
-                  <span className="sm:hidden">🗑️</span>
+                  <span className="sm:hidden">Delete</span>
                   <span className="hidden sm:inline">🗑️ Delete</span>
                 </Button>
               </div>

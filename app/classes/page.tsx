@@ -123,7 +123,7 @@ export default function ClassesPage() {
             <h1 className="text-lg sm:text-3xl font-bold text-gray-900">My Classes</h1>
           </div>
           <Button size="sm" onClick={() => router.push('/classes/new')}>
-            <span className="sm:hidden">➕</span>
+            <span className="sm:hidden">+ New</span>
             <span className="hidden sm:inline">Create New Class</span>
           </Button>
         </div>

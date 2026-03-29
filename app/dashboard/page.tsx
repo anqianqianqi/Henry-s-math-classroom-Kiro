@@ -229,18 +229,20 @@ export default function DashboardPage() {
               {isTeacher && (
                 <button
                   onClick={() => router.push('/admin/roles')}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                  className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                   aria-label="Manage Roles"
                 >
-                  <span className="text-xl sm:text-2xl">👥</span>
+                  <span className="hidden sm:inline text-2xl">👥</span>
+                  <span className="sm:hidden">Roles</span>
                 </button>
               )}
               <button
                 onClick={() => router.push('/settings')}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                 aria-label="Settings"
               >
-                <span className="text-xl sm:text-2xl">⚙️</span>
+                <span className="hidden sm:inline text-2xl">⚙️</span>
+                <span className="sm:hidden">Settings</span>
               </button>
               <span className="text-gray-600 font-medium hidden sm:inline">
                 {profile?.nickname || profile?.full_name || user?.email}
