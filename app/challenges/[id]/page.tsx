@@ -671,45 +671,26 @@ export default function ChallengePage() {
                 ←
               </Button>
               <div className="flex items-center gap-2">
-                <span className="text-2xl sm:text-3xl">📚</span>
                 <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Challenge</h1>
               </div>
             </div>
             {isTeacher && (
               <div className="flex items-center gap-1 sm:gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push(`/challenges/${params.id}/edit`)}
-                >
-                  <span className="sm:hidden">Edit</span>
-                  <span className="hidden sm:inline">✏️ Edit</span>
+                <Button variant="outline" size="sm"
+                  onClick={() => router.push(`/challenges/${params.id}/edit`)}>
+                  Edit
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleDuplicate}
-                  disabled={duplicating}
-                >
-                  <span className="sm:hidden">{duplicating ? '...' : 'Copy'}</span>
-                  <span className="hidden sm:inline">{duplicating ? '⏳...' : '📋 Duplicate'}</span>
+                <Button variant="secondary" size="sm"
+                  onClick={handleDuplicate} disabled={duplicating}>
+                  {duplicating ? '...' : 'Copy'}
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleSaveAsTemplate}
-                  disabled={savingTemplate}
-                >
-                  <span className="sm:hidden">{savingTemplate ? '...' : 'Save'}</span>
-                  <span className="hidden sm:inline">{savingTemplate ? '⏳...' : '💾 Template'}</span>
+                <Button variant="secondary" size="sm"
+                  onClick={handleSaveAsTemplate} disabled={savingTemplate}>
+                  {savingTemplate ? '...' : 'Save'}
                 </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => setShowDeleteModal(true)}
-                >
-                  <span className="sm:hidden">Delete</span>
-                  <span className="hidden sm:inline">🗑️ Delete</span>
+                <Button variant="danger" size="sm"
+                  onClick={() => setShowDeleteModal(true)}>
+                  Delete
                 </Button>
               </div>
             )}

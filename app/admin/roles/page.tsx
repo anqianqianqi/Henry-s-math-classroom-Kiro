@@ -127,7 +127,7 @@ export default function AdminRolesPage() {
           >
             ← Back to Dashboard
           </button>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">👥 User Roles</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">User Roles</h1>
           <p className="text-gray-600">Assign teacher or student roles to users</p>
         </div>
 

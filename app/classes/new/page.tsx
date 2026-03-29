@@ -278,7 +278,6 @@ export default function NewClassPage() {
               ←
             </Button>
             <div className="flex items-center gap-2">
-              <span className="text-2xl sm:text-3xl">🎓</span>
               <h1 className="text-lg sm:text-2xl font-bold text-gray-900">New Class</h1>
             </div>
           </div>

@@ -101,7 +101,6 @@ export default function JoinRequestsDashboard() {
               ←
             </Button>
             <div className="flex items-center gap-2">
-              <span className="text-2xl sm:text-3xl">📋</span>
               <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Join Requests</h1>
               {pending.length > 0 && (
                 <span className="px-2 py-1 bg-orange-500 text-white text-sm rounded-full">
