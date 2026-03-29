@@ -75,8 +75,11 @@ export function generateOccurrences(
   }
 
   // Convert to Date objects if strings
-  const start = typeof startDate === 'string' ? new Date(startDate) : startDate
-  const end = typeof endDate === 'string' ? new Date(endDate) : endDate
+  let start = typeof startDate === 'string' ? new Date(startDate) : new Date(startDate)
+  let end = typeof endDate === 'string' ? new Date(endDate) : new Date(endDate)
+  // Fix timezone offset for date-only strings
+  start = new Date(start.getTime() + start.getTimezoneOffset() * 60000)
+  end = new Date(end.getTime() + end.getTimezoneOffset() * 60000)
 
   // Validate date range
   if (isNaN(start.getTime())) {
