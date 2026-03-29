@@ -20,6 +20,7 @@ interface Class {
   created_at: string
   created_by: string
   teacher_name: string
+  teacher_email: string
 }
 
 interface Member {
@@ -58,12 +59,16 @@ export default function ClassDetailPage() {
     try {
       const { data, error } = await supabase
         .from('classes')
-        .select('*, profiles:created_by(full_name)')
+        .select('*, profiles:created_by(full_name, email)')
         .eq('id', classId)
         .single()
 
       if (error) throw error
-      setClassData({ ...data, teacher_name: (data.profiles as any)?.full_name || 'Unknown Teacher' })
+      setClassData({
+        ...data,
+        teacher_name: (data.profiles as any)?.full_name || 'Unknown Teacher',
+        teacher_email: (data.profiles as any)?.email || ''
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load class')
     } finally {
@@ -363,6 +368,7 @@ export default function ClassDetailPage() {
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Teacher</dt>
                   <dd className="mt-1 text-gray-900 font-medium">{classData.teacher_name}</dd>
+                  <dd className="text-sm text-gray-500">{classData.teacher_email}</dd>
                 </div>
                 {classData.description && (
                   <div>
