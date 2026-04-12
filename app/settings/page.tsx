@@ -15,6 +15,13 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
   const [loading, setLoading] = useState(true)
+  const [isTeacher, setIsTeacher] = useState(false)
+  const [scoreStats, setScoreStats] = useState<{
+    totalScore: number
+    gradedCount: number
+    submittedCount: number
+    recentGrades: { title: string; points: number; date: string }[]
+  } | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -38,17 +45,56 @@ export default function SettingsPage() {
       .eq('id', user.id)
       .single()
 
-    console.log('Settings - profile:', profile, 'error:', profileError)
-
     if (profile) {
       setProfile(profile)
-      // Try to get nickname separately (column may not exist yet)
       const { data: nicknameData } = await supabase
         .from('profiles')
         .select('nickname')
         .eq('id', user.id)
         .single()
       setNickname((nicknameData as any)?.nickname || '')
+    }
+
+    // Check role
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('role_id')
+      .eq('user_id', user.id)
+      .is('class_id', null)
+
+    let teacher = false
+    if (userRoles && userRoles.length > 0) {
+      const { data: roleData } = await supabase
+        .from('roles')
+        .select('name')
+        .in('id', userRoles.map((r: any) => r.role_id))
+      teacher = roleData?.some((r: any) => r.name === 'teacher' || r.name === 'administrator') || false
+    }
+    setIsTeacher(teacher)
+
+    // Load score stats for students only
+    if (!teacher) {
+      const { data: submissions } = await supabase
+        .from('challenge_submissions')
+        .select('id, points, is_locked, submitted_at, challenge_id, daily_challenges(title)')
+        .eq('user_id', user.id)
+        .order('submitted_at', { ascending: false })
+
+      if (submissions) {
+        const graded = submissions.filter(s => s.points != null && s.is_locked)
+        const totalScore = graded.reduce((sum, s) => sum + (s.points || 0), 0)
+        const recentGrades = graded.slice(0, 5).map((s: any) => ({
+          title: s.daily_challenges?.title || 'Challenge',
+          points: s.points,
+          date: s.submitted_at
+        }))
+        setScoreStats({
+          totalScore,
+          gradedCount: graded.length,
+          submittedCount: submissions.length,
+          recentGrades
+        })
+      }
     }
 
     setLoading(false)
@@ -89,17 +135,16 @@ export default function SettingsPage() {
             <Button onClick={() => router.push('/dashboard')} variant="ghost" size="sm">
               ←
             </Button>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Settings</h1>
-            </div>
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Settings</h1>
           </div>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+        {/* Profile Card */}
         <Card>
           <Card.Header>
-            <h2 className="text-lg font-semibold">👤 Profile</h2>
+            <h2 className="text-lg font-semibold"><span className="hidden sm:inline">👤 </span>Profile</h2>
           </Card.Header>
           <Card.Body>
             <div className="space-y-4">
@@ -128,6 +173,58 @@ export default function SettingsPage() {
             </div>
           </Card.Body>
         </Card>
+
+        {/* Score Card — students only */}
+        {!isTeacher && scoreStats && (
+          <Card>
+            <Card.Header>
+              <h2 className="text-lg font-semibold"><span className="hidden sm:inline">⭐ </span>My Score</h2>
+            </Card.Header>
+            <Card.Body>
+              <div className="space-y-4">
+                {/* Summary stats */}
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="bg-primary-50 rounded-xl p-4">
+                    <div className="text-3xl font-bold text-primary-700">{scoreStats.totalScore}</div>
+                    <div className="text-sm text-gray-600 mt-1">Total Points</div>
+                  </div>
+                  <div className="bg-green-50 rounded-xl p-4">
+                    <div className="text-3xl font-bold text-green-700">{scoreStats.gradedCount}</div>
+                    <div className="text-sm text-gray-600 mt-1">Graded</div>
+                  </div>
+                  <div className="bg-blue-50 rounded-xl p-4">
+                    <div className="text-3xl font-bold text-blue-700">{scoreStats.submittedCount}</div>
+                    <div className="text-sm text-gray-600 mt-1">Submitted</div>
+                  </div>
+                </div>
+
+                {/* Recent grades */}
+                {scoreStats.recentGrades.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">Recent Grades</p>
+                    <div className="space-y-2">
+                      {scoreStats.recentGrades.map((g, i) => (
+                        <div key={i} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                          <span className="text-sm text-gray-800 truncate flex-1">{g.title}</span>
+                          <div className="flex items-center gap-3 ml-3 shrink-0">
+                            <span className="text-sm font-bold text-primary-700">{g.points}/100</span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(g.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {scoreStats.gradedCount === 0 && (
+                  <p className="text-sm text-gray-500 text-center py-2">No graded challenges yet</p>
+                )}
+              </div>
+            </Card.Body>
+          </Card>
+        )}
 
         <NotificationPreferences />
       </main>

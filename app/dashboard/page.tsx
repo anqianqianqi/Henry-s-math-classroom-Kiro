@@ -124,11 +124,12 @@ export default function DashboardPage() {
 
       let challengesCount = 0
       if (userClassIds && userClassIds.length > 0) {
-        const { count } = await supabase
+        const { data: assignmentData } = await supabase
           .from('challenge_assignments')
-          .select('challenge_id', { count: 'exact', head: true })
+          .select('challenge_id')
           .in('class_id', userClassIds.map(m => m.class_id))
-        challengesCount = count || 0
+        const uniqueChallenges = new Set(assignmentData?.map(a => a.challenge_id))
+        challengesCount = uniqueChallenges.size
       }
       // Calculate day streak from challenge submissions
       const { data: submissions } = await supabase
@@ -178,6 +179,7 @@ export default function DashboardPage() {
         .from('challenge_submissions')
         .select('points')
         .eq('user_id', userId)
+        .eq('is_locked', true)
         .not('points', 'is', null)
 
       const totalScore = gradedSubmissions?.reduce((sum, s) => sum + (s.points || 0), 0) || 0
@@ -260,7 +262,7 @@ export default function DashboardPage() {
         {/* Welcome Banner */}
         <div className="bg-gradient-to-r from-primary-500 to-accent-blue rounded-3xl p-8 mb-8 text-white shadow-lg">
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-4xl">👋</span>
+            <span className="text-4xl hidden sm:inline">👋</span>
             <h2 className="text-3xl font-bold">Welcome back, {firstName}!</h2>
           </div>
           <p className="text-xl text-white/90">
@@ -268,7 +270,7 @@ export default function DashboardPage() {
           </p>
           {isTeacher && (
             <div className="mt-4 inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full">
-              <span>👨‍🏫</span>
+              <span className="hidden sm:inline">👨‍🏫</span>
               <span className="font-semibold">Teacher Account</span>
             </div>
           )}
@@ -281,7 +283,7 @@ export default function DashboardPage() {
             onClick={() => router.push('/classes')}
           >
             <Card.Body>
-              <div className="text-5xl mb-3">📚</div>
+              <div className="text-5xl mb-3 hidden sm:block">📚</div>
               <div className="text-3xl font-bold text-gray-900 mb-1">{stats.classesCount}</div>
               <div className="text-gray-600 font-medium">Classes</div>
             </Card.Body>
@@ -292,7 +294,7 @@ export default function DashboardPage() {
             onClick={() => router.push('/challenges')}
           >
             <Card.Body>
-              <div className="text-5xl mb-3">🎯</div>
+              <div className="text-5xl mb-3 hidden sm:block">🎯</div>
               <div className="text-3xl font-bold text-gray-900 mb-1">{stats.challengesCount}</div>
               <div className="text-gray-600 font-medium">Challenges</div>
             </Card.Body>
@@ -301,7 +303,7 @@ export default function DashboardPage() {
           {!isTeacher && !isAdmin && (
             <Card className="text-center hover:shadow-lg transition-shadow">
               <Card.Body>
-                <div className="text-5xl mb-3">⭐</div>
+                <div className="text-5xl mb-3 hidden sm:block">⭐</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">{stats.totalScore}</div>
                 <div className="text-gray-600 font-medium">Total Score</div>
               </Card.Body>
@@ -314,7 +316,7 @@ export default function DashboardPage() {
               onClick={() => router.push('/admin/roles')}
             >
               <Card.Body>
-                <div className="text-5xl mb-3">👥</div>
+                <div className="text-5xl mb-3 hidden sm:block">👥</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">Manage</div>
                 <div className="text-gray-600 font-medium">User Roles</div>
               </Card.Body>
@@ -331,7 +333,7 @@ export default function DashboardPage() {
             <Card.Body>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl">📋</span>
+                  <span className="text-3xl hidden sm:inline">📋</span>
                   <div>
                     <p className="font-semibold text-gray-900">
                       {stats.pendingRequests} Pending Join Request{stats.pendingRequests !== 1 ? 's' : ''}
@@ -429,7 +431,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="text-4xl">🌍</span>
+                  <span className="text-4xl hidden sm:inline">🌍</span>
                   <h3 className="text-2xl font-bold">Explore Classes</h3>
                 </div>
                 <p className="text-white/90 text-lg">
@@ -448,7 +450,7 @@ export default function DashboardPage() {
           <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/classes')}>
             <Card.Header>
               <Card.Title className="flex items-center gap-2">
-                <span className="text-2xl">📚</span>
+                <span className="text-2xl hidden sm:inline">📚</span>
                 My Classes
               </Card.Title>
             </Card.Header>
@@ -467,7 +469,7 @@ export default function DashboardPage() {
           <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/challenges')}>
             <Card.Header>
               <Card.Title className="flex items-center gap-2">
-                <span className="text-2xl">🎯</span>
+                <span className="text-2xl hidden sm:inline">🎯</span>
                 Daily Challenge
               </Card.Title>
             </Card.Header>

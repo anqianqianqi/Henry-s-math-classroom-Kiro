@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -12,10 +12,15 @@ interface Challenge {
   description: string
   challenge_date: string
   created_at: string
+  tags?: string[]
   submission_count?: number
   total_students?: number
   completion_rate?: number
   class_names?: string[]
+  // Student-specific
+  my_points?: number | null
+  my_is_locked?: boolean
+  my_submitted?: boolean
 }
 
 export default function ChallengesPage() {
@@ -30,6 +35,19 @@ export default function ChallengesPage() {
   const [selectedClass, setSelectedClass] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<string>('date-desc')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false)
+  const tagDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target as Node)) {
+        setTagDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
   
   // Pagination state
   const [showAllUpcoming, setShowAllUpcoming] = useState(false)
@@ -45,7 +63,7 @@ export default function ChallengesPage() {
 
   useEffect(() => {
     applyFiltersAndSort()
-  }, [challenges, searchQuery, selectedClass, dateFilter, sortBy])
+  }, [challenges, searchQuery, selectedClass, dateFilter, sortBy, selectedTags])
 
   async function loadChallenges() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -62,8 +80,6 @@ export default function ChallengesPage() {
       .eq('user_id', user.id)
       .is('class_id', null)
 
-    console.log('🔍 Admin Debug - User roles query:', { roles, userId: user.id })
-
     let teacherRole = false
     let adminRole = false
     if (roles && roles.length > 0) {
@@ -72,15 +88,11 @@ export default function ChallengesPage() {
         .select('name')
         .in('id', roles.map((r: any) => r.role_id))
 
-      console.log('🔍 Admin Debug - Role names:', roleData)
       teacherRole = roleData?.some((r: any) => r.name === 'teacher') || false
       adminRole = roleData?.some((r: any) => r.name === 'administrator') || false
-      console.log('🔍 Admin Debug - Is teacher?', teacherRole, 'Is admin?', adminRole)
     }
     
-    // Treat admin as teacher for UI purposes
     const canSeeAll = teacherRole || adminRole
-    console.log('🔍 Admin Debug - Can see all challenges?', canSeeAll)
     setIsTeacher(canSeeAll)
 
     if (canSeeAll) {
@@ -121,8 +133,6 @@ export default function ChallengesPage() {
         .select('class_id')
         .eq('user_id', user.id)
 
-      console.log('Class members:', classMembers)
-
       const classIds = classMembers?.map(cm => cm.class_id) || []
 
       if (classIds.length === 0) {
@@ -130,12 +140,18 @@ export default function ChallengesPage() {
         return
       }
 
+      // Load class names for filter dropdown
+      const { data: classesData } = await supabase
+        .from('classes')
+        .select('id, name')
+        .in('id', classIds)
+        .order('name')
+      setClasses(classesData || [])
+
       const { data: assignments } = await supabase
         .from('challenge_assignments')
         .select('challenge_id')
         .in('class_id', classIds)
-
-      console.log('Assignments:', assignments)
 
       const challengeIds = assignments?.map(a => a.challenge_id) || []
 
@@ -150,9 +166,34 @@ export default function ChallengesPage() {
         .in('id', challengeIds)
         .order('challenge_date', { ascending: false })
 
-      console.log('Challenges:', challengesData)
-
       setChallenges(challengesData || [])
+
+      // Load class names for each challenge (needed for class filter)
+      if (challengesData) {
+        // Load student's submissions for all challenges
+        const { data: mySubmissions } = await supabase
+          .from('challenge_submissions')
+          .select('challenge_id, points, is_locked')
+          .eq('user_id', user.id)
+          .in('challenge_id', challengeIds)
+
+        const subMap = new Map(mySubmissions?.map(s => [s.challenge_id, s]) || [])
+
+        const withExtras = await Promise.all(
+          challengesData.map(async (c) => {
+            const names = await loadChallengeClasses(c.id)
+            const sub = subMap.get(c.id)
+            return {
+              ...c,
+              class_names: names,
+              my_submitted: !!sub,
+              my_points: sub?.points ?? null,
+              my_is_locked: sub?.is_locked ?? false,
+            }
+          })
+        )
+        setChallenges(withExtras)
+      }
     }
     
     setLoading(false)
@@ -222,6 +263,11 @@ export default function ChallengesPage() {
       filtered = filtered.filter(c => 
         c.class_names?.some(name => name === selectedClass)
       )
+    }
+
+    // Apply tag filter
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(c => selectedTags.every(t => c.tags?.includes(t)))
     }
 
     // Apply date filter
@@ -310,8 +356,8 @@ export default function ChallengesPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Filters and Search - Teacher Only */}
-        {isTeacher && challenges.length > 0 && (
+        {/* Filters and Search */}
+        {challenges.length > 0 && (
           <Card className="mb-6">
             <Card.Body>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -371,6 +417,81 @@ export default function ChallengesPage() {
                 </div>
               </div>
 
+              {/* Tag filter row */}
+              {(() => {
+                const allTags = [...new Set(challenges.flatMap(c => c.tags || []))].sort()
+                return allTags.length > 0 ? (
+                  <div className="mt-4 flex items-center gap-3">
+                    <label className="text-sm font-medium text-gray-700 shrink-0">Tags:</label>
+                    <div className="relative" ref={tagDropdownRef}>
+                      <button
+                        type="button"
+                        onClick={() => setTagDropdownOpen(o => !o)}
+                        className="flex items-center gap-2 px-4 py-2 border-2 border-gray-200 rounded-xl 
+                                   bg-white text-sm hover:border-primary-400 transition-colors min-w-[160px]"
+                      >
+                        <span className="flex-1 text-left">
+                          {selectedTags.length === 0
+                            ? 'All Tags'
+                            : `${selectedTags.length} tag${selectedTags.length > 1 ? 's' : ''} selected`}
+                        </span>
+                        <span className="text-gray-400">{tagDropdownOpen ? '▲' : '▼'}</span>
+                      </button>
+
+                      {tagDropdownOpen && (
+                        <div className="absolute z-20 mt-1 w-56 bg-white border border-gray-200 rounded-xl shadow-lg py-1">
+                          {allTags.map(tag => (
+                            <label
+                              key={tag}
+                              className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedTags.includes(tag)}
+                                onChange={() =>
+                                  setSelectedTags(prev =>
+                                    prev.includes(tag)
+                                      ? prev.filter(t => t !== tag)
+                                      : [...prev, tag]
+                                  )
+                                }
+                                className="w-4 h-4 text-primary-600 rounded"
+                              />
+                              <span className="text-sm text-gray-700">#{tag}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Selected tag pills */}
+                    {selectedTags.map(tag => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-medium"
+                      >
+                        #{tag}
+                        <button
+                          onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
+                          className="ml-1 text-primary-500 hover:text-primary-800"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+
+                    {selectedTags.length > 0 && (
+                      <button
+                        onClick={() => setSelectedTags([])}
+                        className="text-sm text-gray-400 hover:text-gray-600"
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+                ) : null
+              })()}
+
               {/* Sort */}
               <div className="mt-4 flex items-center gap-4">
                 <label className="text-sm font-medium text-gray-700">
@@ -404,7 +525,7 @@ export default function ChallengesPage() {
         {todayChallenges.length > 0 ? (
           <div className="mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span>🔥</span>
+              <span className="hidden sm:inline">🔥</span>
               Today&apos;s Challenges ({todayChallenges.length})
             </h2>
             <div className="space-y-4">
@@ -413,7 +534,7 @@ export default function ChallengesPage() {
                   <Card.Header>
                     <div className="flex items-center justify-between">
                       <Card.Title className="flex items-center gap-2">
-                        <span>🔥</span>
+                        <span className="hidden sm:inline">🔥</span>
                         {challenge.title}
                       </Card.Title>
                       <span className="text-sm text-primary-600 font-semibold">
@@ -447,6 +568,23 @@ export default function ChallengesPage() {
                           <div className="mt-2 text-xs text-gray-500">
                             Classes: {challenge.class_names.join(', ')}
                           </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Grade for students */}
+                    {!isTeacher && (
+                      <div className="mb-4 flex items-center gap-2 text-sm">
+                        {challenge.my_submitted ? (
+                          <>
+                            <span className="text-green-600">✅ Submitted</span>
+                            <span className={`px-2 py-0.5 rounded-full font-bold ${challenge.my_points != null ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500'}`}>
+                              {challenge.my_points ?? 0}/100
+                            </span>
+                            {challenge.my_is_locked && <span className="text-gray-400">🔒</span>}
+                          </>
+                        ) : (
+                          <span className="text-orange-500">⏳ Not submitted</span>
                         )}
                       </div>
                     )}
@@ -484,7 +622,7 @@ export default function ChallengesPage() {
             {upcomingChallenges.length > 0 && (
               <>
                 <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <span>📅</span>
+                  <span className="hidden sm:inline">📅</span>
                   Upcoming Challenges ({upcomingChallenges.length})
                 </h2>
                 <div className="space-y-4 mb-8">
@@ -523,6 +661,15 @@ export default function ChallengesPage() {
                                 )}
                               </div>
                             )}
+                            {/* Grade for students */}
+                            {!isTeacher && challenge.my_submitted && (
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="text-green-600">✅ Submitted</span>
+                                <span className={`px-2 py-0.5 rounded-full font-bold ${challenge.my_points != null ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500'}`}>
+                                  {challenge.my_points ?? 0}/100
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <span className="text-2xl ml-4">→</span>
                         </div>
@@ -548,7 +695,7 @@ export default function ChallengesPage() {
             {pastChallenges.length > 0 && (
               <>
                 <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <span>📚</span>
+                  <span className="hidden sm:inline">📚</span>
                   Past Challenges ({pastChallenges.length})
                 </h2>
                 <div className="space-y-4">
@@ -585,6 +732,32 @@ export default function ChallengesPage() {
                                     {challenge.class_names.join(', ')}
                                   </span>
                                 )}
+                              </div>
+                            )}
+                            {/* Grade for students */}
+                            {!isTeacher && (
+                              <div className="flex items-center gap-2 text-xs">
+                                {challenge.my_submitted ? (
+                                  <>
+                                    <span className="text-green-600">✅ Submitted</span>
+                                    <span className={`px-2 py-0.5 rounded-full font-bold ${challenge.my_points != null ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500'}`}>
+                                      {challenge.my_points ?? 0}/100
+                                    </span>
+                                    {challenge.my_is_locked && <span className="text-gray-400">🔒</span>}
+                                  </>
+                                ) : (
+                                  <span className="text-orange-500">⏳ Not submitted</span>
+                                )}
+                              </div>
+                            )}
+                            {/* Tags */}
+                            {challenge.tags && challenge.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {challenge.tags.map(tag => (
+                                  <span key={tag} className="px-2 py-0.5 bg-primary-50 text-primary-600 rounded-full text-xs font-medium">
+                                    #{tag}
+                                  </span>
+                                ))}
                               </div>
                             )}
                           </div>

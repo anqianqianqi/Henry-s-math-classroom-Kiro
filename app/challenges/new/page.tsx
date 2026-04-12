@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
+import TagInput from '@/components/TagInput'
 
 interface Class {
   id: string
@@ -29,6 +30,7 @@ export default function NewChallengePage() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [tags, setTags] = useState<string[]>([])
 
   useEffect(() => {
     loadData()
@@ -196,7 +198,8 @@ export default function NewChallengePage() {
           created_by: userId,
           title: title.trim(),
           description: description.trim(),
-          challenge_date: challengeDate
+          challenge_date: challengeDate,
+          tags
         })
         .select()
         .single()
@@ -379,6 +382,17 @@ export default function NewChallengePage() {
                 onChange={(e) => setChallengeDate(e.target.value)}
                 required
               />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tags (Optional)
+                </label>
+                <TagInput
+                  tags={tags}
+                  onChange={setTags}
+                  placeholder="e.g. algebra, equations, grade-8"
+                />
+              </div>
 
               <div>
                 <div className="flex items-center justify-between mb-3">

@@ -55,14 +55,12 @@ export default function NotificationBell() {
 
   async function markAsRead(notificationId: string) {
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('id', notificationId)
+      const { error } = await supabase.rpc('mark_notification_read', {
+        p_notification_id: notificationId
+      })
 
-      if (error) throw error
+      if (error) console.error('markAsRead error:', error)
 
-      // Update local state
       setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
       )
@@ -85,7 +83,6 @@ export default function NotificationBell() {
 
       if (error) throw error
 
-      // Update local state
       setNotifications(prev =>
         prev.map(n => ({ ...n, read: true }))
       )
@@ -95,16 +92,16 @@ export default function NotificationBell() {
     }
   }
 
-  function handleNotificationClick(notification: Notification) {
+  async function handleNotificationClick(notification: Notification) {
     if (!notification.read) {
-      markAsRead(notification.id)
-    }
-    
-    if (notification.link) {
-      window.location.href = notification.link
+      await markAsRead(notification.id)
     }
     
     setIsOpen(false)
+
+    if (notification.link) {
+      window.location.href = notification.link
+    }
   }
 
   function getNotificationIcon(type: string): string {
@@ -151,15 +148,12 @@ export default function NotificationBell() {
       {/* Dropdown */}
       {isOpen && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 z-10"
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Dropdown Content */}
           <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-20 max-h-[600px] flex flex-col">
-            {/* Header */}
             <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
               <h3 className="font-semibold text-gray-900">Notifications</h3>
               {unreadCount > 0 && (
@@ -172,7 +166,6 @@ export default function NotificationBell() {
               )}
             </div>
 
-            {/* Notifications List */}
             <div className="overflow-y-auto flex-1">
               {loading ? (
                 <div className="p-8 text-center">
@@ -226,7 +219,6 @@ export default function NotificationBell() {
               )}
             </div>
 
-            {/* Footer */}
             {notifications.length > 0 && (
               <div className="px-4 py-3 border-t border-gray-200 text-center">
                 <button

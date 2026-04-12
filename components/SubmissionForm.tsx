@@ -160,7 +160,7 @@ export default function SubmissionForm({
         link_url: submissionType === 'link' ? linkUrl.trim() : null,
         comments: comments.trim() || null,
         is_late: isLate,
-        version: 1,
+        version: isUpdate ? (existingSubmission?.version || 1) + 1 : 1,
         submitted_at: new Date().toISOString()
       }
 
@@ -179,7 +179,6 @@ export default function SubmissionForm({
           .eq('id', existingSubmissions.id)
 
         if (updateError) {
-          // Clean up uploaded file if update fails
           if (fileUrl) {
             const filePath = fileUrl.split('/').slice(-2).join('/')
             await supabase.storage

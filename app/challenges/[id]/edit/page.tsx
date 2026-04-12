@@ -1,11 +1,11 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
+import TagInput from '@/components/TagInput'
 
 interface Challenge {
   id: string
@@ -41,6 +41,7 @@ export default function EditChallengePage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [tags, setTags] = useState<string[]>([])
 
   useEffect(() => {
     loadData()
@@ -97,6 +98,7 @@ export default function EditChallengePage() {
     setDescription(challengeData.description)
     setChallengeDate(challengeData.challenge_date)
     setCurrentImageUrl(challengeData.image_url || null)
+    setTags(challengeData.tags || [])
 
     // Load submission count
     const { count } = await supabase
@@ -254,7 +256,8 @@ export default function EditChallengePage() {
           title: title.trim(),
           description: description.trim(),
           challenge_date: challengeDate,
-          image_url: imageUrl
+          image_url: imageUrl,
+          tags
         })
         .eq('id', params.id)
 
@@ -469,6 +472,17 @@ export default function EditChallengePage() {
                 onChange={(e) => setChallengeDate(e.target.value)}
                 required
               />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tags (Optional)
+                </label>
+                <TagInput
+                  tags={tags}
+                  onChange={setTags}
+                  placeholder="e.g. algebra, equations, grade-8"
+                />
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">

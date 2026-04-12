@@ -1,5 +1,4 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -82,6 +81,27 @@ export default function ChallengePage() {
   useEffect(() => {
     loadChallenge()
   }, [params.id])
+
+  // Poll for score updates every 30s so student sees grade without refreshing
+  useEffect(() => {
+    if (isTeacher) return
+    const interval = setInterval(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('challenge_submissions')
+        .select('points, is_locked')
+        .eq('challenge_id', params.id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (data && userSubmission) {
+        if (data.points !== userSubmission.points || data.is_locked !== userSubmission.is_locked) {
+          setUserSubmission(prev => prev ? { ...prev, points: data.points, is_locked: data.is_locked } : prev)
+        }
+      }
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [isTeacher, userSubmission?.id])
 
   async function loadStudentList() {
     console.log('loadStudentList called')
@@ -350,6 +370,36 @@ export default function ChallengePage() {
         }))
         // Clear input
         setNewComment(prev => ({ ...prev, [submissionId]: '' }))
+
+        // Notify teachers when a student comments (not for own comments)
+        if (!isTeacher) {
+          try {
+            const commenterName = data.profiles?.nickname || data.profiles?.full_name || 'Someone'
+            const { data: teacherRole } = await supabase
+              .from('roles').select('id').eq('name', 'teacher').single()
+            if (teacherRole) {
+              const { data: assignments } = await supabase
+                .from('challenge_assignments').select('class_id').eq('challenge_id', params.id)
+              if (assignments && assignments.length > 0) {
+                const { data: teachers } = await supabase
+                  .from('class_members').select('user_id')
+                  .in('class_id', assignments.map((a: any) => a.class_id))
+                  .eq('role_id', teacherRole.id)
+                for (const t of (teachers || [])) {
+                  await supabase.rpc('insert_notification', {
+                    p_user_id: t.user_id,
+                    p_type: 'new_comment',
+                    p_title: 'New Comment',
+                    p_message: `${commenterName} commented on a solution for "${challenge?.title}"`,
+                    p_link: `/challenges/${params.id}`
+                  })
+                }
+              }
+            }
+          } catch (notifErr) {
+            console.error('Failed to send comment notification:', notifErr)
+          }
+        }
         // Expand to show the new comment
         const newCommentCount = (comments[submissionId]?.length || 0) + 1
         if (newCommentCount > COMMENTS_INCREMENT) {
@@ -378,6 +428,76 @@ export default function ChallengePage() {
         return { ...prev, [submissionId]: Math.min(current + COMMENTS_INCREMENT, total) }
       }
     })
+  }
+
+  async function notifyTeachers(studentId: string, action: string = 'submitted a solution') {
+    try {
+      const { data: teacherRole } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'teacher')
+        .single()
+
+      if (!teacherRole) return
+
+      const { data: challengeData } = await supabase
+        .from('daily_challenges')
+        .select('created_by, title')
+        .eq('id', params.id)
+        .single()
+
+      const { data: assignments } = await supabase
+        .from('challenge_assignments')
+        .select('class_id')
+        .eq('challenge_id', params.id)
+
+      const teacherIds = new Set<string>()
+
+      if (assignments && assignments.length > 0) {
+        const classIds = assignments.map((a: any) => a.class_id)
+        const { data: teachers } = await supabase
+          .from('class_members')
+          .select('user_id')
+          .in('class_id', classIds)
+          .eq('role_id', teacherRole.id)
+
+        teachers?.forEach((t: any) => teacherIds.add(t.user_id))
+      }
+
+      if (challengeData?.created_by) teacherIds.add(challengeData.created_by)
+      teacherIds.delete(studentId)
+
+      if (teacherIds.size === 0) return
+
+      const { data: studentProfile } = await supabase
+        .from('profiles')
+        .select('full_name, nickname')
+        .eq('id', studentId)
+        .single()
+
+      const studentName = (studentProfile as any)?.nickname || (studentProfile as any)?.full_name || 'A student'
+
+      const notifications = Array.from(teacherIds).map(teacherId => ({
+        user_id: teacherId,
+        type: 'submission_received',
+        title: action.includes('updated') ? 'Submission Updated' : 'New Submission',
+        message: `${studentName} ${action} for "${challengeData?.title || 'a challenge'}"`,
+        link: `/challenges/${params.id}`
+      }))
+
+      for (const notif of notifications) {
+        const { error: notifError } = await supabase.rpc('insert_notification', {
+          p_user_id: notif.user_id,
+          p_type: notif.type,
+          p_title: notif.title,
+          p_message: notif.message,
+          p_link: notif.link
+        })
+        if (notifError) console.error('Notification insert error:', notifError)
+      }
+    } catch (err) {
+      console.error('Failed to send notification:', err)
+    }
   }
 
   async function handleSubmit() {
@@ -415,6 +535,8 @@ export default function ChallengePage() {
         if (!error) {
           setUserSubmission({ ...userSubmission, content: solution, image_url: imageUrl || userSubmission.image_url })
           setIsEditing(false)
+          // Notify teachers of resubmission
+          await notifyTeachers(userId, 'updated their solution')
         }
       } else {
         const insertData: any = {
@@ -438,6 +560,8 @@ export default function ChallengePage() {
           setShowCelebration(true)
           await loadOtherSubmissions(userId)
           setTimeout(() => setShowCelebration(false), 3000)
+          // Notify teachers of new submission
+          await notifyTeachers(userId, 'submitted a solution')
         }
       }
       setSolutionImage(null)
@@ -451,7 +575,8 @@ export default function ChallengePage() {
 
   async function handleRevealOthers() {
     if (!userSubmission || !userId) return
-    if (!confirm('⚠️ This will lock your current submission and grade. You won\'t be able to edit your answer after this. Continue?')) return
+    const grade = userSubmission.points ?? 0
+    if (!confirm(`⚠️ This will lock your current submission and grade (${grade}/100). You won't be able to edit your answer after this. Continue?`)) return
 
     const { error } = await supabase
       .from('challenge_submissions')
@@ -479,6 +604,23 @@ export default function ChallengePage() {
       ))
       if (userSubmission?.id === submissionId) {
         setUserSubmission({ ...userSubmission, points })
+      }
+
+      // Notify the student their grade was published
+      try {
+        const gradedSubmission = otherSubmissions.find(s => s.id === submissionId)
+        const studentId = gradedSubmission?.user_id
+        if (studentId && studentId !== userId) {
+          await supabase.rpc('insert_notification', {
+            p_user_id: studentId,
+            p_type: 'homework_graded',
+            p_title: 'Challenge Graded',
+            p_message: `You received ${points}/100 on "${challenge?.title}"`,
+            p_link: `/challenges/${params.id}`
+          })
+        }
+      } catch (notifErr) {
+        console.error('Failed to send grade notification:', notifErr)
       }
     }
   }
@@ -716,7 +858,7 @@ export default function ChallengePage() {
         <Card className="mb-6">
           <Card.Header>
             <div className="flex items-center gap-3">
-              <span className="text-3xl">📚</span>
+              <span className="text-3xl hidden sm:inline">📚</span>
               <div className="flex-1">
                 <Card.Title>{challenge.title}</Card.Title>
                 <p className="text-sm text-gray-500">
@@ -831,9 +973,13 @@ export default function ChallengePage() {
                     <Card.Title className="flex items-center gap-2">
                       <span>✅</span>
                       Your Solution
-                      {userSubmission?.points != null && (
+                      {userSubmission?.points != null ? (
                         <span className="ml-2 px-2 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-bold">
                           {userSubmission.points}/100
+                        </span>
+                      ) : (
+                        <span className="ml-2 px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-sm font-bold">
+                          0/100
                         </span>
                       )}
                       {userSubmission?.is_locked && (

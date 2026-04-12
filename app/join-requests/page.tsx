@@ -116,7 +116,7 @@ export default function JoinRequestsDashboard() {
         {/* Pending */}
         <Card>
           <Card.Header>
-            <h2 className="text-lg font-semibold">⏳ Pending Requests</h2>
+            <h2 className="text-lg font-semibold"><span className="hidden sm:inline">⏳ </span>Pending Requests</h2>
           </Card.Header>
           <Card.Body>
             {pending.length === 0 ? (
@@ -168,7 +168,7 @@ export default function JoinRequestsDashboard() {
         {processed.length > 0 && (
           <Card>
             <Card.Header>
-              <h2 className="text-lg font-semibold">📜 History</h2>
+              <h2 className="text-lg font-semibold"><span className="hidden sm:inline">📜 </span>History</h2>
             </Card.Header>
             <Card.Body>
               <div className="space-y-2">

@@ -246,67 +246,17 @@ export default function NotificationPreferences() {
             </div>
           )}
 
-          {/* Email Master Toggle */}
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-900">Email Notifications</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  {preferences.email_enabled 
-                    ? 'Email notifications are enabled' 
-                    : 'Email notifications are disabled'}
-                </p>
-              </div>
-              <button
-                onClick={toggleEmailEnabled}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  preferences.email_enabled ? 'bg-blue-600' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    preferences.email_enabled ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-
           {/* Quick Actions */}
           <div className="flex gap-2">
-            <Button
-              onClick={() => setAllEmail(true)}
-              variant="secondary"
-              size="sm"
-              disabled={!preferences.email_enabled}
-            >
-              Enable All Email
+            <Button onClick={() => setAllInApp(true)} variant="secondary" size="sm">
+              Enable All
             </Button>
-            <Button
-              onClick={() => setAllEmail(false)}
-              variant="secondary"
-              size="sm"
-              disabled={!preferences.email_enabled}
-            >
-              Disable All Email
-            </Button>
-            <Button
-              onClick={() => setAllInApp(true)}
-              variant="secondary"
-              size="sm"
-            >
-              Enable All In-App
-            </Button>
-            <Button
-              onClick={() => setAllInApp(false)}
-              variant="secondary"
-              size="sm"
-            >
-              Disable All In-App
+            <Button onClick={() => setAllInApp(false)} variant="secondary" size="sm">
+              Disable All
             </Button>
           </div>
 
-          {/* Notification Types Table */}
+          {/* Notification Types */}
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -317,21 +267,16 @@ export default function NotificationPreferences() {
                   <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
                     In-App
                   </th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
-                    Email
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {notificationTypes.map((type) => {
                   const inappKey = `inapp_${type.key}` as keyof NotificationPrefs
-                  const emailKey = `email_${type.key}` as keyof NotificationPrefs
-                  
                   return (
                     <tr key={type.key} className="hover:bg-gray-50">
                       <td className="px-4 py-4">
                         <div className="flex items-start gap-3">
-                          <span className="text-2xl">{type.icon}</span>
+                          <span className="text-2xl hidden sm:inline">{type.icon}</span>
                           <div>
                             <div className="font-medium text-gray-900">{type.title}</div>
                             <div className="text-sm text-gray-600">{type.description}</div>
@@ -352,39 +297,11 @@ export default function NotificationPreferences() {
                           />
                         </button>
                       </td>
-                      <td className="px-4 py-4 text-center">
-                        <button
-                          onClick={() => togglePreference(type.key, 'email')}
-                          disabled={!preferences.email_enabled}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            preferences.email_enabled && preferences[emailKey]
-                              ? 'bg-blue-600'
-                              : 'bg-gray-300'
-                          } ${!preferences.email_enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              preferences[emailKey] ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
-                        </button>
-                      </td>
                     </tr>
                   )
                 })}
               </tbody>
             </table>
-          </div>
-
-          {/* Info Box */}
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-            <h4 className="font-medium text-gray-900 mb-2">📧 About Email Notifications</h4>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>• In-app notifications appear in the bell icon at the top of the page</li>
-              <li>• Email notifications are sent to your registered email address</li>
-              <li>• You can customize each notification type independently</li>
-              <li>• Changes take effect immediately</li>
-            </ul>
           </div>
 
           {/* Save Button */}

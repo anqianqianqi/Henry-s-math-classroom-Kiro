@@ -1,5 +1,4 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -354,7 +353,7 @@ export default function ClassDetailPage() {
               <div className="text-gray-600 space-y-1">
                 {classData.schedule.map((slot, index) => (
                   <p key={index} className="flex items-center gap-2">
-                    <span>📅</span>
+                    <span className="hidden sm:inline">📅</span>
                     <span>{slot.day}s {slot.startTime} - {slot.endTime}</span>
                   </p>
                 ))}
@@ -369,14 +368,14 @@ export default function ClassDetailPage() {
                   size="sm"
                   onClick={() => router.push(`/classes/${classId}/edit`)}
                 >
-                  ✏️ Edit
+                  <span className="hidden sm:inline">✏️ </span>Edit
                 </Button>
                 <Button
                   variant="danger"
                   size="sm"
                   onClick={handleDelete}
                 >
-                  🗑️ Delete
+                  <span className="hidden sm:inline">🗑️ </span>Delete
                 </Button>
               </>
             ) : (
@@ -387,12 +386,12 @@ export default function ClassDetailPage() {
                     disabled={requestingJoin}
                     className="bg-green-600 hover:bg-green-700"
                   >
-                    {requestingJoin ? 'Sending...' : '📝 Request to Join'}
+                    {requestingJoin ? 'Sending...' : <><span className="hidden sm:inline">📝 </span>Request to Join</>}
                   </Button>
                 )}
                 {joinRequestStatus === 'pending' && (
                   <div className="px-4 py-2 bg-orange-100 text-orange-800 rounded-lg font-medium">
-                    ⏳ Request Pending
+                    <span className="hidden sm:inline">⏳ </span>Request Pending
                   </div>
                 )}
                 {joinRequestStatus === 'approved' && (
@@ -434,7 +433,7 @@ export default function ClassDetailPage() {
                     <dd className="mt-1 space-y-2">
                       {classData.schedule.map((slot, index) => (
                         <div key={index} className="flex items-center gap-2 text-gray-900">
-                          <span>📅</span>
+                          <span className="hidden sm:inline">📅</span>
                           <span className="font-medium">{slot.day}s</span>
                           <span className="text-gray-500">•</span>
                           <span>{slot.startTime} - {slot.endTime}</span>
