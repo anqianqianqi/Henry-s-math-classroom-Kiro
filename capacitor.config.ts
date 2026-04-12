@@ -5,9 +5,7 @@ const config: CapacitorConfig = {
   appName: "Henry's Math Classroom",
   webDir: 'public',
   server: {
-    // Point to your deployed Vercel URL for production
-    // For development, comment this out and use local files
-    url: 'https://your-app.vercel.app',
+    url: 'https://henry-s-math-classroom-kiro-6nasvwiic.vercel.app',
     cleartext: true
   }
 };
