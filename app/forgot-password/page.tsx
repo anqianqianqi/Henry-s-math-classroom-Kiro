@@ -40,6 +40,12 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md">
+        <a
+          href="/login"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 py-2 px-3 -ml-3 rounded-lg active:bg-gray-100"
+        >
+          ← Back
+        </a>
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Henry&apos;s Math Classroom</h1>
           <p className="mt-2 text-gray-600">Reset your password</p>
