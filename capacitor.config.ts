@@ -7,6 +7,9 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://henry-s-math-classroom-kiro-6nasvwiic.vercel.app',
     cleartext: true
+  },
+  ios: {
+    contentInset: 'always'
   }
 };
 
