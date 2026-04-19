@@ -71,6 +71,18 @@ export default function JoinRequestManager({ classId }: JoinRequestManagerProps)
         .eq('id', requestId)
 
       if (error) throw error
+
+      const req = requests.find(r => r.id === requestId)
+      if (req) {
+        const { data: cls } = await supabase.from('classes').select('name').eq('id', classId).single()
+        await supabase.from('notifications').insert({
+          user_id: req.user_id, type: 'join_request_response',
+          title: 'Join Request Approved',
+          message: `Your request to join ${cls?.name || 'the class'} has been approved!`,
+          link: '/classes/' + classId, read: false
+        })
+      }
+
       await loadRequests()
       setResponseText(prev => {
         const next = { ...prev }
@@ -103,6 +115,18 @@ export default function JoinRequestManager({ classId }: JoinRequestManagerProps)
         .eq('id', requestId)
 
       if (error) throw error
+
+      const req = requests.find(r => r.id === requestId)
+      if (req) {
+        const { data: cls } = await supabase.from('classes').select('name').eq('id', classId).single()
+        const msg = `Your request to join ${cls?.name || 'the class'} was not approved.` + (response ? ` Reason: ${response}` : '')
+        await supabase.from('notifications').insert({
+          user_id: req.user_id, type: 'join_request_response',
+          title: 'Join Request Denied', message: msg,
+          link: '/classes/' + classId, read: false
+        })
+      }
+
       await loadRequests()
       setResponseText(prev => {
         const next = { ...prev }

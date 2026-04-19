@@ -72,6 +72,24 @@ export default function JoinRequestsDashboard() {
         .eq('id', requestId)
 
       if (error) throw error
+
+      // Send notification to student
+      const req = requests.find(r => r.id === requestId)
+      if (req) {
+        const title = status === 'approved' ? 'Join Request Approved' : 'Join Request Denied'
+        const message = status === 'approved'
+          ? `Your request to join ${req.class_name} has been approved!`
+          : `Your request to join ${req.class_name} was not approved.`
+        await supabase.from('notifications').insert({
+          user_id: req.user_id,
+          type: 'join_request_response',
+          title,
+          message,
+          link: '/classes/' + req.class_id,
+          read: false
+        })
+      }
+
       await loadRequests()
     } catch (err) {
       console.error('Failed to update request:', err)
