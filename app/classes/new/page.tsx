@@ -712,6 +712,7 @@ export default function NewClassPage() {
                       <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                         <span>🎓</span>
                         <span>Learning Objectives</span>
+                        <span className="text-sm font-normal text-gray-500">(optional)</span>
                       </label>
                       <div className="space-y-3">
                         {learningObjectives.map((objective, index) => (
@@ -752,7 +753,7 @@ export default function NewClassPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Materials Provided
+                          Materials Provided <span className="text-sm font-normal text-gray-500">(optional)</span>
                         </label>
                         <textarea
                           value={formData.materials_provided}
@@ -766,7 +767,7 @@ export default function NewClassPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Homework Expectations
+                          Homework Expectations <span className="text-sm font-normal text-gray-500">(optional)</span>
                         </label>
                         <textarea
                           value={formData.homework_expectations}
@@ -800,7 +801,7 @@ export default function NewClassPage() {
                     {/* Teaching Style */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Teaching Style
+                        Teaching Style <span className="text-sm font-normal text-gray-500">(optional)</span>
                       </label>
                       <input
                         type="text"

@@ -558,7 +558,7 @@ export default function EditClassPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Learning Objectives
+                        Learning Objectives <span className="text-sm font-normal text-gray-500">(optional)</span>
                       </label>
                       <div className="space-y-2">
                         {learningObjectives.map((objective, index) => (
@@ -594,7 +594,7 @@ export default function EditClassPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Materials Provided
+                          Materials Provided <span className="text-sm font-normal text-gray-500">(optional)</span>
                         </label>
                         <textarea
                           value={formData.materials_provided}
@@ -606,7 +606,7 @@ export default function EditClassPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Homework Expectations
+                          Homework Expectations <span className="text-sm font-normal text-gray-500">(optional)</span>
                         </label>
                         <textarea
                           value={formData.homework_expectations}
@@ -632,7 +632,7 @@ export default function EditClassPage() {
                     </div>
 
                     <FormField 
-                      label="Teaching Style"
+                      label="Teaching Style (optional)"
                       type="text"
                       value={formData.teaching_style}
                       onChange={(e) => setFormData({ ...formData, teaching_style: e.target.value })}
