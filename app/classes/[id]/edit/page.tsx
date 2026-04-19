@@ -620,7 +620,7 @@ export default function EditClassPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        About the Teacher
+                        About the Teacher <span className="text-sm font-normal text-gray-500">(optional)</span>
                       </label>
                       <textarea
                         value={formData.teacher_bio}
@@ -657,13 +657,19 @@ export default function EditClassPage() {
                         min="0"
                         step="0.01"
                       />
-                      <FormField 
-                        label="Location"
-                        type="text"
-                        value={formData.location}
-                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                        placeholder="Online"
-                      />
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                        <select
+                          value={formData.location}
+                          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                        >
+                          <option value="">Select...</option>
+                          <option value="Online">Online</option>
+                          <option value="In-person">In-person</option>
+                          <option value="Hybrid">Hybrid</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                 )}

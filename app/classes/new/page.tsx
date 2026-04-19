@@ -786,6 +786,7 @@ export default function NewClassPage() {
                       <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                         <span>👨‍🏫</span>
                         <span>About the Teacher</span>
+                        <span className="text-sm font-normal text-gray-500">(optional)</span>
                       </label>
                       <textarea
                         value={formData.teacher_bio}
@@ -851,15 +852,18 @@ export default function NewClassPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Location
                         </label>
-                        <input
-                          type="text"
+                        <select
                           value={formData.location}
                           onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                          placeholder="Online / In-person"
                           className="w-full p-3 border-2 border-gray-200 rounded-xl 
                                    focus:border-primary-500 focus:ring-4 focus:ring-primary-100
-                                   transition-all duration-200"
-                        />
+                                   transition-all duration-200 bg-white"
+                        >
+                          <option value="">Select...</option>
+                          <option value="Online">Online</option>
+                          <option value="In-person">In-person</option>
+                          <option value="Hybrid">Hybrid</option>
+                        </select>
                       </div>
                     </div>
                   </div>
