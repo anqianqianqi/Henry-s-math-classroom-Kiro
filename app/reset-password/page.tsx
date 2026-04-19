@@ -16,17 +16,22 @@ export default function ResetPasswordPage() {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    // Supabase sets the session from the URL hash after the callback redirect
-    // We just need to confirm the user has an active session
     const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        // No session — the link may be expired or already used
-        router.push('/forgot-password')
-      } else {
+    // Supabase puts tokens in the URL hash — onAuthStateChange picks them up
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
         setReady(true)
       }
     })
+    // Also check if already has a session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setReady(true)
+    })
+    // If no session after 3 seconds, redirect
+    const timeout = setTimeout(() => {
+      if (!ready) router.push('/forgot-password')
+    }, 3000)
+    return () => { subscription.unsubscribe(); clearTimeout(timeout) }
   }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
