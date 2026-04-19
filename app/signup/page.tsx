@@ -47,7 +47,7 @@ export default function SignUpPage() {
             full_name: fullName,
             nickname: nickname || null,
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback`,
         },
       })
 
