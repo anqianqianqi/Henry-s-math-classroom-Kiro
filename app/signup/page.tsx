@@ -92,7 +92,7 @@ export default function SignUpPage() {
       <div className="w-full max-w-md">
         <a
           href="/login"
-          className="mb-4 text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 py-2 px-3 -ml-3 rounded-lg active:bg-gray-100"
         >
           ← Back
         </a>
