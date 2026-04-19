@@ -214,7 +214,7 @@ export default function DashboardPage() {
     )
   }
 
-  const firstName = profile?.nickname || profile?.full_name?.split(' ')[0] || 'there'
+  const firstName = profile?.nickname || profile?.first_name || 'there'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">

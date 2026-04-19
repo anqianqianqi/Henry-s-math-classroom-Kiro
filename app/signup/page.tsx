@@ -39,7 +39,8 @@ export default function SignUpPage() {
     try {
       const supabase = createClient()
       
-      const fullName = `${firstName.trim()} ${lastName.trim()}`
+      const fName = firstName.trim()
+      const lName = lastName.trim()
       
       // Sign up user
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
@@ -47,7 +48,8 @@ export default function SignUpPage() {
         password,
         options: {
           data: {
-            full_name: fullName,
+            first_name: fName,
+            last_name: lName,
             nickname: nickname || null,
           },
           emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback`,
@@ -65,7 +67,8 @@ export default function SignUpPage() {
           .from('profiles')
           .insert({
             id: authData.user.id,
-            full_name: fullName,
+            first_name: fName,
+            last_name: lName,
             nickname: nickname || null,
             email: email,
           })

@@ -6,6 +6,8 @@ export type Database = {
       profiles: {
         Row: {
           id: string
+          first_name: string
+          last_name: string
           full_name: string
           nickname: string | null
           email: string
@@ -15,7 +17,8 @@ export type Database = {
         }
         Insert: {
           id: string
-          full_name: string
+          first_name: string
+          last_name: string
           nickname?: string | null
           email: string
           avatar_url?: string | null
@@ -24,7 +27,8 @@ export type Database = {
         }
         Update: {
           id?: string
-          full_name?: string
+          first_name?: string
+          last_name?: string
           nickname?: string | null
           email?: string
           avatar_url?: string | null
