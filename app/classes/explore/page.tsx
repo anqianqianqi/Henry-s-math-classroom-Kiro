@@ -243,10 +243,11 @@ export default function ExploreClassesPage() {
         <div className="max-w-7xl mx-auto px-4 py-10">
           <Button
             variant="ghost"
+            size="sm"
             onClick={() => router.push('/dashboard')}
-            className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 mb-6 transition-all"
+            className="mb-4"
           >
-            ← Back to Dashboard
+            ← Back
           </Button>
           
           <div className="max-w-3xl mx-auto text-center mb-10">

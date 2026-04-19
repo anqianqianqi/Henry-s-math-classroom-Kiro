@@ -121,12 +121,14 @@ export default function AdminRolesPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 p-4 sm:p-8">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => window.history.back()}
-            className="text-sm text-gray-600 hover:text-gray-900 mb-4 inline-block"
+            className="mb-4"
           >
-            ← Back to Dashboard
-          </button>
+            ← Back
+          </Button>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">User Roles</h1>
           <p className="text-gray-600">Assign teacher or student roles to users</p>
         </div>

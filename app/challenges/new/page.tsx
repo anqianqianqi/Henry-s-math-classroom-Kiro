@@ -277,8 +277,8 @@ export default function NewChallengePage() {
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 sm:gap-4">
-            <Button variant="outline" size="sm" onClick={() => router.push('/dashboard')}>
-              ←
+            <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
+              ← Back
             </Button>
             <div className="flex items-center gap-2">
               <h1 className="text-lg sm:text-2xl font-bold text-gray-900">New Challenge</h1>
