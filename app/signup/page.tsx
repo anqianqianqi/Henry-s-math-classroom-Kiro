@@ -9,7 +9,8 @@ import { Card } from '@/components/ui/Card'
 
 export default function SignUpPage() {
   const router = useRouter()
-  const [fullName, setFullName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [nickname, setNickname] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -37,6 +38,8 @@ export default function SignUpPage() {
 
     try {
       const supabase = createClient()
+      
+      const fullName = `${firstName.trim()} ${lastName.trim()}`
       
       // Sign up user
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
@@ -120,14 +123,25 @@ export default function SignUpPage() {
                 </div>
               )}
 
-              <FormField
-                label="Full Name"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="John Doe"
-                required
-              />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  label="First Name"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="John"
+                  required
+                />
+
+                <FormField
+                  label="Last Name"
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Doe"
+                  required
+                />
+              </div>
 
               <FormField
                 label="Nickname (shown to classmates)"
