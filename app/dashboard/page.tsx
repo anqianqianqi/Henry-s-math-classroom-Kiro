@@ -135,7 +135,7 @@ export default function DashboardPage() {
       const { data: submissions } = await supabase
         .from('challenge_submissions')
         .select('submitted_at')
-        .eq('student_id', userId)
+        .eq('user_id', userId)
         .order('submitted_at', { ascending: false })
 
       let dayStreak = 0
