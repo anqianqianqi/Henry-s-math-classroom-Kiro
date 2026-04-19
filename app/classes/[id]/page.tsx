@@ -400,8 +400,14 @@ export default function ClassDetailPage() {
                   </div>
                 )}
                 {joinRequestStatus === 'denied' && (
-                  <div className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg font-medium">
-                    Request Denied
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-2">
+                    <p className="text-sm text-red-800">✗ Join request not approved</p>
+                    <button
+                      onClick={handleRequestJoin}
+                      className="w-full px-3 py-1.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+                    >
+                      Submit New Request
+                    </button>
                   </div>
                 )}
               </>
