@@ -511,18 +511,6 @@ export default function ClassDetailPage() {
           )}
 
           {/* Class Sessions */}
-          {userRole === 'teacher' && classData.schedule && (
-            <div className="flex justify-end">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleGenerateSessions}
-                disabled={generatingSessions}
-              >
-                {generatingSessions ? 'Generating...' : '+ Generate More Sessions'}
-              </Button>
-            </div>
-          )}
           {selectedSessionId ? (
             <SessionDetail
               occurrenceId={selectedSessionId}
