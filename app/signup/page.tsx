@@ -88,7 +88,7 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
+    <div className="min-h-screen flex items-start justify-center bg-gray-50 px-4 py-16 pt-[max(4rem,calc(env(safe-area-inset-top)+1rem))]">
       <div className="w-full max-w-md">
         <a
           href="/login"
