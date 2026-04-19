@@ -90,6 +90,12 @@ export default function SignUpPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
       <div className="w-full max-w-md">
+        <button
+          onClick={() => router.back()}
+          className="mb-4 text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+        >
+          ← Back
+        </button>
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
             Henry&apos;s Math Classroom
