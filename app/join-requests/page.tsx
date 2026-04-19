@@ -73,9 +73,18 @@ export default function JoinRequestsDashboard() {
 
       if (error) throw error
 
-      // Send notification to student
+      // Send notification and enroll student
       const req = requests.find(r => r.id === requestId)
       if (req) {
+        if (status === 'approved') {
+          const { data: studentRole } = await supabase.from('roles').select('id').eq('name', 'student').single()
+          if (studentRole) {
+            await supabase.from('class_members').insert({
+              class_id: req.class_id, user_id: req.user_id, role_id: studentRole.id
+            })
+          }
+        }
+
         const title = status === 'approved' ? 'Join Request Approved' : 'Join Request Denied'
         const message = status === 'approved'
           ? `Your request to join ${req.class_name} has been approved!`

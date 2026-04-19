@@ -74,6 +74,15 @@ export default function JoinRequestManager({ classId }: JoinRequestManagerProps)
 
       const req = requests.find(r => r.id === requestId)
       if (req) {
+        // Add student to class
+        const { data: studentRole } = await supabase.from('roles').select('id').eq('name', 'student').single()
+        if (studentRole) {
+          await supabase.from('class_members').insert({
+            class_id: classId, user_id: req.user_id, role_id: studentRole.id
+          }).single()
+        }
+
+        // Send notification
         const { data: cls } = await supabase.from('classes').select('name').eq('id', classId).single()
         await supabase.from('notifications').insert({
           user_id: req.user_id, type: 'join_request_response',
