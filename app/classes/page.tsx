@@ -116,11 +116,11 @@ export default function ClassesPage() {
         <div className="flex justify-between items-center mb-6 sm:mb-8">
           <div className="flex items-center gap-2 sm:gap-4">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => router.push('/dashboard')}
             >
-              ←
+              ← Back
             </Button>
             <h1 className="text-lg sm:text-3xl font-bold text-gray-900">My Classes</h1>
           </div>
