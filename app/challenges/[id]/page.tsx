@@ -68,6 +68,7 @@ export default function ChallengePage() {
     submittedAt?: string
   }>>([])
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
   const [savingTemplate, setSavingTemplate] = useState(false)
@@ -817,24 +818,48 @@ export default function ChallengePage() {
               </div>
             </div>
             {isTeacher && (
-              <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
-                <Button variant="ghost" size="sm"
-                  onClick={() => router.push(`/challenges/${params.id}/edit`)}>
-                  Edit
-                </Button>
-                <Button variant="ghost" size="sm"
-                  onClick={handleDuplicate} disabled={duplicating}>
-                  {duplicating ? '...' : 'Copy'}
-                </Button>
-                <Button variant="ghost" size="sm"
-                  onClick={handleSaveAsTemplate} disabled={savingTemplate}>
-                  {savingTemplate ? '...' : 'Save'}
-                </Button>
-                <Button variant="danger" size="sm"
-                  onClick={() => setShowDeleteModal(true)}>
-                  Delete
-                </Button>
-              </div>
+              <>
+                {/* Desktop: show all buttons */}
+                <div className="hidden sm:flex items-center gap-2">
+                  <Button variant="ghost" size="sm"
+                    onClick={() => router.push(`/challenges/${params.id}/edit`)}>
+                    Edit
+                  </Button>
+                  <Button variant="ghost" size="sm"
+                    onClick={handleDuplicate} disabled={duplicating}>
+                    {duplicating ? '...' : 'Copy'}
+                  </Button>
+                  <Button variant="ghost" size="sm"
+                    onClick={handleSaveAsTemplate} disabled={savingTemplate}>
+                    {savingTemplate ? '...' : 'Save'}
+                  </Button>
+                  <Button variant="danger" size="sm"
+                    onClick={() => setShowDeleteModal(true)}>
+                    Delete
+                  </Button>
+                </div>
+                {/* Mobile: hamburger menu */}
+                <div className="relative sm:hidden">
+                  <button
+                    onClick={() => setShowMenu(!showMenu)}
+                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                  >
+                    ⋮
+                  </button>
+                  {showMenu && (
+                    <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[120px]">
+                      <button onClick={() => { router.push(`/challenges/${params.id}/edit`); setShowMenu(false) }}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Edit</button>
+                      <button onClick={() => { handleDuplicate(); setShowMenu(false) }} disabled={duplicating}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Copy</button>
+                      <button onClick={() => { handleSaveAsTemplate(); setShowMenu(false) }} disabled={savingTemplate}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Save as Template</button>
+                      <button onClick={() => { setShowDeleteModal(true); setShowMenu(false) }}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete</button>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>
