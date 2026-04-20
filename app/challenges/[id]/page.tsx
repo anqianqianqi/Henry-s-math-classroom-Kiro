@@ -806,27 +806,27 @@ export default function ChallengePage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-4">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => router.push('/challenges')}
               >
-                ←
+                ← Back
               </Button>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Challenge</h1>
               </div>
             </div>
             {isTeacher && (
-              <div className="flex items-center gap-1 sm:gap-2">
-                <Button variant="outline" size="sm"
+              <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
+                <Button variant="ghost" size="sm"
                   onClick={() => router.push(`/challenges/${params.id}/edit`)}>
                   Edit
                 </Button>
-                <Button variant="secondary" size="sm"
+                <Button variant="ghost" size="sm"
                   onClick={handleDuplicate} disabled={duplicating}>
                   {duplicating ? '...' : 'Copy'}
                 </Button>
-                <Button variant="secondary" size="sm"
+                <Button variant="ghost" size="sm"
                   onClick={handleSaveAsTemplate} disabled={savingTemplate}>
                   {savingTemplate ? '...' : 'Save'}
                 </Button>
