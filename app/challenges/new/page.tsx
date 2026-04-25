@@ -468,7 +468,7 @@ export default function NewChallengePage() {
                   size="lg"
                   className="flex-1"
                 >
-                  🚀 Create Challenge
+                  Create Challenge
                 </Button>
                 <Button
                   type="button"

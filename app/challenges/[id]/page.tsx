@@ -1138,7 +1138,7 @@ export default function ChallengePage() {
                       size="lg"
                       className="flex-1"
                     >
-                      🚀 {hasSubmitted ? 'Update Solution' : 'Submit Solution'}
+                      {hasSubmitted ? 'Update Solution' : 'Submit Solution'}
                     </Button>
                     {isEditing && (
                       <Button
