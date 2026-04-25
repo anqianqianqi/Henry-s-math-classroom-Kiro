@@ -372,10 +372,20 @@ export default function ChallengePage() {
         // Clear input
         setNewComment(prev => ({ ...prev, [submissionId]: '' }))
 
-        // Notify teachers when a student comments (not for own comments)
-        if (!isTeacher) {
-          try {
-            const commenterName = data.profiles?.nickname || data.profiles?.full_name || 'Someone'
+        // Notify relevant users about the new comment
+        try {
+          const commenterName = data.profiles?.nickname || data.profiles?.full_name || 'Someone'
+          const notifyIds = new Set<string>()
+
+          // Find the submission owner and notify them
+          const submission = otherSubmissions.find(s => s.id === submissionId)
+            || (userSubmission?.id === submissionId ? userSubmission : null)
+          if (submission && submission.user_id !== userId) {
+            notifyIds.add(submission.user_id)
+          }
+
+          // Notify teachers (for student comments)
+          if (!isTeacher) {
             const { data: teacherRole } = await supabase
               .from('roles').select('id').eq('name', 'teacher').single()
             if (teacherRole) {
@@ -386,20 +396,25 @@ export default function ChallengePage() {
                   .from('class_members').select('user_id')
                   .in('class_id', assignments.map((a: any) => a.class_id))
                   .eq('role_id', teacherRole.id)
-                for (const t of (teachers || [])) {
-                  await supabase.rpc('insert_notification', {
-                    p_user_id: t.user_id,
-                    p_type: 'new_comment',
-                    p_title: 'New Comment',
-                    p_message: `${commenterName} commented on a solution for "${challenge?.title}"`,
-                    p_link: `/challenges/${params.id}`
-                  })
-                }
+                teachers?.forEach((t: any) => notifyIds.add(t.user_id))
               }
             }
-          } catch (notifErr) {
-            console.error('Failed to send comment notification:', notifErr)
           }
+
+          // Don't notify yourself
+          notifyIds.delete(userId!)
+
+          for (const recipientId of notifyIds) {
+            await supabase.rpc('insert_notification', {
+              p_user_id: recipientId,
+              p_type: 'new_comment',
+              p_title: 'New Comment',
+              p_message: `${commenterName} commented on a solution for "${challenge?.title}"`,
+              p_link: `/challenges/${params.id}`
+            })
+          }
+        } catch (notifErr) {
+          console.error('Failed to send comment notification:', notifErr)
         }
         // Expand to show the new comment
         const newCommentCount = (comments[submissionId]?.length || 0) + 1
