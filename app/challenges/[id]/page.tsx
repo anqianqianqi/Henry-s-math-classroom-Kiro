@@ -405,12 +405,13 @@ export default function ChallengePage() {
           notifyIds.delete(userId!)
 
           for (const recipientId of notifyIds) {
-            await supabase.rpc('insert_notification', {
-              p_user_id: recipientId,
-              p_type: 'new_comment',
-              p_title: 'New Comment',
-              p_message: `${commenterName} commented on a solution for "${challenge?.title}"`,
-              p_link: `/challenges/${params.id}`
+            await supabase.from('notifications').insert({
+              user_id: recipientId,
+              type: 'new_comment',
+              title: 'New Comment',
+              message: `${commenterName} commented on a solution for "${challenge?.title}"`,
+              link: `/challenges/${params.id}`,
+              read: false
             })
           }
         } catch (notifErr) {
@@ -502,12 +503,13 @@ export default function ChallengePage() {
       }))
 
       for (const notif of notifications) {
-        const { error: notifError } = await supabase.rpc('insert_notification', {
-          p_user_id: notif.user_id,
-          p_type: notif.type,
-          p_title: notif.title,
-          p_message: notif.message,
-          p_link: notif.link
+        const { error: notifError } = await supabase.from('notifications').insert({
+          user_id: notif.user_id,
+          type: notif.type,
+          title: notif.title,
+          message: notif.message,
+          link: notif.link,
+          read: false
         })
         if (notifError) console.error('Notification insert error:', notifError)
       }
@@ -627,12 +629,13 @@ export default function ChallengePage() {
         const gradedSubmission = otherSubmissions.find(s => s.id === submissionId)
         const studentId = gradedSubmission?.user_id
         if (studentId && studentId !== userId) {
-          await supabase.rpc('insert_notification', {
-            p_user_id: studentId,
-            p_type: 'homework_graded',
-            p_title: 'Challenge Graded',
-            p_message: `You received ${points}/100 on "${challenge?.title}"`,
-            p_link: `/challenges/${params.id}`
+          await supabase.from('notifications').insert({
+            user_id: studentId,
+            type: 'homework_graded',
+            title: 'Challenge Graded',
+            message: `You received ${points}/100 on "${challenge?.title}"`,
+            link: `/challenges/${params.id}`,
+            read: false
           })
         }
       } catch (notifErr) {
