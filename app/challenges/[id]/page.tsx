@@ -1135,11 +1135,10 @@ export default function ChallengePage() {
                       onClick={handleSubmit}
                       disabled={!solution.trim() || submitting}
                       isLoading={submitting}
-                      fullWidth
                       size="lg"
+                      className="flex-1"
                     >
-                      <span className="mr-2">🚀</span>
-                      {hasSubmitted ? 'Update Solution' : 'Submit Solution'}
+                      🚀 {hasSubmitted ? 'Update Solution' : 'Submit Solution'}
                     </Button>
                     {isEditing && (
                       <Button

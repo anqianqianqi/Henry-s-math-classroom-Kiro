@@ -465,11 +465,10 @@ export default function NewChallengePage() {
                   type="submit"
                   disabled={submitting || classes.length === 0}
                   isLoading={submitting}
-                  fullWidth
                   size="lg"
+                  className="flex-1"
                 >
-                  <span className="mr-2">🚀</span>
-                  Create Challenge
+                  🚀 Create Challenge
                 </Button>
                 <Button
                   type="button"
