@@ -55,9 +55,10 @@ export default function NotificationBell() {
 
   async function markAsRead(notificationId: string) {
     try {
-      const { error } = await supabase.rpc('mark_notification_read', {
-        p_notification_id: notificationId
-      })
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', notificationId)
 
       if (error) console.error('markAsRead error:', error)
 

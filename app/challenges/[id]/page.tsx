@@ -386,6 +386,11 @@ export default function ChallengePage() {
 
           // Notify teachers (for student comments)
           if (!isTeacher) {
+            // Always notify the challenge creator
+            if (challenge?.created_by) {
+              notifyIds.add(challenge.created_by)
+            }
+            // Also notify teachers in assigned classes
             const { data: teacherRole } = await supabase
               .from('roles').select('id').eq('name', 'teacher').single()
             if (teacherRole) {
