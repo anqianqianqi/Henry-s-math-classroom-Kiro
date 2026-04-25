@@ -153,7 +153,7 @@ export default function NotificationBell() {
             onClick={() => setIsOpen(false)}
           />
           
-          <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-20 max-h-[600px] flex flex-col">
+          <div className="fixed inset-x-0 top-14 mx-2 sm:absolute sm:inset-x-auto sm:top-auto sm:mx-0 sm:right-0 sm:mt-2 w-auto sm:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-20 max-h-[70vh] flex flex-col">
             <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
               <h3 className="font-semibold text-gray-900">Notifications</h3>
               {unreadCount > 0 && (
