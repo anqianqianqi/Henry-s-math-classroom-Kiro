@@ -83,6 +83,30 @@ export default function ChallengePage() {
     loadChallenge()
   }, [params.id])
 
+  // Real-time comment subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel(`comments-${params.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'submission_comments' }, async (payload) => {
+        const newComment = payload.new as any
+        // Fetch the full comment with profile
+        const { data } = await supabase
+          .from('submission_comments')
+          .select('*, profiles!inner(full_name, nickname)')
+          .eq('id', newComment.id)
+          .single()
+        if (data) {
+          setComments(prev => {
+            const existing = prev[data.submission_id] || []
+            if (existing.some(c => c.id === data.id)) return prev
+            return { ...prev, [data.submission_id]: [...existing, data] }
+          })
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [params.id])
+
   // Poll for score updates every 30s so student sees grade without refreshing
   useEffect(() => {
     if (isTeacher) return
@@ -416,7 +440,7 @@ export default function ChallengePage() {
               title: 'New Comment',
               message: `${commenterName} commented on a solution for "${challenge?.title}"`,
               link: `/challenges/${params.id}`,
-              read: false
+              is_read: false
             })
           }
         } catch (notifErr) {

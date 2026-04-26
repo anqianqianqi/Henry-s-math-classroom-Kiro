@@ -107,6 +107,29 @@ export default function SessionDetail({ occurrenceId, userRole, onClose }: Sessi
     loadSessionData()
   }, [occurrenceId])
 
+  // Real-time comment subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel(`hw-comments-${occurrenceId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'homework_submission_comments' }, async (payload) => {
+        const newComment = payload.new as any
+        const { data } = await supabase
+          .from('homework_submission_comments')
+          .select('*, profiles!inner(full_name, nickname)')
+          .eq('id', newComment.id)
+          .single()
+        if (data) {
+          setSubmissionComments(prev => {
+            const existing = prev[data.submission_id] || []
+            if (existing.some(c => c.id === data.id)) return prev
+            return { ...prev, [data.submission_id]: [...existing, data] }
+          })
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [occurrenceId])
+
   async function loadSessionData() {
     try {
       setLoading(true)
