@@ -468,36 +468,33 @@ export default function ChallengePage() {
 
   async function notifyTeachers(studentId: string, action: string = 'submitted a solution') {
     try {
-      const { data: teacherRole } = await supabase
-        .from('roles')
-        .select('id')
-        .eq('name', 'teacher')
-        .single()
-
-      if (!teacherRole) return
-
       const { data: challengeData } = await supabase
         .from('daily_challenges')
         .select('created_by, title')
         .eq('id', params.id)
         .single()
 
-      const { data: assignments } = await supabase
-        .from('challenge_assignments')
-        .select('class_id')
-        .eq('challenge_id', params.id)
+      // Get all teacher/admin user IDs from user_roles (global roles, class_id IS NULL)
+      const { data: allRoles } = await supabase
+        .from('user_roles')
+        .select('user_id, role_id')
+        .is('class_id', null)
 
       const teacherIds = new Set<string>()
 
-      if (assignments && assignments.length > 0) {
-        const classIds = assignments.map((a: any) => a.class_id)
-        const { data: teachers } = await supabase
-          .from('class_members')
-          .select('user_id')
-          .in('class_id', classIds)
-          .eq('role_id', teacherRole.id)
+      if (allRoles && allRoles.length > 0) {
+        const roleIds = [...new Set(allRoles.map(r => r.role_id))]
+        const { data: roleNames } = await supabase
+          .from('roles')
+          .select('id, name')
+          .in('id', roleIds)
 
-        teachers?.forEach((t: any) => teacherIds.add(t.user_id))
+        const teacherRoleIds = new Set(
+          roleNames?.filter(r => r.name === 'teacher' || r.name === 'administrator').map(r => r.id) || []
+        )
+        allRoles.forEach(r => {
+          if (teacherRoleIds.has(r.role_id)) teacherIds.add(r.user_id)
+        })
       }
 
       if (challengeData?.created_by) teacherIds.add(challengeData.created_by)
@@ -521,17 +518,8 @@ export default function ChallengePage() {
         link: `/challenges/${params.id}`
       }))
 
-      for (const notif of notifications) {
-        const { error: notifError } = await supabase.from('notifications').insert({
-          user_id: notif.user_id,
-          type: notif.type,
-          title: notif.title,
-          message: notif.message,
-          link: notif.link,
-          read: false
-        })
-        if (notifError) console.error('Notification insert error:', notifError)
-      }
+      const { error: notifError } = await supabase.from('notifications').insert(notifications)
+      if (notifError) console.error('Notification insert error:', notifError)
     } catch (err) {
       console.error('Failed to send notification:', err)
     }
