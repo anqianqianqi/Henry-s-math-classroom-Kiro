@@ -14,7 +14,8 @@ export default function SettingsPage() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [nickname, setNickname] = useState('')
-  const [fullName, setFullName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
   const [loading, setLoading] = useState(true)
@@ -44,13 +45,14 @@ export default function SettingsPage() {
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, full_name, email, avatar_url')
+      .select('id, full_name, first_name, last_name, email, avatar_url')
       .eq('id', user.id)
       .single()
 
     if (profile) {
       setProfile(profile)
-      setFullName(profile.full_name || '')
+      setFirstName(profile.first_name || '')
+      setLastName(profile.last_name || '')
       const { data: nicknameData } = await supabase
         .from('profiles')
         .select('nickname')
@@ -112,7 +114,9 @@ export default function SettingsPage() {
     const { error } = await supabase
       .from('profiles')
       .update({
-        full_name: fullName.trim() || null,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        full_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
         nickname: nickname.trim() || null
       })
       .eq('id', user.id)
@@ -120,9 +124,11 @@ export default function SettingsPage() {
     setSaving(false)
     if (error) {
       setSaveMsg('Failed to save')
+      console.error('Profile save error:', error)
     } else {
+      const newFullName = `${firstName.trim()} ${lastName.trim()}`.trim()
       setSaveMsg('Saved!')
-      setProfile({ ...profile, full_name: fullName.trim() })
+      setProfile({ ...profile, first_name: firstName.trim(), last_name: lastName.trim(), full_name: newFullName })
     }
     setTimeout(() => setSaveMsg(''), 2000)
   }
@@ -160,13 +166,24 @@ export default function SettingsPage() {
           </Card.Header>
           <Card.Body>
             <div className="space-y-4">
-              <FormField
-                label="Full Name"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Your full name"
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  label="First Name"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="First name"
+                  required
+                />
+                <FormField
+                  label="Last Name"
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Last name"
+                  required
+                />
+              </div>
               <div>
                 <p className="text-sm font-medium text-gray-700">Email</p>
                 <p className="text-gray-900">{profile?.email}</p>
