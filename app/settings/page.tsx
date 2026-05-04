@@ -14,6 +14,7 @@ export default function SettingsPage() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [nickname, setNickname] = useState('')
+  const [fullName, setFullName] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
   const [loading, setLoading] = useState(true)
@@ -49,6 +50,7 @@ export default function SettingsPage() {
 
     if (profile) {
       setProfile(profile)
+      setFullName(profile.full_name || '')
       const { data: nicknameData } = await supabase
         .from('profiles')
         .select('nickname')
@@ -102,18 +104,26 @@ export default function SettingsPage() {
     setLoading(false)
   }
 
-  async function saveNickname() {
+  async function saveProfile() {
     if (!user) return
     setSaving(true)
     setSaveMsg('')
 
     const { error } = await supabase
       .from('profiles')
-      .update({ nickname: nickname.trim() || null })
+      .update({
+        full_name: fullName.trim() || null,
+        nickname: nickname.trim() || null
+      })
       .eq('id', user.id)
 
     setSaving(false)
-    setSaveMsg(error ? 'Failed to save' : 'Saved!')
+    if (error) {
+      setSaveMsg('Failed to save')
+    } else {
+      setSaveMsg('Saved!')
+      setProfile({ ...profile, full_name: fullName.trim() })
+    }
     setTimeout(() => setSaveMsg(''), 2000)
   }
 
@@ -150,10 +160,13 @@ export default function SettingsPage() {
           </Card.Header>
           <Card.Body>
             <div className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-gray-700">Full Name</p>
-                <p className="text-gray-900">{profile?.full_name}</p>
-              </div>
+              <FormField
+                label="Full Name"
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Your full name"
+              />
               <div>
                 <p className="text-sm font-medium text-gray-700">Email</p>
                 <p className="text-gray-900">{profile?.email}</p>
@@ -167,8 +180,8 @@ export default function SettingsPage() {
                 helperText="Optional — displayed instead of your full name to other students"
               />
               <div className="flex items-center gap-3">
-                <Button onClick={saveNickname} isLoading={saving} size="sm">
-                  Save Nickname
+                <Button onClick={saveProfile} isLoading={saving} size="sm">
+                  Save Profile
                 </Button>
                 {saveMsg && <span className="text-sm text-green-600">{saveMsg}</span>}
               </div>
