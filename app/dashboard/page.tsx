@@ -239,6 +239,15 @@ export default function DashboardPage() {
                   Roles
                 </button>
               )}
+              {isTeacher && (
+                <button
+                  onClick={() => router.push('/admin/tags')}
+                  className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="Manage Tags"
+                >
+                  Tags
+                </button>
+              )}
               <button
                 onClick={() => router.push('/settings')}
                 className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
