@@ -114,8 +114,8 @@ export default function SettingsPage() {
     const { error } = await supabase
       .from('profiles')
       .update({
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
+        first_name: firstName.trim() || '',
+        last_name: lastName.trim() || '',
         nickname: nickname.trim() || null
       })
       .eq('id', user.id)
@@ -172,7 +172,6 @@ export default function SettingsPage() {
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder="First name"
-                  required
                 />
                 <FormField
                   label="Last Name"
@@ -180,7 +179,6 @@ export default function SettingsPage() {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="Last name"
-                  required
                 />
               </div>
               <div>
