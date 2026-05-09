@@ -42,6 +42,7 @@ export default function EditChallengePage() {
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [tags, setTags] = useState<string[]>([])
+  const [existingTags, setExistingTags] = useState<string[]>([])
 
   useEffect(() => {
     loadData()
@@ -124,6 +125,14 @@ export default function EditChallengePage() {
       .order('name')
 
     setClasses(classesData || [])
+
+    // Load existing tags
+    const { data: tagsData } = await supabase
+      .from('challenge_tags')
+      .select('name')
+      .order('name')
+    setExistingTags(tagsData?.map(t => t.name) || [])
+
     setLoading(false)
   }
 
@@ -481,6 +490,7 @@ export default function EditChallengePage() {
                   tags={tags}
                   onChange={setTags}
                   placeholder="e.g. algebra, equations, grade-8"
+                  suggestions={existingTags}
                 />
               </div>
 

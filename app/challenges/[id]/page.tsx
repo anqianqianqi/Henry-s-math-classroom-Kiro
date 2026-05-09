@@ -225,6 +225,15 @@ export default function ChallengePage() {
       setIsTeacher(teacherRole)
     }
 
+    // Block students from viewing future challenges
+    if (!teacherRole && challengeData) {
+      const today = new Date().toISOString().split('T')[0]
+      if (challengeData.challenge_date > today) {
+        router.push('/challenges')
+        return
+      }
+    }
+
     // Load user's submission (for both students and teachers)
     const { data: submissionData } = await supabase
       .from('challenge_submissions')

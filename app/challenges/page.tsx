@@ -166,6 +166,7 @@ export default function ChallengesPage() {
         .from('daily_challenges')
         .select('*')
         .in('id', challengeIds)
+        .lte('challenge_date', new Date().toISOString().split('T')[0])
         .order('challenge_date', { ascending: false })
 
       setChallenges(challengesData || [])

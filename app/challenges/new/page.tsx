@@ -33,6 +33,7 @@ export default function NewChallengePage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [tags, setTags] = useState<string[]>([])
+  const [existingTags, setExistingTags] = useState<string[]>([])
 
   useEffect(() => {
     loadData()
@@ -89,6 +90,13 @@ export default function NewChallengePage() {
 
     setClasses(classesData || [])
     
+    // Load existing tags
+    const { data: tagsData } = await supabase
+      .from('challenge_tags')
+      .select('name')
+      .order('name')
+    setExistingTags(tagsData?.map(t => t.name) || [])
+
     // Set default date to today
     const today = new Date().toISOString().split('T')[0]
     setChallengeDate(today)
@@ -213,6 +221,16 @@ export default function NewChallengePage() {
         setError(challengeError.message)
         setSubmitting(false)
         return
+      }
+
+      // Save any new tags to the challenge_tags table
+      if (tags.length > 0) {
+        const newTags = tags.filter(t => !existingTags.includes(t))
+        if (newTags.length > 0) {
+          await supabase.from('challenge_tags').insert(
+            newTags.map(name => ({ name, created_by: userId }))
+          )
+        }
       }
 
       // Upload image if provided
@@ -393,6 +411,7 @@ export default function NewChallengePage() {
                   tags={tags}
                   onChange={setTags}
                   placeholder="e.g. algebra, equations, grade-8"
+                  suggestions={existingTags}
                 />
               </div>
 
