@@ -116,7 +116,6 @@ export default function SettingsPage() {
       .update({
         first_name: firstName.trim(),
         last_name: lastName.trim(),
-        full_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
         nickname: nickname.trim() || null
       })
       .eq('id', user.id)
