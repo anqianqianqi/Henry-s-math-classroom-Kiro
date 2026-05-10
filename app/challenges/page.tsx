@@ -377,6 +377,9 @@ export default function ChallengesPage() {
                 <Button size="sm" onClick={() => router.push('/challenges/templates')} variant="secondary">
                   Templates
                 </Button>
+                <Button size="sm" onClick={() => router.push('/admin/schedules')} variant="secondary">
+                  Scheduler
+                </Button>
               </div>
             )}
           </div>
