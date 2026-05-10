@@ -242,11 +242,6 @@ export default function EditChallengePage() {
       return
     }
 
-    if (selectedClasses.length === 0) {
-      setError('Please select at least one class')
-      return
-    }
-
     if (!userId) return
 
     setSubmitting(true)
@@ -280,27 +275,28 @@ export default function EditChallengePage() {
       }
 
       // Update class assignments
-      // First, delete existing assignments
+      // Update class assignments
       await supabase
         .from('challenge_assignments')
         .delete()
         .eq('challenge_id', params.id)
 
-      // Then, insert new assignments
-      const assignments = selectedClasses.map(classId => ({
-        challenge_id: params.id,
-        class_id: classId,
-        assigned_by: userId
-      }))
+      if (selectedClasses.length > 0) {
+        const assignments = selectedClasses.map(classId => ({
+          challenge_id: params.id,
+          class_id: classId,
+          assigned_by: userId
+        }))
 
-      const { error: assignError } = await supabase
-        .from('challenge_assignments')
-        .insert(assignments)
+        const { error: assignError } = await supabase
+          .from('challenge_assignments')
+          .insert(assignments)
 
-      if (assignError) {
-        setError(`Challenge updated but assignment failed: ${assignError.message}`)
-        setSubmitting(false)
-        return
+        if (assignError) {
+          setError(`Challenge updated but assignment failed: ${assignError.message}`)
+          setSubmitting(false)
+          return
+        }
       }
 
       // Success! Redirect to challenge detail
