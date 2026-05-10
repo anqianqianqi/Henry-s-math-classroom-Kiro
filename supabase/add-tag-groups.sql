@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS tag_groups (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tag_ids UUID[] NOT NULL DEFAULT '{}',
+  tag_ids UUID[] NOT NULL DEFAULT ARRAY[]::UUID[],
   created_by UUID REFERENCES profiles(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -26,37 +26,70 @@ CREATE POLICY "Anyone can view tag group names" ON tag_group_names FOR SELECT US
 
 -- Teachers can manage groups
 CREATE POLICY "Teachers can insert tag groups" ON tag_groups FOR INSERT
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
-    WHERE ur.user_id = auth.uid() AND ur.class_id IS NULL AND r.name IN ('teacher', 'administrator')
-  ));
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON r.id = ur.role_id
+      WHERE ur.user_id = auth.uid()
+        AND ur.class_id IS NULL
+        AND r.name IN ('teacher', 'administrator')
+    )
+  );
 
 CREATE POLICY "Teachers can update tag groups" ON tag_groups FOR UPDATE
-  USING (EXISTS (
-    SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
-    WHERE ur.user_id = auth.uid() AND ur.class_id IS NULL AND r.name IN ('teacher', 'administrator')
-  ));
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON r.id = ur.role_id
+      WHERE ur.user_id = auth.uid()
+        AND ur.class_id IS NULL
+        AND r.name IN ('teacher', 'administrator')
+    )
+  );
 
 CREATE POLICY "Teachers can delete tag groups" ON tag_groups FOR DELETE
-  USING (EXISTS (
-    SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
-    WHERE ur.user_id = auth.uid() AND ur.class_id IS NULL AND r.name IN ('teacher', 'administrator')
-  ));
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON r.id = ur.role_id
+      WHERE ur.user_id = auth.uid()
+        AND ur.class_id IS NULL
+        AND r.name IN ('teacher', 'administrator')
+    )
+  );
 
 CREATE POLICY "Teachers can insert tag group names" ON tag_group_names FOR INSERT
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
-    WHERE ur.user_id = auth.uid() AND ur.class_id IS NULL AND r.name IN ('teacher', 'administrator')
-  ));
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON r.id = ur.role_id
+      WHERE ur.user_id = auth.uid()
+        AND ur.class_id IS NULL
+        AND r.name IN ('teacher', 'administrator')
+    )
+  );
 
 CREATE POLICY "Teachers can update tag group names" ON tag_group_names FOR UPDATE
-  USING (EXISTS (
-    SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
-    WHERE ur.user_id = auth.uid() AND ur.class_id IS NULL AND r.name IN ('teacher', 'administrator')
-  ));
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON r.id = ur.role_id
+      WHERE ur.user_id = auth.uid()
+        AND ur.class_id IS NULL
+        AND r.name IN ('teacher', 'administrator')
+    )
+  );
 
 CREATE POLICY "Teachers can delete tag group names" ON tag_group_names FOR DELETE
-  USING (EXISTS (
-    SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
-    WHERE ur.user_id = auth.uid() AND ur.class_id IS NULL AND r.name IN ('teacher', 'administrator')
-  ));
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON r.id = ur.role_id
+      WHERE ur.user_id = auth.uid()
+        AND ur.class_id IS NULL
+        AND r.name IN ('teacher', 'administrator')
+    )
+  );
+
+-- Notify PostgREST to reload schema cache
+NOTIFY pgrst, 'reload schema';
