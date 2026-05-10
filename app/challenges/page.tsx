@@ -170,6 +170,19 @@ export default function ChallengesPage() {
         .order('name')
       setClasses(classesData || [])
 
+      // Load tag names for students too
+      const { data: tagsData } = await supabase
+        .from('challenge_tags')
+        .select('id, slug, challenge_tag_names(language, name)')
+        .order('slug')
+      const tagMap: Record<string, string> = {}
+      tagsData?.forEach((t: any) => {
+        const enName = t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
+        const zhName = t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
+        tagMap[t.id] = enName || zhName || t.slug
+      })
+      setAvailableTagsMap(tagMap)
+
       const { data: assignments } = await supabase
         .from('challenge_assignments')
         .select('challenge_id')
