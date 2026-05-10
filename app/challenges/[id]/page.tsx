@@ -299,7 +299,25 @@ export default function ChallengePage() {
           .in('class_id', classIds)
 
         const uniqueStudents = new Set(memberData?.map(m => m.user_id) || [])
+        
+        // Also include individually assigned students
+        const { data: individualAssignments } = await supabase
+          .from('challenge_student_assignments')
+          .select('user_id')
+          .eq('challenge_id', params.id)
+        
+        individualAssignments?.forEach(a => uniqueStudents.add(a.user_id))
         setTotalStudents(uniqueStudents.size)
+      } else {
+        // Check if there are only individual assignments
+        const { data: individualAssignments } = await supabase
+          .from('challenge_student_assignments')
+          .select('user_id')
+          .eq('challenge_id', params.id)
+        
+        if (individualAssignments && individualAssignments.length > 0) {
+          setTotalStudents(individualAssignments.length)
+        }
       }
     } else if (submissionData) {
       await loadOtherSubmissions(user.id, false)

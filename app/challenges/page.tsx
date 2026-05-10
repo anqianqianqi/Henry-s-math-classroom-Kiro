@@ -172,6 +172,27 @@ export default function ChallengesPage() {
       const classIds = classMembers?.map(cm => cm.class_id) || []
 
       if (classIds.length === 0) {
+        // Even without class memberships, check individual assignments
+        const { data: individualOnly } = await supabase
+          .from('challenge_student_assignments')
+          .select('challenge_id')
+          .eq('user_id', user.id)
+
+        if (!individualOnly || individualOnly.length === 0) {
+          setLoading(false)
+          return
+        }
+
+        // Load individually assigned challenges
+        const indivIds = [...new Set(individualOnly.map(a => a.challenge_id))]
+        const { data: challengesData } = await supabase
+          .from('daily_challenges')
+          .select('*')
+          .in('id', indivIds)
+          .lte('challenge_date', new Date().toISOString().split('T')[0])
+          .order('challenge_date', { ascending: false })
+
+        setChallenges(challengesData || [])
         setLoading(false)
         return
       }
@@ -210,7 +231,18 @@ export default function ChallengesPage() {
         .select('challenge_id')
         .in('class_id', classIds)
 
-      const challengeIds = assignments?.map(a => a.challenge_id) || []
+      const classAssignedIds = assignments?.map(a => a.challenge_id) || []
+
+      // Also check individual student assignments
+      const { data: individualAssignments } = await supabase
+        .from('challenge_student_assignments')
+        .select('challenge_id')
+        .eq('user_id', user.id)
+
+      const individualIds = individualAssignments?.map(a => a.challenge_id) || []
+
+      // Merge and deduplicate challenge IDs from both sources
+      const challengeIds = [...new Set([...classAssignedIds, ...individualIds])]
 
       if (challengeIds.length === 0) {
         setLoading(false)

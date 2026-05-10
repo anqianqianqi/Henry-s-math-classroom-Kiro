@@ -45,6 +45,9 @@ export default function EditChallengePage() {
   const [availableTags, setAvailableTags] = useState<any[]>([])
   const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
   const [maxPoints, setMaxPoints] = useState(100)
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([])
+  const [allStudents, setAllStudents] = useState<Array<{id: string, name: string}>>([])
+  const [studentSearch, setStudentSearch] = useState('')
 
   useEffect(() => {
     loadData()
@@ -137,6 +140,38 @@ export default function EditChallengePage() {
     setAvailableTags((tagsData || []).map((t: any) => ({
       id: t.id, _names: t.challenge_tag_names || []
     })))
+
+    // Load all students for individual assignment
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, full_name')
+      .order('full_name')
+    
+    const { data: teacherRoles } = await supabase
+      .from('user_roles')
+      .select('user_id, roles!inner(name)')
+      .is('class_id', null)
+    
+    const teacherIds = new Set(
+      (teacherRoles || [])
+        .filter((r: any) => r.roles?.name === 'teacher' || r.roles?.name === 'administrator')
+        .map((r: any) => r.user_id)
+    )
+    
+    const students = (profilesData || [])
+      .filter((p: any) => !teacherIds.has(p.id))
+      .map((p: any) => ({
+        id: p.id,
+        name: p.first_name || p.full_name || 'Unknown'
+      }))
+    setAllStudents(students)
+
+    // Load current individual student assignments
+    const { data: studentAssignments } = await supabase
+      .from('challenge_student_assignments')
+      .select('user_id')
+      .eq('challenge_id', params.id)
+    setSelectedStudents(studentAssignments?.map(a => a.user_id) || [])
 
     setLoading(false)
   }
@@ -299,6 +334,28 @@ export default function EditChallengePage() {
           setError(`Challenge updated but assignment failed: ${assignError.message}`)
           setSubmitting(false)
           return
+        }
+      }
+
+      // Update individual student assignments
+      await supabase
+        .from('challenge_student_assignments')
+        .delete()
+        .eq('challenge_id', params.id)
+
+      if (selectedStudents.length > 0) {
+        const studentAssignments = selectedStudents.map(studentId => ({
+          challenge_id: params.id,
+          user_id: studentId,
+          assigned_by: userId
+        }))
+
+        const { error: studentAssignError } = await supabase
+          .from('challenge_student_assignments')
+          .insert(studentAssignments)
+
+        if (studentAssignError) {
+          console.error('Student assignment failed:', studentAssignError)
         }
       }
 
@@ -547,6 +604,56 @@ export default function EditChallengePage() {
                   <div className="p-8 bg-gray-50 rounded-2xl text-center">
                     <div className="text-5xl mb-3">📚</div>
                     <p className="text-gray-600">No classes available</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Individual Student Assignment */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Assign to Individual Students (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={studentSearch}
+                  onChange={e => setStudentSearch(e.target.value)}
+                  placeholder="Search students by name..."
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl 
+                           focus:border-primary-500 focus:ring-2 focus:ring-primary-100
+                           transition-all mb-2"
+                />
+                {selectedStudents.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {selectedStudents.map(sid => {
+                      const student = allStudents.find(s => s.id === sid)
+                      return (
+                        <span key={sid} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                          {student?.name || 'Unknown'}
+                          <button type="button" onClick={() => setSelectedStudents(prev => prev.filter(id => id !== sid))} className="ml-1 text-blue-400 hover:text-blue-800">×</button>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+                {allStudents.length > 0 && (
+                  <div className="max-h-48 overflow-y-auto border-2 border-gray-200 rounded-xl">
+                    {allStudents
+                      .filter(s => !selectedStudents.includes(s.id))
+                      .filter(s => !studentSearch.trim() || s.name.toLowerCase().includes(studentSearch.toLowerCase()))
+                      .slice(0, 20)
+                      .map(student => (
+                        <button
+                          key={student.id}
+                          type="button"
+                          onClick={() => setSelectedStudents(prev => [...prev, student.id])}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 border-b border-gray-100 last:border-b-0"
+                        >
+                          {student.name}
+                        </button>
+                      ))}
+                    {allStudents.filter(s => !selectedStudents.includes(s.id)).filter(s => !studentSearch.trim() || s.name.toLowerCase().includes(studentSearch.toLowerCase())).length === 0 && (
+                      <p className="px-4 py-3 text-sm text-gray-500 text-center">No students found</p>
+                    )}
                   </div>
                 )}
               </div>
