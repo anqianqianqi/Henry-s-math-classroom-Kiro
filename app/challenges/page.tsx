@@ -41,6 +41,8 @@ export default function ChallengesPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false)
   const [availableTagsMap, setAvailableTagsMap] = useState<Record<string, string>>({}) // id → name
+  const [allTagData, setAllTagData] = useState<any[]>([]) // raw tag data with all names
+  const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
   const tagDropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -52,6 +54,20 @@ export default function ChallengesPage() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Rebuild tag map when language changes
+  useEffect(() => {
+    if (allTagData.length === 0) return
+    const tagMap: Record<string, string> = {}
+    allTagData.forEach((t: any) => {
+      const name = t.challenge_tag_names?.find((n: any) => n.language === tagLang)?.name
+        || t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
+        || t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
+        || t.id.slice(0, 8)
+      tagMap[t.id] = name
+    })
+    setAvailableTagsMap(tagMap)
+  }, [tagLang, allTagData])
   
   // Pagination state
   const [showAllUpcoming, setShowAllUpcoming] = useState(false)
@@ -114,11 +130,14 @@ export default function ChallengesPage() {
         .from('challenge_tags')
         .select('id, challenge_tag_names(language, name)')
         .order('created_at')
+      setAllTagData(tagsData || [])
       const tagMap: Record<string, string> = {}
       tagsData?.forEach((t: any) => {
-        const enName = t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
-        const zhName = t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
-        tagMap[t.id] = enName || zhName || t.id.slice(0, 8)
+        const name = t.challenge_tag_names?.find((n: any) => n.language === tagLang)?.name
+          || t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
+          || t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
+          || t.id.slice(0, 8)
+        tagMap[t.id] = name
       })
       setAvailableTagsMap(tagMap)
 
@@ -175,11 +194,14 @@ export default function ChallengesPage() {
         .from('challenge_tags')
         .select('id, challenge_tag_names(language, name)')
         .order('created_at')
+      setAllTagData(tagsData || [])
       const tagMap: Record<string, string> = {}
       tagsData?.forEach((t: any) => {
-        const enName = t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
-        const zhName = t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
-        tagMap[t.id] = enName || zhName || t.id.slice(0, 8)
+        const name = t.challenge_tag_names?.find((n: any) => n.language === tagLang)?.name
+          || t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
+          || t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
+          || t.id.slice(0, 8)
+        tagMap[t.id] = name
       })
       setAvailableTagsMap(tagMap)
 
@@ -380,6 +402,14 @@ export default function ChallengesPage() {
               </Button>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Challenges</h1>
+                <select
+                  value={tagLang}
+                  onChange={e => setTagLang(e.target.value as 'en' | 'zh')}
+                  className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white"
+                >
+                  <option value="en">EN</option>
+                  <option value="zh">CN</option>
+                </select>
               </div>
             </div>
             {isTeacher && (
