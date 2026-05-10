@@ -79,12 +79,12 @@ export default function SchedulesPage() {
     // Load tags
     const { data: tagsData } = await supabase
       .from('challenge_tags')
-      .select('id, slug, challenge_tag_names(language, name)')
+      .select('id, challenge_tag_names(language, name)')
       .order('slug')
     const tagList = (tagsData || []).map((t: any) => {
       const en = t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
       const zh = t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
-      return { id: t.id, name: en || zh || t.slug }
+      return { id: t.id, name: en || zh || t.id.slice(0, 8) }
     })
     setTags(tagList)
 

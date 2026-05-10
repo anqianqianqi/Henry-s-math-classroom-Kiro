@@ -4,7 +4,6 @@ import { useState, KeyboardEvent, useRef, useEffect } from 'react'
 
 export interface TagOption {
   id: string
-  slug: string
   name: string // display name in current language
 }
 
@@ -26,7 +25,6 @@ export default function TagInput({ selectedTagIds, onChange, availableTags, plac
   const filteredTags = input.trim()
     ? unselectedTags.filter(t =>
         t.name.toLowerCase().includes(input.toLowerCase()) ||
-        t.slug.toLowerCase().includes(input.toLowerCase()) ||
         (t as any)._allNames?.some((n: string) => n.toLowerCase().includes(input.toLowerCase()))
       )
     : unselectedTags
@@ -109,7 +107,7 @@ export default function TagInput({ selectedTagIds, onChange, availableTags, plac
               >
                 <span>{tag.name}</span>
                 <span className="text-xs text-gray-400 font-mono">
-                  {(tag as any)._allNames?.filter((n: string) => n !== tag.name).join(' / ') || tag.slug}
+                  {(tag as any)._allNames?.filter((n: string) => n !== tag.name).join(' / ') || ''}
                 </span>
               </button>
             ))}

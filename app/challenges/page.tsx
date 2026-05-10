@@ -112,13 +112,13 @@ export default function ChallengesPage() {
       // Load tag names for filter
       const { data: tagsData } = await supabase
         .from('challenge_tags')
-        .select('id, slug, challenge_tag_names(language, name)')
+        .select('id, challenge_tag_names(language, name)')
         .order('slug')
       const tagMap: Record<string, string> = {}
       tagsData?.forEach((t: any) => {
         const enName = t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
         const zhName = t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
-        tagMap[t.id] = enName || zhName || t.slug
+        tagMap[t.id] = enName || zhName || t.id.slice(0, 8)
       })
       setAvailableTagsMap(tagMap)
 
@@ -173,13 +173,13 @@ export default function ChallengesPage() {
       // Load tag names for students too
       const { data: tagsData } = await supabase
         .from('challenge_tags')
-        .select('id, slug, challenge_tag_names(language, name)')
+        .select('id, challenge_tag_names(language, name)')
         .order('slug')
       const tagMap: Record<string, string> = {}
       tagsData?.forEach((t: any) => {
         const enName = t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
         const zhName = t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
-        tagMap[t.id] = enName || zhName || t.slug
+        tagMap[t.id] = enName || zhName || t.id.slice(0, 8)
       })
       setAvailableTagsMap(tagMap)
 

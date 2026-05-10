@@ -13,7 +13,6 @@ interface TagName {
 
 interface Tag {
   id: string
-  slug: string
   names: TagName[]
 }
 
@@ -58,12 +57,11 @@ export default function TagManagementPage() {
 
     const { data: tagsData } = await supabase
       .from('challenge_tags')
-      .select('id, slug, challenge_tag_names(language, name)')
+      .select('id, challenge_tag_names(language, name)')
       .order('slug')
 
     const formatted = (tagsData || []).map((t: any) => ({
       id: t.id,
-      slug: t.slug,
       names: t.challenge_tag_names || []
     }))
 
