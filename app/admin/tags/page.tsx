@@ -19,7 +19,6 @@ interface Tag {
 
 export default function TagManagementPage() {
   const [tags, setTags] = useState<Tag[]>([])
-  const [newSlug, setNewSlug] = useState('')
   const [newNameEn, setNewNameEn] = useState('')
   const [newNameZh, setNewNameZh] = useState('')
   const [loading, setLoading] = useState(true)
@@ -73,13 +72,15 @@ export default function TagManagementPage() {
   }
 
   async function addTag() {
-    const slug = newSlug.trim().toLowerCase().replace(/\s+/g, '-')
-    if (!slug) { setError('Slug is required'); return }
     if (!newNameEn.trim() && !newNameZh.trim()) { setError('At least one name is required'); return }
-    if (tags.some(t => t.slug === slug)) { setError('Tag slug already exists'); return }
 
     setAdding(true)
     setError('')
+
+    // Auto-generate slug from English name, or Chinese pinyin-ish, or random
+    const baseSlug = (newNameEn.trim() || newNameZh.trim() || 'tag')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const slug = `${baseSlug}-${Date.now().toString(36)}`
 
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -101,7 +102,6 @@ export default function TagManagementPage() {
       await supabase.from('challenge_tag_names').insert(names)
     }
 
-    setNewSlug('')
     setNewNameEn('')
     setNewNameZh('')
     setAdding(false)
@@ -163,7 +163,7 @@ export default function TagManagementPage() {
           <Card.Header>
             <Card.Title>Create New Tag</Card.Title>
             <p className="text-sm text-gray-600 mt-1">
-              Each tag has a unique slug and display names in different languages.
+              Enter the tag name in one or both languages. An internal ID is generated automatically.
             </p>
           </Card.Header>
           <Card.Body>
@@ -173,16 +173,6 @@ export default function TagManagementPage() {
               </div>
             )}
             <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Slug (internal ID)</label>
-                <input
-                  type="text"
-                  value={newSlug}
-                  onChange={e => setNewSlug(e.target.value)}
-                  placeholder="e.g. algebra, geometry, grade-3"
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                />
-              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">English Name</label>
@@ -190,6 +180,7 @@ export default function TagManagementPage() {
                     type="text"
                     value={newNameEn}
                     onChange={e => setNewNameEn(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag() } }}
                     placeholder="e.g. Algebra"
                     className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                   />
@@ -200,12 +191,13 @@ export default function TagManagementPage() {
                     type="text"
                     value={newNameZh}
                     onChange={e => setNewNameZh(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag() } }}
                     placeholder="例如：代数"
                     className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                   />
                 </div>
               </div>
-              <Button onClick={addTag} disabled={!newSlug.trim() || adding} isLoading={adding}>
+              <Button onClick={addTag} disabled={(!newNameEn.trim() && !newNameZh.trim()) || adding} isLoading={adding}>
                 + Create Tag
               </Button>
             </div>
@@ -226,22 +218,27 @@ export default function TagManagementPage() {
                   <div key={tag.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
                     {editingTag === tag.id ? (
                       <div className="space-y-2">
-                        <p className="text-sm font-mono text-gray-500">slug: {tag.slug}</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <input
-                            type="text"
-                            value={editNameEn}
-                            onChange={e => setEditNameEn(e.target.value)}
-                            placeholder="English name"
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          />
-                          <input
-                            type="text"
-                            value={editNameZh}
-                            onChange={e => setEditNameZh(e.target.value)}
-                            placeholder="中文名称"
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          />
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">English</label>
+                            <input
+                              type="text"
+                              value={editNameEn}
+                              onChange={e => setEditNameEn(e.target.value)}
+                              placeholder="English name"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">中文</label>
+                            <input
+                              type="text"
+                              value={editNameZh}
+                              onChange={e => setEditNameZh(e.target.value)}
+                              placeholder="中文名称"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                            />
+                          </div>
                         </div>
                         <div className="flex gap-2">
                           <Button size="sm" onClick={() => saveEdit(tag.id)}>Save</Button>
@@ -250,16 +247,16 @@ export default function TagManagementPage() {
                       </div>
                     ) : (
                       <div className="flex items-center justify-between">
-                        <div>
-                          <span className="text-sm font-mono text-gray-400 mr-3">{tag.slug}</span>
+                        <div className="flex flex-wrap items-center gap-2">
                           {tag.names.map(n => (
-                            <span key={n.language} className="inline-flex items-center gap-1 px-2 py-1 bg-primary-50 text-primary-700 rounded-full text-sm mr-2">
-                              <span className="text-xs text-gray-400">{n.language}:</span> {n.name}
+                            <span key={n.language} className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm">
+                              <span className="text-xs font-medium text-gray-400 uppercase">{n.language}</span>
+                              <span className="font-medium">{n.name}</span>
                             </span>
                           ))}
                           {tag.names.length === 0 && <span className="text-sm text-gray-400 italic">No names set</span>}
                         </div>
-                        <div className="flex gap-2 shrink-0">
+                        <div className="flex gap-2 shrink-0 ml-3">
                           <button onClick={() => startEdit(tag)} className="text-sm text-primary-600 hover:text-primary-800">Edit</button>
                           <button onClick={() => deleteTag(tag.id)} className="text-sm text-red-500 hover:text-red-700">Delete</button>
                         </div>
