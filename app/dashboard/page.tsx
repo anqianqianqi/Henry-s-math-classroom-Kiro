@@ -247,7 +247,7 @@ export default function DashboardPage() {
                 Settings
               </button>
               <span className="text-gray-600 font-medium hidden sm:inline">
-                {profile?.nickname || profile?.full_name || user?.email}
+                {profile?.nickname || profile?.first_name || user?.email}
               </span>
               <button
                 onClick={handleSignOut}

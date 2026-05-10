@@ -198,8 +198,7 @@ export default function NewChallengePage() {
     }
 
     if (selectedClasses.length === 0) {
-      setError('Please select at least one class')
-      return
+      // No class selected - that's fine, create without assignment
     }
 
     if (!userId) return
@@ -242,31 +241,26 @@ export default function NewChallengePage() {
         }
       }
 
-      // Assign to selected classes
-      const assignments = selectedClasses.map(classId => ({
-        challenge_id: challenge.id,
-        class_id: classId,
-        assigned_by: userId
-      }))
+      // Assign to selected classes (optional)
+      if (selectedClasses.length > 0) {
+        const assignments = selectedClasses.map(classId => ({
+          challenge_id: challenge.id,
+          class_id: classId,
+          assigned_by: userId
+        }))
 
-      console.log('Attempting to insert assignments:', assignments)
+        const { error: assignError } = await supabase
+          .from('challenge_assignments')
+          .insert(assignments)
 
-      const { data: assignmentData, error: assignError } = await supabase
-        .from('challenge_assignments')
-        .insert(assignments)
-        .select()
-
-      console.log('Assignment result:', assignmentData)
-      console.log('Assignment error:', assignError)
-
-      if (assignError) {
-        console.error('Assignment failed:', assignError)
-        setError(`Challenge created but assignment failed: ${assignError.message}`)
-        setSubmitting(false)
-        return
+        if (assignError) {
+          console.error('Assignment failed:', assignError)
+          setError(`Challenge created but assignment failed: ${assignError.message}`)
+          setSubmitting(false)
+          return
+        }
       }
 
-      console.log('Success! Redirecting...')
       // Success! Redirect to challenges
       router.push('/challenges')
     } catch (err) {
@@ -495,7 +489,7 @@ export default function NewChallengePage() {
               <div className="flex gap-3 pt-4">
                 <Button
                   type="submit"
-                  disabled={submitting || classes.length === 0}
+                  disabled={submitting}
                   isLoading={submitting}
                   size="lg"
                   className="flex-1"
