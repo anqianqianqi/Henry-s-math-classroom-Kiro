@@ -419,9 +419,10 @@ export default function NewChallengePage() {
                   onChange={setTags}
                   availableTags={availableTags.map((t: any) => {
                     const localName = t._names?.find((n: any) => n.language === tagLang)?.name
-                    return { id: t.id, slug: t.slug, name: localName || t.slug }
+                    const allNames = t._names?.map((n: any) => n.name) || []
+                    return { id: t.id, slug: t.slug, name: localName || t.slug, _allNames: allNames }
                   })}
-                  placeholder="Search tags..."
+                  placeholder="Search by English, Chinese, or slug..."
                 />
               </div>
 

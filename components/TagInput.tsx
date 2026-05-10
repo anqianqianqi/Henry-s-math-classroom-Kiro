@@ -23,10 +23,13 @@ export default function TagInput({ selectedTagIds, onChange, availableTags, plac
 
   const selectedTags = availableTags.filter(t => selectedTagIds.includes(t.id))
   const unselectedTags = availableTags.filter(t => !selectedTagIds.includes(t.id))
-  const filteredTags = unselectedTags.filter(t =>
-    t.name.toLowerCase().includes(input.toLowerCase()) ||
-    t.slug.toLowerCase().includes(input.toLowerCase())
-  )
+  const filteredTags = input.trim()
+    ? unselectedTags.filter(t =>
+        t.name.toLowerCase().includes(input.toLowerCase()) ||
+        t.slug.toLowerCase().includes(input.toLowerCase()) ||
+        (t as any)._allNames?.some((n: string) => n.toLowerCase().includes(input.toLowerCase()))
+      )
+    : unselectedTags
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -105,7 +108,9 @@ export default function TagInput({ selectedTagIds, onChange, availableTags, plac
                 className="w-full text-left px-4 py-2 text-sm hover:bg-primary-50 text-gray-700 flex items-center justify-between"
               >
                 <span>{tag.name}</span>
-                <span className="text-xs text-gray-400 font-mono">{tag.slug}</span>
+                <span className="text-xs text-gray-400 font-mono">
+                  {(tag as any)._allNames?.filter((n: string) => n !== tag.name).join(' / ') || tag.slug}
+                </span>
               </button>
             ))}
           </div>
