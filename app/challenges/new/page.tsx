@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
-import TagInput from '@/components/TagInput'
+import TagInput, { TagOption } from '@/components/TagInput'
 
 interface Class {
   id: string
@@ -33,7 +33,8 @@ export default function NewChallengePage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [tags, setTags] = useState<string[]>([])
-  const [existingTags, setExistingTags] = useState<string[]>([])
+  const [availableTags, setAvailableTags] = useState<TagOption[]>([])
+  const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
 
   useEffect(() => {
     loadData()
@@ -90,12 +91,17 @@ export default function NewChallengePage() {
 
     setClasses(classesData || [])
     
-    // Load existing tags
+    // Load existing tags with names
     const { data: tagsData } = await supabase
       .from('challenge_tags')
-      .select('name')
-      .order('name')
-    setExistingTags(tagsData?.map(t => t.name) || [])
+      .select('id, slug, challenge_tag_names(language, name)')
+      .order('slug')
+    
+    const tagOptions: TagOption[] = (tagsData || []).map((t: any) => {
+      const names = t.challenge_tag_names || []
+      return { id: t.id, slug: t.slug, name: t.slug, _names: names }
+    })
+    setAvailableTags(tagOptions as any)
 
     // Set default date to today
     const today = new Date().toISOString().split('T')[0]
@@ -209,7 +215,7 @@ export default function NewChallengePage() {
           title: title.trim(),
           description: description.trim(),
           challenge_date: challengeDate,
-          tags
+          tag_ids: tags
         })
         .select()
         .single()
@@ -221,16 +227,6 @@ export default function NewChallengePage() {
         setError(challengeError.message)
         setSubmitting(false)
         return
-      }
-
-      // Save any new tags to the challenge_tags table
-      if (tags.length > 0) {
-        const newTags = tags.filter(t => !existingTags.includes(t))
-        if (newTags.length > 0) {
-          await supabase.from('challenge_tags').insert(
-            newTags.map(name => ({ name, created_by: userId }))
-          )
-        }
       }
 
       // Upload image if provided
@@ -404,14 +400,28 @@ export default function NewChallengePage() {
               />
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tags (Optional)
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">Tags (Optional)</label>
+                  <select
+                    value={tagLang}
+                    onChange={e => {
+                      const lang = e.target.value as 'en' | 'zh'
+                      setTagLang(lang)
+                    }}
+                    className="text-xs px-2 py-1 border border-gray-200 rounded-lg"
+                  >
+                    <option value="en">English</option>
+                    <option value="zh">中文</option>
+                  </select>
+                </div>
                 <TagInput
-                  tags={tags}
+                  selectedTagIds={tags}
                   onChange={setTags}
-                  placeholder="e.g. algebra, equations, grade-8"
-                  suggestions={existingTags}
+                  availableTags={availableTags.map((t: any) => {
+                    const localName = t._names?.find((n: any) => n.language === tagLang)?.name
+                    return { id: t.id, slug: t.slug, name: localName || t.slug }
+                  })}
+                  placeholder="Search tags..."
                 />
               </div>
 
