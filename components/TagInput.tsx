@@ -12,9 +12,10 @@ interface TagInputProps {
   onChange: (tagIds: string[]) => void
   availableTags: TagOption[]
   placeholder?: string
+  tagGroups?: Array<{ id: string; name: string; tag_ids: string[] }>
 }
 
-export default function TagInput({ selectedTagIds, onChange, availableTags, placeholder = 'Search tags...' }: TagInputProps) {
+export default function TagInput({ selectedTagIds, onChange, availableTags, placeholder = 'Search tags...', tagGroups = [] }: TagInputProps) {
   const [input, setInput] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -127,6 +128,26 @@ export default function TagInput({ selectedTagIds, onChange, availableTags, plac
               className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full text-xs hover:bg-primary-100 hover:text-primary-700 transition-colors"
             >
               + {tag.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Tag Groups - apply all tags from a group */}
+      {tagGroups.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-xs text-gray-400 self-center mr-1">Groups:</span>
+          {tagGroups.map(group => (
+            <button
+              key={group.id}
+              type="button"
+              onClick={() => {
+                const merged = [...new Set([...selectedTagIds, ...group.tag_ids])]
+                onChange(merged)
+              }}
+              className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full text-xs hover:bg-blue-100 hover:text-blue-800 transition-colors border border-blue-200"
+            >
+              📁 {group.name}
             </button>
           ))}
         </div>

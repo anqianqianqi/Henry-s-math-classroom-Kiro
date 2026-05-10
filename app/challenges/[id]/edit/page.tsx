@@ -48,6 +48,8 @@ export default function EditChallengePage() {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   const [allStudents, setAllStudents] = useState<Array<{id: string, name: string}>>([])
   const [studentSearch, setStudentSearch] = useState('')
+  const [tagGroups, setTagGroups] = useState<Array<{id: string, name: string, tag_ids: string[]}>>([])
+  const [allTagGroupData, setAllTagGroupData] = useState<any[]>([])
 
   useEffect(() => {
     loadData()
@@ -140,6 +142,20 @@ export default function EditChallengePage() {
     setAvailableTags((tagsData || []).map((t: any) => ({
       id: t.id, _names: t.challenge_tag_names || []
     })))
+
+    // Load tag groups
+    const { data: groupsData } = await supabase
+      .from('tag_groups')
+      .select('id, tag_ids, tag_group_names(language, name)')
+      .order('created_at')
+    setAllTagGroupData(groupsData || [])
+    const groupsList = (groupsData || []).map((g: any) => {
+      const name = g.tag_group_names?.find((n: any) => n.language === tagLang)?.name
+        || g.tag_group_names?.find((n: any) => n.language === 'en')?.name
+        || g.tag_group_names?.[0]?.name || 'Group'
+      return { id: g.id, name, tag_ids: g.tag_ids || [] }
+    })
+    setTagGroups(groupsList)
 
     // Load all students for individual assignment
     const { data: profilesData } = await supabase
@@ -573,6 +589,10 @@ export default function EditChallengePage() {
                     return { id: t.id, name: localName || t.id.slice(0, 8), _allNames: allNames }
                   })}
                   placeholder="Search by name..."
+                  tagGroups={tagGroups.map(g => {
+                    const name = allTagGroupData.find((gd: any) => gd.id === g.id)?.tag_group_names?.find((n: any) => n.language === tagLang)?.name || g.name
+                    return { ...g, name }
+                  })}
                 />
               </div>
 

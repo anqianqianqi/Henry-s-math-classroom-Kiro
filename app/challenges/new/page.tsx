@@ -39,6 +39,8 @@ export default function NewChallengePage() {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   const [allStudents, setAllStudents] = useState<Array<{id: string, name: string, email?: string}>>([])
   const [studentSearch, setStudentSearch] = useState('')
+  const [tagGroups, setTagGroups] = useState<Array<{id: string, name: string, tag_ids: string[]}>>([])
+  const [allTagGroupData, setAllTagGroupData] = useState<any[]>([])
 
   useEffect(() => {
     loadData()
@@ -132,6 +134,20 @@ export default function NewChallengePage() {
       return { id: t.id, name: t.id.slice(0, 8), _names: names }
     })
     setAvailableTags(tagOptions as any)
+
+    // Load tag groups
+    const { data: groupsData } = await supabase
+      .from('tag_groups')
+      .select('id, tag_ids, tag_group_names(language, name)')
+      .order('created_at')
+    setAllTagGroupData(groupsData || [])
+    const groupsList = (groupsData || []).map((g: any) => {
+      const name = g.tag_group_names?.find((n: any) => n.language === tagLang)?.name
+        || g.tag_group_names?.find((n: any) => n.language === 'en')?.name
+        || g.tag_group_names?.[0]?.name || 'Group'
+      return { id: g.id, name, tag_ids: g.tag_ids || [] }
+    })
+    setTagGroups(groupsList)
 
     // Set default date to today
     const today = new Date().toISOString().split('T')[0]
@@ -474,6 +490,10 @@ export default function NewChallengePage() {
                     return { id: t.id, name: localName || t.id.slice(0, 8), _allNames: allNames }
                   })}
                   placeholder="Search by name..."
+                  tagGroups={tagGroups.map(g => {
+                    const name = allTagGroupData.find((gd: any) => gd.id === g.id)?.tag_group_names?.find((n: any) => n.language === tagLang)?.name || g.name
+                    return { ...g, name }
+                  })}
                 />
               </div>
 

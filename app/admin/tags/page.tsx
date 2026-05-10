@@ -16,6 +16,12 @@ interface Tag {
   names: TagName[]
 }
 
+interface TagGroup {
+  id: string
+  tag_ids: string[]
+  names: TagName[]
+}
+
 export default function TagManagementPage() {
   const [tags, setTags] = useState<Tag[]>([])
   const [newNameEn, setNewNameEn] = useState('')
@@ -26,6 +32,16 @@ export default function TagManagementPage() {
   const [editingTag, setEditingTag] = useState<string | null>(null)
   const [editNameEn, setEditNameEn] = useState('')
   const [editNameZh, setEditNameZh] = useState('')
+  // Tag Groups
+  const [groups, setGroups] = useState<TagGroup[]>([])
+  const [newGroupNameEn, setNewGroupNameEn] = useState('')
+  const [newGroupNameZh, setNewGroupNameZh] = useState('')
+  const [newGroupTagIds, setNewGroupTagIds] = useState<string[]>([])
+  const [addingGroup, setAddingGroup] = useState(false)
+  const [editingGroup, setEditingGroup] = useState<string | null>(null)
+  const [editGroupNameEn, setEditGroupNameEn] = useState('')
+  const [editGroupNameZh, setEditGroupNameZh] = useState('')
+  const [editGroupTagIds, setEditGroupTagIds] = useState<string[]>([])
   const router = useRouter()
   const supabase = createClient()
 
@@ -66,6 +82,20 @@ export default function TagManagementPage() {
     }))
 
     setTags(formatted)
+    
+    // Load tag groups
+    const { data: groupsData } = await supabase
+      .from('tag_groups')
+      .select('id, tag_ids, tag_group_names(language, name)')
+      .order('created_at')
+
+    const formattedGroups = (groupsData || []).map((g: any) => ({
+      id: g.id,
+      tag_ids: g.tag_ids || [],
+      names: g.tag_group_names || []
+    }))
+    setGroups(formattedGroups)
+
     setLoading(false)
   }
 
@@ -132,6 +162,75 @@ export default function TagManagementPage() {
 
     setEditingTag(null)
     await loadTags()
+  }
+
+  // Tag Group functions
+  async function addGroup() {
+    if (!newGroupNameEn.trim() && !newGroupNameZh.trim()) { setError('Group needs at least one name'); return }
+    if (newGroupTagIds.length === 0) { setError('Select at least one tag for the group'); return }
+
+    setAddingGroup(true)
+    setError('')
+
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const { data: group, error: groupError } = await supabase
+      .from('tag_groups')
+      .insert({ tag_ids: newGroupTagIds, created_by: user?.id })
+      .select()
+      .single()
+
+    if (groupError) { setError(groupError.message); setAddingGroup(false); return }
+
+    const names: { group_id: string; language: string; name: string }[] = []
+    if (newGroupNameEn.trim()) names.push({ group_id: group.id, language: 'en', name: newGroupNameEn.trim() })
+    if (newGroupNameZh.trim()) names.push({ group_id: group.id, language: 'zh', name: newGroupNameZh.trim() })
+
+    if (names.length > 0) {
+      await supabase.from('tag_group_names').insert(names)
+    }
+
+    setNewGroupNameEn('')
+    setNewGroupNameZh('')
+    setNewGroupTagIds([])
+    setAddingGroup(false)
+    await loadTags()
+  }
+
+  async function deleteGroup(id: string) {
+    if (!confirm('Delete this tag group?')) return
+    await supabase.from('tag_groups').delete().eq('id', id)
+    setGroups(prev => prev.filter(g => g.id !== id))
+  }
+
+  async function startEditGroup(group: TagGroup) {
+    setEditingGroup(group.id)
+    setEditGroupNameEn(group.names.find(n => n.language === 'en')?.name || '')
+    setEditGroupNameZh(group.names.find(n => n.language === 'zh')?.name || '')
+    setEditGroupTagIds([...group.tag_ids])
+  }
+
+  async function saveEditGroup(groupId: string) {
+    // Update tag_ids
+    await supabase.from('tag_groups').update({ tag_ids: editGroupTagIds }).eq('id', groupId)
+
+    // Update names
+    await supabase.from('tag_group_names').delete().eq('group_id', groupId)
+    const names: { group_id: string; language: string; name: string }[] = []
+    if (editGroupNameEn.trim()) names.push({ group_id: groupId, language: 'en', name: editGroupNameEn.trim() })
+    if (editGroupNameZh.trim()) names.push({ group_id: groupId, language: 'zh', name: editGroupNameZh.trim() })
+    if (names.length > 0) {
+      await supabase.from('tag_group_names').insert(names)
+    }
+
+    setEditingGroup(null)
+    await loadTags()
+  }
+
+  function getTagDisplayName(tagId: string): string {
+    const tag = tags.find(t => t.id === tagId)
+    if (!tag) return tagId.slice(0, 8)
+    return tag.names.find(n => n.language === 'en')?.name || tag.names.find(n => n.language === 'zh')?.name || tagId.slice(0, 8)
   }
 
   if (loading) {
@@ -257,6 +356,139 @@ export default function TagManagementPage() {
                         <div className="flex gap-2 shrink-0 ml-3">
                           <button onClick={() => startEdit(tag)} className="text-sm text-primary-600 hover:text-primary-800">Edit</button>
                           <button onClick={() => deleteTag(tag.id)} className="text-sm text-red-500 hover:text-red-700">Delete</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card.Body>
+        </Card>
+
+        {/* Tag Groups */}
+        <Card className="mt-6">
+          <Card.Header>
+            <Card.Title>Tag Groups ({groups.length})</Card.Title>
+            <p className="text-sm text-gray-600 mt-1">
+              Group tags into presets. When creating a challenge, apply a group to add all its tags at once.
+            </p>
+          </Card.Header>
+          <Card.Body>
+            {/* Create new group */}
+            <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 mb-4">
+              <h4 className="font-medium text-gray-900 mb-3">Create New Group</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">English Name</label>
+                  <input
+                    type="text"
+                    value={newGroupNameEn}
+                    onChange={e => setNewGroupNameEn(e.target.value)}
+                    placeholder="e.g. Algebra Basics"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">中文名称</label>
+                  <input
+                    type="text"
+                    value={newGroupNameZh}
+                    onChange={e => setNewGroupNameZh(e.target.value)}
+                    placeholder="例如：代数基础"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+              </div>
+              <div className="mb-3">
+                <label className="block text-xs text-gray-500 mb-1">Select Tags for this Group</label>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map(tag => {
+                    const selected = newGroupTagIds.includes(tag.id)
+                    const name = tag.names.find(n => n.language === 'en')?.name || tag.names.find(n => n.language === 'zh')?.name || tag.id.slice(0, 8)
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => setNewGroupTagIds(prev => selected ? prev.filter(id => id !== tag.id) : [...prev, tag.id])}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selected ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                      >
+                        {selected ? '✓ ' : ''}{name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <Button size="sm" onClick={addGroup} disabled={addingGroup} isLoading={addingGroup}>
+                + Create Group
+              </Button>
+            </div>
+
+            {/* Existing groups */}
+            {groups.length === 0 ? (
+              <p className="text-center text-gray-500 py-4">No tag groups yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {groups.map(group => (
+                  <div key={group.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                    {editingGroup === group.id ? (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">English</label>
+                            <input type="text" value={editGroupNameEn} onChange={e => setEditGroupNameEn(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">中文</label>
+                            <input type="text" value={editGroupNameZh} onChange={e => setEditGroupNameZh(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Tags in Group</label>
+                          <div className="flex flex-wrap gap-2">
+                            {tags.map(tag => {
+                              const selected = editGroupTagIds.includes(tag.id)
+                              const name = getTagDisplayName(tag.id)
+                              return (
+                                <button
+                                  key={tag.id}
+                                  type="button"
+                                  onClick={() => setEditGroupTagIds(prev => selected ? prev.filter(id => id !== tag.id) : [...prev, tag.id])}
+                                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selected ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                >
+                                  {selected ? '✓ ' : ''}{name}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => saveEditGroup(group.id)}>Save</Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingGroup(null)}>Cancel</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {group.names.map(n => (
+                              <span key={n.language} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
+                                <span className="text-xs font-medium text-gray-400 uppercase">{n.language === 'zh' ? 'CN' : 'EN'}</span>
+                                <span className="font-medium">{n.name}</span>
+                              </span>
+                            ))}
+                          </div>
+                          <div className="flex gap-2 shrink-0 ml-3">
+                            <button onClick={() => startEditGroup(group)} className="text-sm text-primary-600 hover:text-primary-800">Edit</button>
+                            <button onClick={() => deleteGroup(group.id)} className="text-sm text-red-500 hover:text-red-700">Delete</button>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {group.tag_ids.map(tagId => (
+                            <span key={tagId} className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full text-xs font-medium">
+                              {getTagDisplayName(tagId)}
+                            </span>
+                          ))}
                         </div>
                       </div>
                     )}
