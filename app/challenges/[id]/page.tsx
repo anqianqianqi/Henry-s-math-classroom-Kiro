@@ -936,8 +936,11 @@ export default function ChallengePage() {
                 <img
                   src={challenge.image_url}
                   alt="Challenge visual"
-                  className="w-full max-h-96 object-contain bg-gray-50 rounded-2xl border-2 border-gray-200"
+                  className="w-full max-h-96 object-contain bg-gray-50 rounded-2xl border-2 border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => window.open(challenge.image_url!, '_blank')}
+                  title="Click to enlarge"
                 />
+                <p className="text-xs text-gray-400 text-center mt-1">Click image to enlarge</p>
               </div>
             )}
             <p className="text-gray-700 whitespace-pre-wrap">

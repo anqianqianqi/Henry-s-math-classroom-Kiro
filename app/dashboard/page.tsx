@@ -337,6 +337,19 @@ export default function DashboardPage() {
               </Card.Body>
             </Card>
           )}
+
+          {(isTeacher || isAdmin) && (
+            <Card 
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/admin/schedules')}
+            >
+              <Card.Body>
+                <div className="text-5xl mb-3 hidden sm:block">📅</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">Manage</div>
+                <div className="text-gray-600 font-medium">Scheduler</div>
+              </Card.Body>
+            </Card>
+          )}
         </div>
 
         {/* Join Requests - Teacher only */}
