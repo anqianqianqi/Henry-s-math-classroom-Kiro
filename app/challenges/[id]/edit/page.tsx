@@ -146,14 +146,15 @@ export default function EditChallengePage() {
     // Load tag groups
     const { data: groupsData } = await supabase
       .from('tag_groups')
-      .select('id, tag_ids, tag_group_names(language, name)')
+      .select('id, tag_group_names(language, name), tag_group_members(tag_id)')
       .order('created_at')
     setAllTagGroupData(groupsData || [])
     const groupsList = (groupsData || []).map((g: any) => {
       const name = g.tag_group_names?.find((n: any) => n.language === tagLang)?.name
         || g.tag_group_names?.find((n: any) => n.language === 'en')?.name
         || g.tag_group_names?.[0]?.name || 'Group'
-      return { id: g.id, name, tag_ids: g.tag_ids || [] }
+      const tagIds = (g.tag_group_members || []).map((m: any) => m.tag_id)
+      return { id: g.id, name, tag_ids: tagIds }
     })
     setTagGroups(groupsList)
 

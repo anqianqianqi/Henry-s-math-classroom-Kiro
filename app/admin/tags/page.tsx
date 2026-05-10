@@ -83,15 +83,15 @@ export default function TagManagementPage() {
 
     setTags(formatted)
     
-    // Load tag groups
+    // Load tag groups with their members
     const { data: groupsData } = await supabase
       .from('tag_groups')
-      .select('id, tag_ids, tag_group_names(language, name)')
+      .select('id, tag_group_names(language, name), tag_group_members(tag_id)')
       .order('created_at')
 
     const formattedGroups = (groupsData || []).map((g: any) => ({
       id: g.id,
-      tag_ids: g.tag_ids || [],
+      tag_ids: (g.tag_group_members || []).map((m: any) => m.tag_id),
       names: g.tag_group_names || []
     }))
     setGroups(formattedGroups)
@@ -176,12 +176,17 @@ export default function TagManagementPage() {
 
     const { data: group, error: groupError } = await supabase
       .from('tag_groups')
-      .insert({ tag_ids: newGroupTagIds, created_by: user?.id })
+      .insert({ created_by: user?.id })
       .select()
       .single()
 
     if (groupError) { setError(groupError.message); setAddingGroup(false); return }
 
+    // Insert group members (junction table)
+    const members = newGroupTagIds.map(tagId => ({ group_id: group.id, tag_id: tagId }))
+    await supabase.from('tag_group_members').insert(members)
+
+    // Insert names
     const names: { group_id: string; language: string; name: string }[] = []
     if (newGroupNameEn.trim()) names.push({ group_id: group.id, language: 'en', name: newGroupNameEn.trim() })
     if (newGroupNameZh.trim()) names.push({ group_id: group.id, language: 'zh', name: newGroupNameZh.trim() })
@@ -211,8 +216,12 @@ export default function TagManagementPage() {
   }
 
   async function saveEditGroup(groupId: string) {
-    // Update tag_ids
-    await supabase.from('tag_groups').update({ tag_ids: editGroupTagIds }).eq('id', groupId)
+    // Update members via junction table
+    await supabase.from('tag_group_members').delete().eq('group_id', groupId)
+    if (editGroupTagIds.length > 0) {
+      const members = editGroupTagIds.map(tagId => ({ group_id: groupId, tag_id: tagId }))
+      await supabase.from('tag_group_members').insert(members)
+    }
 
     // Update names
     await supabase.from('tag_group_names').delete().eq('group_id', groupId)
