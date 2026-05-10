@@ -41,6 +41,12 @@ export default function SchedulesPage() {
   const [newFrequency, setNewFrequency] = useState('daily')
   const [newPerDay, setNewPerDay] = useState(1)
 
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editTagIds, setEditTagIds] = useState<string[]>([])
+  const [editFrequency, setEditFrequency] = useState('daily')
+  const [editPerDay, setEditPerDay] = useState(1)
+
   const router = useRouter()
   const supabase = createClient()
 
@@ -128,6 +134,22 @@ export default function SchedulesPage() {
     if (!confirm('Delete this schedule?')) return
     await supabase.from('class_challenge_schedules').delete().eq('id', id)
     setSchedules(prev => prev.filter(s => s.id !== id))
+  }
+
+  function startEdit(schedule: Schedule) {
+    setEditingId(schedule.id)
+    setEditTagIds([...schedule.tag_ids])
+    setEditFrequency(schedule.frequency)
+    setEditPerDay(schedule.challenges_per_day)
+  }
+
+  async function saveEdit(id: string) {
+    await supabase
+      .from('class_challenge_schedules')
+      .update({ tag_ids: editTagIds, frequency: editFrequency, challenges_per_day: editPerDay })
+      .eq('id', id)
+    setEditingId(null)
+    await loadData()
   }
 
   function toggleTag(tagId: string) {
@@ -247,6 +269,44 @@ export default function SchedulesPage() {
               <div className="space-y-3">
                 {schedules.map(schedule => (
                   <div key={schedule.id} className={`p-4 rounded-xl border ${schedule.is_active ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                    {editingId === schedule.id ? (
+                      <div className="space-y-3">
+                        <p className="font-medium text-gray-900">{schedule.class_name}</p>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Tags</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {tags.map(tag => (
+                              <button
+                                key={tag.id}
+                                type="button"
+                                onClick={() => setEditTagIds(prev => prev.includes(tag.id) ? prev.filter(t => t !== tag.id) : [...prev, tag.id])}
+                                className={`px-2.5 py-1 rounded-full text-xs font-medium ${editTagIds.includes(tag.id) ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+                              >
+                                {tag.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">Frequency</label>
+                            <select value={editFrequency} onChange={e => setEditFrequency(e.target.value)} className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+                              <option value="daily">Daily</option>
+                              <option value="weekdays">Weekdays</option>
+                              <option value="weekly">Weekly</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">Per day</label>
+                            <input type="number" min={1} max={5} value={editPerDay} onChange={e => setEditPerDay(parseInt(e.target.value) || 1)} className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm" />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => saveEdit(schedule.id)}>Save</Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>Cancel</Button>
+                        </div>
+                      </div>
+                    ) : (
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-gray-900">{schedule.class_name}</p>
@@ -264,6 +324,7 @@ export default function SchedulesPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
+                        <button onClick={() => startEdit(schedule)} className="text-sm text-primary-600 hover:text-primary-800">Edit</button>
                         <button
                           onClick={() => toggleActive(schedule.id, schedule.is_active)}
                           className={`px-3 py-1 rounded-full text-xs font-medium ${schedule.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}
@@ -273,6 +334,7 @@ export default function SchedulesPage() {
                         <button onClick={() => deleteSchedule(schedule.id)} className="text-sm text-red-500 hover:text-red-700">Delete</button>
                       </div>
                     </div>
+                    )}
                   </div>
                 ))}
               </div>
