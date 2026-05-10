@@ -296,7 +296,7 @@ export default function NewChallengePage() {
       if (selectedStudents.length > 0) {
         const studentAssignments = selectedStudents.map(studentId => ({
           challenge_id: challenge.id,
-          user_id: studentId,
+          student_id: studentId,
           assigned_by: userId
         }))
 

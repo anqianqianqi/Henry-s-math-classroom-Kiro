@@ -169,9 +169,9 @@ export default function EditChallengePage() {
     // Load current individual student assignments
     const { data: studentAssignments } = await supabase
       .from('challenge_student_assignments')
-      .select('user_id')
+      .select('student_id')
       .eq('challenge_id', params.id)
-    setSelectedStudents(studentAssignments?.map(a => a.user_id) || [])
+    setSelectedStudents(studentAssignments?.map(a => a.student_id) || [])
 
     setLoading(false)
   }
@@ -346,7 +346,7 @@ export default function EditChallengePage() {
       if (selectedStudents.length > 0) {
         const studentAssignments = selectedStudents.map(studentId => ({
           challenge_id: params.id,
-          user_id: studentId,
+          student_id: studentId,
           assigned_by: userId
         }))
 

@@ -176,7 +176,7 @@ export default function ChallengesPage() {
         const { data: individualOnly } = await supabase
           .from('challenge_student_assignments')
           .select('challenge_id')
-          .eq('user_id', user.id)
+          .eq('student_id', user.id)
 
         if (!individualOnly || individualOnly.length === 0) {
           setLoading(false)
@@ -237,7 +237,7 @@ export default function ChallengesPage() {
       const { data: individualAssignments } = await supabase
         .from('challenge_student_assignments')
         .select('challenge_id')
-        .eq('user_id', user.id)
+        .eq('student_id', user.id)
 
       const individualIds = individualAssignments?.map(a => a.challenge_id) || []
 

@@ -303,16 +303,16 @@ export default function ChallengePage() {
         // Also include individually assigned students
         const { data: individualAssignments } = await supabase
           .from('challenge_student_assignments')
-          .select('user_id')
+          .select('student_id')
           .eq('challenge_id', params.id)
         
-        individualAssignments?.forEach(a => uniqueStudents.add(a.user_id))
+        individualAssignments?.forEach(a => uniqueStudents.add(a.student_id))
         setTotalStudents(uniqueStudents.size)
       } else {
         // Check if there are only individual assignments
         const { data: individualAssignments } = await supabase
           .from('challenge_student_assignments')
-          .select('user_id')
+          .select('student_id')
           .eq('challenge_id', params.id)
         
         if (individualAssignments && individualAssignments.length > 0) {

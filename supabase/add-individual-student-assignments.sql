@@ -6,10 +6,10 @@
 CREATE TABLE IF NOT EXISTS challenge_student_assignments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   challenge_id UUID NOT NULL REFERENCES daily_challenges(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  assigned_by UUID REFERENCES auth.users(id),
+  student_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  assigned_by UUID REFERENCES profiles(id),
   assigned_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE(challenge_id, user_id)
+  UNIQUE(challenge_id, student_id)
 );
 
 -- RLS policies
@@ -31,7 +31,7 @@ CREATE POLICY "Teachers can view all student assignments"
 -- Students can see their own assignments
 CREATE POLICY "Students can view own assignments"
   ON challenge_student_assignments FOR SELECT
-  USING (user_id = auth.uid());
+  USING (student_id = auth.uid());
 
 -- Teachers can insert assignments
 CREATE POLICY "Teachers can insert student assignments"
