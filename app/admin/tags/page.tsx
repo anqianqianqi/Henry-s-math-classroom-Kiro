@@ -250,7 +250,7 @@ export default function TagManagementPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           {tag.names.map(n => (
                             <span key={n.language} className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm">
-                              <span className="text-xs font-medium text-gray-400 uppercase">{n.language}</span>
+                              <span className="text-xs font-medium text-gray-400 uppercase">{n.language === 'zh' ? 'CN' : 'EN'}</span>
                               <span className="font-medium">{n.name}</span>
                             </span>
                           ))}

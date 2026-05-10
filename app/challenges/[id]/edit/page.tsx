@@ -496,8 +496,8 @@ export default function EditChallengePage() {
                     onChange={e => setTagLang(e.target.value as 'en' | 'zh')}
                     className="text-xs px-2 py-1 border border-gray-200 rounded-lg"
                   >
-                    <option value="en">English</option>
-                    <option value="zh">中文</option>
+                    <option value="en">EN</option>
+                    <option value="zh">CN</option>
                   </select>
                 </div>
                 <TagInput
