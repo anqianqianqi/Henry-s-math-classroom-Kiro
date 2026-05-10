@@ -6,6 +6,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
+import { runSchedulerForClass } from '@/lib/scheduler'
 import { Button } from '@/components/ui/Button'
 
 interface Challenge {
@@ -14,7 +15,7 @@ interface Challenge {
   description: string
   challenge_date: string
   created_at: string
-  tags?: string[]
+  tag_ids?: string[]
   submission_count?: number
   total_students?: number
   completion_rate?: number
@@ -39,6 +40,7 @@ export default function ChallengesPage() {
   const [sortBy, setSortBy] = useState<string>('date-desc')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false)
+  const [availableTagsMap, setAvailableTagsMap] = useState<Record<string, string>>({}) // id → name
   const tagDropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -107,6 +109,19 @@ export default function ChallengesPage() {
       
       setClasses(classesData || [])
 
+      // Load tag names for filter
+      const { data: tagsData } = await supabase
+        .from('challenge_tags')
+        .select('id, slug, challenge_tag_names(language, name)')
+        .order('slug')
+      const tagMap: Record<string, string> = {}
+      tagsData?.forEach((t: any) => {
+        const enName = t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
+        const zhName = t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
+        tagMap[t.id] = enName || zhName || t.slug
+      })
+      setAvailableTagsMap(tagMap)
+
       // Teachers and admins see ALL challenges
       const { data: challengesData } = await supabase
         .from('daily_challenges')
@@ -142,6 +157,11 @@ export default function ChallengesPage() {
         return
       }
 
+      // Run scheduler for each class (lazy execution)
+      for (const classId of classIds) {
+        await runSchedulerForClass(supabase, classId)
+      }
+
       // Load class names for filter dropdown
       const { data: classesData } = await supabase
         .from('classes')
@@ -169,7 +189,11 @@ export default function ChallengesPage() {
         .lte('challenge_date', new Date().toISOString().split('T')[0])
         .order('challenge_date', { ascending: false })
 
-      setChallenges(challengesData || [])
+      // Deduplicate challenges (same challenge may be assigned via multiple classes/schedules)
+      const uniqueChallenges = (challengesData || []).filter(
+        (c, i, arr) => arr.findIndex(x => x.id === c.id) === i
+      )
+      setChallenges(uniqueChallenges)
 
       // Load class names for each challenge (needed for class filter)
       if (challengesData) {
@@ -252,12 +276,13 @@ export default function ChallengesPage() {
   function applyFiltersAndSort() {
     let filtered = [...challenges]
 
-    // Apply search filter
+    // Apply search filter (matches title, description, and tag names)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(c => 
         c.title.toLowerCase().includes(query) ||
-        c.description.toLowerCase().includes(query)
+        c.description.toLowerCase().includes(query) ||
+        c.tag_ids?.some(id => (availableTagsMap[id] || '').toLowerCase().includes(query))
       )
     }
 
@@ -270,7 +295,7 @@ export default function ChallengesPage() {
 
     // Apply tag filter
     if (selectedTags.length > 0) {
-      filtered = filtered.filter(c => selectedTags.every(t => c.tags?.includes(t)))
+      filtered = filtered.filter(c => selectedTags.every(t => c.tag_ids?.includes(t)))
     }
 
     // Apply date filter
@@ -422,9 +447,10 @@ export default function ChallengesPage() {
 
               {/* Tag filter row */}
               {(() => {
-                const allTags = [...new Set(challenges.flatMap(c => c.tags || []))].sort()
-                return allTags.length > 0 ? (
-                  <div className="mt-4 flex items-center gap-3">
+                const allTagIds = [...new Set(challenges.flatMap(c => c.tag_ids || []))]
+                const tagsWithNames = allTagIds.map(id => ({ id, name: availableTagsMap[id] || id.slice(0, 8) })).sort((a, b) => a.name.localeCompare(b.name))
+                return tagsWithNames.length > 0 ? (
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
                     <label className="text-sm font-medium text-gray-700 shrink-0">Tags:</label>
                     <div className="relative" ref={tagDropdownRef}>
                       <button
@@ -442,25 +468,25 @@ export default function ChallengesPage() {
                       </button>
 
                       {tagDropdownOpen && (
-                        <div className="absolute z-20 mt-1 w-56 bg-white border border-gray-200 rounded-xl shadow-lg py-1">
-                          {allTags.map(tag => (
+                        <div className="absolute z-20 mt-1 w-56 bg-white border border-gray-200 rounded-xl shadow-lg py-1 max-h-48 overflow-y-auto">
+                          {tagsWithNames.map(tag => (
                             <label
-                              key={tag}
+                              key={tag.id}
                               className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 cursor-pointer"
                             >
                               <input
                                 type="checkbox"
-                                checked={selectedTags.includes(tag)}
+                                checked={selectedTags.includes(tag.id)}
                                 onChange={() =>
                                   setSelectedTags(prev =>
-                                    prev.includes(tag)
-                                      ? prev.filter(t => t !== tag)
-                                      : [...prev, tag]
+                                    prev.includes(tag.id)
+                                      ? prev.filter(t => t !== tag.id)
+                                      : [...prev, tag.id]
                                   )
                                 }
                                 className="w-4 h-4 text-primary-600 rounded"
                               />
-                              <span className="text-sm text-gray-700">#{tag}</span>
+                              <span className="text-sm text-gray-700">{tag.name}</span>
                             </label>
                           ))}
                         </div>
@@ -468,14 +494,14 @@ export default function ChallengesPage() {
                     </div>
 
                     {/* Selected tag pills */}
-                    {selectedTags.map(tag => (
+                    {selectedTags.map(tagId => (
                       <span
-                        key={tag}
+                        key={tagId}
                         className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-medium"
                       >
-                        #{tag}
+                        {availableTagsMap[tagId] || tagId.slice(0, 8)}
                         <button
-                          onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
+                          onClick={() => setSelectedTags(prev => prev.filter(t => t !== tagId))}
                           className="ml-1 text-primary-500 hover:text-primary-800"
                         >
                           ×
@@ -754,11 +780,11 @@ export default function ChallengesPage() {
                               </div>
                             )}
                             {/* Tags */}
-                            {challenge.tags && challenge.tags.length > 0 && (
+                            {challenge.tag_ids && challenge.tag_ids.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-2">
-                                {challenge.tags.map(tag => (
-                                  <span key={tag} className="px-2 py-0.5 bg-primary-50 text-primary-600 rounded-full text-xs font-medium">
-                                    #{tag}
+                                {challenge.tag_ids.map(tagId => (
+                                  <span key={tagId} className="px-2 py-0.5 bg-primary-50 text-primary-600 rounded-full text-xs font-medium">
+                                    {availableTagsMap[tagId] || tagId.slice(0, 8)}
                                   </span>
                                 ))}
                               </div>
