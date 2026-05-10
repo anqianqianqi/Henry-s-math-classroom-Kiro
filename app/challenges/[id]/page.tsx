@@ -610,7 +610,7 @@ export default function ChallengePage() {
   async function handleRevealOthers() {
     if (!userSubmission || !userId) return
     const grade = userSubmission.points ?? 0
-    if (!confirm(`⚠️ This will lock your current submission and grade (${grade}/100). You won't be able to edit your answer after this. Continue?`)) return
+    if (!confirm(`⚠️ This will lock your current submission and grade (${grade}/${challenge?.max_points || 100}). You won't be able to edit your answer after this. Continue?`)) return
 
     const { error } = await supabase
       .from('challenge_submissions')
@@ -649,7 +649,7 @@ export default function ChallengePage() {
             user_id: studentId,
             type: 'homework_graded',
             title: 'Challenge Graded',
-            message: `You received ${points}/100 on "${challenge?.title}"`,
+            message: `You received ${points}/${challenge?.max_points || 100} on "${challenge?.title}"`,
             link: `/challenges/${params.id}`,
             read: false
           })
@@ -1037,11 +1037,11 @@ export default function ChallengePage() {
                       Your Solution
                       {userSubmission?.points != null ? (
                         <span className="ml-2 px-2 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-bold">
-                          {userSubmission.points}/100
+                          {userSubmission.points}/${challenge?.max_points || 100}
                         </span>
                       ) : (
                         <span className="ml-2 px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-sm font-bold">
-                          0/100
+                          0/${challenge?.max_points || 100}
                         </span>
                       )}
                       {userSubmission?.is_locked && (
@@ -1222,7 +1222,7 @@ export default function ChallengePage() {
                             submission.is_locked ? (
                               <div className="flex items-center gap-2 mb-3 p-3 bg-gray-100 rounded-lg border-2 border-gray-300">
                                 <span className="text-sm font-bold text-gray-700">📝 Grade:</span>
-                                <span className="text-sm font-bold">{submission.points ?? '—'}/100</span>
+                                <span className="text-sm font-bold">{submission.points ?? '—'}/${challenge?.max_points || 100}</span>
                                 <span className="text-xs text-orange-600 font-medium">🔒 Student locked their grade</span>
                               </div>
                             ) : (
@@ -1231,7 +1231,7 @@ export default function ChallengePage() {
                               <input
                                 type="number"
                                 min={0}
-                                max={100}
+                                max={challenge?.max_points || 100}
                                 defaultValue={submission.points ?? undefined}
                                 id={`grade-${submission.id}`}
                                 className="w-20 px-3 py-2 border-2 border-gray-300 rounded-lg text-center text-sm font-bold focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
@@ -1245,14 +1245,14 @@ export default function ChallengePage() {
                                   if (val === '') return alert('Enter a score first')
                                   const num = Math.min(100, Math.max(0, parseInt(val)))
                                   handleGradeSubmission(submission.id, num)
-                                  alert(`✅ Grade saved: ${num}/100`)
+                                  alert(`✅ Grade saved: ${num}/${challenge?.max_points || 100}`)
                                 }}
                                 className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
                               >
                                 Publish Grade
                               </button>
                               {submission.points != null && (
-                                <span className="text-xs text-green-600 font-medium">Current: {submission.points}/100</span>
+                                <span className="text-xs text-green-600 font-medium">Current: {submission.points}/${challenge?.max_points || 100}</span>
                               )}
                             </div>
                             )
@@ -1260,7 +1260,7 @@ export default function ChallengePage() {
                           {/* Show points to students */}
                           {!isTeacher && submission.points != null && (
                             <div className="mb-3 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm font-medium inline-block">
-                              Score: {submission.points}/100
+                              Score: {submission.points}/${challenge?.max_points || 100}
                             </div>
                           )}
 

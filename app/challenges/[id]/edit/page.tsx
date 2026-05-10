@@ -44,6 +44,7 @@ export default function EditChallengePage() {
   const [tags, setTags] = useState<string[]>([])
   const [availableTags, setAvailableTags] = useState<any[]>([])
   const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
+  const [maxPoints, setMaxPoints] = useState(100)
 
   useEffect(() => {
     loadData()
@@ -101,6 +102,7 @@ export default function EditChallengePage() {
     setChallengeDate(challengeData.challenge_date)
     setCurrentImageUrl(challengeData.image_url || null)
     setTags(challengeData.tag_ids || [])
+    setMaxPoints(challengeData.max_points || 100)
 
     // Load submission count
     const { count } = await supabase
@@ -130,10 +132,10 @@ export default function EditChallengePage() {
     // Load existing tags
     const { data: tagsData } = await supabase
       .from('challenge_tags')
-      .select('id, slug, challenge_tag_names(language, name)')
-      .order('slug')
+      .select('id, challenge_tag_names(language, name)')
+      .order('created_at')
     setAvailableTags((tagsData || []).map((t: any) => ({
-      id: t.id, slug: t.slug, _names: t.challenge_tag_names || []
+      id: t.id, _names: t.challenge_tag_names || []
     })))
 
     setLoading(false)
@@ -264,7 +266,8 @@ export default function EditChallengePage() {
           description: description.trim(),
           challenge_date: challengeDate,
           image_url: imageUrl,
-          tag_ids: tags
+          tag_ids: tags,
+          max_points: maxPoints
         })
         .eq('id', params.id)
 
@@ -481,6 +484,14 @@ export default function EditChallengePage() {
                 required
               />
 
+              <FormField
+                label="Max Points"
+                type="number"
+                value={maxPoints.toString()}
+                onChange={(e) => setMaxPoints(parseInt(e.target.value) || 100)}
+                helperText="Total points this challenge is worth"
+              />
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Tags (Optional)
@@ -502,9 +513,9 @@ export default function EditChallengePage() {
                   availableTags={availableTags.map((t: any) => {
                     const localName = t._names?.find((n: any) => n.language === tagLang)?.name
                     const allNames = t._names?.map((n: any) => n.name) || []
-                    return { id: t.id, slug: t.slug, name: localName || t.slug, _allNames: allNames }
+                    return { id: t.id, name: localName || t.id.slice(0, 8), _allNames: allNames }
                   })}
-                  placeholder="Search by English, Chinese, or slug..."
+                  placeholder="Search by name..."
                 />
               </div>
 

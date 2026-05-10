@@ -35,6 +35,7 @@ export default function NewChallengePage() {
   const [tags, setTags] = useState<string[]>([])
   const [availableTags, setAvailableTags] = useState<TagOption[]>([])
   const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
+  const [maxPoints, setMaxPoints] = useState(100)
 
   useEffect(() => {
     loadData()
@@ -94,12 +95,12 @@ export default function NewChallengePage() {
     // Load existing tags with names
     const { data: tagsData } = await supabase
       .from('challenge_tags')
-      .select('id, slug, challenge_tag_names(language, name)')
+      .select('id, challenge_tag_names(language, name)')
       .order('slug')
     
     const tagOptions: TagOption[] = (tagsData || []).map((t: any) => {
       const names = t.challenge_tag_names || []
-      return { id: t.id, slug: t.slug, name: t.slug, _names: names }
+      return { id: t.id, name: t.id.slice(0, 8), _names: names }
     })
     setAvailableTags(tagOptions as any)
 
@@ -214,7 +215,8 @@ export default function NewChallengePage() {
           title: title.trim(),
           description: description.trim(),
           challenge_date: challengeDate,
-          tag_ids: tags
+          tag_ids: tags,
+          max_points: maxPoints
         })
         .select()
         .single()
@@ -393,6 +395,14 @@ export default function NewChallengePage() {
                 required
               />
 
+              <FormField
+                label="Max Points"
+                type="number"
+                value={maxPoints.toString()}
+                onChange={(e) => setMaxPoints(parseInt(e.target.value) || 100)}
+                helperText="Total points this challenge is worth (default: 100)"
+              />
+
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">Tags (Optional)</label>
@@ -414,9 +424,9 @@ export default function NewChallengePage() {
                   availableTags={availableTags.map((t: any) => {
                     const localName = t._names?.find((n: any) => n.language === tagLang)?.name
                     const allNames = t._names?.map((n: any) => n.name) || []
-                    return { id: t.id, slug: t.slug, name: localName || t.slug, _allNames: allNames }
+                    return { id: t.id, name: localName || t.id.slice(0, 8), _allNames: allNames }
                   })}
-                  placeholder="Search by English, Chinese, or slug..."
+                  placeholder="Search by name..."
                 />
               </div>
 
