@@ -14,6 +14,7 @@ interface Challenge {
   created_by: string
   image_url?: string | null
   max_points?: number
+  tag_ids?: string[]
 }
 
 interface Submission {
@@ -79,6 +80,8 @@ export default function ChallengePage() {
   const [submittingComment, setSubmittingComment] = useState<{[submissionId: string]: boolean}>({})
   const [visibleComments, setVisibleComments] = useState<{[submissionId: string]: number}>({})
   const COMMENTS_INCREMENT = 5
+  const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
+  const [tagNames, setTagNames] = useState<Record<string, Record<string, string>>>({}) // id → { en: name, zh: name }
 
   useEffect(() => {
     loadChallenge()
@@ -207,6 +210,26 @@ export default function ChallengePage() {
       .single()
 
     setChallenge(challengeData)
+
+    // Load tag names for this challenge
+    if (challengeData?.tag_ids && challengeData.tag_ids.length > 0) {
+      const { data: tagsData } = await supabase
+        .from('challenge_tags')
+        .select('id, challenge_tag_names(language, name)')
+        .in('id', challengeData.tag_ids)
+
+      if (tagsData) {
+        const namesMap: Record<string, Record<string, string>> = {}
+        tagsData.forEach((t: any) => {
+          const langMap: Record<string, string> = {}
+          t.challenge_tag_names?.forEach((n: any) => {
+            langMap[n.language] = n.name
+          })
+          namesMap[t.id] = langMap
+        })
+        setTagNames(namesMap)
+      }
+    }
 
     // Check if user is teacher first
     const { data: roles } = await supabase
@@ -850,6 +873,14 @@ export default function ChallengePage() {
               </Button>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Challenge</h1>
+                <select
+                  value={tagLang}
+                  onChange={e => setTagLang(e.target.value as 'en' | 'zh')}
+                  className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white"
+                >
+                  <option value="en">EN</option>
+                  <option value="zh">CN</option>
+                </select>
               </div>
             </div>
             {isTeacher && (
@@ -928,6 +959,22 @@ export default function ChallengePage() {
                     year: 'numeric'
                   })}
                 </p>
+                {/* Tags */}
+                {challenge.tag_ids && challenge.tag_ids.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {challenge.tag_ids.map((tagId: string) => {
+                      const name = tagNames[tagId]?.[tagLang] || tagNames[tagId]?.['en'] || tagNames[tagId]?.['zh'] || tagId.slice(0, 8)
+                      return (
+                        <span
+                          key={tagId}
+                          className="inline-flex items-center px-2.5 py-0.5 bg-primary-100 text-primary-700 rounded-full text-xs font-medium"
+                        >
+                          {name}
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </Card.Header>
