@@ -27,10 +27,17 @@ interface ClassInfo {
   name: string
 }
 
+interface TagGroupInfo {
+  id: string
+  name: string
+  tag_ids: string[]
+}
+
 export default function SchedulesPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [classes, setClasses] = useState<ClassInfo[]>([])
   const [tags, setTags] = useState<TagInfo[]>([])
+  const [tagGroups, setTagGroups] = useState<TagGroupInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
@@ -87,6 +94,19 @@ export default function SchedulesPage() {
       return { id: t.id, name: en || zh || t.id.slice(0, 8) }
     })
     setTags(tagList)
+
+    // Load tag groups
+    const { data: groupsData } = await supabase
+      .from('tag_groups')
+      .select('id, tag_group_names(language, name), tag_group_members(tag_id)')
+      .order('created_at')
+    const groupList = (groupsData || []).map((g: any) => {
+      const en = g.tag_group_names?.find((n: any) => n.language === 'en')?.name
+      const zh = g.tag_group_names?.find((n: any) => n.language === 'zh')?.name
+      const tagIds = (g.tag_group_members || []).map((m: any) => m.tag_id)
+      return { id: g.id, name: en || zh || 'Group', tag_ids: tagIds }
+    })
+    setTagGroups(groupList)
 
     setLoading(false)
   }
@@ -204,6 +224,21 @@ export default function SchedulesPage() {
               {/* Tags */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tags (challenge pool)</label>
+                {tagGroups.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    <span className="text-xs text-gray-400 self-center mr-1">Groups:</span>
+                    {tagGroups.map(group => (
+                      <button
+                        key={group.id}
+                        type="button"
+                        onClick={() => setNewTagIds(prev => [...new Set([...prev, ...group.tag_ids])])}
+                        className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full text-xs hover:bg-blue-100 border border-blue-200"
+                      >
+                        📁 {group.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {tags.map(tag => (
                     <button
@@ -274,6 +309,21 @@ export default function SchedulesPage() {
                         <p className="font-medium text-gray-900">{schedule.class_name}</p>
                         <div>
                           <label className="text-xs text-gray-500 mb-1 block">Tags</label>
+                          {tagGroups.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              <span className="text-xs text-gray-400 self-center mr-1">Groups:</span>
+                              {tagGroups.map(group => (
+                                <button
+                                  key={group.id}
+                                  type="button"
+                                  onClick={() => setEditTagIds(prev => [...new Set([...prev, ...group.tag_ids])])}
+                                  className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-xs hover:bg-blue-100 border border-blue-200"
+                                >
+                                  📁 {group.name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                           <div className="flex flex-wrap gap-1.5">
                             {tags.map(tag => (
                               <button
