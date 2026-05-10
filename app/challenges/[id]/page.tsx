@@ -13,6 +13,7 @@ interface Challenge {
   challenge_date: string
   created_by: string
   image_url?: string | null
+  max_points?: number
 }
 
 interface Submission {
