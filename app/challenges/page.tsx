@@ -113,7 +113,7 @@ export default function ChallengesPage() {
       const { data: tagsData } = await supabase
         .from('challenge_tags')
         .select('id, challenge_tag_names(language, name)')
-        .order('slug')
+        .order('created_at')
       const tagMap: Record<string, string> = {}
       tagsData?.forEach((t: any) => {
         const enName = t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
@@ -174,7 +174,7 @@ export default function ChallengesPage() {
       const { data: tagsData } = await supabase
         .from('challenge_tags')
         .select('id, challenge_tag_names(language, name)')
-        .order('slug')
+        .order('created_at')
       const tagMap: Record<string, string> = {}
       tagsData?.forEach((t: any) => {
         const enName = t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name

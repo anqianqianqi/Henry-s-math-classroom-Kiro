@@ -58,7 +58,7 @@ export default function TagManagementPage() {
     const { data: tagsData } = await supabase
       .from('challenge_tags')
       .select('id, challenge_tag_names(language, name)')
-      .order('slug')
+      .order('created_at')
 
     const formatted = (tagsData || []).map((t: any) => ({
       id: t.id,

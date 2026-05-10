@@ -96,7 +96,7 @@ export default function NewChallengePage() {
     const { data: tagsData } = await supabase
       .from('challenge_tags')
       .select('id, challenge_tag_names(language, name)')
-      .order('slug')
+      .order('created_at')
     
     const tagOptions: TagOption[] = (tagsData || []).map((t: any) => {
       const names = t.challenge_tag_names || []
