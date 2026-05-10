@@ -239,15 +239,6 @@ export default function DashboardPage() {
                   Roles
                 </button>
               )}
-              {isTeacher && (
-                <button
-                  onClick={() => router.push('/admin/tags')}
-                  className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                  aria-label="Manage Tags"
-                >
-                  Tags
-                </button>
-              )}
               <button
                 onClick={() => router.push('/settings')}
                 className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -330,6 +321,19 @@ export default function DashboardPage() {
                 <div className="text-5xl mb-3 hidden sm:block">👥</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">Manage</div>
                 <div className="text-gray-600 font-medium">User Roles</div>
+              </Card.Body>
+            </Card>
+          )}
+
+          {(isTeacher || isAdmin) && (
+            <Card 
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/admin/tags')}
+            >
+              <Card.Body>
+                <div className="text-5xl mb-3 hidden sm:block">🏷️</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">Manage</div>
+                <div className="text-gray-600 font-medium">Tags</div>
               </Card.Body>
             </Card>
           )}

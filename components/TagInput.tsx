@@ -130,6 +130,23 @@ export default function TagInput({ tags, onChange, placeholder = 'Type a tag...'
         <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">Enter</kbd>{' '}
         or click <span className="font-medium text-gray-500">+ Add</span> to add.
       </p>
+
+      {/* Quick-add from existing tags */}
+      {suggestions.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-xs text-gray-400 self-center mr-1">Quick add:</span>
+          {suggestions.filter(s => !tags.includes(s)).slice(0, 15).map(tag => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => addTag(tag)}
+              className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full text-xs hover:bg-primary-100 hover:text-primary-700 transition-colors"
+            >
+              + {tag}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
