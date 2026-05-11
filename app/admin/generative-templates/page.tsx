@@ -487,7 +487,8 @@ function TemplateForm({
         answer_formula: answerFormula,
         max_points: parseInt(maxPoints) || 10,
         tag_ids: tagIds,
-        title: titleTemplate, // Use title_template as the template title
+        title: titleTemplate,
+        description: descriptionTemplate, // Required NOT NULL column in existing table
       }
 
       if (isEditing && template) {
