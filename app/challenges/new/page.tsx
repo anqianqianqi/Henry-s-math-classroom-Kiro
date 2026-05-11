@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import TagInput, { TagOption } from '@/components/TagInput'
+import { generateChallenge, GenerativeTemplate } from '@/lib/challenge-generator'
 
 interface Class {
   id: string
@@ -41,7 +42,10 @@ export default function NewChallengePage() {
   const [studentSearch, setStudentSearch] = useState('')
   const [tagGroups, setTagGroups] = useState<Array<{id: string, name: string, tag_ids: string[]}>>([])
   const [allTagGroupData, setAllTagGroupData] = useState<any[]>([])
-
+  const [generativeTemplates, setGenerativeTemplates] = useState<any[]>([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
+  const [generating, setGenerating] = useState(false)
+  const [generateSuccess, setGenerateSuccess] = useState<string | null>(null)
   useEffect(() => {
     loadData()
   }, [])
@@ -119,7 +123,7 @@ export default function NewChallengePage() {
       .filter((p: any) => !teacherIds.has(p.id))
       .map((p: any) => ({
         id: p.id,
-        name: p.first_name || p.full_name || 'Unknown'
+        name: [p.first_name, p.last_name].filter(Boolean).join(' ') || p.full_name || 'Unknown'
       }))
     setAllStudents(students)
 
@@ -149,6 +153,14 @@ export default function NewChallengePage() {
       return { id: g.id, name, tag_ids: tagIds }
     })
     setTagGroups(groupsList)
+
+    // Load generative templates
+    const { data: genTemplates } = await supabase
+      .from('challenge_templates')
+      .select('id, title_template, description_template, variables, answer_formula, max_points, tag_ids')
+      .eq('is_generative', true)
+      .order('created_at', { ascending: false })
+    setGenerativeTemplates(genTemplates || [])
 
     // Set default date to today
     const today = new Date().toISOString().split('T')[0]
@@ -336,6 +348,44 @@ export default function NewChallengePage() {
     }
   }
 
+  async function handleGenerateFromTemplate() {
+    if (!selectedTemplateId || !userId) return
+
+    const rawTemplate = generativeTemplates.find(t => t.id === selectedTemplateId)
+    if (!rawTemplate) return
+
+    setGenerating(true)
+    setError('')
+    setGenerateSuccess(null)
+
+    try {
+      const template: GenerativeTemplate = {
+        id: rawTemplate.id,
+        title_template: rawTemplate.title_template,
+        description_template: rawTemplate.description_template,
+        variables: rawTemplate.variables,
+        answer_formula: rawTemplate.answer_formula,
+        max_points: rawTemplate.max_points ?? 10,
+        tag_ids: rawTemplate.tag_ids ?? [],
+      }
+
+      const challengeId = await generateChallenge(template, supabase, userId)
+
+      if (challengeId) {
+        setGenerateSuccess(`Challenge generated successfully!`)
+        // Redirect to the new challenge
+        router.push(`/challenges/${challengeId}`)
+      } else {
+        setError('Failed to generate challenge. Please try again.')
+      }
+    } catch (err) {
+      console.error('Error generating from template:', err)
+      setError('An unexpected error occurred during generation.')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
@@ -364,6 +414,63 @@ export default function NewChallengePage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        {/* Generate from Template Section */}
+        {generativeTemplates.length > 0 && (
+          <Card className="mb-6">
+            <Card.Header>
+              <Card.Title className="flex items-center gap-2">
+                <span>🎲</span>
+                Generate from Template
+              </Card.Title>
+            </Card.Header>
+            <Card.Body>
+              <p className="text-sm text-gray-600 mb-4">
+                Quickly generate a randomized challenge from one of your generative templates.
+              </p>
+
+              {generateSuccess && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-2xl mb-4">
+                  <p className="text-sm text-green-700">{generateSuccess}</p>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Template
+                  </label>
+                  <select
+                    value={selectedTemplateId || ''}
+                    onChange={(e) => setSelectedTemplateId(e.target.value || null)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl 
+                             focus:border-primary-500 focus:ring-2 focus:ring-primary-200
+                             transition-colors bg-white"
+                  >
+                    <option value="">Choose a template...</option>
+                    {generativeTemplates.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.title_template} ({Object.keys(t.variables || {}).length} variables)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={handleGenerateFromTemplate}
+                  disabled={!selectedTemplateId || generating}
+                  isLoading={generating}
+                  size="lg"
+                  className="w-full"
+                >
+                  <span className="mr-2">🎲</span>
+                  Generate Challenge
+                </Button>
+              </div>
+            </Card.Body>
+          </Card>
+        )}
+
         <Card>
           <Card.Header>
             <Card.Title className="flex items-center gap-2">

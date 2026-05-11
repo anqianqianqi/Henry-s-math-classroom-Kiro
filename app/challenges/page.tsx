@@ -185,11 +185,17 @@ export default function ChallengesPage() {
 
         // Load individually assigned challenges
         const indivIds = [...new Set(individualOnly.map(a => a.challenge_id))]
+        // Only show challenges from the past 10 days
+        const tenDaysAgo = new Date()
+        tenDaysAgo.setDate(tenDaysAgo.getDate() - 10)
+        const tenDaysAgoStr = tenDaysAgo.toISOString().split('T')[0]
+
         const { data: challengesData } = await supabase
           .from('daily_challenges')
           .select('*')
           .in('id', indivIds)
           .lte('challenge_date', new Date().toISOString().split('T')[0])
+          .gte('challenge_date', tenDaysAgoStr)
           .order('challenge_date', { ascending: false })
 
         setChallenges(challengesData || [])
@@ -249,11 +255,17 @@ export default function ChallengesPage() {
         return
       }
 
+      // Only show challenges from the past 10 days
+      const tenDaysAgo = new Date()
+      tenDaysAgo.setDate(tenDaysAgo.getDate() - 10)
+      const tenDaysAgoStr = tenDaysAgo.toISOString().split('T')[0]
+
       const { data: challengesData } = await supabase
         .from('daily_challenges')
         .select('*')
         .in('id', challengeIds)
         .lte('challenge_date', new Date().toISOString().split('T')[0])
+        .gte('challenge_date', tenDaysAgoStr)
         .order('challenge_date', { ascending: false })
 
       // Deduplicate challenges (same challenge may be assigned via multiple classes/schedules)
@@ -449,7 +461,7 @@ export default function ChallengesPage() {
                 <Button size="sm" onClick={() => router.push('/challenges/new')}>
                   + New
                 </Button>
-                <Button size="sm" onClick={() => router.push('/challenges/templates')} variant="secondary">
+                <Button size="sm" onClick={() => router.push('/admin/generative-templates')} variant="secondary">
                   Templates
                 </Button>
                 <Button size="sm" onClick={() => router.push('/admin/schedules')} variant="secondary">

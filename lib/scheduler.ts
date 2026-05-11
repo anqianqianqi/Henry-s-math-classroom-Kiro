@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js'
+import { generateChallenge, GenerativeTemplate } from './challenge-generator'
 
 /**
  * Runs the challenge scheduler for a given class.
@@ -27,9 +28,9 @@ export async function runSchedulerForClass(supabase: SupabaseClient, classId: st
     // Check if we should run today
     if (!shouldRunToday(schedule, today, dayOfWeek)) continue
 
-    // Pick challenges
+    // Pick challenges (with generative template support)
     for (let i = 0; i < schedule.challenges_per_day; i++) {
-      await assignOneChallenge(supabase, schedule, classId, today)
+      await assignOneChallengeWithGenerative(supabase, schedule, classId, today)
     }
 
     // Update last_assigned_at
@@ -56,6 +57,70 @@ function shouldRunToday(schedule: any, today: string, dayOfWeek: number): boolea
   }
 
   return false
+}
+
+async function assignOneChallengeWithGenerative(
+  supabase: SupabaseClient,
+  schedule: any,
+  classId: string,
+  today: string
+) {
+  const tagIds: string[] = schedule.tag_ids || []
+  if (tagIds.length === 0) return
+
+  // Check if any generative templates match the schedule's tags
+  const { data: templates } = await supabase
+    .from('challenge_templates')
+    .select('*')
+    .eq('is_generative', true)
+    .overlaps('tag_ids', tagIds)
+
+  if (templates && templates.length > 0) {
+    // Pick a random generative template
+    const rawTemplate = templates[Math.floor(Math.random() * templates.length)]
+
+    const template: GenerativeTemplate = {
+      id: rawTemplate.id,
+      title_template: rawTemplate.title_template,
+      description_template: rawTemplate.description_template,
+      variables: rawTemplate.variables,
+      answer_formula: rawTemplate.answer_formula,
+      max_points: rawTemplate.max_points ?? 10,
+      tag_ids: rawTemplate.tag_ids ?? [],
+    }
+
+    // Generate a new challenge from the template
+    const challengeId = await generateChallenge(template, supabase, schedule.created_by)
+
+    if (challengeId) {
+      // Create challenge assignment for the class
+      await supabase
+        .from('challenge_assignments')
+        .insert({
+          challenge_id: challengeId,
+          class_id: classId,
+          assigned_by: schedule.created_by,
+        })
+
+      // Log the assignment
+      await supabase
+        .from('schedule_assignment_log')
+        .insert({
+          schedule_id: schedule.id,
+          challenge_id: challengeId,
+          assigned_date: today,
+        })
+      return
+    }
+
+    // Generation returned null — log failure and continue
+    console.warn(
+      `[scheduler] generative template ${template.id} failed to generate for schedule ${schedule.id}`
+    )
+  }
+
+  // Fallback: use existing non-generative assignment logic
+  await assignOneChallenge(supabase, schedule, classId, today)
 }
 
 async function assignOneChallenge(
