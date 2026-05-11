@@ -444,6 +444,11 @@ function TemplateForm({
   const [previews, setPreviews] = useState<GeneratedChallenge[]>([])
   const [showPreview, setShowPreview] = useState(false)
 
+  // AI generation state
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
+
   useEffect(() => {
     loadTags()
   }, [])
@@ -478,6 +483,50 @@ function TemplateForm({
         const tag_ids = g.tag_group_members?.map((m: any) => m.tag_id) || []
         return { id: g.id, name, tag_ids }
       }))
+    }
+  }
+
+  async function handleAiGenerate() {
+    if (!aiPrompt.trim()) return
+    setAiLoading(true)
+    setAiError('')
+
+    try {
+      const res = await fetch('/api/generate-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setAiError(data.error || 'Failed to generate template')
+        return
+      }
+
+      // Fill form fields with AI response
+      if (data.titleTemplate) setTitleTemplate(data.titleTemplate)
+      if (data.descriptionTemplate) setDescriptionTemplate(data.descriptionTemplate)
+      if (data.answerFormula) setAnswerFormula(data.answerFormula)
+      if (data.maxPoints) setMaxPoints(String(data.maxPoints))
+
+      // Convert variables object to form entries
+      if (data.variables && typeof data.variables === 'object') {
+        const entries: VariableFormEntry[] = Object.entries(data.variables).map(([name, v]: [string, any]) => ({
+          name,
+          type: v.type || 'random_int',
+          min: String(v.min ?? '1'),
+          max: String(v.max ?? '10'),
+          options: v.options?.join(', ') || '',
+          decimals: String(v.decimals ?? '1'),
+        }))
+        setVariables(entries)
+      }
+    } catch (err: any) {
+      setAiError(err.message || 'Network error')
+    } finally {
+      setAiLoading(false)
     }
   }
 
@@ -658,6 +707,36 @@ function TemplateForm({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Form Panel */}
         <div className="space-y-6">
+          {/* AI Generation Section */}
+          <Card>
+            <Card.Header>
+              <Card.Title className="flex items-center gap-2">
+                <span>🤖</span> Generate with AI
+              </Card.Title>
+            </Card.Header>
+            <Card.Body>
+              <p className="text-sm text-gray-600 mb-3">
+                Describe what kind of challenge template you want in plain language.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={aiPrompt}
+                  onChange={e => setAiPrompt(e.target.value)}
+                  placeholder="e.g. multiplication problems for numbers 1-9, or 分数加法练习"
+                  className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-colors"
+                  onKeyDown={e => { if (e.key === 'Enter') handleAiGenerate() }}
+                />
+                <Button onClick={handleAiGenerate} isLoading={aiLoading} disabled={!aiPrompt.trim()}>
+                  ✨ Generate
+                </Button>
+              </div>
+              {aiError && (
+                <p className="text-sm text-red-600 mt-2">{aiError}</p>
+              )}
+            </Card.Body>
+          </Card>
+
           <Card>
             <Card.Header>
               <Card.Title>Template Definition</Card.Title>
