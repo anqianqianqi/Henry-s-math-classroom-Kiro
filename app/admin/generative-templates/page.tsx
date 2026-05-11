@@ -288,46 +288,122 @@ function TemplateListView({
       ) : (
         <div className="space-y-4">
           {templates.map(template => (
-            <Card key={template.id}>
-              <Card.Body>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 text-lg truncate">
-                      {template.title_template}
-                    </h3>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <Badge variant="info">
-                        {Object.keys(template.variables).length} variable{Object.keys(template.variables).length !== 1 ? 's' : ''}
-                      </Badge>
-                      <Badge variant="purple">
-                        {template.challenge_count} generated
-                      </Badge>
-                      <Badge variant="success">
-                        {template.max_points} pts
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-2">
-                      Formula: <code className="bg-gray-100 px-1 rounded">{template.answer_formula}</code>
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2 shrink-0">
-                    <Button size="sm" variant="outline" onClick={() => onGenerate(template)}>
-                      Generate
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => onEdit(template)}>
-                      Edit
-                    </Button>
-                    <Button size="sm" variant="danger" onClick={() => onDelete(template.id)}>
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              </Card.Body>
-            </Card>
+            <TemplateCard
+              key={template.id}
+              template={template}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onGenerate={onGenerate}
+            />
           ))}
         </div>
       )}
     </>
+  )
+}
+
+
+// --- Template Card Component (with expandable generated challenges) ---
+
+function TemplateCard({
+  template,
+  onEdit,
+  onDelete,
+  onGenerate,
+}: {
+  template: TemplateListItem
+  onEdit: (t: TemplateListItem) => void
+  onDelete: (id: string) => void
+  onGenerate: (t: TemplateListItem) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const [challenges, setChallenges] = useState<Array<{ id: string; title: string; expected_answer: string; challenge_date: string }>>([])
+  const [loadingChallenges, setLoadingChallenges] = useState(false)
+  const supabase = createClient()
+
+  async function loadGeneratedChallenges() {
+    if (challenges.length > 0) {
+      setExpanded(!expanded)
+      return
+    }
+    setLoadingChallenges(true)
+    setExpanded(true)
+    const { data } = await supabase
+      .from('daily_challenges')
+      .select('id, title, expected_answer, challenge_date')
+      .eq('template_id', template.id)
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    setChallenges(data || [])
+    setLoadingChallenges(false)
+  }
+
+  return (
+    <Card>
+      <Card.Body>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-gray-900 text-lg truncate">
+              {template.title_template}
+            </h3>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <Badge variant="info">
+                {Object.keys(template.variables).length} variable{Object.keys(template.variables).length !== 1 ? 's' : ''}
+              </Badge>
+              <button
+                onClick={loadGeneratedChallenges}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors cursor-pointer"
+              >
+                {template.challenge_count} generated {expanded ? '▲' : '▼'}
+              </button>
+              <Badge variant="success">
+                {template.max_points} pts
+              </Badge>
+            </div>
+            <p className="text-sm text-gray-500 mt-2">
+              Formula: <code className="bg-gray-100 px-1 rounded">{template.answer_formula}</code>
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button size="sm" variant="outline" onClick={() => onGenerate(template)}>
+              Generate
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onEdit(template)}>
+              Edit
+            </Button>
+            <Button size="sm" variant="danger" onClick={() => onDelete(template.id)}>
+              Delete
+            </Button>
+          </div>
+        </div>
+
+        {expanded && (
+          <div className="mt-4 border-t pt-4">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Generated Challenges</h4>
+            {loadingChallenges ? (
+              <p className="text-sm text-gray-400">Loading...</p>
+            ) : challenges.length === 0 ? (
+              <p className="text-sm text-gray-400">No challenges generated yet.</p>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {challenges.map(c => (
+                  <div key={c.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-gray-800 truncate block">{c.title}</span>
+                      <span className="text-xs text-gray-500">{c.challenge_date}</span>
+                    </div>
+                    <code className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded ml-2 shrink-0">
+                      = {c.expected_answer || '?'}
+                    </code>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Card.Body>
+    </Card>
   )
 }
 
