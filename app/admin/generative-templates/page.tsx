@@ -388,15 +388,19 @@ function TemplateCard({
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {challenges.map(c => (
-                  <div key={c.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
+                  <a
+                    key={c.id}
+                    href={`/challenges/${c.id}`}
+                    className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm hover:bg-blue-50 hover:border-blue-200 border border-transparent transition-colors"
+                  >
                     <div className="flex-1 min-w-0">
-                      <span className="font-medium text-gray-800 truncate block">{c.title}</span>
+                      <span className="font-medium text-gray-800 truncate block hover:text-blue-700">{c.title}</span>
                       <span className="text-xs text-gray-500">{c.challenge_date}</span>
                     </div>
                     <code className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded ml-2 shrink-0">
                       = {c.expected_answer || '?'}
                     </code>
-                  </div>
+                  </a>
                 ))}
               </div>
             )}
