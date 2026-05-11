@@ -356,6 +356,7 @@ function TemplateForm({
     template ? variablesFromRecord(template.variables) : []
   )
   const [availableTags, setAvailableTags] = useState<TagOption[]>([])
+  const [tagGroups, setTagGroups] = useState<Array<{ id: string; name: string; tag_ids: string[] }>>([])
   const [errors, setErrors] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
 
@@ -368,13 +369,35 @@ function TemplateForm({
   }, [])
 
   async function loadTags() {
-    const { data } = await supabase
-      .from('tags')
-      .select('id, name')
-      .order('name')
+    // Load tags with multilingual names
+    const { data: tagsData } = await supabase
+      .from('challenge_tags')
+      .select('id, challenge_tag_names(language, name)')
+      .order('created_at')
 
-    if (data) {
-      setAvailableTags(data.map(t => ({ id: t.id, name: t.name })))
+    if (tagsData) {
+      setAvailableTags(tagsData.map((t: any) => {
+        const name = t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
+          || t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
+          || t.id.slice(0, 8)
+        return { id: t.id, name }
+      }))
+    }
+
+    // Load tag groups
+    const { data: groupsData } = await supabase
+      .from('tag_groups')
+      .select('id, tag_group_names(language, name), tag_group_members(tag_id)')
+      .order('created_at')
+
+    if (groupsData) {
+      setTagGroups(groupsData.map((g: any) => {
+        const name = g.tag_group_names?.find((n: any) => n.language === 'en')?.name
+          || g.tag_group_names?.find((n: any) => n.language === 'zh')?.name
+          || g.id.slice(0, 8)
+        const tag_ids = g.tag_group_members?.map((m: any) => m.tag_id) || []
+        return { id: g.id, name, tag_ids }
+      }))
     }
   }
 
@@ -632,6 +655,7 @@ function TemplateForm({
                     onChange={setTagIds}
                     availableTags={availableTags}
                     placeholder="Search tags..."
+                    tagGroups={tagGroups}
                   />
                 </div>
               </div>
