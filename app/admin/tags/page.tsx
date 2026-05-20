@@ -32,6 +32,7 @@ export default function TagManagementPage() {
   const [editingTag, setEditingTag] = useState<string | null>(null)
   const [editNameEn, setEditNameEn] = useState('')
   const [editNameZh, setEditNameZh] = useState('')
+  const [tagSearch, setTagSearch] = useState('')
   // Tag Groups
   const [groups, setGroups] = useState<TagGroup[]>([])
   const [newGroupNameEn, setNewGroupNameEn] = useState('')
@@ -42,6 +43,7 @@ export default function TagManagementPage() {
   const [editGroupNameEn, setEditGroupNameEn] = useState('')
   const [editGroupNameZh, setEditGroupNameZh] = useState('')
   const [editGroupTagIds, setEditGroupTagIds] = useState<string[]>([])
+  const [groupSearch, setGroupSearch] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
@@ -313,14 +315,29 @@ export default function TagManagementPage() {
         {/* Tag list */}
         <Card>
           <Card.Header>
-            <Card.Title>All Tags ({tags.length})</Card.Title>
+            <div className="flex items-center justify-between gap-4">
+              <Card.Title>All Tags ({tags.length})</Card.Title>
+              <input
+                type="text"
+                placeholder="Search tags..."
+                value={tagSearch}
+                onChange={e => setTagSearch(e.target.value)}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-200 w-48"
+              />
+            </div>
           </Card.Header>
           <Card.Body>
             {tags.length === 0 ? (
               <p className="text-center text-gray-500 py-8">No tags yet. Create your first one above.</p>
             ) : (
               <div className="space-y-3">
-                {tags.map(tag => (
+                {tags
+                  .filter(tag => {
+                    if (!tagSearch.trim()) return true
+                    const q = tagSearch.toLowerCase()
+                    return tag.names.some(n => n.name.toLowerCase().includes(q))
+                  })
+                  .map(tag => (
                   <div key={tag.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
                     {editingTag === tag.id ? (
                       <div className="space-y-2">
@@ -378,7 +395,16 @@ export default function TagManagementPage() {
         {/* Tag Groups */}
         <Card className="mt-6">
           <Card.Header>
-            <Card.Title>Tag Groups ({groups.length})</Card.Title>
+            <div className="flex items-center justify-between gap-4">
+              <Card.Title>Tag Groups ({groups.length})</Card.Title>
+              <input
+                type="text"
+                placeholder="Search groups..."
+                value={groupSearch}
+                onChange={e => setGroupSearch(e.target.value)}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-200 w-48"
+              />
+            </div>
             <p className="text-sm text-gray-600 mt-1">
               Group tags into presets. When creating a challenge, apply a group to add all its tags at once.
             </p>
@@ -438,7 +464,18 @@ export default function TagManagementPage() {
               <p className="text-center text-gray-500 py-4">No tag groups yet.</p>
             ) : (
               <div className="space-y-3">
-                {groups.map(group => (
+                {groups
+                  .filter(group => {
+                    if (!groupSearch.trim()) return true
+                    const q = groupSearch.toLowerCase()
+                    const nameMatch = group.names.some(n => n.name.toLowerCase().includes(q))
+                    const tagMatch = group.tag_ids.some(tagId => {
+                      const tag = tags.find(t => t.id === tagId)
+                      return tag?.names.some(n => n.name.toLowerCase().includes(q))
+                    })
+                    return nameMatch || tagMatch
+                  })
+                  .map(group => (
                   <div key={group.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
                     {editingGroup === group.id ? (
                       <div className="space-y-3">
@@ -478,7 +515,7 @@ export default function TagManagementPage() {
                       </div>
                     ) : (
                       <div>
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between">
                           <div className="flex flex-wrap items-center gap-2">
                             {group.names.map(n => (
                               <span key={n.language} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
@@ -486,18 +523,12 @@ export default function TagManagementPage() {
                                 <span className="font-medium">{n.name}</span>
                               </span>
                             ))}
+                            <span className="text-xs text-gray-400">({group.tag_ids.length} tags)</span>
                           </div>
                           <div className="flex gap-2 shrink-0 ml-3">
                             <button onClick={() => startEditGroup(group)} className="text-sm text-primary-600 hover:text-primary-800">Edit</button>
                             <button onClick={() => deleteGroup(group.id)} className="text-sm text-red-500 hover:text-red-700">Delete</button>
                           </div>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {group.tag_ids.map(tagId => (
-                            <span key={tagId} className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full text-xs font-medium">
-                              {getTagDisplayName(tagId)}
-                            </span>
-                          ))}
                         </div>
                       </div>
                     )}

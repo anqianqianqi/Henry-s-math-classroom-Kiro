@@ -116,8 +116,8 @@ export default function TagInput({ selectedTagIds, onChange, availableTags, plac
         )}
       </div>
 
-      {/* Quick-add pills */}
-      {unselectedTags.length > 0 && (
+      {/* Quick-add pills - only show if no tag groups, or show tags not in any group */}
+      {unselectedTags.length > 0 && tagGroups.length === 0 && (
         <div className="flex flex-wrap gap-1.5">
           <span className="text-xs text-gray-400 self-center mr-1">Quick add:</span>
           {unselectedTags.slice(0, 10).map(tag => (
