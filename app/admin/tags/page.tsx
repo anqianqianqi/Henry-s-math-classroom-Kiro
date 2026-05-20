@@ -39,6 +39,7 @@ export default function TagManagementPage() {
   const [newGroupNameZh, setNewGroupNameZh] = useState('')
   const [newGroupTagIds, setNewGroupTagIds] = useState<string[]>([])
   const [addingGroup, setAddingGroup] = useState(false)
+  const [showCreateGroup, setShowCreateGroup] = useState(false)
   const [editingGroup, setEditingGroup] = useState<string | null>(null)
   const [editGroupNameEn, setEditGroupNameEn] = useState('')
   const [editGroupNameZh, setEditGroupNameZh] = useState('')
@@ -410,9 +411,19 @@ export default function TagManagementPage() {
             </p>
           </Card.Header>
           <Card.Body>
-            {/* Create new group */}
+            {/* Create new group - collapsible */}
+            {!showCreateGroup ? (
+              <div className="mb-4">
+                <Button size="sm" variant="outline" onClick={() => setShowCreateGroup(true)}>
+                  + Create New Group
+                </Button>
+              </div>
+            ) : (
             <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 mb-4">
-              <h4 className="font-medium text-gray-900 mb-3">Create New Group</h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-900">Create New Group</h4>
+                <button onClick={() => setShowCreateGroup(false)} className="text-sm text-gray-400 hover:text-gray-600">✕</button>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">English Name</label>
@@ -458,6 +469,7 @@ export default function TagManagementPage() {
                 + Create Group
               </Button>
             </div>
+            )}
 
             {/* Existing groups */}
             {groups.length === 0 ? (

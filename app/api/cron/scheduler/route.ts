@@ -53,7 +53,7 @@ export async function GET(request: Request) {
   }
 
   let totalAssigned = 0
-  const results: Array<{ scheduleId: string; classId: string; status: string }> = []
+  const results: Array<{ scheduleId: string; classId: string; status: string; challengeId?: string; challengeTitle?: string; error?: string }> = []
 
   for (const schedule of schedules) {
     // Check if we should run today
@@ -64,8 +64,13 @@ export async function GET(request: Request) {
 
     // Assign challenges
     for (let i = 0; i < (schedule.challenges_per_day || 1); i++) {
-      const assigned = await assignOneChallenge(supabase, schedule, schedule.class_id, today)
-      if (assigned) totalAssigned++
+      const result = await assignOneChallenge(supabase, schedule, schedule.class_id, today)
+      if (result) {
+        totalAssigned++
+        results.push({ scheduleId: schedule.id, classId: schedule.class_id, status: 'assigned', challengeId: result.challengeId, challengeTitle: result.title })
+      } else {
+        results.push({ scheduleId: schedule.id, classId: schedule.class_id, status: 'failed - no challenge created' })
+      }
     }
 
     // Update last_assigned_at
@@ -73,8 +78,6 @@ export async function GET(request: Request) {
       .from('class_challenge_schedules')
       .update({ last_assigned_at: new Date().toISOString() })
       .eq('id', schedule.id)
-
-    results.push({ scheduleId: schedule.id, classId: schedule.class_id, status: 'assigned' })
   }
 
   return NextResponse.json({
@@ -103,9 +106,9 @@ async function assignOneChallenge(
   schedule: any,
   classId: string,
   today: string
-): Promise<boolean> {
+): Promise<{ challengeId: string; title: string } | null> {
   const tagIds: string[] = schedule.tag_ids || []
-  if (tagIds.length === 0) return false
+  if (tagIds.length === 0) return null
 
   // Check for generative templates first
   const { data: templates } = await supabase
@@ -128,6 +131,13 @@ async function assignOneChallenge(
 
     const challengeId = await generateChallenge(template, supabase, schedule.created_by)
     if (challengeId) {
+      // Get the challenge title for debugging
+      const { data: challenge } = await supabase
+        .from('daily_challenges')
+        .select('title')
+        .eq('id', challengeId)
+        .single()
+
       await supabase.from('challenge_assignments').insert({
         challenge_id: challengeId,
         class_id: classId,
@@ -138,17 +148,17 @@ async function assignOneChallenge(
         challenge_id: challengeId,
         assigned_date: today,
       })
-      return true
+      return { challengeId, title: challenge?.title || 'unknown' }
     }
   }
 
   // Fallback: pick from existing challenges matching tags
   const { data: allChallenges } = await supabase
     .from('daily_challenges')
-    .select('id')
+    .select('id, title')
     .overlaps('tag_ids', tagIds)
 
-  if (!allChallenges || allChallenges.length === 0) return false
+  if (!allChallenges || allChallenges.length === 0) return null
 
   // Get already-used challenge IDs
   const { data: usedLog } = await supabase
@@ -169,7 +179,7 @@ async function assignOneChallenge(
   }
 
   const picked = available[Math.floor(Math.random() * available.length)]
-  if (!picked) return false
+  if (!picked) return null
 
   await supabase.from('challenge_assignments').insert({
     challenge_id: picked.id,
@@ -183,5 +193,5 @@ async function assignOneChallenge(
     assigned_date: today,
   })
 
-  return true
+  return { challengeId: picked.id, title: picked.title }
 }
