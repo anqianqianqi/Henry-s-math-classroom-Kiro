@@ -181,6 +181,12 @@ async function assignOneChallenge(
   const picked = available[Math.floor(Math.random() * available.length)]
   if (!picked) return null
 
+  // Update challenge_date to today so it appears as today's challenge
+  await supabase
+    .from('daily_challenges')
+    .update({ challenge_date: today })
+    .eq('id', picked.id)
+
   await supabase.from('challenge_assignments').insert({
     challenge_id: picked.id,
     class_id: classId,
