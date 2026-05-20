@@ -112,10 +112,10 @@ export default function TagManagementPage() {
 
     const { data: { user } } = await supabase.auth.getUser()
 
-    // Create tag
+    // Create tag (name column holds the slug/identifier)
     const { data: tag, error: tagError } = await supabase
       .from('challenge_tags')
-      .insert({ slug, created_by: user?.id })
+      .insert({ name: slug, created_by: user?.id })
       .select()
       .single()
 
