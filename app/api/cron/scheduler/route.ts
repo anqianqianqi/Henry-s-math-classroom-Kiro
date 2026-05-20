@@ -69,7 +69,7 @@ export async function GET(request: Request) {
         totalAssigned++
         results.push({ scheduleId: schedule.id, classId: schedule.class_id, status: 'assigned', challengeId: result.challengeId, challengeTitle: result.title })
       } else {
-        results.push({ scheduleId: schedule.id, classId: schedule.class_id, status: 'failed - no challenge created' })
+        results.push({ scheduleId: schedule.id, classId: schedule.class_id, status: 'pool_exhausted - skipped' })
       }
     }
 
@@ -169,13 +169,21 @@ async function assignOneChallenge(
   const usedIds = new Set(usedLog?.map((l: any) => l.challenge_id) || [])
   let available = allChallenges.filter((c: any) => !usedIds.has(c.id))
 
-  // If pool exhausted, reset
+  // If pool exhausted, SKIP and mark schedule as exhausted (don't cycle)
   if (available.length === 0) {
     await supabase
-      .from('schedule_assignment_log')
-      .delete()
-      .eq('schedule_id', schedule.id)
-    available = allChallenges
+      .from('class_challenge_schedules')
+      .update({ pool_exhausted: true })
+      .eq('id', schedule.id)
+    return null
+  }
+
+  // Clear exhausted flag if we have challenges available
+  if (schedule.pool_exhausted) {
+    await supabase
+      .from('class_challenge_schedules')
+      .update({ pool_exhausted: false })
+      .eq('id', schedule.id)
   }
 
   const picked = available[Math.floor(Math.random() * available.length)]

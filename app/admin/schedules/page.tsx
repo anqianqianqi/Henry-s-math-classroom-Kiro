@@ -15,6 +15,13 @@ interface Schedule {
   challenges_per_day: number
   is_active: boolean
   last_assigned_at: string | null
+  pool_exhausted?: boolean
+}
+
+interface AssignmentLogEntry {
+  challenge_id: string
+  assigned_date: string
+  challenge_title?: string
 }
 
 interface TagInfo {
@@ -53,6 +60,11 @@ export default function SchedulesPage() {
   const [editTagIds, setEditTagIds] = useState<string[]>([])
   const [editFrequency, setEditFrequency] = useState('daily')
   const [editPerDay, setEditPerDay] = useState(1)
+
+  // History state
+  const [expandedHistory, setExpandedHistory] = useState<string | null>(null)
+  const [historyData, setHistoryData] = useState<Record<string, AssignmentLogEntry[]>>({})
+  const [historyLoading, setHistoryLoading] = useState(false)
 
   const router = useRouter()
   const supabase = createClient()
@@ -170,6 +182,50 @@ export default function SchedulesPage() {
       .eq('id', id)
     setEditingId(null)
     await loadData()
+  }
+
+  async function loadHistory(scheduleId: string) {
+    if (expandedHistory === scheduleId) {
+      setExpandedHistory(null)
+      return
+    }
+    if (historyData[scheduleId]) {
+      setExpandedHistory(scheduleId)
+      return
+    }
+    setHistoryLoading(true)
+    setExpandedHistory(scheduleId)
+
+    const { data: logs } = await supabase
+      .from('schedule_assignment_log')
+      .select('challenge_id, assigned_date')
+      .eq('schedule_id', scheduleId)
+      .order('assigned_date', { ascending: false })
+      .limit(50)
+
+    if (logs && logs.length > 0) {
+      const challengeIds = logs.map((l: any) => l.challenge_id)
+      const { data: challenges } = await supabase
+        .from('daily_challenges')
+        .select('id, title')
+        .in('id', challengeIds)
+
+      const titleMap: Record<string, string> = {}
+      for (const c of challenges || []) {
+        titleMap[c.id] = c.title
+      }
+
+      const entries: AssignmentLogEntry[] = logs.map((l: any) => ({
+        challenge_id: l.challenge_id,
+        assigned_date: l.assigned_date,
+        challenge_title: titleMap[l.challenge_id] || 'Unknown',
+      }))
+
+      setHistoryData(prev => ({ ...prev, [scheduleId]: entries }))
+    } else {
+      setHistoryData(prev => ({ ...prev, [scheduleId]: [] }))
+    }
+    setHistoryLoading(false)
   }
 
   function toggleTag(tagId: string) {
@@ -372,8 +428,12 @@ export default function SchedulesPage() {
                         {schedule.last_assigned_at && (
                           <p className="text-xs text-gray-400 mt-1">Last ran: {new Date(schedule.last_assigned_at).toLocaleDateString()}</p>
                         )}
+                        {schedule.pool_exhausted && (
+                          <p className="text-xs text-orange-600 mt-1 font-medium">⚠️ Challenge pool exhausted — add more templates or challenges</p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
+                        <button onClick={() => loadHistory(schedule.id)} className="text-sm text-purple-600 hover:text-purple-800">History</button>
                         <button onClick={() => startEdit(schedule)} className="text-sm text-primary-600 hover:text-primary-800">Edit</button>
                         <button
                           onClick={() => toggleActive(schedule.id, schedule.is_active)}
@@ -384,6 +444,31 @@ export default function SchedulesPage() {
                         <button onClick={() => deleteSchedule(schedule.id)} className="text-sm text-red-500 hover:text-red-700">Delete</button>
                       </div>
                     </div>
+                    )}
+
+                    {/* Challenge History */}
+                    {expandedHistory === schedule.id && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">📋 Assignment History</h4>
+                        {historyLoading ? (
+                          <p className="text-sm text-gray-400">Loading...</p>
+                        ) : (historyData[schedule.id] || []).length === 0 ? (
+                          <p className="text-sm text-gray-400">No challenges assigned yet.</p>
+                        ) : (
+                          <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                            {(historyData[schedule.id] || []).map((entry, idx) => (
+                              <a
+                                key={idx}
+                                href={`/challenges/${entry.challenge_id}`}
+                                className="flex items-center justify-between p-2 bg-white rounded-lg text-sm hover:bg-blue-50 border border-gray-100 transition-colors"
+                              >
+                                <span className="font-medium text-gray-800 truncate">{entry.challenge_title}</span>
+                                <span className="text-xs text-gray-500 shrink-0 ml-2">{entry.assigned_date}</span>
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 ))}

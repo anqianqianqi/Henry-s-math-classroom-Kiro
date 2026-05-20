@@ -149,12 +149,14 @@ export async function generateChallenge(
     // Step 3: Compute expected answer
     const expected_answer = evaluateFormula(template.answer_formula, values)
 
-    // Step 4: Deduplication check against (template_id, title)
+    // Step 4: Deduplication check - skip if title already exists today
+    // (Allow same template to generate challenges on different days)
     const { data: existing } = await supabase
       .from('daily_challenges')
       .select('id')
       .eq('template_id', template.id)
       .eq('title', title)
+      .eq('challenge_date', new Date().toISOString().split('T')[0])
       .maybeSingle()
 
     if (existing) {
