@@ -971,7 +971,7 @@ export default function ChallengePage() {
               <div className="flex-1">
                 <Card.Title>{challenge.title}</Card.Title>
                 <p className="text-sm text-gray-500">
-                  {new Date(challenge.challenge_date).toLocaleDateString('en-US', {
+                  {new Date(challenge.challenge_date + 'T12:00:00').toLocaleDateString('en-US', {
                     month: 'long',
                     day: 'numeric',
                     year: 'numeric'

@@ -761,7 +761,7 @@ export default function ChallengesPage() {
                               {challenge.description}
                             </p>
                             <p className="text-xs text-gray-500 mb-2">
-                              {new Date(challenge.challenge_date).toLocaleDateString('en-US', {
+                              {new Date(challenge.challenge_date + 'T12:00:00').toLocaleDateString('en-US', {
                                 month: 'long',
                                 day: 'numeric',
                                 year: 'numeric'
@@ -834,7 +834,7 @@ export default function ChallengesPage() {
                               {challenge.description}
                             </p>
                             <p className="text-xs text-gray-500 mb-2">
-                              {new Date(challenge.challenge_date).toLocaleDateString('en-US', {
+                              {new Date(challenge.challenge_date + 'T12:00:00').toLocaleDateString('en-US', {
                                 month: 'long',
                                 day: 'numeric',
                                 year: 'numeric'
