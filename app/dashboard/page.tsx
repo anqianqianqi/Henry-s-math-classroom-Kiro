@@ -22,6 +22,7 @@ export default function DashboardPage() {
     pendingRequests: 0,
     totalScore: 0
   })
+  const [todayChallenge, setTodayChallenge] = useState<{ id: string; title: string; challenge_date: string; submitted: boolean } | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -80,6 +81,7 @@ export default function DashboardPage() {
 
     // Load stats - pass role directly since setState is async
     await loadStats(user.id, hasTeacherRole || hasAdminRole)
+    await loadTodayChallenge(user.id, hasTeacherRole || hasAdminRole)
 
     setLoading(false)
   }
@@ -205,6 +207,65 @@ export default function DashboardPage() {
     router.push('/login')
   }
 
+  async function loadTodayChallenge(userId: string, teacherRole: boolean) {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+
+      if (teacherRole) {
+        // Teachers: show the most recent challenge assigned to any class today
+        const { data } = await supabase
+          .from('daily_challenges')
+          .select('id, title, challenge_date')
+          .eq('challenge_date', today)
+          .eq('is_pool', false)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (data) setTodayChallenge({ ...data, submitted: false })
+      } else {
+        // Students: find today's challenge assigned to their classes
+        const { data: classIds } = await supabase
+          .from('class_members')
+          .select('class_id')
+          .eq('user_id', userId)
+
+        if (!classIds || classIds.length === 0) return
+
+        const { data: assignments } = await supabase
+          .from('challenge_assignments')
+          .select('challenge_id')
+          .in('class_id', classIds.map((m: any) => m.class_id))
+
+        if (!assignments || assignments.length === 0) return
+
+        const challengeIds = [...new Set(assignments.map((a: any) => a.challenge_id))]
+
+        const { data: challenge } = await supabase
+          .from('daily_challenges')
+          .select('id, title, challenge_date')
+          .in('id', challengeIds)
+          .eq('challenge_date', today)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (!challenge) return
+
+        // Check if already submitted
+        const { data: submission } = await supabase
+          .from('challenge_submissions')
+          .select('id')
+          .eq('challenge_id', challenge.id)
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        setTodayChallenge({ ...challenge, submitted: !!submission })
+      }
+    } catch (err) {
+      console.error('Failed to load today challenge:', err)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
@@ -263,19 +324,47 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Welcome Banner */}
         <div className="bg-gradient-to-r from-primary-500 to-accent-blue rounded-3xl p-8 mb-8 text-white shadow-lg">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-4xl hidden sm:inline">👋</span>
-            <h2 className="text-3xl font-bold">Welcome back, {firstName}!</h2>
-          </div>
-          <p className="text-xl text-white/90">
-            {isTeacher ? "Let's inspire some students today!" : "Let's learn some math today!"}
-          </p>
-          {isTeacher && (
-            <div className="mt-4 inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full">
-              <span className="hidden sm:inline">👨‍🏫</span>
-              <span className="font-semibold">Teacher Account</span>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-3xl hidden sm:inline">👋</span>
+                <h2 className="text-2xl sm:text-3xl font-bold">Welcome back, {firstName}!</h2>
+              </div>
+              {isTeacher ? (
+                <p className="text-white/80 text-sm mt-1">Teacher Account</p>
+              ) : null}
             </div>
-          )}
+
+            {/* Today's Challenge CTA */}
+            {todayChallenge ? (
+              <div
+                className="bg-white/20 hover:bg-white/30 transition-colors rounded-2xl p-4 cursor-pointer flex-shrink-0 max-w-xs w-full sm:w-auto"
+                onClick={() => router.push(`/challenges/${todayChallenge.id}`)}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">🎯</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-white/70">Today's Challenge</span>
+                  {!isTeacher && (
+                    <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
+                      todayChallenge.submitted ? 'bg-green-400/30 text-green-100' : 'bg-yellow-400/30 text-yellow-100'
+                    }`}>
+                      {todayChallenge.submitted ? '✓ Done' : 'Pending'}
+                    </span>
+                  )}
+                </div>
+                <p className="font-semibold text-white text-sm line-clamp-2">{todayChallenge.title}</p>
+                <p className="text-white/60 text-xs mt-1">Tap to {isTeacher ? 'view' : todayChallenge.submitted ? 'review' : 'solve'} →</p>
+              </div>
+            ) : (
+              <div className="bg-white/10 rounded-2xl p-4 flex-shrink-0 max-w-xs w-full sm:w-auto">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">🎯</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-white/70">Today's Challenge</span>
+                </div>
+                <p className="text-white/60 text-sm">No challenge scheduled for today</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Stats Cards */}
