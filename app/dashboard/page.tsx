@@ -323,48 +323,69 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-primary-500 to-accent-blue rounded-3xl p-8 mb-8 text-white shadow-lg">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <span className="text-3xl hidden sm:inline">👋</span>
-                <h2 className="text-2xl sm:text-3xl font-bold">Welcome back, {firstName}!</h2>
-              </div>
-              {isTeacher ? (
-                <p className="text-white/80 text-sm mt-1">Teacher Account</p>
-              ) : null}
+        <div className="bg-gradient-to-r from-primary-500 to-accent-blue rounded-3xl p-6 sm:p-8 mb-8 text-white shadow-lg">
+          {/* Greeting row */}
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl hidden sm:inline">👋</span>
+              <span className="text-lg sm:text-xl font-semibold text-white/90">
+                Welcome back, {firstName}!{isTeacher ? ' 👨‍🏫' : ''}
+              </span>
             </div>
-
-            {/* Today's Challenge CTA */}
-            {todayChallenge ? (
-              <div
-                className="bg-white/20 hover:bg-white/30 transition-colors rounded-2xl p-4 cursor-pointer flex-shrink-0 max-w-xs w-full sm:w-auto"
-                onClick={() => router.push(`/challenges/${todayChallenge.id}`)}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-lg">🎯</span>
-                  <span className="text-xs font-semibold uppercase tracking-wide text-white/70">Today's Challenge</span>
-                  {!isTeacher && (
-                    <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
-                      todayChallenge.submitted ? 'bg-green-400/30 text-green-100' : 'bg-yellow-400/30 text-yellow-100'
-                    }`}>
-                      {todayChallenge.submitted ? '✓ Done' : 'Pending'}
-                    </span>
-                  )}
-                </div>
-                <p className="font-semibold text-white text-sm line-clamp-2">{todayChallenge.title}</p>
-                <p className="text-white/60 text-xs mt-1">Tap to {isTeacher ? 'view' : todayChallenge.submitted ? 'review' : 'solve'} →</p>
-              </div>
-            ) : (
-              <div className="bg-white/10 rounded-2xl p-4 flex-shrink-0 max-w-xs w-full sm:w-auto">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-lg">🎯</span>
-                  <span className="text-xs font-semibold uppercase tracking-wide text-white/70">Today's Challenge</span>
-                </div>
-                <p className="text-white/60 text-sm">No challenge scheduled for today</p>
-              </div>
+            {!isTeacher && todayChallenge && (
+              <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
+                todayChallenge.submitted
+                  ? 'bg-green-400/30 text-green-100'
+                  : 'bg-yellow-300/30 text-yellow-100'
+              }`}>
+                {todayChallenge.submitted ? '✓ Completed' : '⏳ Pending'}
+              </span>
             )}
           </div>
+
+          {/* Today's Challenge — dominant section */}
+          {todayChallenge ? (
+            <button
+              onClick={() => router.push(`/challenges/${todayChallenge.id}`)}
+              className="w-full text-left bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors rounded-2xl p-5 sm:p-6 border border-white/20"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-white/60 mb-2">
+                    🎯 Today's Challenge
+                  </p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-white leading-tight">
+                    {todayChallenge.title}
+                  </h3>
+                  <p className="text-white/70 text-sm mt-2">
+                    {isTeacher
+                      ? 'Tap to view challenge details →'
+                      : todayChallenge.submitted
+                        ? 'Tap to review your submission →'
+                        : 'Tap to solve now →'}
+                  </p>
+                </div>
+                <div className="shrink-0 text-4xl sm:text-5xl">
+                  {todayChallenge.submitted ? '✅' : '🧮'}
+                </div>
+              </div>
+            </button>
+          ) : (
+            <div className="w-full bg-white/10 rounded-2xl p-5 sm:p-6 border border-white/10">
+              <p className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-2">
+                🎯 Today's Challenge
+              </p>
+              <p className="text-white/60 text-base">No challenge scheduled for today.</p>
+              {isTeacher && (
+                <button
+                  onClick={() => router.push('/challenges/new')}
+                  className="mt-3 text-sm text-white/80 underline hover:text-white"
+                >
+                  Create one →
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Stats Cards */}
