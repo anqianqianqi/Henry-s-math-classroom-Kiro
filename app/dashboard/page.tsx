@@ -22,7 +22,7 @@ export default function DashboardPage() {
     pendingRequests: 0,
     totalScore: 0
   })
-  const [todayChallenge, setTodayChallenge] = useState<{ id: string; title: string; challenge_date: string; submitted: boolean } | null>(null)
+  const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean }>>([])
   const router = useRouter()
   const supabase = createClient()
 
@@ -212,18 +212,14 @@ export default function DashboardPage() {
       const today = new Date().toISOString().split('T')[0]
 
       if (teacherRole) {
-        // Teachers: show the most recent challenge assigned to any class today
         const { data } = await supabase
           .from('daily_challenges')
           .select('id, title, challenge_date')
           .eq('challenge_date', today)
           .eq('is_pool', false)
           .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        if (data) setTodayChallenge({ ...data, submitted: false })
+        setTodayChallenges((data || []).map((c: any) => ({ ...c, submitted: false })))
       } else {
-        // Students: find today's challenge assigned to their classes
         const { data: classIds } = await supabase
           .from('class_members')
           .select('class_id')
@@ -240,29 +236,27 @@ export default function DashboardPage() {
 
         const challengeIds = [...new Set(assignments.map((a: any) => a.challenge_id))]
 
-        const { data: challenge } = await supabase
+        const { data: challenges } = await supabase
           .from('daily_challenges')
           .select('id, title, challenge_date')
           .in('id', challengeIds)
           .eq('challenge_date', today)
           .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
 
-        if (!challenge) return
+        if (!challenges || challenges.length === 0) return
 
-        // Check if already submitted
-        const { data: submission } = await supabase
+        // Check submissions for all challenges
+        const { data: submissions } = await supabase
           .from('challenge_submissions')
-          .select('id')
-          .eq('challenge_id', challenge.id)
+          .select('challenge_id')
+          .in('challenge_id', challenges.map((c: any) => c.id))
           .eq('user_id', userId)
-          .maybeSingle()
 
-        setTodayChallenge({ ...challenge, submitted: !!submission })
+        const submittedIds = new Set(submissions?.map((s: any) => s.challenge_id) || [])
+        setTodayChallenges(challenges.map((c: any) => ({ ...c, submitted: submittedIds.has(c.id) })))
       }
     } catch (err) {
-      console.error('Failed to load today challenge:', err)
+      console.error('Failed to load today challenges:', err)
     }
   }
 
@@ -322,73 +316,59 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-primary-500 to-accent-blue rounded-3xl px-6 py-5 mb-4 text-white shadow-lg">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl hidden sm:inline">👋</span>
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold">Welcome back, {firstName}!</h2>
-              <p className="text-white/80 text-sm mt-0.5">
-                {isTeacher ? "Let's inspire some students today! 👨‍🏫" : "Let's learn some math today!"}
-              </p>
+        {/* Welcome + Today's Challenge — side by side */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+          {/* Left: Welcome */}
+          <div className="bg-gradient-to-br from-primary-500 to-accent-blue rounded-3xl px-6 py-7 text-white shadow-lg flex flex-col justify-center">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-4xl">👋</span>
+              <h2 className="text-2xl sm:text-3xl font-bold">Welcome back,<br />{firstName}!</h2>
             </div>
+            <p className="text-white/80 text-sm mt-1">
+              {isTeacher ? "Let's inspire some students today! 👨‍🏫" : "Let's learn some math today!"}
+            </p>
           </div>
-        </div>
 
-        {/* Today's Challenge Card */}
-        {todayChallenge ? (
-          <button
-            onClick={() => router.push(`/challenges/${todayChallenge.id}`)}
-            className="w-full text-left mb-8 bg-white rounded-3xl shadow-lg border-2 border-primary-100 hover:border-primary-300 hover:shadow-xl transition-all p-6 sm:p-8 group"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-xs font-bold uppercase tracking-widest text-primary-500">🎯 Today's Challenge</span>
-                  {!isTeacher && (
-                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
-                      todayChallenge.submitted
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {todayChallenge.submitted ? '✓ Completed' : '⏳ Pending'}
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight group-hover:text-primary-600 transition-colors">
-                  {todayChallenge.title}
-                </h3>
-                <p className="text-gray-500 text-sm mt-2">
-                  {isTeacher
-                    ? 'View challenge details →'
-                    : todayChallenge.submitted
-                      ? 'Review your submission →'
-                      : 'Tap to solve now →'}
-                </p>
-              </div>
-              <div className="text-5xl sm:text-6xl shrink-0 group-hover:scale-110 transition-transform">
-                {todayChallenge.submitted ? '✅' : '🧮'}
-              </div>
+          {/* Right: Today's Challenges */}
+          {todayChallenges.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {todayChallenges.map(challenge => (
+                <button
+                  key={challenge.id}
+                  onClick={() => router.push(`/challenges/${challenge.id}`)}
+                  className="text-left bg-white rounded-2xl shadow border-2 border-primary-100 hover:border-primary-400 hover:shadow-md transition-all px-5 py-4 group flex items-center justify-between"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold uppercase tracking-widest text-primary-500">🎯 Today</span>
+                      {!isTeacher && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                          challenge.submitted ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {challenge.submitted ? '✓ Done' : '⏳ Pending'}
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-bold text-gray-900 text-sm sm:text-base truncate group-hover:text-primary-600 transition-colors">
+                      {challenge.title}
+                    </p>
+                  </div>
+                  <span className="text-gray-400 group-hover:text-primary-500 ml-3 shrink-0">→</span>
+                </button>
+              ))}
             </div>
-          </button>
-        ) : (
-          <div className="mb-8 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 p-6 sm:p-8">
-            <div className="flex items-center gap-4">
-              <span className="text-4xl">🎯</span>
-              <div>
-                <p className="font-semibold text-gray-700">No challenge scheduled for today</p>
-                {isTeacher && (
-                  <button
-                    onClick={() => router.push('/challenges/new')}
-                    className="text-sm text-primary-600 hover:text-primary-800 mt-1"
-                  >
-                    Create one →
-                  </button>
-                )}
-              </div>
+          ) : (
+            <div className="bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 p-6 flex flex-col justify-center">
+              <span className="text-3xl mb-2">🎯</span>
+              <p className="font-semibold text-gray-600 text-sm">No challenge today</p>
+              {isTeacher && (
+                <button onClick={() => router.push('/challenges/new')} className="text-xs text-primary-600 hover:text-primary-800 mt-1 text-left">
+                  Create one →
+                </button>
+              )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
