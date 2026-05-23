@@ -332,7 +332,7 @@ export default function DashboardPage() {
           {/* Right: Today's Challenges */}
           {todayChallenges.length > 0 ? (
             <div className="flex flex-col gap-3">
-              {todayChallenges.map(challenge => (
+              {todayChallenges.slice(0, 4).map(challenge => (
                 <button
                   key={challenge.id}
                   onClick={() => router.push(`/challenges/${challenge.id}`)}
@@ -356,6 +356,14 @@ export default function DashboardPage() {
                   <span className="text-gray-400 group-hover:text-primary-500 ml-3 shrink-0">→</span>
                 </button>
               ))}
+              {todayChallenges.length > 4 && (
+                <button
+                  onClick={() => router.push('/challenges')}
+                  className="text-xs text-primary-600 hover:text-primary-800 text-center py-1"
+                >
+                  +{todayChallenges.length - 4} more → View all
+                </button>
+              )}
             </div>
           ) : (
             <div className="bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 p-6 flex flex-col justify-center">
@@ -400,6 +408,32 @@ export default function DashboardPage() {
                 <div className="text-5xl mb-3 hidden sm:block">⭐</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">{stats.totalScore}</div>
                 <div className="text-gray-600 font-medium">Total Score</div>
+              </Card.Body>
+            </Card>
+          )}
+
+          {(isTeacher || isAdmin) && (
+            <Card 
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/admin/roles')}
+            >
+              <Card.Body>
+                <div className="text-5xl mb-3 hidden sm:block">👥</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">Manage</div>
+                <div className="text-gray-600 font-medium">User Roles</div>
+              </Card.Body>
+            </Card>
+          )}
+
+          {(isTeacher || isAdmin) && (
+            <Card 
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/admin/tags')}
+            >
+              <Card.Body>
+                <div className="text-5xl mb-3 hidden sm:block">🏷️</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">Manage</div>
+                <div className="text-gray-600 font-medium">Tags</div>
               </Card.Body>
             </Card>
           )}

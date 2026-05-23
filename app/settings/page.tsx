@@ -255,7 +255,8 @@ export default function SettingsPage() {
           </Card>
         )}
 
-        <NotificationPreferences />
+        {/* Notification preferences hidden - defaulting to in-app only */}
+        {false && <NotificationPreferences />}
       </main>
     </div>
   )
