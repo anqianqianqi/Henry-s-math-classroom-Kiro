@@ -323,70 +323,72 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-primary-500 to-accent-blue rounded-3xl p-6 sm:p-8 mb-8 text-white shadow-lg">
-          {/* Greeting row */}
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl hidden sm:inline">👋</span>
-              <span className="text-lg sm:text-xl font-semibold text-white/90">
-                Welcome back, {firstName}!{isTeacher ? ' 👨‍🏫' : ''}
-              </span>
-            </div>
-            {!isTeacher && todayChallenge && (
-              <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
-                todayChallenge.submitted
-                  ? 'bg-green-400/30 text-green-100'
-                  : 'bg-yellow-300/30 text-yellow-100'
-              }`}>
-                {todayChallenge.submitted ? '✓ Completed' : '⏳ Pending'}
-              </span>
-            )}
-          </div>
-
-          {/* Today's Challenge — dominant section */}
-          {todayChallenge ? (
-            <button
-              onClick={() => router.push(`/challenges/${todayChallenge.id}`)}
-              className="w-full text-left bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors rounded-2xl p-5 sm:p-6 border border-white/20"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-white/60 mb-2">
-                    🎯 Today's Challenge
-                  </p>
-                  <h3 className="text-xl sm:text-2xl font-bold text-white leading-tight">
-                    {todayChallenge.title}
-                  </h3>
-                  <p className="text-white/70 text-sm mt-2">
-                    {isTeacher
-                      ? 'Tap to view challenge details →'
-                      : todayChallenge.submitted
-                        ? 'Tap to review your submission →'
-                        : 'Tap to solve now →'}
-                  </p>
-                </div>
-                <div className="shrink-0 text-4xl sm:text-5xl">
-                  {todayChallenge.submitted ? '✅' : '🧮'}
-                </div>
-              </div>
-            </button>
-          ) : (
-            <div className="w-full bg-white/10 rounded-2xl p-5 sm:p-6 border border-white/10">
-              <p className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-2">
-                🎯 Today's Challenge
+        <div className="bg-gradient-to-r from-primary-500 to-accent-blue rounded-3xl px-6 py-5 mb-4 text-white shadow-lg">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl hidden sm:inline">👋</span>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold">Welcome back, {firstName}!</h2>
+              <p className="text-white/80 text-sm mt-0.5">
+                {isTeacher ? "Let's inspire some students today! 👨‍🏫" : "Let's learn some math today!"}
               </p>
-              <p className="text-white/60 text-base">No challenge scheduled for today.</p>
-              {isTeacher && (
-                <button
-                  onClick={() => router.push('/challenges/new')}
-                  className="mt-3 text-sm text-white/80 underline hover:text-white"
-                >
-                  Create one →
-                </button>
-              )}
             </div>
-          )}
+          </div>
         </div>
+
+        {/* Today's Challenge Card */}
+        {todayChallenge ? (
+          <button
+            onClick={() => router.push(`/challenges/${todayChallenge.id}`)}
+            className="w-full text-left mb-8 bg-white rounded-3xl shadow-lg border-2 border-primary-100 hover:border-primary-300 hover:shadow-xl transition-all p-6 sm:p-8 group"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs font-bold uppercase tracking-widest text-primary-500">🎯 Today's Challenge</span>
+                  {!isTeacher && (
+                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
+                      todayChallenge.submitted
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {todayChallenge.submitted ? '✓ Completed' : '⏳ Pending'}
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight group-hover:text-primary-600 transition-colors">
+                  {todayChallenge.title}
+                </h3>
+                <p className="text-gray-500 text-sm mt-2">
+                  {isTeacher
+                    ? 'View challenge details →'
+                    : todayChallenge.submitted
+                      ? 'Review your submission →'
+                      : 'Tap to solve now →'}
+                </p>
+              </div>
+              <div className="text-5xl sm:text-6xl shrink-0 group-hover:scale-110 transition-transform">
+                {todayChallenge.submitted ? '✅' : '🧮'}
+              </div>
+            </div>
+          </button>
+        ) : (
+          <div className="mb-8 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 p-6 sm:p-8">
+            <div className="flex items-center gap-4">
+              <span className="text-4xl">🎯</span>
+              <div>
+                <p className="font-semibold text-gray-700">No challenge scheduled for today</p>
+                {isTeacher && (
+                  <button
+                    onClick={() => router.push('/challenges/new')}
+                    className="text-sm text-primary-600 hover:text-primary-800 mt-1"
+                  >
+                    Create one →
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
