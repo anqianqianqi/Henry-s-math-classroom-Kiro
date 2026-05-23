@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 
+type Tab = 'challenges' | 'templates'
+
 interface PoolChallenge {
   id: string
   title: string
@@ -34,6 +36,18 @@ interface PublishModal {
   classIds: string[]
 }
 
+interface TemplateItem {
+  id: string
+  title_template: string
+  description_template: string
+  variables: Record<string, any>
+  answer_formula: string
+  max_points: number
+  tag_ids: string[]
+  created_at: string
+  challenge_count: number
+}
+
 export default function ChallengeBankPage() {
   const router = useRouter()
   const supabase = createClient()
@@ -47,6 +61,10 @@ export default function ChallengeBankPage() {
   const [publishing, setPublishing] = useState(false)
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<Tab>('challenges')
+  const [templates, setTemplates] = useState<TemplateItem[]>([])
+  const [templateSearch, setTemplateSearch] = useState('')
+  const [deletingTemplate, setDeletingTemplate] = useState<string | null>(null)
 
   useEffect(() => { loadData() }, [])
 
@@ -82,6 +100,33 @@ export default function ChallengeBankPage() {
       .eq('is_active', true)
       .order('name')
     setClasses(classesData || [])
+
+    // Load generative templates
+    const { data: templateData } = await supabase
+      .from('challenge_templates')
+      .select('id, title_template, description_template, variables, answer_formula, max_points, tag_ids, created_at')
+      .eq('is_generative', true)
+      .order('created_at', { ascending: false })
+
+    if (templateData) {
+      const templateIds = templateData.map((t: any) => t.id)
+      let challengeCounts: Record<string, number> = {}
+      if (templateIds.length > 0) {
+        const { data: genChallenges } = await supabase
+          .from('daily_challenges')
+          .select('template_id')
+          .in('template_id', templateIds)
+        for (const c of genChallenges || []) {
+          if (c.template_id) challengeCounts[c.template_id] = (challengeCounts[c.template_id] || 0) + 1
+        }
+      }
+      setTemplates(templateData.map((t: any) => ({
+        ...t,
+        variables: t.variables || {},
+        tag_ids: t.tag_ids || [],
+        challenge_count: challengeCounts[t.id] || 0,
+      })))
+    }
 
     setLoading(false)
   }
@@ -155,6 +200,19 @@ export default function ChallengeBankPage() {
     setDeleting(null)
   }
 
+  async function handleDeleteTemplate(templateId: string) {
+    if (!confirm('Delete this template?')) return
+    setDeletingTemplate(templateId)
+    await supabase.from('challenge_templates').delete().eq('id', templateId)
+    setTemplates(prev => prev.filter(t => t.id !== templateId))
+    setDeletingTemplate(null)
+  }
+
+  const filteredTemplates = templates.filter(t =>
+    !templateSearch.trim() ||
+    t.title_template.toLowerCase().includes(templateSearch.toLowerCase())
+  )
+
   const filtered = challenges.filter(c =>
     !search.trim() ||
     c.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -188,94 +246,187 @@ export default function ChallengeBankPage() {
               <Button onClick={() => router.push('/dashboard')} variant="ghost" size="sm">←</Button>
               <div>
                 <h1 className="text-lg sm:text-2xl font-bold text-gray-900">🏦 Challenge Bank</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">Unscheduled challenges ready to publish</p>
+                <p className="text-xs text-gray-500 hidden sm:block">Create in advance, publish when ready</p>
               </div>
             </div>
-            <Button onClick={() => router.push('/challenges/new')} size="sm">
-              + Add to Bank
-            </Button>
+            {activeTab === 'challenges' ? (
+              <Button onClick={() => router.push('/challenges/new')} size="sm">
+                + Write Challenge
+              </Button>
+            ) : (
+              <Button onClick={() => router.push('/admin/generative-templates')} size="sm">
+                + Create Template
+              </Button>
+            )}
+          </div>
+          {/* Tabs */}
+          <div className="flex gap-1 mt-3 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('challenges')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'challenges'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              📝 Challenges ({challenges.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('templates')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'templates'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              🤖 Templates ({templates.length})
+            </button>
           </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-6">
-        {/* Search */}
-        <div>
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search challenges..."
-            className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-colors"
-          />
-        </div>
+        {activeTab === 'challenges' ? (
+          <>
+            {/* Search */}
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search challenges..."
+              className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-colors"
+            />
 
-        {/* Stats */}
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span className="font-medium text-gray-900">{filtered.length}</span> challenge{filtered.length !== 1 ? 's' : ''} in bank
-        </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span className="font-medium text-gray-900">{filtered.length}</span> challenge{filtered.length !== 1 ? 's' : ''} in bank
+            </div>
 
-        {/* Challenge list */}
-        {filtered.length === 0 ? (
-          <Card>
-            <Card.Body>
-              <div className="text-center py-12">
-                <div className="text-5xl mb-4">🏦</div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Bank is empty</h3>
-                <p className="text-gray-500 mb-6">Create challenges and save them to the bank for later use.</p>
-                <Button onClick={() => router.push('/challenges/new')}>+ Create Challenge</Button>
-              </div>
-            </Card.Body>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {filtered.map(challenge => (
-              <Card key={challenge.id}>
+            {filtered.length === 0 ? (
+              <Card>
                 <Card.Body>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 text-lg">{challenge.title}</h3>
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">{challenge.description}</p>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        <Badge variant="info">{challenge.max_points} pts</Badge>
-                        {challenge.tag_ids?.map(tid => {
-                          const tag = tags.find(t => t.id === tid)
-                          return tag ? (
-                            <span key={tid} className="px-2 py-0.5 bg-primary-50 text-primary-600 rounded-full text-xs">
-                              {tag.name}
-                            </span>
-                          ) : null
-                        })}
-                        <span className="text-xs text-gray-400">
-                          Added {new Date(challenge.created_at + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2 shrink-0">
-                      <Button size="sm" onClick={() => openPublish(challenge)}>
-                        📅 Publish
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => router.push(`/challenges/${challenge.id}/edit`)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        onClick={() => handleDelete(challenge.id)}
-                        disabled={deleting === challenge.id}
-                      >
-                        Delete
-                      </Button>
-                    </div>
+                  <div className="text-center py-12">
+                    <div className="text-5xl mb-4">📝</div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No challenges yet</h3>
+                    <p className="text-gray-500 mb-6">Write challenges and save them to the bank for later use.</p>
+                    <Button onClick={() => router.push('/challenges/new')}>+ Write Challenge</Button>
                   </div>
                 </Card.Body>
               </Card>
-            ))}
-          </div>
+            ) : (
+              <div className="space-y-3">
+                {filtered.map(challenge => (
+                  <Card key={challenge.id}>
+                    <Card.Body>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 text-lg">{challenge.title}</h3>
+                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{challenge.description}</p>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            <Badge variant="info">{challenge.max_points} pts</Badge>
+                            {challenge.tag_ids?.map(tid => {
+                              const tag = tags.find(t => t.id === tid)
+                              return tag ? (
+                                <span key={tid} className="px-2 py-0.5 bg-primary-50 text-primary-600 rounded-full text-xs">
+                                  {tag.name}
+                                </span>
+                              ) : null
+                            })}
+                            <span className="text-xs text-gray-400">
+                              Added {new Date(challenge.created_at + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <Button size="sm" onClick={() => openPublish(challenge)}>
+                            📅 Publish
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => router.push(`/challenges/${challenge.id}/edit`)}>
+                            Edit
+                          </Button>
+                          <Button size="sm" variant="danger" onClick={() => handleDelete(challenge.id)} disabled={deleting === challenge.id}>
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </Card.Body>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Templates tab */}
+            <input
+              type="text"
+              value={templateSearch}
+              onChange={e => setTemplateSearch(e.target.value)}
+              placeholder="Search templates..."
+              className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-colors"
+            />
+
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span className="font-medium text-gray-900">{filteredTemplates.length}</span> template{filteredTemplates.length !== 1 ? 's' : ''}
+            </div>
+
+            {filteredTemplates.length === 0 ? (
+              <Card>
+                <Card.Body>
+                  <div className="text-center py-12">
+                    <div className="text-5xl mb-4">🤖</div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No templates yet</h3>
+                    <p className="text-gray-500 mb-6">Create parameterized templates that generate random challenges automatically.</p>
+                    <Button onClick={() => router.push('/admin/generative-templates')}>+ Create Template</Button>
+                  </div>
+                </Card.Body>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {filteredTemplates.map(template => (
+                  <Card key={template.id}>
+                    <Card.Body>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 text-lg truncate">{template.title_template}</h3>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            <Badge variant="info">{Object.keys(template.variables).length} variable{Object.keys(template.variables).length !== 1 ? 's' : ''}</Badge>
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                              {template.challenge_count} generated
+                            </span>
+                            <Badge variant="success">{template.max_points} pts</Badge>
+                            {template.tag_ids?.map(tid => {
+                              const tag = tags.find(t => t.id === tid)
+                              return tag ? (
+                                <span key={tid} className="px-2 py-0.5 bg-primary-50 text-primary-600 rounded-full text-xs">
+                                  {tag.name}
+                                </span>
+                              ) : null
+                            })}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Formula: <code className="bg-gray-100 px-1 rounded">{template.answer_formula}</code>
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <Button size="sm" variant="outline" onClick={() => router.push(`/admin/generative-templates`)}>
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => handleDeleteTemplate(template.id)}
+                            disabled={deletingTemplate === template.id}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </Card.Body>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </main>
 
