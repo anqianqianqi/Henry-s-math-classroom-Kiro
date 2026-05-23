@@ -350,6 +350,19 @@ export default function DashboardPage() {
               </Card.Body>
             </Card>
           )}
+
+          {(isTeacher || isAdmin) && (
+            <Card 
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/admin/challenge-bank')}
+            >
+              <Card.Body>
+                <div className="text-5xl mb-3 hidden sm:block">🏦</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">Challenge</div>
+                <div className="text-gray-600 font-medium">Bank</div>
+              </Card.Body>
+            </Card>
+          )}
         </div>
 
         {/* Join Requests - Teacher only */}

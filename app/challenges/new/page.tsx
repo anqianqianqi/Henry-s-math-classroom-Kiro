@@ -46,6 +46,7 @@ export default function NewChallengePage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
   const [generateSuccess, setGenerateSuccess] = useState<string | null>(null)
+  const [saveToPool, setSaveToPool] = useState(false)
   useEffect(() => {
     loadData()
   }, [])
@@ -256,6 +257,11 @@ export default function NewChallengePage() {
       return
     }
 
+    if (!saveToPool && !challengeDate) {
+      setError('Please select a date or save to pool')
+      return
+    }
+
     if (selectedClasses.length === 0) {
       // No class selected - that's fine, create without assignment
     }
@@ -272,9 +278,10 @@ export default function NewChallengePage() {
           created_by: userId,
           title: title.trim(),
           description: description.trim(),
-          challenge_date: challengeDate,
+          challenge_date: saveToPool ? null : challengeDate,
           tag_ids: tags,
-          max_points: maxPoints
+          max_points: maxPoints,
+          is_pool: saveToPool,
         })
         .select()
         .single()
@@ -340,7 +347,7 @@ export default function NewChallengePage() {
       }
 
       // Success! Redirect to challenges
-      router.push('/challenges')
+      router.push(saveToPool ? '/admin/challenge-bank' : '/challenges')
     } catch (err) {
       console.error('Error creating challenge:', err)
       setError('An unexpected error occurred')
@@ -563,8 +570,29 @@ export default function NewChallengePage() {
                 type="date"
                 value={challengeDate}
                 onChange={(e) => setChallengeDate(e.target.value)}
-                required
+                required={!saveToPool}
               />
+
+              {/* Save to Pool toggle */}
+              <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-200">
+                <input
+                  type="checkbox"
+                  id="saveToPool"
+                  checked={saveToPool}
+                  onChange={(e) => {
+                    setSaveToPool(e.target.checked)
+                    if (e.target.checked) setChallengeDate('')
+                  }}
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <label htmlFor="saveToPool" className="flex-1 cursor-pointer">
+                  <span className="font-medium text-blue-900">Save to Challenge Bank</span>
+                  <p className="text-sm text-blue-700 mt-0.5">
+                    No date needed — store this challenge in your bank and publish it later
+                  </p>
+                </label>
+                <span className="text-2xl">🏦</span>
+              </div>
 
               <FormField
                 label="Max Points"
@@ -731,7 +759,7 @@ export default function NewChallengePage() {
                   size="lg"
                   className="flex-1"
                 >
-                  Create Challenge
+                  {saveToPool ? '🏦 Save to Bank' : 'Create Challenge'}
                 </Button>
                 <Button
                   type="button"
