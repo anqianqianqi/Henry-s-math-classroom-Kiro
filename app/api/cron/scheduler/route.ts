@@ -15,12 +15,18 @@ import { generateChallenge, GenerativeTemplate } from '@/lib/challenge-generator
  *   Header: Authorization: Bearer <CRON_SECRET>
  */
 export async function GET(request: Request) {
-  // Verify cron secret (skip in development)
+  // Verify cron secret
+  // Vercel Cron sends the secret via 'authorization' header as 'Bearer <CRON_SECRET>'
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (cronSecret) {
+    const isValidBearer = authHeader === `Bearer ${cronSecret}`
+    const isValidVercelCron = request.headers.get('x-vercel-cron') === '1'
+    
+    if (!isValidBearer && !isValidVercelCron) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -169,8 +175,49 @@ async function assignOneChallenge(
   const usedIds = new Set(usedLog?.map((l: any) => l.challenge_id) || [])
   let available = allChallenges.filter((c: any) => !usedIds.has(c.id))
 
-  // If pool exhausted, SKIP and mark schedule as exhausted (don't cycle)
+  // If pool exhausted, try generative templates without tag filter as last resort
   if (available.length === 0) {
+    // Try generative templates without tag constraint (they generate infinite unique challenges)
+    const { data: anyTemplates } = await supabase
+      .from('challenge_templates')
+      .select('*')
+      .eq('is_generative', true)
+
+    if (anyTemplates && anyTemplates.length > 0) {
+      const rawTemplate = anyTemplates[Math.floor(Math.random() * anyTemplates.length)]
+      const template: GenerativeTemplate = {
+        id: rawTemplate.id,
+        title_template: rawTemplate.title_template,
+        description_template: rawTemplate.description_template,
+        variables: rawTemplate.variables,
+        answer_formula: rawTemplate.answer_formula,
+        max_points: rawTemplate.max_points ?? 10,
+        tag_ids: rawTemplate.tag_ids ?? [],
+      }
+
+      const challengeId = await generateChallenge(template, supabase, schedule.created_by)
+      if (challengeId) {
+        const { data: challenge } = await supabase
+          .from('daily_challenges')
+          .select('title')
+          .eq('id', challengeId)
+          .single()
+
+        await supabase.from('challenge_assignments').insert({
+          challenge_id: challengeId,
+          class_id: classId,
+          assigned_by: schedule.created_by,
+        })
+        await supabase.from('schedule_assignment_log').insert({
+          schedule_id: schedule.id,
+          challenge_id: challengeId,
+          assigned_date: today,
+        })
+        return { challengeId, title: challenge?.title || 'unknown' }
+      }
+    }
+
+    // Truly exhausted - no templates available either
     await supabase
       .from('class_challenge_schedules')
       .update({ pool_exhausted: true })
