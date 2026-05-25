@@ -1274,7 +1274,7 @@ export default function ChallengePage() {
                             submission.is_locked ? (
                               <div className="flex items-center gap-2 mb-3 p-3 bg-gray-100 rounded-lg border-2 border-gray-300">
                                 <span className="text-sm font-bold text-gray-700">📝 Grade:</span>
-                                <span className="text-sm font-bold">{submission.points ?? '—'}/${challenge?.max_points || 100}</span>
+                                <span className="text-sm font-bold">{submission.points ?? '—'}/{challenge?.max_points || 100}</span>
                                 <span className="text-xs text-orange-600 font-medium">🔒 Student locked their grade</span>
                               </div>
                             ) : (
