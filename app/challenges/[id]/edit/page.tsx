@@ -582,9 +582,6 @@ export default function EditChallengePage() {
               />
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tags (Optional)
-                </label>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">Tags (Optional)</label>
                   <select
