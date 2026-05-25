@@ -98,7 +98,6 @@ export default function DashboardPage() {
         const { count: challengesCount } = await supabase
           .from('daily_challenges')
           .select('*', { count: 'exact', head: true })
-          .eq('is_pool', false)
 
         // Count pending join requests across all classes
         const { count: pendingRequests } = await supabase
@@ -218,7 +217,6 @@ export default function DashboardPage() {
           .from('daily_challenges')
           .select('id, title, challenge_date')
           .eq('challenge_date', today)
-          .eq('is_pool', false)
           .order('created_at', { ascending: false })
         setTodayChallenges((data || []).map((c: any) => ({ ...c, submitted: false })))
       } else {
@@ -430,8 +428,8 @@ export default function DashboardPage() {
             >
               <Card.Body>
                 <div className="text-5xl mb-3 hidden sm:block">👥</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">Manage</div>
-                <div className="text-gray-600 font-medium">User Roles</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">User Roles</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Manage</div>
               </Card.Body>
             </Card>
           )}
@@ -443,8 +441,8 @@ export default function DashboardPage() {
             >
               <Card.Body>
                 <div className="text-5xl mb-3 hidden sm:block">🏷️</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">Manage</div>
-                <div className="text-gray-600 font-medium">Tags</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">Tags</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Manage</div>
               </Card.Body>
             </Card>
           )}
@@ -456,8 +454,8 @@ export default function DashboardPage() {
             >
               <Card.Body>
                 <div className="text-5xl mb-3 hidden sm:block">📅</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">Manage</div>
-                <div className="text-gray-600 font-medium">Scheduler</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">Scheduler</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Manage</div>
               </Card.Body>
             </Card>
           )}
@@ -469,8 +467,8 @@ export default function DashboardPage() {
             >
               <Card.Body>
                 <div className="text-5xl mb-3 hidden sm:block">🏦</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">Challenge</div>
-                <div className="text-gray-600 font-medium">Bank</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">Challenge Bank</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Manage</div>
               </Card.Body>
             </Card>
           )}

@@ -83,11 +83,10 @@ export default function ChallengeBankPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
 
-    // Load pool challenges
+    // Load bank challenges from challenge_bank table
     const { data: challengesData } = await supabase
-      .from('daily_challenges')
+      .from('challenge_bank')
       .select('id, title, description, tag_ids, max_points, created_at')
-      .eq('is_pool', true)
       .order('created_at', { ascending: false })
 
     setChallenges(challengesData || [])
@@ -197,7 +196,6 @@ export default function ChallengeBankPage() {
           title: source.title,
           description: source.description,
           challenge_date: publishModal.date,
-          is_pool: false,
           tag_ids: source.tag_ids || [],
           max_points: source.max_points || 100,
           created_by: user.id,
@@ -250,7 +248,7 @@ export default function ChallengeBankPage() {
   async function handleDelete(challengeId: string) {
     if (!confirm('Delete this challenge from the bank?')) return
     setDeleting(challengeId)
-    await supabase.from('daily_challenges').delete().eq('id', challengeId)
+    await supabase.from('challenge_bank').delete().eq('id', challengeId)
     setChallenges(prev => prev.filter(c => c.id !== challengeId))
     setDeleting(null)
   }

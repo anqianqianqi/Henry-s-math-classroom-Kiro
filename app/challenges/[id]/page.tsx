@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { CommentThread } from '@/components/CommentThread'
+import { localDateString, localDateOffset } from '@/lib/utils/date'
 
 interface Challenge {
   id: string
@@ -251,7 +252,7 @@ export default function ChallengePage() {
 
     // Block students from viewing future challenges
     if (!teacherRole && challengeData) {
-      const today = new Date().toISOString().split('T')[0]
+      const today = localDateString()
       if (challengeData.challenge_date > today) {
         router.push('/challenges')
         return
@@ -747,23 +748,15 @@ export default function ChallengePage() {
     setDuplicating(true)
 
     try {
-      // Get class assignments for this challenge
-      const { data: assignments } = await supabase
-        .from('challenge_assignments')
-        .select('class_id')
-        .eq('challenge_id', params.id)
-
-      // Create new challenge with same data but new date (tomorrow)
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      const newDate = tomorrow.toISOString().split('T')[0]
-
+      // Duplicate goes to challenge_bank table
       const { data: newChallenge, error: createError } = await supabase
-        .from('daily_challenges')
+        .from('challenge_bank')
         .insert({
           title: challenge.title + ' (Copy)',
           description: challenge.description,
-          challenge_date: newDate,
+          tag_ids: challenge.tag_ids || [],
+          max_points: challenge.max_points || 100,
+          image_url: challenge.image_url || null,
           created_by: userId
         })
         .select()
@@ -776,25 +769,8 @@ export default function ChallengePage() {
         return
       }
 
-      // Copy class assignments
-      if (assignments && assignments.length > 0) {
-        const newAssignments = assignments.map(a => ({
-          challenge_id: newChallenge.id,
-          class_id: a.class_id
-        }))
-
-        const { error: assignError } = await supabase
-          .from('challenge_assignments')
-          .insert(newAssignments)
-
-        if (assignError) {
-          console.error('Error copying assignments:', assignError)
-          // Continue anyway - challenge was created
-        }
-      }
-
-      // Redirect to edit page for the new challenge
-      router.push(`/challenges/${newChallenge.id}/edit`)
+      // Redirect to challenge bank
+      router.push('/admin/challenge-bank')
     } catch (err) {
       console.error('Error duplicating challenge:', err)
       alert('An unexpected error occurred')

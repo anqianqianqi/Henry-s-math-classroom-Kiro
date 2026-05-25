@@ -146,7 +146,6 @@ export default function ChallengesPage() {
       const { data: challengesData } = await supabase
         .from('daily_challenges')
         .select('*')
-        .eq('is_pool', false)
         .order('challenge_date', { ascending: false })
 
       if (challengesData) {

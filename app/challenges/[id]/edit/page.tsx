@@ -91,12 +91,30 @@ export default function EditChallengePage() {
       return
     }
 
-    // Load challenge
-    const { data: challengeData } = await supabase
+    // Load challenge — check daily_challenges first, then challenge_bank
+    let challengeData: any = null
+    let isBankItem = false
+
+    const { data: dcData } = await supabase
       .from('daily_challenges')
       .select('*')
       .eq('id', params.id)
       .single()
+
+    if (dcData) {
+      challengeData = dcData
+    } else {
+      // Try challenge_bank
+      const { data: bankData } = await supabase
+        .from('challenge_bank')
+        .select('*')
+        .eq('id', params.id)
+        .single()
+      if (bankData) {
+        challengeData = { ...bankData, challenge_date: null, is_pool: true }
+        isBankItem = true
+      }
+    }
 
     if (!challengeData) {
       router.push('/challenges')
@@ -107,7 +125,7 @@ export default function EditChallengePage() {
     setTitle(challengeData.title)
     setDescription(challengeData.description)
     setChallengeDate(challengeData.challenge_date || '')
-    setIsPool(challengeData.is_pool || false)
+    setIsPool(isBankItem || challengeData.is_pool || false)
     setCurrentImageUrl(challengeData.image_url || null)
     setTags(challengeData.tag_ids || [])
     setMaxPoints(challengeData.max_points || 100)
@@ -323,21 +341,32 @@ export default function EditChallengePage() {
         tag_ids: tags,
         max_points: maxPoints
       }
-      // Only set challenge_date for non-pool challenges (pool items have no date)
-      if (!isPool) {
+
+      if (isPool) {
+        // Save to challenge_bank table
+        const { error: updateError } = await supabase
+          .from('challenge_bank')
+          .update(updateData)
+          .eq('id', params.id)
+        if (updateError) {
+          console.error('Update error:', updateError)
+          setError(updateError.message)
+          setSubmitting(false)
+          return
+        }
+      } else {
+        // Save to daily_challenges table
         updateData.challenge_date = challengeDate || null
-      }
-
-      const { error: updateError } = await supabase
-        .from('daily_challenges')
-        .update(updateData)
-        .eq('id', params.id)
-
-      if (updateError) {
-        console.error('Update error:', updateError)
-        setError(updateError.message)
-        setSubmitting(false)
-        return
+        const { error: updateError } = await supabase
+          .from('daily_challenges')
+          .update(updateData)
+          .eq('id', params.id)
+        if (updateError) {
+          console.error('Update error:', updateError)
+          setError(updateError.message)
+          setSubmitting(false)
+          return
+        }
       }
 
       // Update class assignments

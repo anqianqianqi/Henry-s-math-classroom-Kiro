@@ -272,20 +272,41 @@ export default function NewChallengePage() {
     setSubmitting(true)
 
     try {
-      // Create challenge
-      const { data: challenge, error: challengeError } = await supabase
-        .from('daily_challenges')
-        .insert({
-          created_by: userId,
-          title: title.trim(),
-          description: description.trim(),
-          challenge_date: saveToPool ? null : challengeDate,
-          tag_ids: tags,
-          max_points: maxPoints,
-          is_pool: saveToPool,
-        })
-        .select()
-        .single()
+      let challenge: any = null
+      let challengeError: any = null
+
+      if (saveToPool) {
+        // Save to challenge_bank table
+        const result = await supabase
+          .from('challenge_bank')
+          .insert({
+            created_by: userId,
+            title: title.trim(),
+            description: description.trim(),
+            tag_ids: tags,
+            max_points: maxPoints,
+          })
+          .select()
+          .single()
+        challenge = result.data
+        challengeError = result.error
+      } else {
+        // Save to daily_challenges table
+        const result = await supabase
+          .from('daily_challenges')
+          .insert({
+            created_by: userId,
+            title: title.trim(),
+            description: description.trim(),
+            challenge_date: challengeDate,
+            tag_ids: tags,
+            max_points: maxPoints,
+          })
+          .select()
+          .single()
+        challenge = result.data
+        challengeError = result.error
+      }
 
       console.log('Challenge created:', challenge)
       console.log('Challenge error:', challengeError)
@@ -301,9 +322,9 @@ export default function NewChallengePage() {
       if (imageFile) {
         imageUrl = await uploadImage(challenge.id)
         if (imageUrl) {
-          // Update challenge with image URL
+          // Update challenge with image URL (use correct table)
           await supabase
-            .from('daily_challenges')
+            .from(saveToPool ? 'challenge_bank' : 'daily_challenges')
             .update({ image_url: imageUrl })
             .eq('id', challenge.id)
         }
