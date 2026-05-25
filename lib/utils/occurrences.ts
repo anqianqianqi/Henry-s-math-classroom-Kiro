@@ -289,7 +289,7 @@ export function formatOccurrenceDisplay(occurrence: ClassOccurrence): string {
   const [y, m, d] = occurrence.occurrence_date.split('-').map(Number)
   const date = new Date(y, m - 1, d)
   const dayName = date.toLocaleDateString('en-US', { weekday: 'long' })
-  const dateStr = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+  const dateStr = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
   
   // Convert 24-hour time to 12-hour format
   const startTime = formatTime12Hour(occurrence.start_time)
