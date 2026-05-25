@@ -34,6 +34,15 @@ interface PublishModal {
   challenge: PoolChallenge
   date: string
   classIds: string[]
+  studentIds: string[]
+  studentSearch: string
+}
+
+interface StudentInfo {
+  id: string
+  name: string
+  lastName: string
+  email: string
 }
 
 interface TemplateItem {
@@ -65,6 +74,7 @@ export default function ChallengeBankPage() {
   const [templates, setTemplates] = useState<TemplateItem[]>([])
   const [templateSearch, setTemplateSearch] = useState('')
   const [deletingTemplate, setDeletingTemplate] = useState<string | null>(null)
+  const [allStudents, setAllStudents] = useState<StudentInfo[]>([])
 
   useEffect(() => { loadData() }, [])
 
@@ -100,6 +110,30 @@ export default function ChallengeBankPage() {
       .eq('is_active', true)
       .order('name')
     setClasses(classesData || [])
+
+    // Load students (non-teacher profiles)
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, full_name, email')
+      .order('full_name')
+    const { data: teacherRoles } = await supabase
+      .from('user_roles')
+      .select('user_id, roles!inner(name)')
+      .is('class_id', null)
+    const teacherIds = new Set(
+      (teacherRoles || [])
+        .filter((r: any) => r.roles?.name === 'teacher' || r.roles?.name === 'administrator')
+        .map((r: any) => r.user_id)
+    )
+    const students = (profilesData || [])
+      .filter((p: any) => !teacherIds.has(p.id))
+      .map((p: any) => ({
+        id: p.id,
+        name: p.first_name || p.full_name?.split(' ')[0] || 'Unknown',
+        lastName: p.last_name || p.full_name?.split(' ').slice(1).join(' ') || '',
+        email: p.email || '',
+      }))
+    setAllStudents(students)
 
     // Load generative templates
     const { data: templateData } = await supabase
@@ -138,7 +172,7 @@ export default function ChallengeBankPage() {
 
   function openPublish(challenge: PoolChallenge) {
     const today = new Date().toISOString().split('T')[0]
-    setPublishModal({ challenge, date: today, classIds: [] })
+    setPublishModal({ challenge, date: today, classIds: [], studentIds: [], studentSearch: '' })
   }
 
   async function handlePublish() {
@@ -147,8 +181,8 @@ export default function ChallengeBankPage() {
       showNotification('Please select a date', 'error')
       return
     }
-    if (publishModal.classIds.length === 0) {
-      showNotification('Please select at least one class', 'error')
+    if (publishModal.classIds.length === 0 && publishModal.studentIds.length === 0) {
+      showNotification('Please select at least one class or student', 'error')
       return
     }
 
@@ -169,17 +203,34 @@ export default function ChallengeBankPage() {
       if (updateError) throw updateError
 
       // Assign to selected classes
-      const assignments = publishModal.classIds.map(classId => ({
-        challenge_id: publishModal.challenge.id,
-        class_id: classId,
-        assigned_by: user.id,
-      }))
+      if (publishModal.classIds.length > 0) {
+        const assignments = publishModal.classIds.map(classId => ({
+          challenge_id: publishModal.challenge.id,
+          class_id: classId,
+          assigned_by: user.id,
+        }))
 
-      const { error: assignError } = await supabase
-        .from('challenge_assignments')
-        .insert(assignments)
+        const { error: assignError } = await supabase
+          .from('challenge_assignments')
+          .insert(assignments)
 
-      if (assignError) throw assignError
+        if (assignError) throw assignError
+      }
+
+      // Assign to individual students
+      if (publishModal.studentIds.length > 0) {
+        const studentAssignments = publishModal.studentIds.map(studentId => ({
+          challenge_id: publishModal.challenge.id,
+          student_id: studentId,
+          assigned_by: user.id,
+        }))
+
+        const { error: studentAssignError } = await supabase
+          .from('challenge_student_assignments')
+          .insert(studentAssignments)
+
+        if (studentAssignError) throw studentAssignError
+      }
 
       showNotification(`Published "${publishModal.challenge.title}" for ${publishModal.date}`, 'success')
       setPublishModal(null)
@@ -457,7 +508,7 @@ export default function ChallengeBankPage() {
                 {classes.length === 0 ? (
                   <p className="text-sm text-gray-400">No classes available</p>
                 ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
                     {classes.map(cls => (
                       <label key={cls.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 cursor-pointer">
                         <input
@@ -477,6 +528,59 @@ export default function ChallengeBankPage() {
                         <span className="text-sm font-medium text-gray-900">{cls.name}</span>
                       </label>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Individual student selector */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Individual Students (Optional)</label>
+                <input
+                  type="text"
+                  value={publishModal.studentSearch}
+                  onChange={e => setPublishModal(prev => prev ? { ...prev, studentSearch: e.target.value } : null)}
+                  placeholder="Search students..."
+                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm mb-2 focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                />
+                {publishModal.studentIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {publishModal.studentIds.map(sid => {
+                      const s = allStudents.find(st => st.id === sid)
+                      return (
+                        <span key={sid} className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                          {s ? `${s.name}${s.lastName ? ' ' + s.lastName : ''}` : 'Unknown'}
+                          <button
+                            type="button"
+                            onClick={() => setPublishModal(prev => prev ? { ...prev, studentIds: prev.studentIds.filter(id => id !== sid) } : null)}
+                            className="ml-0.5 text-blue-400 hover:text-blue-800"
+                          >×</button>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+                {allStudents.length > 0 && (
+                  <div className="max-h-36 overflow-y-auto border-2 border-gray-200 rounded-xl">
+                    {allStudents
+                      .filter(s => !publishModal.studentIds.includes(s.id))
+                      .filter(s => !publishModal.studentSearch.trim() ||
+                        s.name.toLowerCase().includes(publishModal.studentSearch.toLowerCase()) ||
+                        s.lastName.toLowerCase().includes(publishModal.studentSearch.toLowerCase()) ||
+                        s.email.toLowerCase().includes(publishModal.studentSearch.toLowerCase())
+                      )
+                      .slice(0, 20)
+                      .map(student => (
+                        <button
+                          key={student.id}
+                          type="button"
+                          onClick={() => setPublishModal(prev => prev ? { ...prev, studentIds: [...prev.studentIds, student.id] } : null)}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 border-b border-gray-100 last:border-b-0"
+                        >
+                          <span className="font-medium text-gray-800">{student.name}{student.lastName ? ' ' + student.lastName : ''}</span>
+                          {student.email && <span className="ml-2 text-xs text-gray-400">{student.email}</span>}
+                        </button>
+                      ))
+                    }
                   </div>
                 )}
               </div>
