@@ -225,16 +225,25 @@ export default function DashboardPage() {
           .select('class_id')
           .eq('user_id', userId)
 
-        if (!classIds || classIds.length === 0) return
+        // Get class-assigned challenge IDs
+        let classAssignedIds: string[] = []
+        if (classIds && classIds.length > 0) {
+          const { data: assignments } = await supabase
+            .from('challenge_assignments')
+            .select('challenge_id')
+            .in('class_id', classIds.map((m: any) => m.class_id))
+          classAssignedIds = assignments?.map((a: any) => a.challenge_id) || []
+        }
 
-        const { data: assignments } = await supabase
-          .from('challenge_assignments')
+        // Get individually assigned challenge IDs
+        const { data: individualAssignments } = await supabase
+          .from('challenge_student_assignments')
           .select('challenge_id')
-          .in('class_id', classIds.map((m: any) => m.class_id))
+          .eq('student_id', userId)
+        const individualIds = individualAssignments?.map((a: any) => a.challenge_id) || []
 
-        if (!assignments || assignments.length === 0) return
-
-        const challengeIds = [...new Set(assignments.map((a: any) => a.challenge_id))]
+        const challengeIds = [...new Set([...classAssignedIds, ...individualIds])]
+        if (challengeIds.length === 0) return
 
         const { data: challenges } = await supabase
           .from('daily_challenges')
