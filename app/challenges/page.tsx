@@ -382,15 +382,15 @@ export default function ChallengesPage() {
     if (dateFilter === 'today') {
       filtered = filtered.filter(c => c.challenge_date === today)
     } else if (dateFilter === 'upcoming') {
-      filtered = filtered.filter(c => c.challenge_date > today)
+      filtered = filtered.filter(c => c.challenge_date && c.challenge_date > today)
     } else if (dateFilter === 'past') {
-      filtered = filtered.filter(c => c.challenge_date < today)
+      filtered = filtered.filter(c => c.challenge_date && c.challenge_date < today)
     } else if (dateFilter === 'this-week') {
       const weekFromNow = new Date()
       weekFromNow.setDate(weekFromNow.getDate() + 7)
       const weekFromNowStr = weekFromNow.toISOString().split('T')[0]
       filtered = filtered.filter(c => 
-        c.challenge_date >= today && c.challenge_date <= weekFromNowStr
+        c.challenge_date && c.challenge_date >= today && c.challenge_date <= weekFromNowStr
       )
     }
 
@@ -398,9 +398,9 @@ export default function ChallengesPage() {
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'date-desc':
-          return b.challenge_date.localeCompare(a.challenge_date)
+          return (b.challenge_date || '').localeCompare(a.challenge_date || '')
         case 'date-asc':
-          return a.challenge_date.localeCompare(b.challenge_date)
+          return (a.challenge_date || '').localeCompare(b.challenge_date || '')
         case 'submissions-desc':
           return (b.submission_count || 0) - (a.submission_count || 0)
         case 'submissions-asc':
@@ -431,8 +431,8 @@ export default function ChallengesPage() {
   const today = new Date().toISOString().split('T')[0]
   const displayChallenges = filteredChallenges.length > 0 ? filteredChallenges : challenges
   const todayChallenges = displayChallenges.filter(c => c.challenge_date === today)
-  const upcomingChallenges = displayChallenges.filter(c => c.challenge_date > today)
-  const pastChallenges = displayChallenges.filter(c => c.challenge_date < today)
+  const upcomingChallenges = displayChallenges.filter(c => c.challenge_date && c.challenge_date > today)
+  const pastChallenges = displayChallenges.filter(c => c.challenge_date && c.challenge_date < today)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
