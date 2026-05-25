@@ -577,20 +577,18 @@ export default function DashboardPage() {
           className="cursor-pointer mb-6 bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 shadow-xl hover:shadow-2xl transition-all"
           onClick={() => router.push('/classes/explore')}
         >
-          <Card.Body className="p-8">
+          <Card.Body className="p-5 sm:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-4xl hidden sm:inline">🌍</span>
-                  <h3 className="text-2xl font-bold">Explore Classes</h3>
+              <div className="flex items-center gap-3">
+                <span className="text-3xl hidden sm:inline">🌍</span>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-bold">Explore Classes</h3>
+                  <p className="text-white/80 text-sm">
+                    Discover learning opportunities from teachers around the world
+                  </p>
                 </div>
-                <p className="text-white/90 text-lg">
-                  Discover amazing learning opportunities from teachers around the world
-                </p>
               </div>
-              <div className="text-6xl opacity-20">
-                →
-              </div>
+              <span className="text-white/60 text-2xl ml-4">→</span>
             </div>
           </Card.Body>
         </Card>
