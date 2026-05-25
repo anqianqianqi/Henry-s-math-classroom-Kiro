@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatOccurrenceDisplay, generateOccurrences } from '@/lib/utils/occurrences'
+import { localDateString } from '@/lib/utils/date'
 
 interface Occurrence {
   id: string
@@ -51,7 +52,7 @@ export default function SessionsList({ classId, onSelectSession }: SessionsListP
       let allOccurrences = data || []
 
       // Auto-generate if fewer than 5 upcoming sessions
-      const today = new Date().toISOString().split('T')[0]
+      const today = localDateString()
       const upcoming = allOccurrences.filter(
         o => o.occurrence_date >= today && o.status !== 'cancelled'
       )
@@ -111,10 +112,12 @@ export default function SessionsList({ classId, onSelectSession }: SessionsListP
         : new Date(startFrom.getTime() + weeksToGenerate * 7 * 24 * 60 * 60 * 1000)
 
       const newOccurrences = generateOccurrences(classId, cls.schedule, startFrom, endDate)
-      newOccurrences.forEach((o, i) => { o.session_number = maxSession + i + 1 })
+      // Only take exactly as many as needed
+      const trimmed = newOccurrences.slice(0, needed)
+      trimmed.forEach((o, i) => { o.session_number = maxSession + i + 1 })
 
-      if (newOccurrences.length > 0) {
-        await supabase.from('class_occurrences').insert(newOccurrences)
+      if (trimmed.length > 0) {
+        await supabase.from('class_occurrences').insert(trimmed)
         return true
       }
       return false
@@ -124,7 +127,7 @@ export default function SessionsList({ classId, onSelectSession }: SessionsListP
     }
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDateString()
   
   const upcomingOccurrences = occurrences.filter(
     occ => occ.occurrence_date >= today && occ.status !== 'cancelled'
