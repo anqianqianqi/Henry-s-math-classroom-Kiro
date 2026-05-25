@@ -26,6 +26,8 @@ interface SessionsListProps {
 
 export default function SessionsList({ classId, onSelectSession }: SessionsListProps) {
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming')
+  const [showAllPast, setShowAllPast] = useState(false)
+  const PAST_PAGE_SIZE = 5
   const [occurrences, setOccurrences] = useState<Occurrence[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -137,7 +139,9 @@ export default function SessionsList({ classId, onSelectSession }: SessionsListP
     occ => occ.occurrence_date < today
   ).reverse() // Most recent first
 
-  const displayOccurrences = activeTab === 'upcoming' ? upcomingOccurrences : pastOccurrences
+  const displayOccurrences = activeTab === 'upcoming' 
+    ? upcomingOccurrences 
+    : (showAllPast ? pastOccurrences : pastOccurrences.slice(0, PAST_PAGE_SIZE))
 
   if (loading) {
     return (
@@ -217,6 +221,7 @@ export default function SessionsList({ classId, onSelectSession }: SessionsListP
             </p>
           </div>
         ) : (
+          <>
           <div className="space-y-3">
             {displayOccurrences.map((occurrence) => (
               <div
@@ -286,6 +291,16 @@ export default function SessionsList({ classId, onSelectSession }: SessionsListP
               </div>
             ))}
           </div>
+          {/* Load more for past sessions */}
+          {activeTab === 'past' && !showAllPast && pastOccurrences.length > PAST_PAGE_SIZE && (
+            <button
+              onClick={() => setShowAllPast(true)}
+              className="mt-4 w-full py-2 text-sm text-blue-600 hover:text-blue-800 font-medium border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+            >
+              Load more ({pastOccurrences.length - PAST_PAGE_SIZE} more)
+            </button>
+          )}
+          </>
         )}
       </Card.Body>
     </Card>
