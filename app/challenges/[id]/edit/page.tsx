@@ -47,7 +47,7 @@ export default function EditChallengePage() {
   const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
   const [maxPoints, setMaxPoints] = useState(100)
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
-  const [allStudents, setAllStudents] = useState<Array<{id: string, name: string}>>([])
+  const [allStudents, setAllStudents] = useState<Array<{id: string, name: string, lastName: string, email: string}>>([])
   const [studentSearch, setStudentSearch] = useState('')
   const [tagGroups, setTagGroups] = useState<Array<{id: string, name: string, tag_ids: string[]}>>([])
   const [allTagGroupData, setAllTagGroupData] = useState<any[]>([])
@@ -164,7 +164,7 @@ export default function EditChallengePage() {
     // Load all students for individual assignment
     const { data: profilesData } = await supabase
       .from('profiles')
-      .select('id, first_name, last_name, full_name')
+      .select('id, first_name, last_name, full_name, email')
       .order('full_name')
     
     const { data: teacherRoles } = await supabase
@@ -182,7 +182,9 @@ export default function EditChallengePage() {
       .filter((p: any) => !teacherIds.has(p.id))
       .map((p: any) => ({
         id: p.id,
-        name: p.first_name || p.full_name || 'Unknown'
+        name: p.first_name || p.full_name?.split(' ')[0] || 'Unknown',
+        lastName: p.last_name || p.full_name?.split(' ').slice(1).join(' ') || '',
+        email: p.email || '',
       }))
     setAllStudents(students)
 
@@ -661,7 +663,7 @@ export default function EditChallengePage() {
                       const student = allStudents.find(s => s.id === sid)
                       return (
                         <span key={sid} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                          {student?.name || 'Unknown'}
+                          {student ? `${student.name}${student.lastName ? ' ' + student.lastName : ''}` : 'Unknown'}
                           <button type="button" onClick={() => setSelectedStudents(prev => prev.filter(id => id !== sid))} className="ml-1 text-blue-400 hover:text-blue-800">×</button>
                         </span>
                       )
@@ -672,7 +674,11 @@ export default function EditChallengePage() {
                   <div className="max-h-48 overflow-y-auto border-2 border-gray-200 rounded-xl">
                     {allStudents
                       .filter(s => !selectedStudents.includes(s.id))
-                      .filter(s => !studentSearch.trim() || s.name.toLowerCase().includes(studentSearch.toLowerCase()))
+                      .filter(s => !studentSearch.trim() || 
+                        s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                        s.lastName.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                        s.email.toLowerCase().includes(studentSearch.toLowerCase())
+                      )
                       .slice(0, 20)
                       .map(student => (
                         <button
@@ -681,7 +687,12 @@ export default function EditChallengePage() {
                           onClick={() => setSelectedStudents(prev => [...prev, student.id])}
                           className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 border-b border-gray-100 last:border-b-0"
                         >
-                          {student.name}
+                          <span className="font-medium text-gray-800">
+                            {student.name}{student.lastName ? ' ' + student.lastName : ''}
+                          </span>
+                          {student.email && (
+                            <span className="ml-2 text-xs text-gray-400">{student.email}</span>
+                          )}
                         </button>
                       ))}
                     {allStudents.filter(s => !selectedStudents.includes(s.id)).filter(s => !studentSearch.trim() || s.name.toLowerCase().includes(studentSearch.toLowerCase())).length === 0 && (
