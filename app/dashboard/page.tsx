@@ -497,84 +497,9 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {/* Quick Actions - Hidden for now */}
-        {false && (
-        <Card className="mb-8">
-          <Card.Header>
-            <Card.Title className="flex items-center gap-2">
-              <span>⚡</span>
-              Quick Actions
-            </Card.Title>
-          </Card.Header>
-          <Card.Body>
-            {isTeacher ? (
-              // Teacher Quick Actions
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button 
-                  onClick={() => router.push('/classes/new')}
-                  className="h-20 text-lg"
-                  fullWidth
-                >
-                  <span className="mr-2">➕</span>
-                  Create Class
-                </Button>
-                <Button 
-                  variant="secondary"
-                  onClick={() => router.push('/challenges/new')}
-                  className="h-20 text-lg"
-                  fullWidth
-                >
-                  <span className="mr-2">🎯</span>
-                  New Challenge
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => router.push('/materials/upload')}
-                  className="h-20 text-lg"
-                  fullWidth
-                >
-                  <span className="mr-2">📝</span>
-                  Upload Material
-                </Button>
-              </div>
-            ) : (
-              // Student Quick Actions
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button 
-                  onClick={() => router.push('/classes')}
-                  className="h-20 text-lg"
-                  fullWidth
-                >
-                  <span className="mr-2">📚</span>
-                  My Classes
-                </Button>
-                <Button 
-                  variant="secondary"
-                  onClick={() => router.push('/challenges')}
-                  className="h-20 text-lg"
-                  fullWidth
-                >
-                  <span className="mr-2">🎯</span>
-                  Today&apos;s Challenge
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => router.push('/materials')}
-                  className="h-20 text-lg"
-                  fullWidth
-                >
-                  <span className="mr-2">📖</span>
-                  Study Materials
-                </Button>
-              </div>
-            )}
-          </Card.Body>
-        </Card>
-        )}
-
         {/* Featured: Explore Classes */}
         <Card 
-          className="cursor-pointer mb-6 bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 shadow-xl hover:shadow-2xl transition-all"
+          className="cursor-pointer bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 shadow-xl hover:shadow-2xl transition-all"
           onClick={() => router.push('/classes/explore')}
         >
           <Card.Body className="p-5 sm:p-6">
