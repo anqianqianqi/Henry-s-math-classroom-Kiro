@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { localDateString } from '@/lib/utils/date'
 
 type Tab = 'challenges' | 'templates'
 
@@ -171,7 +172,7 @@ export default function ChallengeBankPage() {
   }
 
   function openPublish(challenge: PoolChallenge) {
-    const today = new Date().toISOString().split('T')[0]
+    const today = localDateString()
     setPublishModal({ challenge, date: today, classIds: [], studentIds: [], studentSearch: '' })
   }
 
@@ -187,21 +188,29 @@ export default function ChallengeBankPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Update challenge: set date, remove from pool
-      const { error: updateError } = await supabase
+      const source = publishModal.challenge
+
+      // Create a NEW challenge instance from the bank item (leave original intact)
+      const { data: newChallenge, error: insertError } = await supabase
         .from('daily_challenges')
-        .update({
+        .insert({
+          title: source.title,
+          description: source.description,
           challenge_date: publishModal.date,
           is_pool: false,
+          tag_ids: source.tag_ids || [],
+          max_points: source.max_points || 100,
+          created_by: user.id,
         })
-        .eq('id', publishModal.challenge.id)
+        .select()
+        .single()
 
-      if (updateError) throw updateError
+      if (insertError || !newChallenge) throw insertError || new Error('Failed to create challenge instance')
 
       // Assign to selected classes
       if (publishModal.classIds.length > 0) {
         const assignments = publishModal.classIds.map(classId => ({
-          challenge_id: publishModal.challenge.id,
+          challenge_id: newChallenge.id,
           class_id: classId,
           assigned_by: user.id,
         }))
@@ -216,7 +225,7 @@ export default function ChallengeBankPage() {
       // Assign to individual students
       if (publishModal.studentIds.length > 0) {
         const studentAssignments = publishModal.studentIds.map(studentId => ({
-          challenge_id: publishModal.challenge.id,
+          challenge_id: newChallenge.id,
           student_id: studentId,
           assigned_by: user.id,
         }))
@@ -228,10 +237,9 @@ export default function ChallengeBankPage() {
         if (studentAssignError) throw studentAssignError
       }
 
-      showNotification(`Published "${publishModal.challenge.title}" for ${publishModal.date}`, 'success')
+      // Bank item stays — just close the modal
+      showNotification(`Published "${source.title}" for ${publishModal.date}`, 'success')
       setPublishModal(null)
-      // Remove from local list
-      setChallenges(prev => prev.filter(c => c.id !== publishModal.challenge.id))
     } catch (err: any) {
       showNotification(err.message || 'Failed to publish', 'error')
     } finally {
