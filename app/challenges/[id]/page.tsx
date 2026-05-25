@@ -1078,9 +1078,8 @@ export default function ChallengePage() {
           </Card>
         )}
 
-        {/* Submission Section */}
-        {!isTeacher && (
-          <>
+        {/* Submission Section — visible to all users (teachers can submit too) */}
+        <>
             {hasSubmitted && !isEditing ? (
               <>
               {/* Show submitted solution */}
@@ -1092,11 +1091,11 @@ export default function ChallengePage() {
                       Your Solution
                       {userSubmission?.points != null ? (
                         <span className="ml-2 px-2 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-bold">
-                          {userSubmission.points}/${challenge?.max_points || 100}
+                          {userSubmission.points}/{challenge?.max_points || 100}
                         </span>
                       ) : (
                         <span className="ml-2 px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-sm font-bold">
-                          0/${challenge?.max_points || 100}
+                          0/{challenge?.max_points || 100}
                         </span>
                       )}
                       {userSubmission?.is_locked && (
@@ -1146,7 +1145,7 @@ export default function ChallengePage() {
                 </Card.Body>
               </Card>
 
-              {!userSubmission?.is_locked && (
+              {!userSubmission?.is_locked && !isTeacher && (
                 <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-2xl text-center">
                   <p className="text-gray-700 mb-3">
                     🔒 Want to see what other students wrote?
@@ -1234,7 +1233,6 @@ export default function ChallengePage() {
               </Card>
             )}
           </>
-        )}
 
         {/* Other Submissions Section */}
         {canSeeOthers ? (
@@ -1292,13 +1290,14 @@ export default function ChallengePage() {
                                 className="w-20 px-3 py-2 border-2 border-gray-300 rounded-lg text-center text-sm font-bold focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                                 placeholder="0"
                               />
-                              <span className="text-sm font-medium text-gray-500">/ 100</span>
+                              <span className="text-sm font-medium text-gray-500">/ {challenge?.max_points || 100}</span>
                               <button
                                 onClick={() => {
                                   const input = document.getElementById(`grade-${submission.id}`) as HTMLInputElement
                                   const val = input?.value
                                   if (val === '') return alert('Enter a score first')
-                                  const num = Math.min(100, Math.max(0, parseInt(val)))
+                                  const maxPts = challenge?.max_points || 100
+                                  const num = Math.min(maxPts, Math.max(0, parseInt(val)))
                                   handleGradeSubmission(submission.id, num)
                                   alert(`✅ Grade saved: ${num}/${challenge?.max_points || 100}`)
                                 }}
