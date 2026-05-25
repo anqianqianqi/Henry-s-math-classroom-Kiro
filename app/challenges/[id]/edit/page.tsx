@@ -80,8 +80,9 @@ export default function EditChallengePage() {
         .in('id', roles.map((r: any) => r.role_id))
 
       const hasTeacherRole = roleData?.some((r: any) => r.name === 'teacher')
+      const hasAdminRole = roleData?.some((r: any) => r.name === 'administrator')
       
-      if (!hasTeacherRole) {
+      if (!hasTeacherRole && !hasAdminRole) {
         router.push('/dashboard')
         return
       }
@@ -331,6 +332,7 @@ export default function EditChallengePage() {
         .eq('id', params.id)
 
       if (updateError) {
+        console.error('Update error:', updateError)
         setError(updateError.message)
         setSubmitting(false)
         return
