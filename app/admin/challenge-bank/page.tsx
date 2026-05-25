@@ -181,10 +181,6 @@ export default function ChallengeBankPage() {
       showNotification('Please select a date', 'error')
       return
     }
-    if (publishModal.classIds.length === 0 && publishModal.studentIds.length === 0) {
-      showNotification('Please select at least one class or student', 'error')
-      return
-    }
 
     setPublishing(true)
     try {
@@ -504,7 +500,7 @@ export default function ChallengeBankPage() {
 
               {/* Class selector */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Classes</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Classes <span className="text-gray-400 font-normal">(Optional)</span></label>
                 {classes.length === 0 ? (
                   <p className="text-sm text-gray-400">No classes available</p>
                 ) : (
