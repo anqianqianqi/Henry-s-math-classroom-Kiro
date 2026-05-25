@@ -1313,7 +1313,7 @@ export default function ChallengePage() {
                           {/* Show points to students */}
                           {!isTeacher && submission.points != null && (
                             <div className="mb-3 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm font-medium inline-block">
-                              Score: {submission.points}/${challenge?.max_points || 100}
+                              Score: {submission.points}/{challenge?.max_points || 100}
                             </div>
                           )}
 
