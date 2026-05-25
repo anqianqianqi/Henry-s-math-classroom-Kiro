@@ -874,7 +874,7 @@ export default function ChallengePage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => router.push('/challenges')}
+                onClick={() => router.push((challenge as any)?.is_bank_item ? '/admin/challenge-bank' : '/challenges')}
               >
                 ← Back
               </Button>
