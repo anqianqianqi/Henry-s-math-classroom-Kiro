@@ -1087,7 +1087,6 @@ export default function ChallengePage() {
                 <Card.Header>
                   <div className="flex items-center justify-between">
                     <Card.Title className="flex items-center gap-2">
-                      <span>✅</span>
                       Your Solution
                       {userSubmission?.points != null ? (
                         <span className="ml-2 px-2 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-bold">
@@ -1095,7 +1094,7 @@ export default function ChallengePage() {
                         </span>
                       ) : (
                         <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
-                          ⏳ Pending grade
+                          Pending grade
                         </span>
                       )}
                       {userSubmission?.is_locked && (
