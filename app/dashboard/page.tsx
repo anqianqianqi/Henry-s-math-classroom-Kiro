@@ -421,6 +421,17 @@ export default function DashboardPage() {
             </Card>
           )}
 
+          <Card 
+            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => router.push('/classes/explore')}
+          >
+            <Card.Body>
+              <div className="text-5xl mb-3 hidden sm:block">🌍</div>
+              <div className="text-3xl font-bold text-gray-900 mb-1">Explore</div>
+              <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Classes</div>
+            </Card.Body>
+          </Card>
+
           {(isTeacher || isAdmin) && (
             <Card 
               className="text-center cursor-pointer hover:shadow-lg transition-shadow"
@@ -496,27 +507,6 @@ export default function DashboardPage() {
             </Card.Body>
           </Card>
         )}
-
-        {/* Featured: Explore Classes */}
-        <Card 
-          className="cursor-pointer bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 shadow-xl hover:shadow-2xl transition-all"
-          onClick={() => router.push('/classes/explore')}
-        >
-          <Card.Body className="p-5 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl hidden sm:inline">🌍</span>
-                <div>
-                  <h3 className="text-lg sm:text-xl font-bold">Explore Classes</h3>
-                  <p className="text-white/80 text-sm">
-                    Discover learning opportunities from teachers around the world
-                  </p>
-                </div>
-              </div>
-              <span className="text-white/60 text-2xl ml-4">→</span>
-            </div>
-          </Card.Body>
-        </Card>
 
       </main>
     </div>
