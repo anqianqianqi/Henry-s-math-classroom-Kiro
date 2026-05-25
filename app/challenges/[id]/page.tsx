@@ -203,12 +203,25 @@ export default function ChallengePage() {
 
     setUserId(user.id)
 
-    // Load challenge
-    const { data: challengeData } = await supabase
+    // Load challenge - check daily_challenges first, then challenge_bank
+    let { data: challengeData } = await supabase
       .from('daily_challenges')
       .select('*')
       .eq('id', params.id)
       .single()
+
+    // If not found in daily_challenges, check challenge_bank
+    if (!challengeData) {
+      const { data: bankData } = await supabase
+        .from('challenge_bank')
+        .select('*')
+        .eq('id', params.id)
+        .single()
+      if (bankData) {
+        // Bank items don't have challenge_date — treat as a preview
+        challengeData = { ...bankData, challenge_date: null, is_bank_item: true }
+      }
+    }
 
     setChallenge(challengeData)
 
@@ -250,8 +263,8 @@ export default function ChallengePage() {
       setIsTeacher(teacherRole)
     }
 
-    // Block students from viewing future challenges
-    if (!teacherRole && challengeData) {
+    // Block students from viewing future challenges (not applicable to bank items)
+    if (!teacherRole && challengeData && challengeData.challenge_date) {
       const today = localDateString()
       if (challengeData.challenge_date > today) {
         router.push('/challenges')
