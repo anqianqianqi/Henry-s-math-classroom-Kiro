@@ -98,6 +98,7 @@ export default function DashboardPage() {
         const { count: challengesCount } = await supabase
           .from('daily_challenges')
           .select('*', { count: 'exact', head: true })
+          .eq('is_pool', false)
 
         // Count pending join requests across all classes
         const { count: pendingRequests } = await supabase

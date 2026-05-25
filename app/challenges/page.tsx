@@ -142,10 +142,11 @@ export default function ChallengesPage() {
       })
       setAvailableTagsMap(tagMap)
 
-      // Teachers and admins see ALL challenges
+      // Teachers and admins see all published challenges (not pool/bank items)
       const { data: challengesData } = await supabase
         .from('daily_challenges')
         .select('*')
+        .eq('is_pool', false)
         .order('challenge_date', { ascending: false })
 
       if (challengesData) {
