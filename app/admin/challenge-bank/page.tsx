@@ -365,8 +365,8 @@ export default function ChallengeBankPage() {
                   <Card key={challenge.id}>
                     <Card.Body>
                       <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 text-lg">{challenge.title}</h3>
+                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => router.push(`/challenges/${challenge.id}`)}>
+                          <h3 className="font-semibold text-gray-900 text-lg hover:text-primary-600 transition-colors">{challenge.title}</h3>
                           <p className="text-sm text-gray-600 mt-1 line-clamp-2">{challenge.description}</p>
                           <div className="flex flex-wrap gap-2 mt-2">
                             <Badge variant="info">{challenge.max_points} pts</Badge>
