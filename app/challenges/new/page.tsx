@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -20,7 +20,10 @@ interface Class {
 
 export default function NewChallengePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+  
+  const fromBank = searchParams.get('source') === 'bank'
   
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -49,6 +52,10 @@ export default function NewChallengePage() {
   const [generateSuccess, setGenerateSuccess] = useState<string | null>(null)
   const [saveToPool, setSaveToPool] = useState(false)
   useEffect(() => {
+    if (fromBank) {
+      setSaveToPool(true)
+      setChallengeDate('')
+    }
     loadData()
   }, [])
 
@@ -432,7 +439,7 @@ export default function NewChallengePage() {
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 sm:gap-4">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
+            <Button variant="ghost" size="sm" onClick={() => router.push(fromBank ? '/admin/challenge-bank' : '/dashboard')}>
               ← Back
             </Button>
             <div className="flex items-center gap-2">
@@ -786,7 +793,7 @@ export default function NewChallengePage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => router.push('/dashboard')}
+                  onClick={() => router.push(fromBank ? '/admin/challenge-bank' : '/dashboard')}
                   size="lg"
                 >
                   Cancel

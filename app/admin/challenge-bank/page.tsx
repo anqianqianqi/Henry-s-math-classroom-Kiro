@@ -341,7 +341,7 @@ export default function ChallengeBankPage() {
                 <option value="zh">CN</option>
               </select>
             {activeTab === 'challenges' ? (
-              <Button onClick={() => router.push('/challenges/new')} size="sm">
+              <Button onClick={() => router.push('/challenges/new?source=bank')} size="sm">
                 + Write Challenge
               </Button>
             ) : (
