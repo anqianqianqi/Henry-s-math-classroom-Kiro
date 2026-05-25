@@ -30,6 +30,7 @@ export default function EditChallengePage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [challengeDate, setChallengeDate] = useState('')
+  const [isPool, setIsPool] = useState(false)
   const [selectedClasses, setSelectedClasses] = useState<string[]>([])
   const [classes, setClasses] = useState<Class[]>([])
   const [loading, setLoading] = useState(true)
@@ -104,7 +105,8 @@ export default function EditChallengePage() {
     setChallenge(challengeData)
     setTitle(challengeData.title)
     setDescription(challengeData.description)
-    setChallengeDate(challengeData.challenge_date)
+    setChallengeDate(challengeData.challenge_date || '')
+    setIsPool(challengeData.is_pool || false)
     setCurrentImageUrl(challengeData.image_url || null)
     setTags(challengeData.tag_ids || [])
     setMaxPoints(challengeData.max_points || 100)
@@ -311,16 +313,21 @@ export default function EditChallengePage() {
       }
 
       // Update challenge
+      const updateData: any = {
+        title: title.trim(),
+        description: description.trim(),
+        image_url: imageUrl,
+        tag_ids: tags,
+        max_points: maxPoints
+      }
+      // Only set challenge_date for non-pool challenges (pool items have no date)
+      if (!isPool) {
+        updateData.challenge_date = challengeDate || null
+      }
+
       const { error: updateError } = await supabase
         .from('daily_challenges')
-        .update({
-          title: title.trim(),
-          description: description.trim(),
-          challenge_date: challengeDate,
-          image_url: imageUrl,
-          tag_ids: tags,
-          max_points: maxPoints
-        })
+        .update(updateData)
         .eq('id', params.id)
 
       if (updateError) {
@@ -376,8 +383,12 @@ export default function EditChallengePage() {
         }
       }
 
-      // Success! Redirect to challenge detail
-      router.push(`/challenges/${params.id}`)
+      // Success! Redirect back to appropriate page
+      if (isPool) {
+        router.push('/admin/challenge-bank')
+      } else {
+        router.push(`/challenges/${params.id}`)
+      }
     } catch (err) {
       console.error('Error updating challenge:', err)
       setError('An unexpected error occurred')
@@ -420,7 +431,7 @@ export default function EditChallengePage() {
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 sm:gap-4">
-            <Button variant="outline" size="sm" onClick={() => router.push(`/challenges/${params.id}`)}>
+            <Button variant="outline" size="sm" onClick={() => isPool ? router.push('/admin/challenge-bank') : router.push(`/challenges/${params.id}`)}>
               ←
             </Button>
             <div className="flex items-center gap-2">
@@ -550,6 +561,7 @@ export default function EditChallengePage() {
                 </p>
               </div>
 
+              {!isPool && (
               <FormField
                 label="Date"
                 type="date"
@@ -557,6 +569,7 @@ export default function EditChallengePage() {
                 onChange={(e) => setChallengeDate(e.target.value)}
                 required
               />
+              )}
 
               <FormField
                 label="Max Points"
@@ -693,7 +706,7 @@ export default function EditChallengePage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => router.push(`/challenges/${params.id}`)}
+                  onClick={() => isPool ? router.push('/admin/challenge-bank') : router.push(`/challenges/${params.id}`)}
                   size="lg"
                 >
                   Cancel
