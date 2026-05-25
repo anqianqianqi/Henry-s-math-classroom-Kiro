@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import NotificationBell from '@/components/NotificationBell'
+import { localDateString } from '@/lib/utils/date'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
@@ -209,7 +210,7 @@ export default function DashboardPage() {
 
   async function loadTodayChallenge(userId: string, teacherRole: boolean) {
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = localDateString()
 
       if (teacherRole) {
         const { data } = await supabase

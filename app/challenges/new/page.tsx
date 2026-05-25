@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import TagInput, { TagOption } from '@/components/TagInput'
 import { generateChallenge, GenerativeTemplate } from '@/lib/challenge-generator'
+import { localDateString } from '@/lib/utils/date'
 
 interface Class {
   id: string
@@ -164,7 +165,7 @@ export default function NewChallengePage() {
     setGenerativeTemplates(genTemplates || [])
 
     // Set default date to today
-    const today = new Date().toISOString().split('T')[0]
+    const today = localDateString()
     setChallengeDate(today)
     
     setLoading(false)

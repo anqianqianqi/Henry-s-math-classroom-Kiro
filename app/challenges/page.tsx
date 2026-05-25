@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { runSchedulerForClass } from '@/lib/scheduler'
 import { Button } from '@/components/ui/Button'
+import { localDateString, localDateOffset } from '@/lib/utils/date'
 
 interface Challenge {
   id: string
@@ -186,15 +187,13 @@ export default function ChallengesPage() {
         // Load individually assigned challenges
         const indivIds = [...new Set(individualOnly.map(a => a.challenge_id))]
         // Only show challenges from the past 10 days
-        const tenDaysAgo = new Date()
-        tenDaysAgo.setDate(tenDaysAgo.getDate() - 10)
-        const tenDaysAgoStr = tenDaysAgo.toISOString().split('T')[0]
+        const tenDaysAgoStr = localDateOffset(-10)
 
         const { data: challengesData } = await supabase
           .from('daily_challenges')
           .select('*')
           .in('id', indivIds)
-          .lte('challenge_date', new Date().toISOString().split('T')[0])
+          .lte('challenge_date', localDateString())
           .gte('challenge_date', tenDaysAgoStr)
           .order('challenge_date', { ascending: false })
 
@@ -256,15 +255,13 @@ export default function ChallengesPage() {
       }
 
       // Only show challenges from the past 10 days
-      const tenDaysAgo = new Date()
-      tenDaysAgo.setDate(tenDaysAgo.getDate() - 10)
-      const tenDaysAgoStr = tenDaysAgo.toISOString().split('T')[0]
+      const tenDaysAgoStr = localDateOffset(-10)
 
       const { data: challengesData } = await supabase
         .from('daily_challenges')
         .select('*')
         .in('id', challengeIds)
-        .lte('challenge_date', new Date().toISOString().split('T')[0])
+        .lte('challenge_date', localDateString())
         .gte('challenge_date', tenDaysAgoStr)
         .order('challenge_date', { ascending: false })
 
@@ -378,7 +375,7 @@ export default function ChallengesPage() {
     }
 
     // Apply date filter
-    const today = new Date().toISOString().split('T')[0]
+    const today = localDateString()
     if (dateFilter === 'today') {
       filtered = filtered.filter(c => c.challenge_date === today)
     } else if (dateFilter === 'upcoming') {
@@ -386,9 +383,7 @@ export default function ChallengesPage() {
     } else if (dateFilter === 'past') {
       filtered = filtered.filter(c => c.challenge_date && c.challenge_date < today)
     } else if (dateFilter === 'this-week') {
-      const weekFromNow = new Date()
-      weekFromNow.setDate(weekFromNow.getDate() + 7)
-      const weekFromNowStr = weekFromNow.toISOString().split('T')[0]
+      const weekFromNowStr = localDateOffset(7)
       filtered = filtered.filter(c => 
         c.challenge_date && c.challenge_date >= today && c.challenge_date <= weekFromNowStr
       )
@@ -428,7 +423,7 @@ export default function ChallengesPage() {
     )
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDateString()
   const displayChallenges = filteredChallenges.length > 0 ? filteredChallenges : challenges
   const todayChallenges = displayChallenges.filter(c => c.challenge_date === today)
   const upcomingChallenges = displayChallenges.filter(c => c.challenge_date && c.challenge_date > today)
