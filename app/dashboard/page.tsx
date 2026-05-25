@@ -294,15 +294,6 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-1 sm:gap-4">
               <NotificationBell />
-              {isTeacher && (
-                <button
-                  onClick={() => router.push('/admin/roles')}
-                  className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                  aria-label="Manage Roles"
-                >
-                  Roles
-                </button>
-              )}
               <button
                 onClick={() => router.push('/settings')}
                 className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -334,7 +325,7 @@ export default function DashboardPage() {
               <h2 className="text-2xl sm:text-3xl font-bold">Welcome back,<br />{firstName}!</h2>
             </div>
             <p className="text-white/80 text-sm mt-1">
-              {isTeacher ? "Let's inspire some students today! 👨‍🏫" : "Let's learn some math today!"}
+              {isTeacher ? "Let's inspire some students today! 👨‍🏫" : "Let's have fun with math today! 🎉"}
             </p>
           </div>
 
