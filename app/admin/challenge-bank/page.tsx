@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
@@ -76,6 +76,19 @@ export default function ChallengeBankPage() {
   const [templateSearch, setTemplateSearch] = useState('')
   const [deletingTemplate, setDeletingTemplate] = useState<string | null>(null)
   const [allStudents, setAllStudents] = useState<StudentInfo[]>([])
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false)
+  const tagDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target as Node)) {
+        setTagDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   useEffect(() => { loadData() }, [])
 
@@ -267,9 +280,10 @@ export default function ChallengeBankPage() {
   )
 
   const filtered = challenges.filter(c =>
-    !search.trim() ||
-    c.title.toLowerCase().includes(search.toLowerCase()) ||
-    c.description.toLowerCase().includes(search.toLowerCase())
+    (!search.trim() ||
+      c.title.toLowerCase().includes(search.toLowerCase()) ||
+      c.description.toLowerCase().includes(search.toLowerCase())) &&
+    (selectedTags.length === 0 || selectedTags.every(t => c.tag_ids?.includes(t)))
   )
 
   if (loading) {
@@ -349,6 +363,76 @@ export default function ChallengeBankPage() {
               placeholder="Search challenges..."
               className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-colors"
             />
+
+            {/* Tag filter */}
+            {tags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-sm font-medium text-gray-700 shrink-0">Tags:</label>
+                <div className="relative" ref={tagDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setTagDropdownOpen(o => !o)}
+                    className="flex items-center gap-2 px-4 py-2 border-2 border-gray-200 rounded-xl bg-white text-sm hover:border-primary-400 transition-colors min-w-[160px]"
+                  >
+                    <span className="flex-1 text-left">
+                      {selectedTags.length === 0
+                        ? 'All Tags'
+                        : `${selectedTags.length} tag${selectedTags.length > 1 ? 's' : ''} selected`}
+                    </span>
+                    <span className="text-gray-400">{tagDropdownOpen ? '▲' : '▼'}</span>
+                  </button>
+                  {tagDropdownOpen && (
+                    <div className="absolute z-20 mt-1 w-56 bg-white border border-gray-200 rounded-xl shadow-lg py-1 max-h-48 overflow-y-auto">
+                      {tags.map(tag => (
+                        <label
+                          key={tag.id}
+                          className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedTags.includes(tag.id)}
+                            onChange={() =>
+                              setSelectedTags(prev =>
+                                prev.includes(tag.id)
+                                  ? prev.filter(t => t !== tag.id)
+                                  : [...prev, tag.id]
+                              )
+                            }
+                            className="w-4 h-4 text-primary-600 rounded"
+                          />
+                          <span className="text-sm text-gray-700">{tag.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {selectedTags.map(tagId => {
+                  const tag = tags.find(t => t.id === tagId)
+                  return (
+                    <span
+                      key={tagId}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-medium"
+                    >
+                      {tag?.name || tagId.slice(0, 8)}
+                      <button
+                        onClick={() => setSelectedTags(prev => prev.filter(t => t !== tagId))}
+                        className="ml-1 text-primary-500 hover:text-primary-800"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )
+                })}
+                {selectedTags.length > 0 && (
+                  <button
+                    onClick={() => setSelectedTags([])}
+                    className="text-sm text-gray-400 hover:text-gray-600"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <span className="font-medium text-gray-900">{filtered.length}</span> challenge{filtered.length !== 1 ? 's' : ''} in bank

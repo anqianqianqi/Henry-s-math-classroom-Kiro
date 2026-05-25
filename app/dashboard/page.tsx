@@ -595,46 +595,6 @@ export default function DashboardPage() {
           </Card.Body>
         </Card>
 
-        {/* Main Navigation Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/classes')}>
-            <Card.Header>
-              <Card.Title className="flex items-center gap-2">
-                <span className="text-2xl hidden sm:inline">📚</span>
-                My Classes
-              </Card.Title>
-            </Card.Header>
-            <Card.Body>
-              <p className="text-gray-600">
-                View and manage your classes
-              </p>
-            </Card.Body>
-            <Card.Footer>
-              <span className="text-primary-600 hover:text-primary-700 font-semibold text-sm">
-                View Classes →
-              </span>
-            </Card.Footer>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push('/challenges')}>
-            <Card.Header>
-              <Card.Title className="flex items-center gap-2">
-                <span className="text-2xl hidden sm:inline">🎯</span>
-                Daily Challenge
-              </Card.Title>
-            </Card.Header>
-            <Card.Body>
-              <p className="text-gray-600">
-                Today&apos;s math challenge
-              </p>
-            </Card.Body>
-            <Card.Footer>
-              <span className="text-primary-600 hover:text-primary-700 font-semibold text-sm">
-                View Challenge →
-              </span>
-            </Card.Footer>
-          </Card>
-        </div>
       </main>
     </div>
   )
