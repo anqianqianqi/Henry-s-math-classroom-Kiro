@@ -692,9 +692,15 @@ export default function ChallengesPage() {
                         {challenge.my_submitted ? (
                           <>
                             <span className="text-green-600">✅ Submitted</span>
-                            <span className={`px-2 py-0.5 rounded-full font-bold ${challenge.my_points != null ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500'}`}>
-                              {challenge.my_points ?? 0}/100
-                            </span>
+                            {challenge.my_points != null ? (
+                              <span className="px-2 py-0.5 rounded-full font-bold bg-primary-100 text-primary-700">
+                                {challenge.my_points}/100
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                                ⏳ Pending
+                              </span>
+                            )}
                             {challenge.my_is_locked && <span className="text-gray-400">🔒</span>}
                           </>
                         ) : (
@@ -779,9 +785,15 @@ export default function ChallengesPage() {
                             {!isTeacher && challenge.my_submitted && (
                               <div className="flex items-center gap-2 text-xs">
                                 <span className="text-green-600">✅ Submitted</span>
-                                <span className={`px-2 py-0.5 rounded-full font-bold ${challenge.my_points != null ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500'}`}>
-                                  {challenge.my_points ?? 0}/100
-                                </span>
+                                {challenge.my_points != null ? (
+                                  <span className="px-2 py-0.5 rounded-full font-bold bg-primary-100 text-primary-700">
+                                    {challenge.my_points}/100
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700">
+                                    ⏳ Pending
+                                  </span>
+                                )}
                               </div>
                             )}
                           </div>
@@ -854,9 +866,15 @@ export default function ChallengesPage() {
                                 {challenge.my_submitted ? (
                                   <>
                                     <span className="text-green-600">✅ Submitted</span>
-                                    <span className={`px-2 py-0.5 rounded-full font-bold ${challenge.my_points != null ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500'}`}>
-                                      {challenge.my_points ?? 0}/100
-                                    </span>
+                                    {challenge.my_points != null ? (
+                                      <span className="px-2 py-0.5 rounded-full font-bold bg-primary-100 text-primary-700">
+                                        {challenge.my_points}/100
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700">
+                                        ⏳ Pending
+                                      </span>
+                                    )}
                                     {challenge.my_is_locked && <span className="text-gray-400">🔒</span>}
                                   </>
                                 ) : (

@@ -1094,8 +1094,8 @@ export default function ChallengePage() {
                           {userSubmission.points}/{challenge?.max_points || 100}
                         </span>
                       ) : (
-                        <span className="ml-2 px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-sm font-bold">
-                          0/{challenge?.max_points || 100}
+                        <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
+                          ⏳ Pending grade
                         </span>
                       )}
                       {userSubmission?.is_locked && (
