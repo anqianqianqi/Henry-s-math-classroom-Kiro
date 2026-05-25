@@ -18,6 +18,7 @@ interface PoolChallenge {
   description: string
   tag_ids: string[]
   max_points: number
+  image_url?: string | null
   created_at: string
 }
 
@@ -114,7 +115,7 @@ export default function ChallengeBankPage() {
     // Load bank challenges from challenge_bank table
     const { data: challengesData } = await supabase
       .from('challenge_bank')
-      .select('id, title, description, tag_ids, max_points, created_at')
+      .select('id, title, description, tag_ids, max_points, image_url, created_at')
       .order('created_at', { ascending: false })
 
     setChallenges(challengesData || [])
@@ -226,6 +227,7 @@ export default function ChallengeBankPage() {
           challenge_date: publishModal.date,
           tag_ids: source.tag_ids || [],
           max_points: source.max_points || 100,
+          image_url: source.image_url || null,
           created_by: user.id,
         })
         .select()
