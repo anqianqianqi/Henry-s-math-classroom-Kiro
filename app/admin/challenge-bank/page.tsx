@@ -78,6 +78,8 @@ export default function ChallengeBankPage() {
   const [allStudents, setAllStudents] = useState<StudentInfo[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false)
+  const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
+  const [allTagData, setAllTagData] = useState<any[]>([])
   const tagDropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -91,6 +93,19 @@ export default function ChallengeBankPage() {
   }, [])
 
   useEffect(() => { loadData() }, [])
+
+  // Rebuild tag list when language changes
+  useEffect(() => {
+    if (allTagData.length === 0) return
+    const tagList = allTagData.map((t: any) => {
+      const name = t.challenge_tag_names?.find((n: any) => n.language === tagLang)?.name
+        || t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
+        || t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
+        || t.id.slice(0, 8)
+      return { id: t.id, name }
+    })
+    setTags(tagList)
+  }, [tagLang, allTagData])
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -109,13 +124,13 @@ export default function ChallengeBankPage() {
       .from('challenge_tags')
       .select('id, challenge_tag_names(language, name)')
       .order('created_at')
+    setAllTagData(tagsData || [])
     const tagList = (tagsData || []).map((t: any) => {
       const en = t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
       const zh = t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
       return { id: t.id, name: en || zh || t.id.slice(0, 8) }
     })
     setTags(tagList)
-
     // Load classes
     const { data: classesData } = await supabase
       .from('classes')
@@ -316,6 +331,15 @@ export default function ChallengeBankPage() {
                 <p className="text-xs text-gray-500 hidden sm:block">Create in advance, publish when ready</p>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={tagLang}
+                onChange={e => setTagLang(e.target.value as 'en' | 'zh')}
+                className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white"
+              >
+                <option value="en">EN</option>
+                <option value="zh">CN</option>
+              </select>
             {activeTab === 'challenges' ? (
               <Button onClick={() => router.push('/challenges/new')} size="sm">
                 + Write Challenge
@@ -325,6 +349,7 @@ export default function ChallengeBankPage() {
                 + Create Template
               </Button>
             )}
+            </div>
           </div>
           {/* Tabs */}
           <div className="flex gap-1 mt-3 border-b border-gray-200">
