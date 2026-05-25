@@ -171,9 +171,11 @@ export default function NewChallengePage() {
       .order('created_at', { ascending: false })
     setGenerativeTemplates(genTemplates || [])
 
-    // Set default date to today
-    const today = localDateString()
-    setChallengeDate(today)
+    // Set default date to today (only if not saving to bank)
+    if (!fromBank) {
+      const today = localDateString()
+      setChallengeDate(today)
+    }
     
     setLoading(false)
   }
