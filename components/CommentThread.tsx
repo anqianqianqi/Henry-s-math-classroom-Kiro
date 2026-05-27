@@ -123,22 +123,30 @@ export function CommentThread({
               />
             </label>
           )}
-          <input
-            type="text"
+          <textarea
             value={newComment}
-            onChange={(e) => onCommentChange(e.target.value)}
-            onKeyPress={(e) => {
+            onChange={(e) => {
+              onCommentChange(e.target.value)
+              // Auto-expand
+              e.target.style.height = 'auto'
+              e.target.style.height = e.target.scrollHeight + 'px'
+            }}
+            onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
                 onSubmitComment(commentImage)
                 setCommentImage(null)
                 setCommentImagePreview(null)
+                // Reset height
+                ;(e.target as HTMLTextAreaElement).style.height = 'auto'
               }
             }}
             placeholder="Add a comment..."
+            rows={1}
             className="flex-1 px-3 py-2 text-sm border-2 border-gray-200 rounded-xl 
                      focus:border-primary-500 focus:ring-2 focus:ring-primary-100
-                     transition-all"
+                     transition-all resize-none overflow-hidden"
+            style={{ minHeight: '38px' }}
           />
           <button
             onClick={() => {
