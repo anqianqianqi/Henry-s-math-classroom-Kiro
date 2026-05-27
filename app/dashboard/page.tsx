@@ -131,11 +131,18 @@ export default function DashboardPage() {
       if (userClassIds && userClassIds.length > 0) {
         const { data: assignmentData } = await supabase
           .from('challenge_assignments')
-          .select('challenge_id, daily_challenges!inner(challenge_date)')
+          .select('challenge_id')
           .in('class_id', userClassIds.map(m => m.class_id))
-          .lte('daily_challenges.challenge_date', new Date().toISOString().split('T')[0])
-        const uniqueChallenges = new Set(assignmentData?.map(a => a.challenge_id))
-        challengesCount = uniqueChallenges.size
+        const allChallengeIds = [...new Set(assignmentData?.map(a => a.challenge_id) || [])]
+        if (allChallengeIds.length > 0) {
+          const today = new Date().toISOString().split('T')[0]
+          const { data: visibleChallenges } = await supabase
+            .from('daily_challenges')
+            .select('id')
+            .in('id', allChallengeIds)
+            .lte('challenge_date', today)
+          challengesCount = visibleChallenges?.length || 0
+        }
       }
       // Calculate day streak from challenge submissions
       const { data: submissions } = await supabase
