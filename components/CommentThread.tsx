@@ -166,7 +166,7 @@ export function CommentThread({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-gray-700">{comment.content}</p>
+                  <p className="text-gray-700 break-words whitespace-pre-wrap">{comment.content}</p>
                 )}
 
                 {comment.image_url && (
@@ -226,8 +226,8 @@ export function CommentThread({
             rows={1}
             className="flex-1 px-3 py-2 text-sm border-2 border-gray-200 rounded-xl 
                      focus:border-primary-500 focus:ring-2 focus:ring-primary-100
-                     transition-all resize-none overflow-hidden"
-            style={{ minHeight: '38px' }}
+                     transition-all resize-none"
+            style={{ minHeight: '38px', overflowY: 'hidden' }}
           />
           <button
             onClick={() => {
