@@ -17,6 +17,7 @@ interface Challenge {
   challenge_date: string
   created_at: string
   tag_ids?: string[]
+  max_points?: number | null
   submission_count?: number
   total_students?: number
   completion_rate?: number
@@ -694,7 +695,7 @@ export default function ChallengesPage() {
                             <span className="text-green-600">✅ Submitted</span>
                             {challenge.my_points != null ? (
                               <span className="px-2 py-0.5 rounded-full font-bold bg-primary-100 text-primary-700">
-                                {challenge.my_points}/100
+                                {challenge.my_points}/{challenge.max_points || 100}
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
@@ -787,7 +788,7 @@ export default function ChallengesPage() {
                                 <span className="text-green-600">✅ Submitted</span>
                                 {challenge.my_points != null ? (
                                   <span className="px-2 py-0.5 rounded-full font-bold bg-primary-100 text-primary-700">
-                                    {challenge.my_points}/100
+                                    {challenge.my_points}/{challenge.max_points || 100}
                                   </span>
                                 ) : (
                                   <span className="px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700">
@@ -868,7 +869,7 @@ export default function ChallengesPage() {
                                     <span className="text-green-600">✅ Submitted</span>
                                     {challenge.my_points != null ? (
                                       <span className="px-2 py-0.5 rounded-full font-bold bg-primary-100 text-primary-700">
-                                        {challenge.my_points}/100
+                                        {challenge.my_points}/{challenge.max_points || 100}
                                       </span>
                                     ) : (
                                       <span className="px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700">
