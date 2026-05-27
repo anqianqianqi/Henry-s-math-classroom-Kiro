@@ -187,12 +187,11 @@ export default function DashboardPage() {
         }
       }
 
-      // Calculate total score from graded submissions
+      // Calculate total score from graded submissions (locked or not)
       const { data: gradedSubmissions } = await supabase
         .from('challenge_submissions')
         .select('points')
         .eq('user_id', userId)
-        .eq('is_locked', true)
         .not('points', 'is', null)
 
       const totalScore = gradedSubmissions?.reduce((sum, s) => sum + (s.points || 0), 0) || 0
