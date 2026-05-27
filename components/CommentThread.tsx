@@ -102,8 +102,8 @@ export function CommentThread({
           {/* Comment List */}
           {visibleComments.map(comment => (
             <div key={comment.id} className="flex items-start gap-2 text-sm bg-gray-50 p-3 rounded-xl">
-              <span className="text-lg">💬</span>
-              <div className="flex-1">
+              <span className="text-lg flex-shrink-0">💬</span>
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <p className="font-medium text-gray-900">
                     {comment.profiles.nickname || comment.profiles.full_name}
@@ -210,8 +210,9 @@ export function CommentThread({
             value={newComment}
             onChange={(e) => {
               onCommentChange(e.target.value)
+              // Reset to auto first so shrinking works, then expand to content
               e.target.style.height = 'auto'
-              e.target.style.height = e.target.scrollHeight + 'px'
+              e.target.style.height = Math.max(38, e.target.scrollHeight) + 'px'
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -219,7 +220,7 @@ export function CommentThread({
                 onSubmitComment(commentImage)
                 setCommentImage(null)
                 setCommentImagePreview(null)
-                ;(e.target as HTMLTextAreaElement).style.height = 'auto'
+                ;(e.target as HTMLTextAreaElement).style.height = '38px'
               }
             }}
             placeholder="Add a comment..."
@@ -227,7 +228,7 @@ export function CommentThread({
             className="flex-1 px-3 py-2 text-sm border-2 border-gray-200 rounded-xl 
                      focus:border-primary-500 focus:ring-2 focus:ring-primary-100
                      transition-all resize-none"
-            style={{ minHeight: '38px', overflowY: 'hidden' }}
+            style={{ minHeight: '38px', height: '38px', overflow: 'hidden' }}
           />
           <button
             onClick={() => {
