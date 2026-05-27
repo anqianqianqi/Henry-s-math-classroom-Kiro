@@ -16,6 +16,7 @@ interface Challenge {
   image_url?: string | null
   max_points?: number
   tag_ids?: string[]
+  hint?: string | null
 }
 
 interface Submission {
@@ -83,6 +84,11 @@ export default function ChallengePage() {
   const COMMENTS_INCREMENT = 5
   const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
   const [tagNames, setTagNames] = useState<Record<string, Record<string, string>>>({}) // id → { en: name, zh: name }
+  // Hint state
+  const [showHint, setShowHint] = useState(false)
+  const [editingHint, setEditingHint] = useState(false)
+  const [hintDraft, setHintDraft] = useState('')
+  const [savingHint, setSavingHint] = useState(false)
 
   useEffect(() => {
     loadChallenge()
@@ -397,6 +403,26 @@ export default function ChallengePage() {
       console.log('Comments by submission:', commentsBySubmission)
       // MERGE with existing comments instead of replacing
       setComments(prev => ({ ...prev, ...commentsBySubmission }))
+    }
+  }
+
+  async function handleEditComment(commentId: string, newContent: string) {
+    const { error } = await supabase
+      .from('submission_comments')
+      .update({ content: newContent })
+      .eq('id', commentId)
+      .eq('user_id', userId!) // only own comments
+
+    if (!error) {
+      setComments(prev => {
+        const updated = { ...prev }
+        for (const subId in updated) {
+          updated[subId] = updated[subId].map(c =>
+            c.id === commentId ? { ...c, content: newContent } : c
+          )
+        }
+        return updated
+      })
     }
   }
 
@@ -828,6 +854,21 @@ export default function ChallengePage() {
     }
   }
 
+  async function saveHint() {
+    if (!challenge) return
+    setSavingHint(true)
+    const table = (challenge as any).is_bank_item ? 'challenge_bank' : 'daily_challenges'
+    const { error } = await supabase
+      .from(table)
+      .update({ hint: hintDraft.trim() || null })
+      .eq('id', challenge.id)
+    if (!error) {
+      setChallenge({ ...challenge, hint: hintDraft.trim() || null })
+      setEditingHint(false)
+    }
+    setSavingHint(false)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
@@ -1001,6 +1042,62 @@ export default function ChallengePage() {
             <p className="text-gray-700 whitespace-pre-wrap">
               {challenge.description}
             </p>
+
+            {/* Hint Section */}
+            {(challenge.hint || isTeacher) && (
+              <div className="mt-4">
+                {isTeacher ? (
+                  editingHint ? (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-amber-700">💡 Hint (visible to students)</label>
+                      <textarea
+                        value={hintDraft}
+                        onChange={e => setHintDraft(e.target.value)}
+                        placeholder="Add a hint for students..."
+                        rows={3}
+                        className="w-full px-3 py-2 text-sm border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-100 resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={saveHint} disabled={savingHint}>
+                          {savingHint ? 'Saving...' : 'Save Hint'}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setEditingHint(false); setHintDraft(challenge.hint || '') }}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                        <p className="text-xs font-medium text-amber-600 mb-1">💡 Hint</p>
+                        <p className="text-sm text-amber-800 whitespace-pre-wrap">
+                          {challenge.hint || <span className="italic text-amber-400">No hint added yet</span>}
+                        </p>
+                      </div>
+                      <Button size="sm" variant="ghost" onClick={() => { setEditingHint(true); setHintDraft(challenge.hint || '') }}>
+                        {challenge.hint ? 'Edit' : '+ Add Hint'}
+                      </Button>
+                    </div>
+                  )
+                ) : (
+                  // Student view — collapsible
+                  <div>
+                    <button
+                      onClick={() => setShowHint(h => !h)}
+                      className="flex items-center gap-2 text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors"
+                    >
+                      <span>{showHint ? '▼' : '▶'}</span>
+                      <span>💡 {showHint ? 'Hide Hint' : 'Show Hint'}</span>
+                    </button>
+                    {showHint && (
+                      <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                        <p className="text-sm text-amber-800 whitespace-pre-wrap">{challenge.hint}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </Card.Body>
         </Card>
 
@@ -1136,8 +1233,10 @@ export default function ChallengePage() {
                     newComment={newComment[userSubmission.id] || ''}
                     onCommentChange={(value) => setNewComment(prev => ({ ...prev, [userSubmission.id]: value }))}
                     onSubmitComment={(img?: File | null) => handleSubmitComment(userSubmission.id, img)}
+                    onEditComment={handleEditComment}
                     isSubmitting={submittingComment[userSubmission.id] || false}
                     formatTimeAgo={formatTimeAgo}
+                    currentUserId={userId}
                     showTitle={true}
                     allowImage={true}
                   />
@@ -1325,8 +1424,10 @@ export default function ChallengePage() {
                             newComment={newComment[submission.id] || ''}
                             onCommentChange={(value) => setNewComment(prev => ({ ...prev, [submission.id]: value }))}
                             onSubmitComment={(img?: File | null) => handleSubmitComment(submission.id, img)}
+                            onEditComment={handleEditComment}
                             isSubmitting={submittingComment[submission.id] || false}
                             formatTimeAgo={formatTimeAgo}
+                            currentUserId={userId}
                             showTitle={false}
                             allowImage={true}
                           />

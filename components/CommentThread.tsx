@@ -23,8 +23,10 @@ interface CommentThreadProps {
   newComment: string
   onCommentChange: (value: string) => void
   onSubmitComment: (imageFile?: File | null) => void
+  onEditComment?: (commentId: string, newContent: string) => Promise<void>
   isSubmitting: boolean
   formatTimeAgo: (date: string) => string
+  currentUserId?: string | null
   showTitle?: boolean
   allowImage?: boolean
 }
@@ -39,16 +41,29 @@ export function CommentThread({
   newComment,
   onCommentChange,
   onSubmitComment,
+  onEditComment,
   isSubmitting,
   formatTimeAgo,
+  currentUserId,
   showTitle = false,
   allowImage = false
 }: CommentThreadProps) {
   const [commentImage, setCommentImage] = useState<File | null>(null)
   const [commentImagePreview, setCommentImagePreview] = useState<string | null>(null)
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
+
   const visibleComments = comments.slice(-visibleCount)
-  const hasMore = comments.length > visibleCount
   const showingAll = visibleCount >= comments.length
+
+  async function handleSaveEdit(commentId: string) {
+    if (!onEditComment || !editDraft.trim()) return
+    setSavingEdit(true)
+    await onEditComment(commentId, editDraft.trim())
+    setSavingEdit(false)
+    setEditingCommentId(null)
+  }
 
   return (
     <>
@@ -79,13 +94,58 @@ export function CommentThread({
             <div key={comment.id} className="flex items-start gap-2 text-sm bg-gray-50 p-3 rounded-xl">
               <span className="text-lg">💬</span>
               <div className="flex-1">
-                <p className="font-medium text-gray-900">
-                  {comment.profiles.nickname || comment.profiles.full_name}
-                  <span className="font-normal text-gray-500 ml-2">
-                    {formatTimeAgo(comment.created_at)}
-                  </span>
-                </p>
-                <p className="text-gray-700">{comment.content}</p>
+                <div className="flex items-center justify-between">
+                  <p className="font-medium text-gray-900">
+                    {comment.profiles.nickname || comment.profiles.full_name}
+                    <span className="font-normal text-gray-500 ml-2">
+                      {formatTimeAgo(comment.created_at)}
+                    </span>
+                  </p>
+                  {/* Edit button — only for comment author */}
+                  {currentUserId && comment.user_id === currentUserId && onEditComment && editingCommentId !== comment.id && (
+                    <button
+                      onClick={() => { setEditingCommentId(comment.id); setEditDraft(comment.content) }}
+                      className="text-xs text-gray-400 hover:text-gray-600 ml-2"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+
+                {editingCommentId === comment.id ? (
+                  <div className="mt-1 space-y-1">
+                    <textarea
+                      value={editDraft}
+                      onChange={e => {
+                        setEditDraft(e.target.value)
+                        e.target.style.height = 'auto'
+                        e.target.style.height = e.target.scrollHeight + 'px'
+                      }}
+                      rows={1}
+                      className="w-full px-2 py-1 text-sm border-2 border-primary-300 rounded-lg focus:border-primary-500 resize-none overflow-hidden"
+                      style={{ minHeight: '32px' }}
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSaveEdit(comment.id)}
+                        disabled={savingEdit || !editDraft.trim()}
+                        className="text-xs px-2 py-1 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
+                      >
+                        {savingEdit ? '...' : 'Save'}
+                      </button>
+                      <button
+                        onClick={() => setEditingCommentId(null)}
+                        className="text-xs px-2 py-1 text-gray-500 hover:text-gray-700"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-700">{comment.content}</p>
+                )}
+
                 {comment.image_url && (
                   <img src={comment.image_url} alt="Comment image" className="mt-2 max-h-40 rounded-lg border" />
                 )}
@@ -127,7 +187,6 @@ export function CommentThread({
             value={newComment}
             onChange={(e) => {
               onCommentChange(e.target.value)
-              // Auto-expand
               e.target.style.height = 'auto'
               e.target.style.height = e.target.scrollHeight + 'px'
             }}
@@ -137,7 +196,6 @@ export function CommentThread({
                 onSubmitComment(commentImage)
                 setCommentImage(null)
                 setCommentImagePreview(null)
-                // Reset height
                 ;(e.target as HTMLTextAreaElement).style.height = 'auto'
               }
             }}
