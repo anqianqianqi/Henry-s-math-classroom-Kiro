@@ -101,8 +101,9 @@ export function validateShopItemForm(form: ShopItemForm): ValidationResult {
 
 /**
  * Sort redemptions by most recent first (descending redeemed_at).
+ * Generic so it preserves extended types like RedemptionWithTitle.
  */
-export function sortRedemptionsByRecent(redemptions: Redemption[]): Redemption[] {
+export function sortRedemptionsByRecent<T extends Redemption>(redemptions: T[]): T[] {
   return [...redemptions].sort((a, b) =>
     b.redeemed_at.localeCompare(a.redeemed_at)
   )
