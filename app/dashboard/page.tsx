@@ -21,7 +21,8 @@ export default function DashboardPage() {
     challengesCount: 0,
     dayStreak: 0,
     pendingRequests: 0,
-    totalScore: 0
+    totalScore: 0,
+    spendableBalance: 0,
   })
   const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean }>>([])
   const router = useRouter()
@@ -110,7 +111,8 @@ export default function DashboardPage() {
           challengesCount: challengesCount || 0,
           dayStreak: 0,
           pendingRequests: pendingRequests || 0,
-          totalScore: 0
+          totalScore: 0,
+          spendableBalance: 0,
         }
         setStats(newStats)
         return
@@ -196,12 +198,42 @@ export default function DashboardPage() {
 
       const totalScore = gradedSubmissions?.reduce((sum, s) => sum + (s.points || 0), 0) || 0
 
+      // Compute spendable balance for students.
+      // This is a single extra query — does NOT modify or replace totalScore.
+      // spendable_balance = totalScore(locked only) - SUM(redemptions.points_spent)
+      // When a teacher increases a grade, totalScore goes up → balance goes up automatically.
+      let spendableBalance = 0
+      try {
+        const { data: lockedSubmissions } = await supabase
+          .from('challenge_submissions')
+          .select('points')
+          .eq('user_id', userId)
+          .eq('is_locked', true)
+
+        const { data: redemptionsData } = await supabase
+          .from('redemptions')
+          .select('points_spent')
+          .eq('user_id', userId)
+
+        const totalLocked = (lockedSubmissions ?? []).reduce(
+          (sum: number, s: any) => sum + (s.points ?? 0), 0
+        )
+        const totalSpent = (redemptionsData ?? []).reduce(
+          (sum: number, r: any) => sum + (r.points_spent ?? 0), 0
+        )
+        spendableBalance = totalLocked - totalSpent
+      } catch {
+        // If shop tables don't exist yet, silently skip — dashboard still works
+        spendableBalance = 0
+      }
+
       const newStats = {
         classesCount: memberCount || 0,
         challengesCount,
         dayStreak,
         pendingRequests: 0,
-        totalScore
+        totalScore,
+        spendableBalance,
       }
 
       setStats(newStats)
@@ -419,6 +451,21 @@ export default function DashboardPage() {
             </Card>
           )}
 
+          {!isTeacher && !isAdmin && (
+            <Card
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/shop')}
+            >
+              <Card.Body>
+                <div className="text-5xl mb-3 hidden sm:block">🛍️</div>
+                <div className="text-3xl font-bold text-primary-600 mb-1">
+                  {stats.spendableBalance}
+                </div>
+                <div className="text-gray-600 font-medium">Shop Balance</div>
+              </Card.Body>
+            </Card>
+          )}
+
           <Card 
             className="text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/classes/explore')}
@@ -429,6 +476,18 @@ export default function DashboardPage() {
               <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Classes</div>
             </Card.Body>
           </Card>
+          {(isTeacher || isAdmin) && (
+            <Card 
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/admin/shop')}
+            >
+              <Card.Body>
+                <div className="text-5xl mb-3 hidden sm:block">🛍️</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">Shop</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Manage</div>
+              </Card.Body>
+            </Card>
+          )}
 
           {(isTeacher || isAdmin) && (
             <Card 
