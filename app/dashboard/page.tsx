@@ -131,8 +131,9 @@ export default function DashboardPage() {
       if (userClassIds && userClassIds.length > 0) {
         const { data: assignmentData } = await supabase
           .from('challenge_assignments')
-          .select('challenge_id')
+          .select('challenge_id, daily_challenges!inner(challenge_date)')
           .in('class_id', userClassIds.map(m => m.class_id))
+          .lte('daily_challenges.challenge_date', new Date().toISOString().split('T')[0])
         const uniqueChallenges = new Set(assignmentData?.map(a => a.challenge_id))
         challengesCount = uniqueChallenges.size
       }
