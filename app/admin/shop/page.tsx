@@ -50,6 +50,10 @@ export default function AdminShopPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Image upload state
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const loadData = useCallback(async () => {
     // Fetch all shop items (active + inactive)
@@ -180,6 +184,28 @@ export default function AdminShopPage() {
     setFormErrors((prev) => ({ ...prev, [field]: '' }))
   }
 
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      setFormErrors((prev) => ({ ...prev, image_url: 'Image must be less than 5MB' }))
+      return
+    }
+    if (!file.type.startsWith('image/')) {
+      setFormErrors((prev) => ({ ...prev, image_url: 'File must be an image' }))
+      return
+    }
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+    setFormErrors((prev) => ({ ...prev, image_url: '' }))
+  }
+
+  function clearImage() {
+    setImageFile(null)
+    setImagePreview(null)
+    setForm((prev) => ({ ...prev, image_url: '' }))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const validation = validateShopItemForm(form)
@@ -193,6 +219,27 @@ export default function AdminShopPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
+      // Upload image to Supabase Storage if a new file was selected
+      let finalImageUrl = form.image_url.trim() || null
+      if (imageFile) {
+        setUploadingImage(true)
+        const fileExt = imageFile.name.split('.').pop()
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`
+        const { error: uploadError } = await supabase.storage
+          .from('shop-images')
+          .upload(fileName, imageFile)
+        setUploadingImage(false)
+        if (uploadError) {
+          setError('Failed to upload image: ' + uploadError.message)
+          setSubmitting(false)
+          return
+        }
+        const { data: { publicUrl } } = supabase.storage
+          .from('shop-images')
+          .getPublicUrl(fileName)
+        finalImageUrl = publicUrl
+      }
+
       if (editingId) {
         // Update existing item
         const { error: updateError } = await supabase
@@ -201,7 +248,7 @@ export default function AdminShopPage() {
             title: form.title.trim(),
             description: form.description.trim() || null,
             cost: parseInt(form.cost, 10),
-            image_url: form.image_url.trim() || null,
+            image_url: finalImageUrl,
             quantity: form.quantity.trim() !== '' ? parseInt(form.quantity, 10) : null,
           })
           .eq('id', editingId)
@@ -211,8 +258,11 @@ export default function AdminShopPage() {
           return
         }
       } else {
-        // Create new item
-        const payload = buildShopItemInsert(form, user.id)
+        // Create new item — override image_url with uploaded URL
+        const payload = {
+          ...buildShopItemInsert(form, user.id),
+          image_url: finalImageUrl,
+        }
         const { error: insertError } = await supabase.from('shop_items').insert(payload)
         if (insertError) {
           setError('Failed to create item')
@@ -222,6 +272,8 @@ export default function AdminShopPage() {
 
       setForm(EMPTY_FORM)
       setEditingId(null)
+      setImageFile(null)
+      setImagePreview(null)
       await loadData()
     } finally {
       setSubmitting(false)
@@ -237,6 +289,9 @@ export default function AdminShopPage() {
       image_url: item.image_url ?? '',
       quantity: item.quantity !== null ? String(item.quantity) : '',
     })
+    // Show existing image as preview (no file selected yet)
+    setImageFile(null)
+    setImagePreview(item.image_url ?? null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -372,29 +427,52 @@ export default function AdminShopPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Image URL (optional)
+                    Image (optional)
                   </label>
-                  <input
-                    type="url"
-                    value={form.image_url}
-                    onChange={(e) => handleFormChange('image_url', e.target.value)}
-                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
-                    placeholder="https://..."
-                  />
+                  {imagePreview ? (
+                    <div className="relative">
+                      <img
+                        src={imagePreview}
+                        alt="Item preview"
+                        className="w-full h-40 object-cover rounded-xl mb-2"
+                      />
+                      <button
+                        type="button"
+                        onClick={clearImage}
+                        className="absolute top-2 right-2 px-2 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="hidden"
+                        id="shop-item-image"
+                      />
+                      <label htmlFor="shop-item-image" className="cursor-pointer">
+                        <div className="text-3xl mb-1">📸</div>
+                        <div className="text-sm text-gray-600">Click to upload image (max 5MB)</div>
+                      </label>
+                    </div>
+                  )}
                   {formErrors.image_url && (
                     <p className="text-red-500 text-xs mt-1">{formErrors.image_url}</p>
                   )}
                 </div>
 
                 <div className="flex gap-3">
-                  <Button type="submit" disabled={submitting}>
-                    {submitting ? 'Saving…' : editingId ? 'Save Changes' : 'Create Item'}
+                  <Button type="submit" disabled={submitting || uploadingImage}>
+                    {uploadingImage ? 'Uploading image…' : submitting ? 'Saving…' : editingId ? 'Save Changes' : 'Create Item'}
                   </Button>
                   {editingId && (
                     <Button
                       type="button"
                       variant="ghost"
-                      onClick={() => { setEditingId(null); setForm(EMPTY_FORM) }}
+                      onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setImageFile(null); setImagePreview(null) }}
                     >
                       Cancel
                     </Button>
