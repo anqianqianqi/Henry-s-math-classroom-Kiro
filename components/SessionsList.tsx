@@ -91,7 +91,11 @@ export default function SessionsList({ classId, onSelectSession }: SessionsListP
         .eq('id', classId)
         .single()
 
-      if (!cls?.schedule || !cls.start_date) return false
+      if (!cls?.schedule || !Array.isArray(cls.schedule) || cls.schedule.length === 0) return false
+      // If no start_date, use today as the starting point
+      if (!cls.start_date) {
+        cls.start_date = localDateString()
+      }
       // Don't generate past end_date
       if (cls.end_date && new Date(cls.end_date) < new Date()) return false
 
