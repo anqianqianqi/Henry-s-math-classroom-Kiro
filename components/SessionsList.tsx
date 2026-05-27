@@ -104,9 +104,15 @@ export default function SessionsList({ classId, onSelectSession }: SessionsListP
         ? existing[existing.length - 1].occurrence_date
         : null
 
-      const startFrom = lastDate
-        ? new Date(new Date(lastDate).getTime() + 24 * 60 * 60 * 1000)
-        : new Date(cls.start_date)
+      const startFrom = (() => {
+        const fromLast = lastDate
+          ? new Date(new Date(lastDate).getTime() + 24 * 60 * 60 * 1000)
+          : new Date(cls.start_date)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        // Always start from at least today so we generate future sessions
+        return fromLast > today ? fromLast : today
+      })()
 
       // Generate enough weeks to get at least `needed` sessions
       const weeksToGenerate = Math.ceil(needed / (cls.schedule.length || 1)) + 1
