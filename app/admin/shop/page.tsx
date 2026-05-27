@@ -107,7 +107,7 @@ export default function AdminShopPage() {
           .from('challenge_submissions')
           .select('user_id, points')
           .in('user_id', studentIds)
-          .eq('is_locked', true),
+          .not('points', 'is', null),
         supabase
           .from('redemptions')
           .select('user_id, points_spent')
