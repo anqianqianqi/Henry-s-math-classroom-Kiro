@@ -199,32 +199,24 @@ export default function DashboardPage() {
       const totalScore = gradedSubmissions?.reduce((sum, s) => sum + (s.points || 0), 0) || 0
 
       // Compute spendable balance for students.
-      // This is a single extra query — does NOT modify or replace totalScore.
-      // spendable_balance = totalScore(locked only) - SUM(redemptions.points_spent)
-      // When a teacher increases a grade, totalScore goes up → balance goes up automatically.
-      let spendableBalance = 0
+      // Reuse totalScore (already computed above) as the earned amount.
+      // spendable_balance = totalScore - SUM(redemptions.points_spent)
+      let spendableBalance = totalScore  // default to full score if redemptions query fails
       try {
-        const { data: lockedSubmissions } = await supabase
-          .from('challenge_submissions')
-          .select('points')
-          .eq('user_id', userId)
-          .not('points', 'is', null)  // any graded submission, not just locked
-
-        const { data: redemptionsData } = await supabase
+        const { data: redemptionsData, error: redemptionsError } = await supabase
           .from('redemptions')
           .select('points_spent')
           .eq('user_id', userId)
 
-        const totalLocked = (lockedSubmissions ?? []).reduce(
-          (sum: number, s: any) => sum + (s.points ?? 0), 0
-        )
-        const totalSpent = (redemptionsData ?? []).reduce(
-          (sum: number, r: any) => sum + (r.points_spent ?? 0), 0
-        )
-        spendableBalance = totalLocked - totalSpent
+        if (!redemptionsError && redemptionsData) {
+          const totalSpent = redemptionsData.reduce(
+            (sum: number, r: any) => sum + (r.points_spent ?? 0), 0
+          )
+          spendableBalance = totalScore - totalSpent
+        }
+        // If redemptions query fails (e.g. table doesn't exist), keep spendableBalance = totalScore
       } catch {
-        // If shop tables don't exist yet, silently skip — dashboard still works
-        spendableBalance = 0
+        spendableBalance = totalScore
       }
 
       const newStats = {
