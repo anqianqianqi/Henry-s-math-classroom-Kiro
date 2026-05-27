@@ -135,7 +135,7 @@ export default function DashboardPage() {
           .in('class_id', userClassIds.map(m => m.class_id))
         const allChallengeIds = [...new Set(assignmentData?.map(a => a.challenge_id) || [])]
         if (allChallengeIds.length > 0) {
-          const today = new Date().toISOString().split('T')[0]
+          const today = localDateString()
           const { data: visibleChallenges } = await supabase
             .from('daily_challenges')
             .select('id')
