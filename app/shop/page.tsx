@@ -49,7 +49,7 @@ export default function ShopPage() {
         .from('challenge_submissions')
         .select('points')
         .eq('user_id', userId)
-        .eq('is_locked', true),
+        .not('points', 'is', null),  // any graded submission counts, not just locked
       supabase
         .from('redemptions')
         .select('points_spent')

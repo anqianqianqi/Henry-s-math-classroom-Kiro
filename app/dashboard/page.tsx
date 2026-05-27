@@ -208,7 +208,7 @@ export default function DashboardPage() {
           .from('challenge_submissions')
           .select('points')
           .eq('user_id', userId)
-          .eq('is_locked', true)
+          .not('points', 'is', null)  // any graded submission, not just locked
 
         const { data: redemptionsData } = await supabase
           .from('redemptions')

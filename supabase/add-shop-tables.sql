@@ -178,7 +178,7 @@ BEGIN
   -- which increases the spendable balance.
   SELECT COALESCE(SUM(points), 0) INTO v_earned
     FROM challenge_submissions
-   WHERE user_id = auth.uid() AND is_locked = true;
+   WHERE user_id = auth.uid() AND points IS NOT NULL;
 
   SELECT COALESCE(SUM(points_spent), 0) INTO v_spent
     FROM redemptions
