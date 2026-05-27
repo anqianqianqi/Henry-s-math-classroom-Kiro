@@ -426,6 +426,24 @@ export default function ChallengePage() {
     }
   }
 
+  async function handleDeleteComment(commentId: string) {
+    const { error } = await supabase
+      .from('submission_comments')
+      .delete()
+      .eq('id', commentId)
+      .eq('user_id', userId!) // only own comments
+
+    if (!error) {
+      setComments(prev => {
+        const updated = { ...prev }
+        for (const subId in updated) {
+          updated[subId] = updated[subId].filter(c => c.id !== commentId)
+        }
+        return updated
+      })
+    }
+  }
+
   async function handleSubmitComment(submissionId: string, imageFile?: File | null) {
     const commentText = newComment[submissionId]?.trim()
     if ((!commentText && !imageFile) || !userId) return
@@ -1234,6 +1252,7 @@ export default function ChallengePage() {
                     onCommentChange={(value) => setNewComment(prev => ({ ...prev, [userSubmission.id]: value }))}
                     onSubmitComment={(img?: File | null) => handleSubmitComment(userSubmission.id, img)}
                     onEditComment={handleEditComment}
+                    onDeleteComment={handleDeleteComment}
                     isSubmitting={submittingComment[userSubmission.id] || false}
                     formatTimeAgo={formatTimeAgo}
                     currentUserId={userId}
@@ -1425,6 +1444,7 @@ export default function ChallengePage() {
                             onCommentChange={(value) => setNewComment(prev => ({ ...prev, [submission.id]: value }))}
                             onSubmitComment={(img?: File | null) => handleSubmitComment(submission.id, img)}
                             onEditComment={handleEditComment}
+                            onDeleteComment={handleDeleteComment}
                             isSubmitting={submittingComment[submission.id] || false}
                             formatTimeAgo={formatTimeAgo}
                             currentUserId={userId}

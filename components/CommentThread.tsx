@@ -24,6 +24,7 @@ interface CommentThreadProps {
   onCommentChange: (value: string) => void
   onSubmitComment: (imageFile?: File | null) => void
   onEditComment?: (commentId: string, newContent: string) => Promise<void>
+  onDeleteComment?: (commentId: string) => Promise<void>
   isSubmitting: boolean
   formatTimeAgo: (date: string) => string
   currentUserId?: string | null
@@ -42,6 +43,7 @@ export function CommentThread({
   onCommentChange,
   onSubmitComment,
   onEditComment,
+  onDeleteComment,
   isSubmitting,
   formatTimeAgo,
   currentUserId,
@@ -53,6 +55,7 @@ export function CommentThread({
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
 
   const visibleComments = comments.slice(-visibleCount)
   const showingAll = visibleCount >= comments.length
@@ -63,6 +66,13 @@ export function CommentThread({
     await onEditComment(commentId, editDraft.trim())
     setSavingEdit(false)
     setEditingCommentId(null)
+  }
+
+  async function handleDelete(commentId: string) {
+    if (!onDeleteComment) return
+    setDeletingCommentId(commentId)
+    await onDeleteComment(commentId)
+    setDeletingCommentId(null)
   }
 
   return (
@@ -101,14 +111,27 @@ export function CommentThread({
                       {formatTimeAgo(comment.created_at)}
                     </span>
                   </p>
-                  {/* Edit button — only for comment author */}
-                  {currentUserId && comment.user_id === currentUserId && onEditComment && editingCommentId !== comment.id && (
-                    <button
-                      onClick={() => { setEditingCommentId(comment.id); setEditDraft(comment.content) }}
-                      className="text-xs text-gray-400 hover:text-gray-600 ml-2"
-                    >
-                      Edit
-                    </button>
+                  {/* Edit/Delete buttons — only for comment author */}
+                  {currentUserId && comment.user_id === currentUserId && editingCommentId !== comment.id && (
+                    <div className="flex items-center gap-2 ml-2">
+                      {onEditComment && (
+                        <button
+                          onClick={() => { setEditingCommentId(comment.id); setEditDraft(comment.content) }}
+                          className="text-xs text-gray-400 hover:text-gray-600"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {onDeleteComment && (
+                        <button
+                          onClick={() => handleDelete(comment.id)}
+                          disabled={deletingCommentId === comment.id}
+                          className="text-xs text-red-400 hover:text-red-600 disabled:opacity-50"
+                        >
+                          {deletingCommentId === comment.id ? '...' : 'Delete'}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
 
