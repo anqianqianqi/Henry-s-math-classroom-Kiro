@@ -6,7 +6,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import {
   computeSpendableBalance,
   isRedeemDisabled,
@@ -205,15 +204,13 @@ export default function ShopPage() {
         {/* Shop Items Grid */}
         <h2 className="text-xl font-bold text-gray-900 mb-4">Available Rewards</h2>
         {items.length === 0 ? (
-          <Card className="mb-8">
-            <Card.Body>
-              <p className="text-center text-gray-500 py-8">
-                No rewards available yet. Check back soon!
-              </p>
-            </Card.Body>
-          </Card>
+          <div className="mb-8 text-center py-16 text-gray-400">
+            <div className="text-5xl mb-3">🛍️</div>
+            <p className="text-lg font-medium text-gray-500">No rewards available yet.</p>
+            <p className="text-sm mt-1">Check back soon!</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 mb-10">
             {items.map((item) => {
               const disabled = isRedeemDisabled(balance, item)
               const outOfStock =
@@ -222,50 +219,71 @@ export default function ShopPage() {
               const redeemError = redeemErrors[item.id]
 
               return (
-                <Card key={item.id} className="flex flex-col">
-                  <Card.Body className="flex flex-col flex-1">
-                    {item.image_url && (
+                <div
+                  key={item.id}
+                  className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200 flex flex-col"
+                >
+                  {/* Product image — full bleed, fixed aspect ratio */}
+                  <div className="relative w-full aspect-square bg-gray-50 overflow-hidden">
+                    {item.image_url ? (
                       <img
                         src={item.image_url}
                         alt={item.title}
-                        className="w-full h-40 object-cover rounded-xl mb-3"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                    )}
-                    <h3 className="font-bold text-gray-900 text-lg mb-1">{item.title}</h3>
-                    {item.description && (
-                      <p className="text-gray-600 text-sm mb-3 flex-1">{item.description}</p>
-                    )}
-                    <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
-                      <div>
-                        <span className="text-2xl font-bold text-primary-600">
-                          {item.cost}
-                        </span>
-                        <span className="text-gray-500 text-sm ml-1">pts</span>
-                        {outOfStock && (
-                          <span className="ml-2 text-xs text-red-500 font-medium">
-                            Out of stock
-                          </span>
-                        )}
-                        {!outOfStock && item.quantity !== null && (
-                          <span className="ml-2 text-xs text-gray-400">
-                            {item.quantity - item.redemption_count} left
-                          </span>
-                        )}
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-5xl select-none">
+                        🎁
                       </div>
-                      <Button
-                        size="sm"
+                    )}
+                    {outOfStock && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <span className="bg-white text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">
+                          Sold Out
+                        </span>
+                      </div>
+                    )}
+                    {!outOfStock && item.quantity !== null && (
+                      <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm text-gray-700 text-xs font-medium px-2 py-0.5 rounded-full shadow-sm">
+                        {item.quantity - item.redemption_count} left
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card body */}
+                  <div className="p-3 flex flex-col flex-1">
+                    <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-0.5 line-clamp-2">
+                      {item.title}
+                    </h3>
+                    {item.description && (
+                      <p className="text-gray-500 text-xs line-clamp-2 mb-2 flex-1">
+                        {item.description}
+                      </p>
+                    )}
+
+                    <div className="mt-auto pt-2 flex items-center justify-between gap-2">
+                      <span className="text-primary-600 font-bold text-base">
+                        {item.cost}
+                        <span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
+                      </span>
+                      <button
                         disabled={disabled || redeeming === item.id}
                         onClick={() => handleRedeem(item.id)}
                         aria-label={`Redeem ${item.title} for ${item.cost} points`}
+                        className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                          disabled || redeeming === item.id
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-primary-600 text-white hover:bg-primary-700 active:scale-95'
+                        }`}
                       >
-                        {redeeming === item.id ? 'Redeeming…' : 'Redeem'}
-                      </Button>
+                        {redeeming === item.id ? '…' : outOfStock ? 'Sold Out' : 'Redeem'}
+                      </button>
                     </div>
                     {redeemError && (
-                      <p className="text-red-500 text-xs mt-2">{redeemError}</p>
+                      <p className="text-red-500 text-xs mt-1">{redeemError}</p>
                     )}
-                  </Card.Body>
-                </Card>
+                  </div>
+                </div>
               )
             })}
           </div>
