@@ -54,6 +54,9 @@ export default function PetPage() {
   const [xpGainedLabel, setXpGainedLabel] = useState<number | null>(null)
   const [xpLabelVisible, setXpLabelVisible] = useState(false)
   const [evolvedFrom, setEvolvedFrom] = useState<string | null>(null) // stage before feeding
+  const [showRestartConfirm, setShowRestartConfirm] = useState(false)
+  const [restarting, setRestarting] = useState(false)
+  const [restartError, setRestartError] = useState<string | null>(null)
   const sparkleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -306,6 +309,39 @@ export default function PetPage() {
     }, 800)
   }
 
+  async function handleRestart() {
+    if (!pet || restarting) return
+    setRestarting(true)
+    setRestartError(null)
+
+    const { error } = await supabase
+      .from('student_pets')
+      .update({
+        species: null,
+        evolution_stage: 'egg',
+        xp: 0,
+        equipped_accessories: [],
+      })
+      .eq('id', pet.id)
+
+    if (error) {
+      console.error('Error restarting pet:', error)
+      setRestartError('Failed to restart. Please try again.')
+      setRestarting(false)
+      return
+    }
+
+    setPet(prev => prev ? {
+      ...prev,
+      species: null,
+      evolution_stage: 'egg',
+      xp: 0,
+      equipped_accessories: [],
+    } : prev)
+    setShowRestartConfirm(false)
+    setRestarting(false)
+  }
+
   async function handleEquip(accessoryId: string) {
     if (!pet) return
     setAccessoryError(null)
@@ -367,8 +403,55 @@ export default function PetPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
+      {/* Restart confirmation modal */}
+      {showRestartConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center">
+            <div className="text-5xl mb-4">🥚</div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Start Over?</h2>
+            <p className="text-gray-500 text-sm mb-6">
+              This will reset your pet back to an egg. Your XP, species, and equipped accessories will be cleared. This cannot be undone.
+            </p>
+            {restartError && (
+              <p className="text-red-600 text-sm mb-4" role="alert">{restartError}</p>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowRestartConfirm(false); setRestartError(null) }}
+                className="flex-1 bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRestart}
+                disabled={restarting}
+                className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
+              >
+                {restarting ? 'Resetting…' : 'Yes, Start Over'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="max-w-2xl mx-auto px-4 py-8 sm:px-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">My Pet</h1>
+        {/* Header row: back button + title + restart */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+          >
+            ← Dashboard
+          </button>
+          <h1 className="text-2xl font-bold text-gray-900">My Pet 🐾</h1>
+          <button
+            onClick={() => setShowRestartConfirm(true)}
+            className="text-xs text-gray-400 hover:text-red-500 transition-colors font-medium"
+            title="Reset pet to egg"
+          >
+            🔄 Restart
+          </button>
+        </div>
 
         {/* Balance + Shop link — visible regardless of evolution stage */}
         <div className="flex items-center justify-between mb-6 bg-white rounded-2xl px-5 py-3 shadow-sm border border-gray-100">
