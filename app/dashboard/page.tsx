@@ -217,38 +217,44 @@ export default function DashboardPage() {
         }
       }
 
-      // Read total score and spendable balance from student_wallets (single row read)
+      // Read total score and spendable balance — compute live from submissions minus redemptions
       let totalScore = 0
       let spendableBalance = 0
       try {
+        const [submissionsResult, spentResult] = await Promise.all([
+          supabase
+            .from('challenge_submissions')
+            .select('points')
+            .eq('user_id', userId)
+            .not('points', 'is', null),
+          supabase
+            .from('redemptions')
+            .select('points_spent')
+            .eq('user_id', userId),
+        ])
+        const earned = (submissionsResult.data ?? []).reduce((sum: number, s: any) => sum + (s.points ?? 0), 0)
+        const spent = (spentResult.data ?? []).reduce((sum: number, r: any) => sum + (r.points_spent ?? 0), 0)
+        totalScore = earned
+        spendableBalance = Math.max(earned - spent, 0)
+
+        // Keep student_wallets in sync so other reads stay accurate
+        await supabase
+          .from('student_wallets')
+          .upsert(
+            { user_id: userId, total_earned: totalScore, total_spent: spent, spendable_balance: spendableBalance },
+            { onConflict: 'user_id' }
+          )
+      } catch {
+        // If something fails, fall back to wallet table
         const { data: walletData } = await supabase
           .from('student_wallets')
           .select('total_earned, spendable_balance')
           .eq('user_id', userId)
           .single()
-
         if (walletData) {
           totalScore = walletData.total_earned ?? 0
           spendableBalance = walletData.spendable_balance ?? 0
-        } else {
-          // Fallback: wallet not yet created, compute on the fly
-          const { data: gradedSubmissions } = await supabase
-            .from('challenge_submissions')
-            .select('points')
-            .eq('user_id', userId)
-            .not('points', 'is', null)
-          totalScore = gradedSubmissions?.reduce((sum, s) => sum + (s.points || 0), 0) || 0
-          spendableBalance = totalScore
         }
-      } catch {
-        // If wallet table doesn't exist yet, fall back to submission sum
-        const { data: gradedSubmissions } = await supabase
-          .from('challenge_submissions')
-          .select('points')
-          .eq('user_id', userId)
-          .not('points', 'is', null)
-        totalScore = gradedSubmissions?.reduce((sum, s) => sum + (s.points || 0), 0) || 0
-        spendableBalance = totalScore
       }
 
       const newStats = {
