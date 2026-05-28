@@ -511,9 +511,12 @@ export default function ShopPage() {
               const isPhysicalBlindbox = commodityType === 'physical_blindbox'
 
               // Out of stock logic
-              const outOfStock = isBlindbox
-                ? (item.blindbox_remaining ?? 0) === 0
-                : item.quantity !== null && item.redemption_count >= item.quantity
+              // physical_blindbox uses quantity cap (physical stock), not blindbox pool
+              const outOfStock = isPhysicalBlindbox
+                ? (item.quantity !== null && (item.redemption_count ?? 0) >= item.quantity)
+                : isBlindbox
+                  ? (item.blindbox_remaining ?? 0) === 0
+                  : item.quantity !== null && (item.redemption_count ?? 0) >= item.quantity
 
               const canAfford = balance >= item.cost
               const disabled = outOfStock || !canAfford
@@ -558,14 +561,14 @@ export default function ShopPage() {
                     )}
 
                     {/* Stock badge */}
-                    {!outOfStock && isBlindbox && (
+                    {!outOfStock && isBlindbox && !isPhysicalBlindbox && (
                       <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full shadow-sm">
                         {item.blindbox_remaining} left
                       </div>
                     )}
-                    {!outOfStock && !isBlindbox && item.quantity !== null && (
+                    {!outOfStock && (!isBlindbox || isPhysicalBlindbox) && item.quantity !== null && (
                       <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm text-gray-700 text-xs font-medium px-2 py-0.5 rounded-full shadow-sm">
-                        {item.quantity - item.redemption_count} left
+                        {item.quantity - (item.redemption_count ?? 0)} left
                       </div>
                     )}
                   </div>
