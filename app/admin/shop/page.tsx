@@ -31,9 +31,14 @@ import type {
 const EMPTY_FORM: ShopItemForm = {
   title: '',
   description: '',
+  details: '',
   cost: '',
   image_url: '',
   quantity: '',
+  category: 'other',
+  commodity_type: 'standard',
+  food_xp: '',
+  target_species: '',
 }
 
 export default function AdminShopPage() {
@@ -53,6 +58,10 @@ export default function AdminShopPage() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+  // Blind box image pool state
+  const [blindboxFiles, setBlindboxFiles] = useState<File[]>([])
+  const [blindboxPreviews, setBlindboxPreviews] = useState<string[]>([])
+  const [uploadingBlindbox, setUploadingBlindbox] = useState(false)
 
   const loadData = useCallback(async () => {
     // Fetch all shop items (active + inactive)
@@ -195,6 +204,18 @@ export default function AdminShopPage() {
     setForm((prev) => ({ ...prev, image_url: '' }))
   }
 
+  function handleBlindboxFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    const valid = files.filter(f => f.type.startsWith('image/') && f.size <= 5 * 1024 * 1024)
+    setBlindboxFiles((prev) => [...prev, ...valid])
+    setBlindboxPreviews((prev) => [...prev, ...valid.map(f => URL.createObjectURL(f))])
+  }
+
+  function removeBlindboxImage(index: number) {
+    setBlindboxFiles((prev) => prev.filter((_, i) => i !== index))
+    setBlindboxPreviews((prev) => prev.filter((_, i) => i !== index))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const validation = validateShopItemForm(form)
@@ -236,9 +257,11 @@ export default function AdminShopPage() {
           .update({
             title: form.title.trim(),
             description: form.description.trim() || null,
+            details: form.details.trim() || null,
             cost: parseInt(form.cost, 10),
             image_url: finalImageUrl,
             quantity: form.quantity.trim() !== '' ? parseInt(form.quantity, 10) : null,
+            commodity_type: form.commodity_type || 'standard',
           })
           .eq('id', editingId)
 
@@ -251,11 +274,44 @@ export default function AdminShopPage() {
         const payload = {
           ...buildShopItemInsert(form, user.id),
           image_url: finalImageUrl,
+          details: form.details.trim() || null,
+          commodity_type: form.commodity_type || 'standard',
         }
-        const { error: insertError } = await supabase.from('shop_items').insert(payload)
-        if (insertError) {
+        const { data: newItem, error: insertError } = await supabase
+          .from('shop_items')
+          .insert(payload)
+          .select('id')
+          .single()
+        if (insertError || !newItem) {
           setError('Failed to create item')
           return
+        }
+
+        // Upload blind box images if commodity_type is blindbox
+        if (form.commodity_type === 'blindbox' && blindboxFiles.length > 0) {
+          setUploadingBlindbox(true)
+          const uploadedUrls: string[] = []
+          for (const file of blindboxFiles) {
+            const fileExt = file.name.split('.').pop()
+            const fileName = `blindbox/${newItem.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+            const { error: uploadErr } = await supabase.storage
+              .from('shop-images')
+              .upload(fileName, file)
+            if (!uploadErr) {
+              const { data: { publicUrl } } = supabase.storage.from('shop-images').getPublicUrl(fileName)
+              uploadedUrls.push(publicUrl)
+            }
+          }
+          setUploadingBlindbox(false)
+
+          if (uploadedUrls.length > 0) {
+            const rows = uploadedUrls.map((url, i) => ({
+              item_id: newItem.id,
+              image_url: url,
+              sort_order: i,
+            }))
+            await supabase.from('blindbox_images').insert(rows)
+          }
         }
       }
 
@@ -263,6 +319,8 @@ export default function AdminShopPage() {
       setEditingId(null)
       setImageFile(null)
       setImagePreview(null)
+      setBlindboxFiles([])
+      setBlindboxPreviews([])
       await loadData()
     } finally {
       setSubmitting(false)
@@ -274,13 +332,19 @@ export default function AdminShopPage() {
     setForm({
       title: item.title,
       description: item.description ?? '',
+      details: (item as any).details ?? '',
       cost: String(item.cost),
       image_url: item.image_url ?? '',
       quantity: item.quantity !== null ? String(item.quantity) : '',
+      category: item.category ?? 'other',
+      commodity_type: item.commodity_type ?? 'standard',
+      food_xp: item.food_xp !== null ? String(item.food_xp) : '',
+      target_species: item.target_species ?? '',
     })
-    // Show existing image as preview (no file selected yet)
     setImageFile(null)
     setImagePreview(item.image_url ?? null)
+    setBlindboxFiles([])
+    setBlindboxPreviews([])
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -369,10 +433,53 @@ export default function AdminShopPage() {
                     maxLength={500}
                     rows={2}
                     className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
-                    placeholder="Optional description"
+                    placeholder="Optional short description"
                   />
                   {formErrors.description && (
                     <p className="text-red-500 text-xs mt-1">{formErrors.description}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Details (collapsible — shown to students)
+                  </label>
+                  <textarea
+                    value={form.details}
+                    onChange={(e) => handleFormChange('details', e.target.value)}
+                    rows={3}
+                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                    placeholder="What students can expect, terms, how to use, etc."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Commodity Type
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['standard', 'blindbox', 'physical'] as const).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => handleFormChange('commodity_type', type)}
+                        className={`py-2 px-3 rounded-xl text-xs font-semibold border-2 transition-colors ${
+                          form.commodity_type === type
+                            ? type === 'blindbox' ? 'border-purple-500 bg-purple-50 text-purple-700'
+                              : type === 'physical' ? 'border-amber-500 bg-amber-50 text-amber-700'
+                              : 'border-primary-500 bg-primary-50 text-primary-700'
+                            : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                        }`}
+                      >
+                        {type === 'standard' ? '🎁 Standard' : type === 'blindbox' ? '🎲 Blind Box' : '📦 Physical'}
+                      </button>
+                    ))}
+                  </div>
+                  {form.commodity_type === 'blindbox' && (
+                    <p className="text-xs text-purple-600 mt-1">Students get a random image from the pool. Each image can only be claimed once.</p>
+                  )}
+                  {form.commodity_type === 'physical' && (
+                    <p className="text-xs text-amber-600 mt-1">You will receive an in-app notification when a student redeems this item.</p>
                   )}
                 </div>
 
@@ -453,15 +560,56 @@ export default function AdminShopPage() {
                   )}
                 </div>
 
+                {/* Blind box image pool */}
+                {form.commodity_type === 'blindbox' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Blind Box Image Pool <span className="text-red-500">*</span>
+                      <span className="text-gray-400 font-normal ml-1">({blindboxPreviews.length} images added)</span>
+                    </label>
+                    <div className="border-2 border-dashed border-purple-300 rounded-xl p-4 bg-purple-50">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleBlindboxFilesChange}
+                        className="hidden"
+                        id="blindbox-images"
+                      />
+                      <label htmlFor="blindbox-images" className="cursor-pointer flex flex-col items-center">
+                        <div className="text-3xl mb-1">🎲</div>
+                        <div className="text-sm text-purple-700 font-medium">Click to add images to the pool</div>
+                        <div className="text-xs text-purple-500 mt-0.5">Each image will be claimed by exactly one student</div>
+                      </label>
+                    </div>
+                    {blindboxPreviews.length > 0 && (
+                      <div className="mt-3 grid grid-cols-4 gap-2">
+                        {blindboxPreviews.map((url, i) => (
+                          <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
+                            <img src={url} alt={`Pool image ${i + 1}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => removeBlindboxImage(i)}
+                              className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center hover:bg-red-600"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex gap-3">
-                  <Button type="submit" disabled={submitting || uploadingImage}>
-                    {uploadingImage ? 'Uploading image…' : submitting ? 'Saving…' : editingId ? 'Save Changes' : 'Create Item'}
+                  <Button type="submit" disabled={submitting || uploadingImage || uploadingBlindbox}>
+                    {uploadingBlindbox ? 'Uploading images…' : uploadingImage ? 'Uploading image…' : submitting ? 'Saving…' : editingId ? 'Save Changes' : 'Create Item'}
                   </Button>
                   {editingId && (
                     <Button
                       type="button"
                       variant="ghost"
-                      onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setImageFile(null); setImagePreview(null) }}
+                      onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setImageFile(null); setImagePreview(null); setBlindboxFiles([]); setBlindboxPreviews([]) }}
                     >
                       Cancel
                     </Button>

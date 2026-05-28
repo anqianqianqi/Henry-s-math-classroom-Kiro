@@ -7,7 +7,8 @@
 // When a teacher increases a grade, the earned side goes up automatically,
 // which increases the wallet balance. No score is ever taken away.
 
-import type { Redemption, ShopItem, ShopItemForm, ShopItemInsert, ValidationResult } from '@/lib/types/shop'
+import type { Redemption, ShopItem, ShopItemCategory, ShopItemForm, ShopItemInsert, ValidationResult, CommodityType } from '@/lib/types/shop'
+import type { Species } from '@/lib/types/pet'
 
 /**
  * Compute the student's spendable balance from raw data.
@@ -96,6 +97,22 @@ export function validateShopItemForm(form: ShopItemForm): ValidationResult {
     errors.image_url = 'Image URL must be 2,048 characters or fewer'
   }
 
+  if (form.category === 'food') {
+    const foodXpNum = parseInt(form.food_xp, 10)
+    if (form.food_xp === '' || form.food_xp === '0' || isNaN(foodXpNum) || foodXpNum < 1 || !Number.isInteger(foodXpNum)) {
+      errors.food_xp = 'Food XP is required and must be a whole number between 1 and 500'
+    } else if (foodXpNum > 500) {
+      errors.food_xp = 'Food XP must be 500 or fewer'
+    }
+  }
+
+  if (form.category === 'pet') {
+    const validSpecies = ['dragon', 'fox', 'cat']
+    if (!form.target_species || !validSpecies.includes(form.target_species)) {
+      errors.target_species = 'Target species is required and must be dragon, fox, or cat'
+    }
+  }
+
   return { valid: Object.keys(errors).length === 0, errors }
 }
 
@@ -120,11 +137,16 @@ export function buildShopItemInsert(
   return {
     title: form.title.trim(),
     description: form.description.trim() || null,
+    details: form.details?.trim() || null,
     cost: parseInt(form.cost, 10),
     image_url: form.image_url.trim() || null,
     quantity: form.quantity.trim() !== '' ? parseInt(form.quantity, 10) : null,
     is_active: true,
     created_by: teacherId,
+    category: (form.category || 'other') as ShopItemCategory,
+    commodity_type: (form.commodity_type || 'standard') as CommodityType,
+    food_xp: form.category === 'food' ? parseInt(form.food_xp, 10) : null,
+    target_species: form.category === 'pet' ? form.target_species as Species : null,
   }
 }
 

@@ -1,18 +1,23 @@
 // app/api/shop/redeem/route.ts
 // Atomic redemption API route.
-// Validates auth, calls the redeem_item() Supabase RPC, maps errors to HTTP responses.
-//
-// NOTE: This route never modifies challenge_submissions.points.
-// Student scores only increase (when teacher grades). Spending only
-// inserts into the redemptions table.
+// Routes to the correct RPC based on commodity_type:
+//   standard / food / pet → redeem_item_v2
+//   blindbox              → redeem_blindbox (returns image_url)
+//   physical              → redeem_physical (notifies teacher)
 
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
+function mapRpcError(msg: string) {
+  if (msg.includes('insufficient_balance')) return { error: 'Insufficient balance', status: 400 }
+  if (msg.includes('out_of_stock'))         return { error: 'Item is out of stock', status: 400 }
+  if (msg.includes('item_not_found'))       return { error: 'Item not found or inactive', status: 400 }
+  return null
+}
+
 export async function POST(request: Request) {
   try {
-    // Parse and validate request body
     let body: { item_id?: string }
     try {
       body = await request.json()
@@ -24,39 +29,80 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'item_id is required' }, { status: 400 })
     }
 
-    // Create server-side Supabase client and verify session
     const supabase = createRouteHandlerClient({ cookies })
     const { data: { session } } = await supabase.auth.getSession()
-
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Call the atomic RPC — balance check, quantity check, and insert
-    // happen in a single Postgres transaction (no race conditions)
-    const { error } = await supabase.rpc('redeem_item', {
+    // Look up commodity_type to route to the right RPC
+    const { data: item, error: itemError } = await supabase
+      .from('shop_items')
+      .select('commodity_type')
+      .eq('id', body.item_id)
+      .eq('is_active', true)
+      .single()
+
+    if (itemError || !item) {
+      return NextResponse.json({ error: 'Item not found or inactive' }, { status: 400 })
+    }
+
+    const commodityType = item.commodity_type ?? 'standard'
+
+    // ── Blind box ──────────────────────────────────────────────────────────
+    if (commodityType === 'blindbox') {
+      const { data, error } = await supabase.rpc('redeem_blindbox', {
+        p_item_id: body.item_id,
+      })
+      if (error) {
+        const mapped = mapRpcError(error.message ?? '')
+        if (mapped) return NextResponse.json({ error: mapped.error }, { status: mapped.status })
+        console.error('[shop/redeem] blindbox RPC error:', error)
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      }
+      // data contains { success, image_id, image_url }
+      return NextResponse.json({
+        success: true,
+        commodity_type: 'blindbox',
+        image_url: (data as any)?.image_url ?? null,
+        image_id: (data as any)?.image_id ?? null,
+      }, { status: 200 })
+    }
+
+    // ── Physical prize ─────────────────────────────────────────────────────
+    if (commodityType === 'physical') {
+      const { error } = await supabase.rpc('redeem_physical', {
+        p_item_id: body.item_id,
+      })
+      if (error) {
+        const mapped = mapRpcError(error.message ?? '')
+        if (mapped) return NextResponse.json({ error: mapped.error }, { status: mapped.status })
+        console.error('[shop/redeem] physical RPC error:', error)
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      }
+      return NextResponse.json({
+        success: true,
+        commodity_type: 'physical',
+      }, { status: 200 })
+    }
+
+    // ── Standard / food / pet ──────────────────────────────────────────────
+    const { data, error } = await supabase.rpc('redeem_item_v2', {
       p_item_id: body.item_id,
     })
-
     if (error) {
-      // Map Postgres exception messages to user-friendly HTTP responses
-      const msg = error.message ?? ''
-
-      if (msg.includes('insufficient_balance')) {
-        return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 })
-      }
-      if (msg.includes('out_of_stock')) {
-        return NextResponse.json({ error: 'Item is out of stock' }, { status: 400 })
-      }
-      if (msg.includes('item_not_found')) {
-        return NextResponse.json({ error: 'Item not found or inactive' }, { status: 400 })
-      }
-
-      console.error('[shop/redeem] Unexpected RPC error:', error)
+      const mapped = mapRpcError(error.message ?? '')
+      if (mapped) return NextResponse.json({ error: mapped.error }, { status: mapped.status })
+      console.error('[shop/redeem] standard RPC error:', error)
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true }, { status: 200 })
+    return NextResponse.json({
+      success: true,
+      commodity_type: 'standard',
+      ...(data as any),
+    }, { status: 200 })
+
   } catch (err) {
     console.error('[shop/redeem] Unhandled error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
