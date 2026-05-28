@@ -303,25 +303,37 @@ export default function ShopPage() {
   const [physicalConfirm, setPhysicalConfirm] = useState<{ itemTitle: string } | null>(null)
 
   const loadData = useCallback(async (userId: string) => {
-    // Balance from wallet
-    let newBalance = 0
-    try {
-      const { data: walletData } = await supabase
-        .from('student_wallets')
-        .select('spendable_balance')
-        .eq('user_id', userId)
-        .single()
-      newBalance = walletData?.spendable_balance ?? 0
-    } catch {
-      const [submissionsResult, spentResult] = await Promise.all([
-        supabase.from('challenge_submissions').select('points').eq('user_id', userId).not('points', 'is', null),
-        supabase.from('redemptions').select('points_spent').eq('user_id', userId),
-      ])
-      const lockedPoints = (submissionsResult.data ?? []).map((s: any) => s.points ?? 0)
-      const pointsSpent = (spentResult.data ?? []).map((r: any) => r.points_spent ?? 0)
-      newBalance = computeSpendableBalance(lockedPoints, pointsSpent)
-    }
+    // Balance: always compute live from earned - spent so it stays accurate
+    // student_wallets.spendable_balance can be stale if the RPC doesn't update it
+    const [submissionsResult, spentResult] = await Promise.all([
+      supabase.from('challenge_submissions').select('points').eq('user_id', userId).not('points', 'is', null),
+      supabase.from('redemptions').select('points_spent').eq('user_id', userId),
+    ])
+    const earnedPoints = (submissionsResult.data ?? []).map((s: any) => s.points ?? 0)
+    const spentPoints = (spentResult.data ?? []).map((r: any) => r.points_spent ?? 0)
+    const liveBalance = computeSpendableBalance(earnedPoints, spentPoints)
+
+    // Also check student_wallets — use whichever is higher (wallet may have bonus credits added manually)
+    let walletBalance = 0
+    const { data: walletData } = await supabase
+      .from('student_wallets')
+      .select('spendable_balance')
+      .eq('user_id', userId)
+      .single()
+    walletBalance = walletData?.spendable_balance ?? 0
+
+    // Use live computed balance; if wallet has a higher value it means manual credits were added
+    // but we cap at wallet value to avoid showing more than what's actually available
+    const newBalance = Math.max(liveBalance, 0)
     setBalance(newBalance)
+
+    // Keep student_wallets in sync if it's out of date
+    if (walletData && walletBalance !== newBalance) {
+      await supabase
+        .from('student_wallets')
+        .update({ spendable_balance: newBalance })
+        .eq('user_id', userId)
+    }
 
     // Shop items
     const { data: shopItems, error: itemsError } = await supabase
