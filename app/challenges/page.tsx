@@ -337,24 +337,33 @@ export default function ChallengesPage() {
       .select('*', { count: 'exact', head: true })
       .eq('challenge_id', challengeId)
 
-    // Get total students in assigned classes
-    const { data: assignments } = await supabase
+    // Get total students: class-assigned + individually assigned (deduplicated)
+    const { data: classAssignments } = await supabase
       .from('challenge_assignments')
       .select('class_id')
       .eq('challenge_id', challengeId)
 
-    let totalStudents = 0
-    if (assignments && assignments.length > 0) {
-      const classIds = assignments.map(a => a.class_id)
-      const { count } = await supabase
+    // Collect all student IDs from class assignments
+    const classStudentIds = new Set<string>()
+    if (classAssignments && classAssignments.length > 0) {
+      const classIds = classAssignments.map(a => a.class_id)
+      const { data: classMembers } = await supabase
         .from('class_members')
-        .select('*', { count: 'exact', head: true })
+        .select('user_id')
         .in('class_id', classIds)
-      
-      totalStudents = count || 0
+      for (const m of classMembers || []) classStudentIds.add(m.user_id)
     }
 
-    const completionRate = totalStudents > 0 
+    // Collect individually assigned student IDs
+    const { data: individualAssignments } = await supabase
+      .from('challenge_student_assignments')
+      .select('student_id')
+      .eq('challenge_id', challengeId)
+    for (const a of individualAssignments || []) classStudentIds.add(a.student_id)
+
+    const totalStudents = classStudentIds.size
+
+    const completionRate = totalStudents > 0
       ? Math.round(((submissionCount || 0) / totalStudents) * 100)
       : 0
 
