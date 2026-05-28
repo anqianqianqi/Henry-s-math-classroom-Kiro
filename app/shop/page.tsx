@@ -145,34 +145,47 @@ function BlindBoxView({
   imageUrl,
   itemTitle,
   onClose,
+  isPhysical = false,
 }: {
   imageUrl: string
   itemTitle: string
   onClose: () => void
+  isPhysical?: boolean
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center">
         <p className="text-sm font-semibold text-primary-500 uppercase tracking-widest mb-4">
-          🎁 {itemTitle}
+          {isPhysical ? '📦' : '🎁'} {itemTitle}
         </p>
         <div className="rounded-2xl overflow-hidden shadow-lg mb-6" style={{ width: 200, height: 200, margin: '0 auto 24px' }}>
           <img src={imageUrl} alt="Your blind box reward" className="w-full h-full object-cover" />
         </div>
-        <p className="text-sm text-gray-500 mb-6">Your exclusive prize — download it anytime!</p>
+        {isPhysical ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-left">
+            <p className="text-amber-800 text-sm font-semibold mb-1">📬 Physical item</p>
+            <p className="text-amber-700 text-xs leading-relaxed">
+              Please <strong>ping Henry</strong> to arrange pickup or delivery of your prize!
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500 mb-6">Your exclusive prize — download it anytime!</p>
+        )}
         <div className="flex gap-3">
-          <a
-            href={imageUrl}
-            download
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 bg-primary-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-primary-700 transition-colors text-center"
-          >
-            ⬇ Download
-          </a>
+          {!isPhysical && (
+            <a
+              href={imageUrl}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 bg-primary-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-primary-700 transition-colors text-center"
+            >
+              ⬇ Download
+            </a>
+          )}
           <button
             onClick={onClose}
-            className="flex-1 bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-200 transition-colors"
+            className={`${isPhysical ? 'w-full' : 'flex-1'} bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-200 transition-colors`}
           >
             Close
           </button>
@@ -265,7 +278,7 @@ export default function ShopPage() {
 
   // Modals
   const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrl: string; itemTitle: string; isPhysical?: boolean } | null>(null)
-  const [blindboxView, setBlindboxView] = useState<{ imageUrl: string; itemTitle: string } | null>(null)
+  const [blindboxView, setBlindboxView] = useState<{ imageUrl: string; itemTitle: string; isPhysical?: boolean } | null>(null)
   const [physicalConfirm, setPhysicalConfirm] = useState<{ itemTitle: string } | null>(null)
 
   const loadData = useCallback(async (userId: string) => {
@@ -373,15 +386,29 @@ export default function ShopPage() {
       .eq('user_id', userId)
       .order('redeemed_at', { ascending: false })
 
-    // Fetch claimed blind box images for this student (from blindbox_claims)
+    // Fetch claimed blind box images for this student (from blindbox_claims for digital blindbox)
     const { data: claimedImages } = await supabase
       .from('blindbox_claims')
       .select('item_id, image_id, blindbox_images(image_url)')
       .eq('student_id', userId)
       .order('claimed_at', { ascending: false })
 
+    // Also fetch physical_blindbox claimed images (stored directly on blindbox_images.claimed_by)
+    const { data: physicalClaimedImages } = await supabase
+      .from('blindbox_images')
+      .select('item_id, image_url')
+      .eq('claimed_by', userId)
+      .eq('is_claimed', true)
+
     // For redemption history: show the most recently claimed image per item
     const claimedImageMap: Record<string, string> = {}
+    // Physical blindbox images (from blindbox_images.claimed_by)
+    for (const img of physicalClaimedImages ?? []) {
+      if (img.image_url && !claimedImageMap[img.item_id]) {
+        claimedImageMap[img.item_id] = img.image_url
+      }
+    }
+    // Digital blindbox images (from blindbox_claims)
     for (const claim of claimedImages ?? []) {
       const url = (claim as any).blindbox_images?.image_url
       if (url && !claimedImageMap[claim.item_id]) {
@@ -490,6 +517,7 @@ export default function ShopPage() {
         <BlindBoxView
           imageUrl={blindboxView.imageUrl}
           itemTitle={blindboxView.itemTitle}
+          isPhysical={blindboxView.isPhysical}
           onClose={() => setBlindboxView(null)}
         />
       )}
@@ -709,7 +737,7 @@ export default function ShopPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       {(r.item_commodity_type === 'blindbox' || r.item_commodity_type === 'physical_blindbox') && r.blindbox_image_url && (
                         <button
-                          onClick={() => setBlindboxView({ imageUrl: r.blindbox_image_url!, itemTitle: r.item_title })}
+                          onClick={() => setBlindboxView({ imageUrl: r.blindbox_image_url!, itemTitle: r.item_title, isPhysical: r.item_commodity_type === 'physical_blindbox' })}
                           className="text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg transition-colors"
                         >
                           View Prize
