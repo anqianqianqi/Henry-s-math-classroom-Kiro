@@ -897,6 +897,7 @@ export default function AdminShopPage() {
                       <tr className="text-left text-gray-500 border-b border-gray-100">
                         <th className="pb-2 pr-4 font-medium">Student</th>
                         <th className="pb-2 pr-4 font-medium">Item</th>
+                        <th className="pb-2 pr-4 font-medium">Prize</th>
                         <th className="pb-2 pr-4 font-medium">Points</th>
                         <th className="pb-2 font-medium">Date</th>
                       </tr>
@@ -907,7 +908,34 @@ export default function AdminShopPage() {
                           <td className="py-2 pr-4 font-medium text-gray-900">
                             {r.student_name}
                           </td>
-                          <td className="py-2 pr-4 text-gray-700">{r.item_title}</td>
+                          <td className="py-2 pr-4 text-gray-700">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span>{r.item_title}</span>
+                              {r.item_commodity_type === 'blindbox' && (
+                                <span className="text-[10px] font-semibold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">🎁 Blind Box</span>
+                              )}
+                              {r.item_commodity_type === 'physical_blindbox' && (
+                                <span className="text-[10px] font-semibold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full">📦🎲 Physical Box</span>
+                              )}
+                              {r.item_commodity_type === 'physical' && (
+                                <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">📦 Physical</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2 pr-4">
+                            {r.blindbox_image_url ? (
+                              <a href={r.blindbox_image_url} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={r.blindbox_image_url}
+                                  alt="Prize"
+                                  className="w-10 h-10 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity"
+                                  title="Click to view full size"
+                                />
+                              </a>
+                            ) : (
+                              <span className="text-gray-300 text-xs">—</span>
+                            )}
+                          </td>
                           <td className="py-2 pr-4 text-primary-600 font-semibold">
                             -{r.points_spent}
                           </td>
