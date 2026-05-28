@@ -289,20 +289,36 @@ export default function ShopPage() {
       countMap[r.item_id] = (countMap[r.item_id] ?? 0) + 1
     }
 
-    // Blind box remaining counts
+    // Blind box remaining counts — per-student: total pool minus what THIS student has claimed
     const blindboxIds = (shopItems ?? [])
       .filter((i: any) => i.commodity_type === 'blindbox' || i.commodity_type === 'physical_blindbox')
       .map((i: any) => i.id)
 
     const remainingMap: Record<string, number> = {}
     if (blindboxIds.length > 0) {
-      const { data: bbCounts } = await supabase
+      // Total pool size per item
+      const { data: poolCounts } = await supabase
         .from('blindbox_images')
         .select('item_id')
         .in('item_id', blindboxIds)
-        .eq('is_claimed', false)
-      for (const r of bbCounts ?? []) {
-        remainingMap[r.item_id] = (remainingMap[r.item_id] ?? 0) + 1
+      const poolMap: Record<string, number> = {}
+      for (const r of poolCounts ?? []) {
+        poolMap[r.item_id] = (poolMap[r.item_id] ?? 0) + 1
+      }
+
+      // How many this student has already claimed
+      const { data: studentClaims } = await supabase
+        .from('blindbox_claims')
+        .select('item_id')
+        .in('item_id', blindboxIds)
+        .eq('student_id', userId)
+      const claimedCountMap: Record<string, number> = {}
+      for (const r of studentClaims ?? []) {
+        claimedCountMap[r.item_id] = (claimedCountMap[r.item_id] ?? 0) + 1
+      }
+
+      for (const id of blindboxIds) {
+        remainingMap[id] = (poolMap[id] ?? 0) - (claimedCountMap[id] ?? 0)
       }
     }
 
@@ -321,15 +337,20 @@ export default function ShopPage() {
       .eq('user_id', userId)
       .order('redeemed_at', { ascending: false })
 
-    // Fetch claimed blind box images for this student
+    // Fetch claimed blind box images for this student (from blindbox_claims)
     const { data: claimedImages } = await supabase
-      .from('blindbox_images')
-      .select('item_id, image_url')
-      .eq('claimed_by', userId)
+      .from('blindbox_claims')
+      .select('item_id, image_id, blindbox_images(image_url)')
+      .eq('student_id', userId)
+      .order('claimed_at', { ascending: false })
 
+    // For redemption history: show the most recently claimed image per item
     const claimedImageMap: Record<string, string> = {}
-    for (const img of claimedImages ?? []) {
-      claimedImageMap[img.item_id] = img.image_url
+    for (const claim of claimedImages ?? []) {
+      const url = (claim as any).blindbox_images?.image_url
+      if (url && !claimedImageMap[claim.item_id]) {
+        claimedImageMap[claim.item_id] = url
+      }
     }
 
     setRedemptions(
