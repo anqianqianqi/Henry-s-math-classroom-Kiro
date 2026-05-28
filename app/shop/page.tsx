@@ -381,57 +381,13 @@ export default function ShopPage() {
       }))
     )
 
-    // Redemption history with item details
-    const { data: history } = await supabase
-      .from('redemptions')
-      .select('*, shop_items(title, commodity_type)')
-      .eq('user_id', userId)
-      .order('redeemed_at', { ascending: false })
-
-    // Fetch claimed blind box images for this student (from blindbox_claims for digital blindbox)
-    const { data: claimedImages } = await supabase
-      .from('blindbox_claims')
-      .select('item_id, image_id, blindbox_images(image_url)')
-      .eq('student_id', userId)
-      .order('claimed_at', { ascending: false })
-
-    // Also fetch physical_blindbox claimed images (stored directly on blindbox_images.claimed_by)
-    const { data: physicalClaimedImages } = await supabase
-      .from('blindbox_images')
-      .select('item_id, image_url')
-      .eq('claimed_by', userId)
-      .eq('is_claimed', true)
-
-    // For redemption history: show the most recently claimed image per item
-    const claimedImageMap: Record<string, string> = {}
-    // Physical blindbox images (from blindbox_images.claimed_by)
-    for (const img of physicalClaimedImages ?? []) {
-      if (img.image_url && !claimedImageMap[img.item_id]) {
-        claimedImageMap[img.item_id] = img.image_url
-      }
+    // Redemption history — fetched via server route so item titles resolve
+    // even when items have been deactivated (bypasses student RLS on shop_items)
+    const redemptionsRes = await fetch('/api/shop/redemptions')
+    if (redemptionsRes.ok) {
+      const redemptionsData = await redemptionsRes.json()
+      setRedemptions(redemptionsData.redemptions ?? [])
     }
-    // Digital blindbox images (from blindbox_claims)
-    for (const claim of claimedImages ?? []) {
-      const url = (claim as any).blindbox_images?.image_url
-      if (url && !claimedImageMap[claim.item_id]) {
-        claimedImageMap[claim.item_id] = url
-      }
-    }
-
-    setRedemptions(
-      (history ?? []).map((r: any) => ({
-        id: r.id,
-        user_id: r.user_id,
-        item_id: r.item_id,
-        points_spent: r.points_spent,
-        redeemed_at: r.redeemed_at,
-        item_title: r.shop_items?.title ?? 'Unknown item',
-        item_commodity_type: r.shop_items?.commodity_type ?? 'standard',
-        blindbox_image_url: (r.shop_items?.commodity_type === 'blindbox' || r.shop_items?.commodity_type === 'physical_blindbox')
-          ? (claimedImageMap[r.item_id] ?? null)
-          : null,
-      }))
-    )
   }, [supabase])
 
   useEffect(() => {
