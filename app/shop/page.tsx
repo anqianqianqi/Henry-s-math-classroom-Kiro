@@ -29,10 +29,12 @@ function BlindBoxReveal({
   imageUrl,
   itemTitle,
   onClose,
+  isPhysical = false,
 }: {
   imageUrl: string
   itemTitle: string
   onClose: () => void
+  isPhysical?: boolean
 }) {
   const [phase, setPhase] = useState<'shake' | 'open' | 'reveal'>('shake')
 
@@ -79,22 +81,36 @@ function BlindBoxReveal({
         {phase === 'reveal' ? (
           <>
             <p className="text-lg font-bold text-gray-900 mb-1">You got it! 🎉</p>
-            <p className="text-sm text-gray-500 mb-6">Download your exclusive image below.</p>
+            {isPhysical ? (
+              <>
+                <p className="text-sm text-gray-500 mb-3">Here&apos;s a preview of your physical prize!</p>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-left">
+                  <p className="text-amber-800 text-sm font-semibold mb-1">📬 How to pick up your item</p>
+                  <p className="text-amber-700 text-xs leading-relaxed">
+                    This is a physical item — please <strong>ping Henry</strong> to arrange pickup or delivery!
+                  </p>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500 mb-6">Download your exclusive image below.</p>
+            )}
             <div className="flex gap-3">
-              <a
-                href={imageUrl}
-                download
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 bg-primary-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-primary-700 transition-colors text-center"
-              >
-                ⬇ Download
-              </a>
+              {!isPhysical && (
+                <a
+                  href={imageUrl}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 bg-primary-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-primary-700 transition-colors text-center"
+                >
+                  ⬇ Download
+                </a>
+              )}
               <button
                 onClick={onClose}
-                className="flex-1 bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-200 transition-colors"
+                className={`${isPhysical ? 'w-full' : 'flex-1'} bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-200 transition-colors`}
               >
-                Close
+                {isPhysical ? 'Got it!' : 'Close'}
               </button>
             </div>
           </>
@@ -248,7 +264,7 @@ export default function ShopPage() {
   const [redeemErrors, setRedeemErrors] = useState<Record<string, string>>({})
 
   // Modals
-  const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrl: string; itemTitle: string } | null>(null)
+  const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrl: string; itemTitle: string; isPhysical?: boolean } | null>(null)
   const [blindboxView, setBlindboxView] = useState<{ imageUrl: string; itemTitle: string } | null>(null)
   const [physicalConfirm, setPhysicalConfirm] = useState<{ itemTitle: string } | null>(null)
 
@@ -405,9 +421,8 @@ export default function ShopPage() {
         // Show appropriate modal
         if (data.commodity_type === 'blindbox' && data.image_url) {
           setBlindboxReveal({ imageUrl: data.image_url, itemTitle: item.title })
-        } else if (data.commodity_type === 'physical_blindbox') {
-          // Physical blind box: show pickup note, no download
-          setPhysicalConfirm({ itemTitle: item.title })
+        } else if (data.commodity_type === 'physical_blindbox' && data.image_url) {
+          setBlindboxReveal({ imageUrl: data.image_url, itemTitle: item.title, isPhysical: true })
         } else if (data.commodity_type === 'physical') {
           setPhysicalConfirm({ itemTitle: item.title })
         }
@@ -439,6 +454,7 @@ export default function ShopPage() {
         <BlindBoxReveal
           imageUrl={blindboxReveal.imageUrl}
           itemTitle={blindboxReveal.itemTitle}
+          isPhysical={blindboxReveal.isPhysical}
           onClose={() => setBlindboxReveal(null)}
         />
       )}
