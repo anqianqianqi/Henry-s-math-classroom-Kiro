@@ -76,11 +76,23 @@ export default function AdminShopPage() {
     }
     setItems(shopItems ?? [])
 
-    // Fetch all redemptions with student name and item title
+    // Fetch all redemptions with student name, item title, and commodity type
     const { data: redemptionData } = await supabase
       .from('redemptions')
-      .select('*, profiles(first_name, last_name), shop_items(title)')
+      .select('*, profiles(first_name, last_name), shop_items(title, commodity_type)')
       .order('redeemed_at', { ascending: false })
+
+    // Fetch all claimed blind box images (teacher can see all via RLS)
+    const { data: claimedImages } = await supabase
+      .from('blindbox_images')
+      .select('item_id, claimed_by, image_url')
+      .eq('is_claimed', true)
+
+    // Build a map: `${item_id}:${user_id}` → image_url
+    const claimedImageMap: Record<string, string> = {}
+    for (const img of claimedImages ?? []) {
+      claimedImageMap[`${img.item_id}:${img.claimed_by}`] = img.image_url
+    }
 
     setRedemptions(
       (redemptionData ?? []).map((r: any) => ({
@@ -93,6 +105,10 @@ export default function AdminShopPage() {
           [r.profiles?.first_name, r.profiles?.last_name].filter(Boolean).join(' ') ||
           'Unknown student',
         item_title: r.shop_items?.title ?? 'Unknown item',
+        item_commodity_type: r.shop_items?.commodity_type ?? 'standard',
+        blindbox_image_url: r.shop_items?.commodity_type === 'blindbox'
+          ? (claimedImageMap[`${r.item_id}:${r.user_id}`] ?? null)
+          : null,
       }))
     )
 

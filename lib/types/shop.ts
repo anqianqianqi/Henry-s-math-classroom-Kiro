@@ -40,6 +40,8 @@ export interface Redemption {
 export interface RedemptionWithDetails extends Redemption {
   student_name: string
   item_title: string
+  item_commodity_type?: string
+  blindbox_image_url?: string | null
 }
 
 export interface StudentBalance {
