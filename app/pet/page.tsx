@@ -435,8 +435,8 @@ export default function PetPage() {
       )}
 
       <main className="max-w-2xl mx-auto px-4 py-8 sm:px-6">
-        {/* Header row: back button + title + restart */}
-        <div className="flex items-center justify-between mb-4">
+        {/* Header row: back button + title */}
+        <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => router.push('/dashboard')}
             className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"
@@ -444,13 +444,6 @@ export default function PetPage() {
             ← Dashboard
           </button>
           <h1 className="text-2xl font-bold text-gray-900">My Pet 🐾</h1>
-          <button
-            onClick={() => setShowRestartConfirm(true)}
-            className="text-xs text-gray-400 hover:text-red-500 transition-colors font-medium"
-            title="Reset pet to egg"
-          >
-            🔄 Restart
-          </button>
         </div>
 
         {/* Balance + Shop link — visible regardless of evolution stage */}
@@ -671,6 +664,16 @@ export default function PetPage() {
             </section>
           </>
         )}
+
+        {/* Start over — tucked at the bottom, low-key */}
+        <div className="mt-10 pt-6 border-t border-gray-100 flex justify-center">
+          <button
+            onClick={() => setShowRestartConfirm(true)}
+            className="text-sm text-gray-400 hover:text-gray-600 transition-colors underline underline-offset-2"
+          >
+            Start over from egg
+          </button>
+        </div>
       </main>
     </div>
   )
