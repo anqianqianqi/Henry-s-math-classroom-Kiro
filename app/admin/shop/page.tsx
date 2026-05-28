@@ -62,6 +62,9 @@ export default function AdminShopPage() {
   const [blindboxFiles, setBlindboxFiles] = useState<File[]>([])
   const [blindboxPreviews, setBlindboxPreviews] = useState<string[]>([])
   const [uploadingBlindbox, setUploadingBlindbox] = useState(false)
+  // Existing blindbox images (when editing)
+  const [existingBlindboxImages, setExistingBlindboxImages] = useState<Array<{id: string; image_url: string}>>([])
+  const [removedBlindboxIds, setRemovedBlindboxIds] = useState<string[]>([])
 
   const loadData = useCallback(async () => {
     // Fetch all shop items (active + inactive)
@@ -285,6 +288,60 @@ export default function AdminShopPage() {
           setError('Failed to update item')
           return
         }
+
+        // Handle blindbox image pool changes when editing
+        if (form.commodity_type === 'blindbox' || form.commodity_type === 'physical_blindbox') {
+          // Remove deleted images
+          if (removedBlindboxIds.length > 0) {
+            await supabase.from('blindbox_images').delete().in('id', removedBlindboxIds)
+          }
+          // Upload new images
+          if (blindboxFiles.length > 0) {
+            setUploadingBlindbox(true)
+            const uploadedUrls: string[] = []
+            const currentMax = existingBlindboxImages.filter(img => !removedBlindboxIds.includes(img.id)).length
+            for (const file of blindboxFiles) {
+              const fileExt = file.name.split('.').pop()
+              const fileName = `blindbox/${editingId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+              const { error: uploadErr } = await supabase.storage.from('shop-images').upload(fileName, file)
+              if (!uploadErr) {
+                const { data: { publicUrl } } = supabase.storage.from('shop-images').getPublicUrl(fileName)
+                uploadedUrls.push(publicUrl)
+              }
+            }
+            setUploadingBlindbox(false)
+            if (uploadedUrls.length > 0) {
+              const rows = uploadedUrls.map((url, i) => ({
+                item_id: editingId,
+                image_url: url,
+                sort_order: currentMax + i,
+              }))
+              await supabase.from('blindbox_images').insert(rows)
+            }
+          }
+        }
+
+        // Remove blindbox images that were marked for deletion
+        if (removedBlindboxIds.length > 0) {
+          await supabase.from('blindbox_images').delete().in('id', removedBlindboxIds)
+        }
+
+        // Upload new blindbox images if any were added
+        if ((form.commodity_type === 'blindbox' || form.commodity_type === 'physical_blindbox') && blindboxFiles.length > 0) {
+          setUploadingBlindbox(true)
+          const existingCount = existingBlindboxImages.filter(img => !removedBlindboxIds.includes(img.id)).length
+          for (let i = 0; i < blindboxFiles.length; i++) {
+            const file = blindboxFiles[i]
+            const fileExt = file.name.split('.').pop()
+            const fileName = `blindbox/${editingId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+            const { error: uploadErr } = await supabase.storage.from('shop-images').upload(fileName, file)
+            if (!uploadErr) {
+              const { data: { publicUrl } } = supabase.storage.from('shop-images').getPublicUrl(fileName)
+              await supabase.from('blindbox_images').insert({ item_id: editingId, image_url: publicUrl, sort_order: existingCount + i })
+            }
+          }
+          setUploadingBlindbox(false)
+        }
       } else {
         // Create new item — override image_url with uploaded URL
         const payload = {
@@ -337,6 +394,8 @@ export default function AdminShopPage() {
       setImagePreview(null)
       setBlindboxFiles([])
       setBlindboxPreviews([])
+      setExistingBlindboxImages([])
+      setRemovedBlindboxIds([])
       await loadData()
     } finally {
       setSubmitting(false)
@@ -361,6 +420,21 @@ export default function AdminShopPage() {
     setImagePreview(item.image_url ?? null)
     setBlindboxFiles([])
     setBlindboxPreviews([])
+    setRemovedBlindboxIds([])
+    setExistingBlindboxImages([])
+
+    // Fetch existing blindbox images if applicable
+    if (item.commodity_type === 'blindbox' || item.commodity_type === 'physical_blindbox') {
+      supabase
+        .from('blindbox_images')
+        .select('id, image_url')
+        .eq('item_id', item.id)
+        .order('sort_order', { ascending: true })
+        .then(({ data }) => {
+          setExistingBlindboxImages(data ?? [])
+        })
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -554,19 +628,34 @@ export default function AdminShopPage() {
                     Image (optional)
                   </label>
                   {imagePreview ? (
-                    <div className="relative">
-                      <img
-                        src={imagePreview}
-                        alt="Item preview"
-                        className="w-full h-40 object-cover rounded-xl mb-2"
-                      />
-                      <button
-                        type="button"
-                        onClick={clearImage}
-                        className="absolute top-2 right-2 px-2 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600"
-                      >
-                        Remove
-                      </button>
+                    <div className="flex items-start gap-3">
+                      <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 shrink-0">
+                        <img
+                          src={imagePreview}
+                          alt="Item preview"
+                          className="w-full h-full object-contain bg-gray-50"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <p className="text-xs text-gray-500">Current image</p>
+                        <button
+                          type="button"
+                          onClick={clearImage}
+                          className="px-2 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 w-fit"
+                        >
+                          Remove
+                        </button>
+                        <label htmlFor="shop-item-image" className="cursor-pointer px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-lg hover:bg-gray-200 w-fit">
+                          Replace
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="hidden"
+                            id="shop-item-image"
+                          />
+                        </label>
+                      </div>
                     </div>
                   ) : (
                     <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center">
@@ -593,8 +682,45 @@ export default function AdminShopPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Blind Box Image Pool <span className="text-red-500">*</span>
-                      <span className="text-gray-400 font-normal ml-1">({blindboxPreviews.length} images added)</span>
+                      <span className="text-gray-400 font-normal ml-1">
+                        ({existingBlindboxImages.filter(img => !removedBlindboxIds.includes(img.id)).length + blindboxPreviews.length} images in pool)
+                      </span>
                     </label>
+
+                    {/* Existing images from DB */}
+                    {existingBlindboxImages.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-xs text-gray-500 mb-2">Current pool images:</p>
+                        <div className="grid grid-cols-4 gap-2">
+                          {existingBlindboxImages.map((img) => {
+                            const isRemoved = removedBlindboxIds.includes(img.id)
+                            return (
+                              <div key={img.id} className={`relative aspect-square rounded-lg overflow-hidden border ${isRemoved ? 'border-red-300 opacity-40' : 'border-gray-200'}`}>
+                                <img src={img.image_url} alt="Pool image" className="w-full h-full object-cover" />
+                                {isRemoved ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setRemovedBlindboxIds(prev => prev.filter(id => id !== img.id))}
+                                    className="absolute inset-0 flex items-center justify-center bg-red-100/80 text-red-600 text-xs font-semibold"
+                                  >
+                                    Undo
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setRemovedBlindboxIds(prev => [...prev, img.id])}
+                                    className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center hover:bg-red-600"
+                                  >
+                                    ×
+                                  </button>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="border-2 border-dashed border-purple-300 rounded-xl p-4 bg-purple-50">
                       <input
                         type="file"
@@ -606,15 +732,15 @@ export default function AdminShopPage() {
                       />
                       <label htmlFor="blindbox-images" className="cursor-pointer flex flex-col items-center">
                         <div className="text-3xl mb-1">🎲</div>
-                        <div className="text-sm text-purple-700 font-medium">Click to add images to the pool</div>
+                        <div className="text-sm text-purple-700 font-medium">Click to add more images to the pool</div>
                         <div className="text-xs text-purple-500 mt-0.5">Each image will be claimed by exactly one student</div>
                       </label>
                     </div>
                     {blindboxPreviews.length > 0 && (
                       <div className="mt-3 grid grid-cols-4 gap-2">
                         {blindboxPreviews.map((url, i) => (
-                          <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
-                            <img src={url} alt={`Pool image ${i + 1}`} className="w-full h-full object-cover" />
+                          <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-purple-200">
+                            <img src={url} alt={`New pool image ${i + 1}`} className="w-full h-full object-cover" />
                             <button
                               type="button"
                               onClick={() => removeBlindboxImage(i)}
@@ -637,7 +763,7 @@ export default function AdminShopPage() {
                     <Button
                       type="button"
                       variant="ghost"
-                      onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setImageFile(null); setImagePreview(null); setBlindboxFiles([]); setBlindboxPreviews([]) }}
+                      onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setImageFile(null); setImagePreview(null); setBlindboxFiles([]); setBlindboxPreviews([]); setExistingBlindboxImages([]); setRemovedBlindboxIds([]) }}
                     >
                       Cancel
                     </Button>
