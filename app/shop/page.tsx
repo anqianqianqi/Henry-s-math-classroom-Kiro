@@ -220,6 +220,11 @@ function CommodityBadge({ type }: { type: string }) {
       📦 Physical
     </span>
   )
+  if (type === 'physical_blindbox') return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-gradient-to-r from-purple-100 to-amber-100 text-purple-700 px-1.5 py-0.5 rounded-full">
+      🎁📦 Physical Blind Box
+    </span>
+  )
   return null
 }
 
@@ -280,7 +285,7 @@ export default function ShopPage() {
 
     // Blind box remaining counts
     const blindboxIds = (shopItems ?? [])
-      .filter((i: any) => i.commodity_type === 'blindbox')
+      .filter((i: any) => i.commodity_type === 'blindbox' || i.commodity_type === 'physical_blindbox')
       .map((i: any) => i.id)
 
     const remainingMap: Record<string, number> = {}
@@ -299,7 +304,7 @@ export default function ShopPage() {
       (shopItems ?? []).map((item: ShopItem) => ({
         ...item,
         redemption_count: countMap[item.id] ?? 0,
-        blindbox_remaining: item.commodity_type === 'blindbox' ? (remainingMap[item.id] ?? 0) : undefined,
+        blindbox_remaining: (item.commodity_type === 'blindbox' || item.commodity_type === 'physical_blindbox') ? (remainingMap[item.id] ?? 0) : undefined,
       }))
     )
 
@@ -330,7 +335,7 @@ export default function ShopPage() {
         redeemed_at: r.redeemed_at,
         item_title: r.shop_items?.title ?? 'Unknown item',
         item_commodity_type: r.shop_items?.commodity_type ?? 'standard',
-        blindbox_image_url: r.shop_items?.commodity_type === 'blindbox'
+        blindbox_image_url: (r.shop_items?.commodity_type === 'blindbox' || r.shop_items?.commodity_type === 'physical_blindbox')
           ? (claimedImageMap[r.item_id] ?? null)
           : null,
       }))
@@ -373,6 +378,8 @@ export default function ShopPage() {
         // Show appropriate modal
         if (data.commodity_type === 'blindbox' && data.image_url) {
           setBlindboxReveal({ imageUrl: data.image_url, itemTitle: item.title })
+        } else if (data.commodity_type === 'physical_blindbox' && data.image_url) {
+          setBlindboxReveal({ imageUrl: data.image_url, itemTitle: item.title + ' 📦' })
         } else if (data.commodity_type === 'physical') {
           setPhysicalConfirm({ itemTitle: item.title })
         }
@@ -455,8 +462,9 @@ export default function ShopPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 mb-10">
             {items.map((item) => {
               const commodityType = item.commodity_type ?? 'standard'
-              const isBlindbox = commodityType === 'blindbox'
+              const isBlindbox = commodityType === 'blindbox' || commodityType === 'physical_blindbox'
               const isPhysical = commodityType === 'physical'
+              const isPhysicalBlindbox = commodityType === 'physical_blindbox'
 
               // Out of stock logic
               const outOfStock = isBlindbox
@@ -523,7 +531,13 @@ export default function ShopPage() {
                     {/* Commodity badge */}
                     {(isBlindbox || isPhysical) && (
                       <div className="mb-1">
-                        <CommodityBadge type={commodityType} />
+                        {isPhysicalBlindbox ? (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full">
+                            📦🎲 Physical Box
+                          </span>
+                        ) : (
+                          <CommodityBadge type={commodityType} />
+                        )}
                       </div>
                     )}
 
@@ -549,6 +563,8 @@ export default function ShopPage() {
                         className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
                           disabled || redeeming === item.id
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : isPhysicalBlindbox
+                            ? 'bg-rose-600 text-white hover:bg-rose-700 active:scale-95'
                             : isBlindbox
                             ? 'bg-purple-600 text-white hover:bg-purple-700 active:scale-95'
                             : isPhysical
@@ -558,6 +574,7 @@ export default function ShopPage() {
                       >
                         {redeeming === item.id ? '…' :
                          outOfStock ? 'Sold Out' :
+                         isPhysicalBlindbox ? 'Open & Claim' :
                          isBlindbox ? 'Open Box' :
                          isPhysical ? 'Claim Prize' :
                          'Redeem'}
@@ -593,6 +610,9 @@ export default function ShopPage() {
                         {r.item_commodity_type === 'blindbox' && (
                           <span className="text-[10px] font-semibold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">🎁 Blind Box</span>
                         )}
+                        {r.item_commodity_type === 'physical_blindbox' && (
+                          <span className="text-[10px] font-semibold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full">📦🎲 Physical Box</span>
+                        )}
                         {r.item_commodity_type === 'physical' && (
                           <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">📦 Physical</span>
                         )}
@@ -605,7 +625,7 @@ export default function ShopPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {r.item_commodity_type === 'blindbox' && r.blindbox_image_url && (
+                      {(r.item_commodity_type === 'blindbox' || r.item_commodity_type === 'physical_blindbox') && r.blindbox_image_url && (
                         <button
                           onClick={() => setBlindboxView({ imageUrl: r.blindbox_image_url!, itemTitle: r.item_title })}
                           className="text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg transition-colors"

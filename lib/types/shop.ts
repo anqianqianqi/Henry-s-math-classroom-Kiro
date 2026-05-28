@@ -6,7 +6,7 @@
 import type { Species } from './pet'
 
 export type ShopItemCategory = 'food' | 'accessory' | 'pet' | 'other'
-export type CommodityType = 'standard' | 'blindbox' | 'physical'
+export type CommodityType = 'standard' | 'blindbox' | 'physical' | 'physical_blindbox'
 
 export interface ShopItem {
   id: string

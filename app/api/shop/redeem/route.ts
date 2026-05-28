@@ -69,13 +69,57 @@ export async function POST(request: Request) {
       }, { status: 200 })
     }
 
+    // ── Physical blind box (blind box + physical delivery) ─────────────────
+    if (commodityType === 'physical_blindbox') {
+      const { data, error } = await supabase.rpc('redeem_physical_blindbox', {
+        p_item_id: body.item_id,
+      })
+      if (error) {
+        const msg = error.message ?? ''
+        if (msg.includes('already_redeemed')) return NextResponse.json({ error: 'You have already redeemed this item' }, { status: 400 })
+        const mapped = mapRpcError(msg)
+        if (mapped) return NextResponse.json({ error: mapped.error }, { status: mapped.status })
+        console.error('[shop/redeem] physical_blindbox RPC error:', error)
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      }
+      return NextResponse.json({
+        success: true,
+        commodity_type: 'physical_blindbox',
+        image_url: (data as any)?.image_url ?? null,
+        image_id: (data as any)?.image_id ?? null,
+      }, { status: 200 })
+    }
+
+    // ── Physical Blind Box ─────────────────────────────────────────────────────
+    if (commodityType === 'physical_blindbox') {
+      const { data, error } = await supabase.rpc('redeem_physical_blindbox', {
+        p_item_id: body.item_id,
+      })
+      if (error) {
+        const msg = error.message ?? ''
+        if (msg.includes('already_redeemed')) return NextResponse.json({ error: 'You have already redeemed this item' }, { status: 400 })
+        const mapped = mapRpcError(msg)
+        if (mapped) return NextResponse.json({ error: mapped.error }, { status: mapped.status })
+        console.error('[shop/redeem] physical_blindbox RPC error:', error)
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      }
+      return NextResponse.json({
+        success: true,
+        commodity_type: 'physical_blindbox',
+        image_url: (data as any)?.image_url ?? null,
+        image_id: (data as any)?.image_id ?? null,
+      }, { status: 200 })
+    }
+
     // ── Physical prize ─────────────────────────────────────────────────────
     if (commodityType === 'physical') {
       const { error } = await supabase.rpc('redeem_physical', {
         p_item_id: body.item_id,
       })
       if (error) {
-        const mapped = mapRpcError(error.message ?? '')
+        const msg = error.message ?? ''
+        if (msg.includes('already_redeemed')) return NextResponse.json({ error: 'You have already redeemed this item' }, { status: 400 })
+        const mapped = mapRpcError(msg)
         if (mapped) return NextResponse.json({ error: mapped.error }, { status: mapped.status })
         console.error('[shop/redeem] physical RPC error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -303,8 +303,8 @@ export default function AdminShopPage() {
           return
         }
 
-        // Upload blind box images if commodity_type is blindbox
-        if (form.commodity_type === 'blindbox' && blindboxFiles.length > 0) {
+        // Upload blind box images if commodity_type is blindbox or physical_blindbox
+        if ((form.commodity_type === 'blindbox' || form.commodity_type === 'physical_blindbox') && blindboxFiles.length > 0) {
           setUploadingBlindbox(true)
           const uploadedUrls: string[] = []
           for (const file of blindboxFiles) {
@@ -474,7 +474,7 @@ export default function AdminShopPage() {
                     Commodity Type
                   </label>
                   <div className="grid grid-cols-3 gap-2">
-                    {(['standard', 'blindbox', 'physical'] as const).map((type) => (
+                    {(['standard', 'blindbox', 'physical', 'physical_blindbox'] as const).map((type) => (
                       <button
                         key={type}
                         type="button"
@@ -483,11 +483,15 @@ export default function AdminShopPage() {
                           form.commodity_type === type
                             ? type === 'blindbox' ? 'border-purple-500 bg-purple-50 text-purple-700'
                               : type === 'physical' ? 'border-amber-500 bg-amber-50 text-amber-700'
+                              : type === 'physical_blindbox' ? 'border-rose-500 bg-rose-50 text-rose-700'
                               : 'border-primary-500 bg-primary-50 text-primary-700'
                             : 'border-gray-200 text-gray-500 hover:border-gray-300'
                         }`}
                       >
-                        {type === 'standard' ? '🎁 Standard' : type === 'blindbox' ? '🎲 Blind Box' : '📦 Physical'}
+                        {type === 'standard' ? '🎁 Standard'
+                          : type === 'blindbox' ? '🎲 Blind Box'
+                          : type === 'physical' ? '📦 Physical'
+                          : '📦🎲 Physical Box'}
                       </button>
                     ))}
                   </div>
@@ -496,6 +500,9 @@ export default function AdminShopPage() {
                   )}
                   {form.commodity_type === 'physical' && (
                     <p className="text-xs text-amber-600 mt-1">You will receive an in-app notification when a student redeems this item.</p>
+                  )}
+                  {form.commodity_type === 'physical_blindbox' && (
+                    <p className="text-xs text-rose-600 mt-1">Student gets a random image from the pool (each claimed once) AND you get notified to ship the physical item.</p>
                   )}
                 </div>
 
@@ -577,7 +584,7 @@ export default function AdminShopPage() {
                 </div>
 
                 {/* Blind box image pool */}
-                {form.commodity_type === 'blindbox' && (
+                {(form.commodity_type === 'blindbox' || form.commodity_type === 'physical_blindbox') && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Blind Box Image Pool <span className="text-red-500">*</span>
