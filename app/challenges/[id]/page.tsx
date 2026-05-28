@@ -88,6 +88,8 @@ export default function ChallengePage() {
   const [showHint, setShowHint] = useState(false)
   const [editingHint, setEditingHint] = useState(false)
   const [hintDraft, setHintDraft] = useState('')
+  const [hintImageFile, setHintImageFile] = useState<File | null>(null)
+  const [hintImagePreview, setHintImagePreview] = useState<string | null>(null)
   const [savingHint, setSavingHint] = useState(false)
 
   useEffect(() => {
@@ -875,14 +877,33 @@ export default function ChallengePage() {
   async function saveHint() {
     if (!challenge) return
     setSavingHint(true)
+
+    let finalImageUrl = (challenge as any).hint_image_url ?? null
+
+    // Upload new hint image if selected
+    if (hintImageFile) {
+      const fileExt = hintImageFile.name.split('.').pop()
+      const fileName = `hints/${challenge.id}/${Date.now()}.${fileExt}`
+      const { error: uploadError } = await supabase.storage
+        .from('challenge-images')
+        .upload(fileName, hintImageFile, { upsert: true })
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('challenge-images')
+          .getPublicUrl(fileName)
+        finalImageUrl = publicUrl
+      }
+    }
+
     const table = (challenge as any).is_bank_item ? 'challenge_bank' : 'daily_challenges'
     const { error } = await supabase
       .from(table)
-      .update({ hint: hintDraft.trim() || null })
+      .update({ hint: hintDraft.trim() || null, hint_image_url: finalImageUrl })
       .eq('id', challenge.id)
     if (!error) {
-      setChallenge({ ...challenge, hint: hintDraft.trim() || null })
+      setChallenge({ ...challenge, hint: hintDraft.trim() || null, hint_image_url: finalImageUrl } as any)
       setEditingHint(false)
+      setHintImageFile(null)
     }
     setSavingHint(false)
   }
@@ -1062,7 +1083,7 @@ export default function ChallengePage() {
             </p>
 
             {/* Hint Section */}
-            {(challenge.hint || isTeacher) && (
+            {(challenge.hint || (challenge as any).hint_image_url || isTeacher) && (
               <div className="mt-4">
                 {isTeacher ? (
                   editingHint ? (
@@ -1075,11 +1096,57 @@ export default function ChallengePage() {
                         rows={3}
                         className="w-full px-3 py-2 text-sm border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-100 resize-none"
                       />
+
+                      {/* Hint image upload */}
+                      <div>
+                        <label className="text-xs font-medium text-amber-700 mb-1 block">Hint Image (optional)</label>
+                        {hintImagePreview || (challenge as any).hint_image_url ? (
+                          <div className="relative inline-block">
+                            <img
+                              src={hintImagePreview ?? (challenge as any).hint_image_url}
+                              alt="Hint"
+                              className="max-h-40 rounded-xl border border-amber-200 object-contain"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => { setHintImageFile(null); setHintImagePreview(null) }}
+                              className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center hover:bg-red-600"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="border-2 border-dashed border-amber-300 rounded-xl p-3 text-center bg-amber-50">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              id="hint-image-upload"
+                              className="hidden"
+                              onChange={e => {
+                                const file = e.target.files?.[0]
+                                if (file && file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024) {
+                                  setHintImageFile(file)
+                                  setHintImagePreview(URL.createObjectURL(file))
+                                }
+                              }}
+                            />
+                            <label htmlFor="hint-image-upload" className="cursor-pointer text-xs text-amber-600 hover:text-amber-700">
+                              📸 Click to upload a hint image (max 5MB)
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="flex gap-2">
                         <Button size="sm" onClick={saveHint} disabled={savingHint}>
                           {savingHint ? 'Saving...' : 'Save Hint'}
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => { setEditingHint(false); setHintDraft(challenge.hint || '') }}>
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          setEditingHint(false)
+                          setHintDraft(challenge.hint || '')
+                          setHintImageFile(null)
+                          setHintImagePreview(null)
+                        }}>
                           Cancel
                         </Button>
                       </div>
@@ -1088,12 +1155,27 @@ export default function ChallengePage() {
                     <div className="flex items-start gap-2">
                       <div className="flex-1 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                         <p className="text-xs font-medium text-amber-600 mb-1">💡 Hint</p>
-                        <p className="text-sm text-amber-800 whitespace-pre-wrap">
-                          {challenge.hint || <span className="italic text-amber-400">No hint added yet</span>}
-                        </p>
+                        {challenge.hint && (
+                          <p className="text-sm text-amber-800 whitespace-pre-wrap mb-2">{challenge.hint}</p>
+                        )}
+                        {(challenge as any).hint_image_url && (
+                          <img
+                            src={(challenge as any).hint_image_url}
+                            alt="Hint"
+                            className="max-h-48 rounded-lg object-contain border border-amber-200"
+                          />
+                        )}
+                        {!challenge.hint && !(challenge as any).hint_image_url && (
+                          <span className="italic text-amber-400 text-sm">No hint added yet</span>
+                        )}
                       </div>
-                      <Button size="sm" variant="ghost" onClick={() => { setEditingHint(true); setHintDraft(challenge.hint || '') }}>
-                        {challenge.hint ? 'Edit' : '+ Add Hint'}
+                      <Button size="sm" variant="ghost" onClick={() => {
+                        setEditingHint(true)
+                        setHintDraft(challenge.hint || '')
+                        setHintImagePreview(null)
+                        setHintImageFile(null)
+                      }}>
+                        {challenge.hint || (challenge as any).hint_image_url ? 'Edit' : '+ Add Hint'}
                       </Button>
                     </div>
                   )
@@ -1108,8 +1190,17 @@ export default function ChallengePage() {
                       <span>💡 {showHint ? 'Hide Hint' : 'Show Hint'}</span>
                     </button>
                     {showHint && (
-                      <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                        <p className="text-sm text-amber-800 whitespace-pre-wrap">{challenge.hint}</p>
+                      <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+                        {challenge.hint && (
+                          <p className="text-sm text-amber-800 whitespace-pre-wrap">{challenge.hint}</p>
+                        )}
+                        {(challenge as any).hint_image_url && (
+                          <img
+                            src={(challenge as any).hint_image_url}
+                            alt="Hint"
+                            className="max-h-64 rounded-lg object-contain border border-amber-200"
+                          />
+                        )}
                       </div>
                     )}
                   </div>
