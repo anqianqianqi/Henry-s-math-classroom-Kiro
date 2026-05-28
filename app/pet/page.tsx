@@ -462,22 +462,54 @@ export default function PetPage() {
                   </div>
                 </div>
 
-                {/* Equipped accessories as SVG overlays */}
+                {/* Equipped accessories as overlays */}
                 {pet && pet.equipped_accessories.length > 0 && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    {/* Accessory overlay placeholder — task 7.6 will implement real overlays */}
-                    {pet.equipped_accessories.map((accessoryId) => {
+                  <div className="absolute inset-0 pointer-events-none">
+                    {pet.equipped_accessories.map((accessoryId, idx) => {
                       const item = accessories.find((a) => a.id === accessoryId)
-                      if (!item?.image_url) return null
+                      if (!item) return null
+
+                      // Stagger multiple accessories slightly so they don't all stack
+                      const offsetX = (idx - Math.floor(pet.equipped_accessories.length / 2)) * 28
+
+                      if (item.image_url) {
+                        return (
+                          <img
+                            key={accessoryId}
+                            src={item.image_url}
+                            alt={item.title}
+                            className="absolute w-14 h-14 object-contain"
+                            style={{
+                              top: '18%',
+                              left: `calc(50% + ${offsetX}px)`,
+                              transform: 'translateX(-50%)',
+                            }}
+                            aria-hidden="true"
+                          />
+                        )
+                      }
+
+                      // Fallback: extract the leading emoji from the title and show it as a badge
+                      const emojiMatch = item.title.match(/^\p{Emoji}/u)
+                      const emoji = emojiMatch ? emojiMatch[0] : '🎀'
+
                       return (
-                        <img
+                        <div
                           key={accessoryId}
-                          src={item.image_url}
-                          alt={item.title}
-                          className="absolute w-16 h-16 object-contain"
-                          style={{ top: '30%', left: '50%', transform: 'translate(-50%, -50%)' }}
-                          aria-hidden="true"
-                        />
+                          aria-label={item.title}
+                          title={item.title}
+                          style={{
+                            position: 'absolute',
+                            top: '14%',
+                            left: `calc(50% + ${offsetX}px)`,
+                            transform: 'translateX(-50%)',
+                            fontSize: '2rem',
+                            lineHeight: 1,
+                            filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.35))',
+                          }}
+                        >
+                          {emoji}
+                        </div>
                       )
                     })}
                   </div>
