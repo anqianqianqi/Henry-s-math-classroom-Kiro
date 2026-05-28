@@ -224,10 +224,14 @@ function PhysicalConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: (
 
 // ── Food queued confirmation ──────────────────────────────────────────────────
 function FoodConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: () => void }) {
+  // Extract the leading emoji from the item title for the modal icon
+  const emojiMatch = itemTitle.match(/^\p{Emoji}/u)
+  const icon = emojiMatch ? emojiMatch[0] : '🍖'
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center">
-        <div className="text-6xl mb-4">🍖</div>
+        <div className="text-6xl mb-4">{icon}</div>
         <h3 className="text-xl font-bold text-gray-900 mb-2">Added to food queue!</h3>
         <p className="text-gray-600 text-sm mb-6">
           <strong>{itemTitle}</strong> is waiting for your pet. Head to your pet page to feed it and earn XP!
