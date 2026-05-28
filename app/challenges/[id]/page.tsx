@@ -149,24 +149,56 @@ export default function ChallengePage() {
       .select('class_id')
       .eq('challenge_id', params.id)
 
-    console.log('Challenge assignments:', assignments)
+    // Get individual student assignments
+    const { data: individualAssignments } = await supabase
+      .from('challenge_student_assignments')
+      .select('student_id')
+      .eq('challenge_id', params.id)
 
-    if (!assignments || assignments.length === 0) return
+    const studentMap = new Map<string, { id: string; name: string; submitted: boolean; submittedAt?: string }>()
 
-    const classIds = assignments.map(a => a.class_id)
+    // Get students from class assignments
+    if (assignments && assignments.length > 0) {
+      const classIds = assignments.map(a => a.class_id)
+      const { data: members } = await supabase
+        .from('class_members')
+        .select(`user_id, profiles:user_id(full_name, nickname)`)
+        .in('class_id', classIds)
 
-    // Get all students in these classes
-    const { data: members } = await supabase
-      .from('class_members')
-      .select(`
-        user_id,
-        profiles:user_id(full_name, nickname)
-      `)
-      .in('class_id', classIds)
+      for (const m of members || []) {
+        if (!studentMap.has(m.user_id)) {
+          studentMap.set(m.user_id, {
+            id: m.user_id,
+            name: (m as any).profiles?.nickname || (m as any).profiles?.full_name || 'Unknown',
+            submitted: false,
+          })
+        }
+      }
+    }
 
-    console.log('Class members:', members)
+    // Get individually assigned students
+    if (individualAssignments && individualAssignments.length > 0) {
+      const indivIds = individualAssignments.map(a => a.student_id)
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, nickname')
+        .in('id', indivIds)
 
-    if (!members) return
+      for (const p of profiles || []) {
+        if (!studentMap.has(p.id)) {
+          studentMap.set(p.id, {
+            id: p.id,
+            name: (p as any).nickname || (p as any).full_name || 'Unknown',
+            submitted: false,
+          })
+        }
+      }
+    }
+
+    if (studentMap.size === 0) {
+      setShowStudentList(true)
+      return
+    }
 
     // Get submissions for this challenge
     const { data: submissions } = await supabase
@@ -174,20 +206,18 @@ export default function ChallengePage() {
       .select('user_id, submitted_at')
       .eq('challenge_id', params.id)
 
-    console.log('Submissions:', submissions)
-
     const submissionMap = new Map(
       submissions?.map(s => [s.user_id, s.submitted_at]) || []
     )
 
-    const students = members
-      .filter((m: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.user_id === m.user_id) === i)
-      .map((m: any) => ({
-      id: m.user_id,
-      name: m.profiles?.nickname || m.profiles?.full_name || 'Unknown',
-      submitted: submissionMap.has(m.user_id),
-      submittedAt: submissionMap.get(m.user_id)
-    }))
+    // Mark submitted students
+    for (const [userId, student] of studentMap) {
+      if (submissionMap.has(userId)) {
+        studentMap.set(userId, { ...student, submitted: true, submittedAt: submissionMap.get(userId) })
+      }
+    }
+
+    const students = Array.from(studentMap.values())
 
     // Sort: submitted first, then by name
     students.sort((a, b) => {
