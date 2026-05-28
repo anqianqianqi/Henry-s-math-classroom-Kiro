@@ -9,6 +9,29 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import NotificationBell from '@/components/NotificationBell'
 import { localDateString } from '@/lib/utils/date'
+import PetPreviewCard from '@/components/pet/PetPreviewCard'
+import EggSvg from '@/components/pet/EggSvg'
+import PetSvg from '@/components/pet/PetSvg'
+import type { StudentPet, Species, EvolutionStage } from '@/lib/types/pet'
+
+interface StudentPetEntry {
+  pet: StudentPet
+  studentName: string
+}
+
+const STAGE_LABELS: Record<string, string> = {
+  egg: 'Egg',
+  baby: 'Baby',
+  teen: 'Teen',
+  adult: 'Adult',
+  legendary: 'Legendary',
+}
+
+const SPECIES_LABELS: Record<string, string> = {
+  dragon: 'Dragon',
+  fox: 'Fox',
+  cat: 'Cat',
+}
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
@@ -25,6 +48,8 @@ export default function DashboardPage() {
     spendableBalance: 0,
   })
   const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean }>>([])
+  const [studentPet, setStudentPet] = useState<StudentPet | null>(null)
+  const [studentPets, setStudentPets] = useState<StudentPetEntry[]>([])
   const router = useRouter()
   const supabase = createClient()
 
@@ -84,6 +109,9 @@ export default function DashboardPage() {
     // Load stats - pass role directly since setState is async
     await loadStats(user.id, hasTeacherRole || hasAdminRole)
     await loadTodayChallenge(user.id, hasTeacherRole || hasAdminRole)
+    if (hasTeacherRole || hasAdminRole) {
+      await loadStudentPets()
+    }
 
     setLoading(false)
   }
@@ -233,8 +261,49 @@ export default function DashboardPage() {
       }
 
       setStats(newStats)
+
+      // Fetch student pet (non-teacher/non-admin only)
+      const { data: petData, error: petError } = await supabase
+        .from('student_pets')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+
+      if (petError && petError.code !== 'PGRST116') {
+        console.error('Failed to load student pet:', petError)
+      }
+      setStudentPet(petData ?? null)
     } catch (err) {
       console.error('Failed to load stats:', err)
+    }
+  }
+
+  async function loadStudentPets() {
+    try {
+      // Query all student_pets rows joined with profiles for student names
+      const { data, error } = await supabase
+        .from('student_pets')
+        .select('*, profiles(first_name, last_name, nickname)')
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('Failed to load student pets:', error)
+        return
+      }
+
+      const entries: StudentPetEntry[] = (data || []).map((row: any) => {
+        const p = row.profiles
+        const studentName = p
+          ? (p.nickname || `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Unknown')
+          : 'Unknown'
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { profiles: _profiles, ...petFields } = row
+        return { pet: petFields as StudentPet, studentName }
+      })
+
+      setStudentPets(entries)
+    } catch (err) {
+      console.error('Failed to load student pets:', err)
     }
   }
 
@@ -462,6 +531,12 @@ export default function DashboardPage() {
             </Card>
           )}
 
+          {!isTeacher && !isAdmin && (
+            <div className="flex items-center justify-center">
+              <PetPreviewCard pet={studentPet} className="w-full h-full justify-center" />
+            </div>
+          )}
+
           <Card 
             className="text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/classes/explore')}
@@ -559,6 +634,46 @@ export default function DashboardPage() {
               </div>
             </Card.Body>
           </Card>
+        )}
+
+        {/* Student Pets Overview - Teacher/Admin only, read-only */}
+        {(isTeacher || isAdmin) && studentPets.length > 0 && (
+          <section aria-labelledby="student-pets-heading" className="mb-8">
+            <h2 id="student-pets-heading" className="text-lg font-bold text-gray-900 mb-4">
+              🐾 Student Pets
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {studentPets.map(({ pet, studentName }) => {
+                const isEgg = pet.evolution_stage === 'egg'
+                const speciesLabel = pet.species ? (SPECIES_LABELS[pet.species] ?? pet.species) : 'Egg'
+                const stageLabel = STAGE_LABELS[pet.evolution_stage] ?? pet.evolution_stage
+                return (
+                  <div
+                    key={pet.id}
+                    className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-4 shadow-sm"
+                  >
+                    {isEgg || !pet.species ? (
+                      <EggSvg size={48} />
+                    ) : (
+                      <PetSvg
+                        species={pet.species as Species}
+                        stage={pet.evolution_stage as Exclude<EvolutionStage, 'egg'>}
+                        animation="none"
+                        size={48}
+                      />
+                    )}
+                    <p className="text-sm font-semibold text-gray-900 text-center leading-tight truncate w-full text-center">
+                      {studentName}
+                    </p>
+                    <p className="text-xs text-gray-500 text-center">{speciesLabel}</p>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">
+                      {stageLabel}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
         )}
 
       </main>

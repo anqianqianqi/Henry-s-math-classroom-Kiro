@@ -243,6 +243,26 @@ function ItemDetails({ details }: { details: string }) {
   )
 }
 
+// ── Category badge ────────────────────────────────────────────────────────────
+function CategoryBadge({ category }: { category: string }) {
+  if (category === 'food') return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-orange-100 text-amber-700 px-1.5 py-0.5 rounded-full">
+      🍖 Food
+    </span>
+  )
+  if (category === 'accessory') return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">
+      🎩 Accessory
+    </span>
+  )
+  if (category === 'pet') return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+      🐾 New Pet
+    </span>
+  )
+  return null
+}
+
 // ── Commodity type badge ──────────────────────────────────────────────────────
 function CommodityBadge({ type }: { type: string }) {
   if (type === 'blindbox') return (
@@ -473,6 +493,11 @@ export default function ShopPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) await loadData(user.id)
 
+        // Store XP gained in sessionStorage so the pet page can show the +N XP animation
+        if (typeof data.xp_gained === 'number' && data.xp_gained > 0) {
+          sessionStorage.setItem('pet_xp_gained', String(data.xp_gained))
+        }
+
         // Show appropriate modal
         if (data.commodity_type === 'blindbox' && data.image_url) {
           setBlindboxReveal({ imageUrl: data.image_url, itemTitle: item.title })
@@ -648,6 +673,13 @@ export default function ShopPage() {
                         ) : (
                           <CommodityBadge type={commodityType} />
                         )}
+                      </div>
+                    )}
+
+                    {/* Category badge */}
+                    {item.category !== 'other' && (
+                      <div className="mb-1">
+                        <CategoryBadge category={item.category} />
                       </div>
                     )}
 
