@@ -42,22 +42,32 @@ export default function ShopPage() {
   const [redeemErrors, setRedeemErrors] = useState<Record<string, string>>({})
 
   const loadData = useCallback(async (userId: string) => {
-    // Run balance queries in parallel
-    const [submissionsResult, spentResult] = await Promise.all([
-      supabase
-        .from('challenge_submissions')
-        .select('points')
+    // Read balance from student_wallets (single row read)
+    let newBalance = 0
+    try {
+      const { data: walletData } = await supabase
+        .from('student_wallets')
+        .select('spendable_balance')
         .eq('user_id', userId)
-        .not('points', 'is', null),  // any graded submission counts, not just locked
-      supabase
-        .from('redemptions')
-        .select('points_spent')
-        .eq('user_id', userId),
-    ])
-
-    const lockedPoints = (submissionsResult.data ?? []).map((s: any) => s.points ?? 0)
-    const pointsSpent = (spentResult.data ?? []).map((r: any) => r.points_spent ?? 0)
-    const newBalance = computeSpendableBalance(lockedPoints, pointsSpent)
+        .single()
+      newBalance = walletData?.spendable_balance ?? 0
+    } catch {
+      // Fallback: compute from submissions if wallet table not yet available
+      const [submissionsResult, spentResult] = await Promise.all([
+        supabase
+          .from('challenge_submissions')
+          .select('points')
+          .eq('user_id', userId)
+          .not('points', 'is', null),
+        supabase
+          .from('redemptions')
+          .select('points_spent')
+          .eq('user_id', userId),
+      ])
+      const lockedPoints = (submissionsResult.data ?? []).map((s: any) => s.points ?? 0)
+      const pointsSpent = (spentResult.data ?? []).map((r: any) => r.points_spent ?? 0)
+      newBalance = computeSpendableBalance(lockedPoints, pointsSpent)
+    }
     setBalance(newBalance)
 
     // Fetch active shop items

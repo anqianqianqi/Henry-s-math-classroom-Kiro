@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/Button'
 import {
   validateShopItemForm,
   buildShopItemInsert,
-  computeSpendableBalance,
 } from '@/lib/utils/shop'
 import type {
   ShopItem,
@@ -88,51 +87,41 @@ export default function AdminShopPage() {
       }))
     )
 
-    // Fetch all students and compute their spendable balances
+    // Fetch all students and their balances from student_wallets (single query)
+    // NOTE: do NOT filter by class_id — students may only have class-scoped roles
     const { data: studentRoles } = await supabase
       .from('user_roles')
       .select('user_id, roles!inner(name)')
       .eq('roles.name', 'student')
-      .is('class_id', null)
 
     const studentIds = [...new Set((studentRoles ?? []).map((r: any) => r.user_id))]
 
     if (studentIds.length > 0) {
-      const [profilesResult, submissionsResult, spentResult] = await Promise.all([
+      const [profilesResult, walletsResult] = await Promise.all([
         supabase
           .from('profiles')
           .select('id, first_name, last_name')
           .in('id', studentIds),
         supabase
-          .from('challenge_submissions')
-          .select('user_id, points')
-          .in('user_id', studentIds)
-          .not('points', 'is', null),
-        supabase
-          .from('redemptions')
-          .select('user_id, points_spent')
+          .from('student_wallets')
+          .select('user_id, total_earned, total_spent, spendable_balance')
           .in('user_id', studentIds),
       ])
 
       const profiles = profilesResult.data ?? []
-      const submissions = submissionsResult.data ?? []
-      const spent = spentResult.data ?? []
+      const walletMap: Record<string, { total_earned: number; total_spent: number; spendable_balance: number }> = {}
+      for (const w of walletsResult.data ?? []) {
+        walletMap[w.user_id] = w
+      }
 
       const balances: StudentBalance[] = profiles.map((p: any) => {
-        const earned = (submissions as any[])
-          .filter((s) => s.user_id === p.id)
-          .map((s) => s.points ?? 0)
-        const spentPoints = (spent as any[])
-          .filter((s) => s.user_id === p.id)
-          .map((s) => s.points_spent ?? 0)
-        const totalEarned = earned.reduce((a: number, b: number) => a + b, 0)
-        const totalSpent = spentPoints.reduce((a: number, b: number) => a + b, 0)
+        const wallet = walletMap[p.id]
         return {
           user_id: p.id,
           student_name: [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Unknown',
-          total_earned: totalEarned,
-          total_spent: totalSpent,
-          spendable_balance: computeSpendableBalance(earned, spentPoints),
+          total_earned: wallet?.total_earned ?? 0,
+          total_spent: wallet?.total_spent ?? 0,
+          spendable_balance: wallet?.spendable_balance ?? 0,
         }
       })
 
