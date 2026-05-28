@@ -255,31 +255,56 @@ export default function ChallengesPage() {
         return
       }
 
-      // Only show challenges from the past 10 days
+      // Only show challenges from the past 10 days for class assignments,
+      // but individually assigned challenges should always show regardless of date
       const tenDaysAgoStr = localDateOffset(-10)
 
-      const { data: challengesData } = await supabase
-        .from('daily_challenges')
-        .select('*')
-        .in('id', challengeIds)
-        .lte('challenge_date', localDateString())
-        .gte('challenge_date', tenDaysAgoStr)
-        .order('challenge_date', { ascending: false })
+      // Fetch class-assigned challenges (10-day window)
+      const classOnlyIds = classAssignedIds.filter(id => !individualIds.includes(id))
+      const indivOnlyIds = individualIds.filter(id => !classAssignedIds.includes(id))
+      const bothIds = classAssignedIds.filter(id => individualIds.includes(id))
 
-      // Deduplicate challenges (same challenge may be assigned via multiple classes/schedules)
-      const uniqueChallenges = (challengesData || []).filter(
+      // All IDs that need the 10-day window (class-assigned or both)
+      const windowIds = [...new Set([...classOnlyIds, ...bothIds])]
+      // IDs that are individual-only (no date restriction)
+      const noWindowIds = indivOnlyIds
+
+      const [windowResult, noWindowResult] = await Promise.all([
+        windowIds.length > 0
+          ? supabase
+              .from('daily_challenges')
+              .select('*')
+              .in('id', windowIds)
+              .lte('challenge_date', localDateString())
+              .gte('challenge_date', tenDaysAgoStr)
+              .order('challenge_date', { ascending: false })
+          : Promise.resolve({ data: [] }),
+        noWindowIds.length > 0
+          ? supabase
+              .from('daily_challenges')
+              .select('*')
+              .in('id', noWindowIds)
+              .lte('challenge_date', localDateString())
+              .order('challenge_date', { ascending: false })
+          : Promise.resolve({ data: [] }),
+      ])
+
+      const allFetched = [...(windowResult.data || []), ...(noWindowResult.data || [])]
+
+      // Deduplicate challenges
+      const uniqueChallenges = allFetched.filter(
         (c, i, arr) => arr.findIndex(x => x.id === c.id) === i
       )
-      setChallenges(uniqueChallenges)
+      const challengesData = uniqueChallenges
 
-      // Load class names for each challenge (needed for class filter)
-      if (challengesData) {
+      // Load class names and submission data for each challenge
+      if (challengesData.length > 0) {
         // Load student's submissions for all challenges
         const { data: mySubmissions } = await supabase
           .from('challenge_submissions')
           .select('challenge_id, points, is_locked')
           .eq('user_id', user.id)
-          .in('challenge_id', challengeIds)
+          .in('challenge_id', challengesData.map(c => c.id))
 
         const subMap = new Map(mySubmissions?.map(s => [s.challenge_id, s]) || [])
 
@@ -297,6 +322,8 @@ export default function ChallengesPage() {
           })
         )
         setChallenges(withExtras)
+      } else {
+        setChallenges([])
       }
     }
     
@@ -310,24 +337,33 @@ export default function ChallengesPage() {
       .select('*', { count: 'exact', head: true })
       .eq('challenge_id', challengeId)
 
-    // Get total students in assigned classes
-    const { data: assignments } = await supabase
+    // Get total students: class-assigned + individually assigned (deduplicated)
+    const { data: classAssignments } = await supabase
       .from('challenge_assignments')
       .select('class_id')
       .eq('challenge_id', challengeId)
 
-    let totalStudents = 0
-    if (assignments && assignments.length > 0) {
-      const classIds = assignments.map(a => a.class_id)
-      const { count } = await supabase
+    // Collect all student IDs from class assignments
+    const classStudentIds = new Set<string>()
+    if (classAssignments && classAssignments.length > 0) {
+      const classIds = classAssignments.map(a => a.class_id)
+      const { data: classMembers } = await supabase
         .from('class_members')
-        .select('*', { count: 'exact', head: true })
+        .select('user_id')
         .in('class_id', classIds)
-      
-      totalStudents = count || 0
+      for (const m of classMembers || []) classStudentIds.add(m.user_id)
     }
 
-    const completionRate = totalStudents > 0 
+    // Collect individually assigned student IDs
+    const { data: individualAssignments } = await supabase
+      .from('challenge_student_assignments')
+      .select('student_id')
+      .eq('challenge_id', challengeId)
+    for (const a of individualAssignments || []) classStudentIds.add(a.student_id)
+
+    const totalStudents = classStudentIds.size
+
+    const completionRate = totalStudents > 0
       ? Math.round(((submissionCount || 0) / totalStudents) * 100)
       : 0
 

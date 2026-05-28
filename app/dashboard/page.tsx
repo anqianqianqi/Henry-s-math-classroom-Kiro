@@ -21,7 +21,8 @@ export default function DashboardPage() {
     challengesCount: 0,
     dayStreak: 0,
     pendingRequests: 0,
-    totalScore: 0
+    totalScore: 0,
+    spendableBalance: 0,
   })
   const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean }>>([])
   const router = useRouter()
@@ -110,7 +111,8 @@ export default function DashboardPage() {
           challengesCount: challengesCount || 0,
           dayStreak: 0,
           pendingRequests: pendingRequests || 0,
-          totalScore: 0
+          totalScore: 0,
+          spendableBalance: 0,
         }
         setStats(newStats)
         return
@@ -187,21 +189,47 @@ export default function DashboardPage() {
         }
       }
 
-      // Calculate total score from graded submissions (locked or not)
-      const { data: gradedSubmissions } = await supabase
-        .from('challenge_submissions')
-        .select('points')
-        .eq('user_id', userId)
-        .not('points', 'is', null)
+      // Read total score and spendable balance from student_wallets (single row read)
+      let totalScore = 0
+      let spendableBalance = 0
+      try {
+        const { data: walletData } = await supabase
+          .from('student_wallets')
+          .select('total_earned, spendable_balance')
+          .eq('user_id', userId)
+          .single()
 
-      const totalScore = gradedSubmissions?.reduce((sum, s) => sum + (s.points || 0), 0) || 0
+        if (walletData) {
+          totalScore = walletData.total_earned ?? 0
+          spendableBalance = walletData.spendable_balance ?? 0
+        } else {
+          // Fallback: wallet not yet created, compute on the fly
+          const { data: gradedSubmissions } = await supabase
+            .from('challenge_submissions')
+            .select('points')
+            .eq('user_id', userId)
+            .not('points', 'is', null)
+          totalScore = gradedSubmissions?.reduce((sum, s) => sum + (s.points || 0), 0) || 0
+          spendableBalance = totalScore
+        }
+      } catch {
+        // If wallet table doesn't exist yet, fall back to submission sum
+        const { data: gradedSubmissions } = await supabase
+          .from('challenge_submissions')
+          .select('points')
+          .eq('user_id', userId)
+          .not('points', 'is', null)
+        totalScore = gradedSubmissions?.reduce((sum, s) => sum + (s.points || 0), 0) || 0
+        spendableBalance = totalScore
+      }
 
       const newStats = {
         classesCount: memberCount || 0,
         challengesCount,
         dayStreak,
         pendingRequests: 0,
-        totalScore
+        totalScore,
+        spendableBalance,
       }
 
       setStats(newStats)
@@ -419,6 +447,21 @@ export default function DashboardPage() {
             </Card>
           )}
 
+          {!isTeacher && !isAdmin && (
+            <Card
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/shop')}
+            >
+              <Card.Body>
+                <div className="text-5xl mb-3 hidden sm:block">🛍️</div>
+                <div className="text-3xl font-bold text-primary-600 mb-1">
+                  {stats.spendableBalance}
+                </div>
+                <div className="text-gray-600 font-medium">Shop Balance</div>
+              </Card.Body>
+            </Card>
+          )}
+
           <Card 
             className="text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/classes/explore')}
@@ -429,6 +472,18 @@ export default function DashboardPage() {
               <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Classes</div>
             </Card.Body>
           </Card>
+          {(isTeacher || isAdmin) && (
+            <Card 
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/admin/shop')}
+            >
+              <Card.Body>
+                <div className="text-5xl mb-3 hidden sm:block">🛍️</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">Shop</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Manage</div>
+              </Card.Body>
+            </Card>
+          )}
 
           {(isTeacher || isAdmin) && (
             <Card 
