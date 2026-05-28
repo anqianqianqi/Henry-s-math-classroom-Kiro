@@ -222,6 +222,27 @@ function PhysicalConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: (
   )
 }
 
+// ── Food queued confirmation ──────────────────────────────────────────────────
+function FoodConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center">
+        <div className="text-6xl mb-4">🍖</div>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">Added to food queue!</h3>
+        <p className="text-gray-600 text-sm mb-6">
+          <strong>{itemTitle}</strong> is waiting for your pet. Head to your pet page to feed it and earn XP!
+        </p>
+        <button
+          onClick={onClose}
+          className="w-full bg-orange-500 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-orange-600 transition-colors"
+        >
+          Got it! 🐾
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Collapsible Details ───────────────────────────────────────────────────────
 function ItemDetails({ details }: { details: string }) {
   const [open, setOpen] = useState(false)
@@ -301,6 +322,7 @@ export default function ShopPage() {
   const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrl: string; itemTitle: string; isPhysical?: boolean } | null>(null)
   const [blindboxView, setBlindboxView] = useState<{ imageUrl: string; itemTitle: string; isPhysical?: boolean } | null>(null)
   const [physicalConfirm, setPhysicalConfirm] = useState<{ itemTitle: string } | null>(null)
+  const [foodConfirm, setFoodConfirm] = useState<{ itemTitle: string } | null>(null)
 
   const loadData = useCallback(async (userId: string) => {
     // Balance: read directly from student_wallets — the RPC keeps it in sync on every purchase
@@ -447,7 +469,7 @@ export default function ShopPage() {
 
         // Show food purchase confirmation
         if (data.pending === true) {
-          setPhysicalConfirm({ itemTitle: `${item.title} added to your pet's food queue! Visit your pet to feed it.` })
+          setFoodConfirm({ itemTitle: item.title })
           return
         }
 
@@ -503,6 +525,12 @@ export default function ShopPage() {
         <PhysicalConfirm
           itemTitle={physicalConfirm.itemTitle}
           onClose={() => setPhysicalConfirm(null)}
+        />
+      )}
+      {foodConfirm && (
+        <FoodConfirm
+          itemTitle={foodConfirm.itemTitle}
+          onClose={() => setFoodConfirm(null)}
         />
       )}
 
