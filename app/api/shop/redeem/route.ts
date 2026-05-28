@@ -76,11 +76,12 @@ export async function POST(request: Request) {
       })
       if (error) {
         const msg = error.message ?? ''
+        console.error('[shop/redeem] physical_blindbox RPC error code:', error.code, 'msg:', msg, 'details:', error.details, 'hint:', error.hint)
         if (msg.includes('already_redeemed')) return NextResponse.json({ error: 'You have already redeemed this item' }, { status: 400 })
         const mapped = mapRpcError(msg)
         if (mapped) return NextResponse.json({ error: mapped.error }, { status: mapped.status })
-        console.error('[shop/redeem] physical_blindbox RPC error:', error)
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+        // Return the actual error message in dev so we can diagnose
+        return NextResponse.json({ error: 'Internal server error', detail: msg }, { status: 500 })
       }
       return NextResponse.json({
         success: true,
