@@ -417,8 +417,13 @@ export default function AdminShopPage() {
         {/* ── Create / Edit Form ── */}
         <section>
           <h2 className="text-lg font-bold text-gray-900 mb-4">
-            {editingId ? 'Edit Item' : 'Create New Item'}
+            {editingId ? '✏️ Edit Item' : 'Create New Item'}
           </h2>
+          {editingId && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
+              Editing: <strong>{items.find(i => i.id === editingId)?.title}</strong>
+            </div>
+          )}
           <Card>
             <Card.Body>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -653,58 +658,101 @@ export default function AdminShopPage() {
               </Card.Body>
             </Card>
           ) : (
-            <div className="space-y-3">
-              {items.map((item) => (
-                <Card key={item.id} className={item.is_active ? '' : 'opacity-60'}>
-                  <Card.Body>
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-gray-900">{item.title}</h3>
-                          {!item.is_active && (
-                            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
-                              Inactive
-                            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+              {items.map((item) => {
+                const isBlindbox = item.commodity_type === 'blindbox' || item.commodity_type === 'physical_blindbox'
+                const isPhysical = item.commodity_type === 'physical'
+                const isPhysicalBlindbox = item.commodity_type === 'physical_blindbox'
+                return (
+                  <div
+                    key={item.id}
+                    className={`group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col ${!item.is_active ? 'opacity-50' : ''}`}
+                  >
+                    {/* Image area */}
+                    <div className="relative w-full aspect-square bg-gray-50 overflow-hidden">
+                      {isBlindbox ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200">
+                          <span className="text-4xl mb-1">🎁</span>
+                          <span className="text-xs font-semibold text-purple-600">Mystery Box</span>
+                        </div>
+                      ) : isPhysical ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100">
+                          {item.image_url ? (
+                            <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <>
+                              <span className="text-4xl mb-1">📦</span>
+                              <span className="text-xs font-semibold text-amber-600">Physical Prize</span>
+                            </>
                           )}
                         </div>
-                        {item.description && (
-                          <p className="text-sm text-gray-600 mt-0.5">{item.description}</p>
-                        )}
-                        <p className="text-sm text-primary-600 font-medium mt-1">
-                          {item.cost} pts
-                          {item.quantity !== null && (
-                            <span className="text-gray-500 font-normal ml-2">
-                              · {item.quantity} max
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex gap-2 shrink-0">
-                        <Button size="sm" variant="outline" onClick={() => handleEdit(item)}>
-                          Edit
-                        </Button>
-                        {item.is_active ? (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleDeactivate(item.id)}
-                          >
-                            Deactivate
-                          </Button>
+                      ) : (
+                        item.image_url ? (
+                          <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
                         ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleReactivate(item.id)}
+                          <div className="w-full h-full flex items-center justify-center text-4xl select-none">🎁</div>
+                        )
+                      )}
+                      {!item.is_active && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                          <span className="bg-white text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">Inactive</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card body */}
+                    <div className="p-3 flex flex-col flex-1">
+                      {/* Commodity badge */}
+                      {(isBlindbox || isPhysical) && (
+                        <div className="mb-1">
+                          {isPhysicalBlindbox ? (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full">📦🎲 Physical Box</span>
+                          ) : isBlindbox ? (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">🎁 Blind Box</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">📦 Physical</span>
+                          )}
+                        </div>
+                      )}
+                      <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-0.5 line-clamp-2">{item.title}</h3>
+                      {item.description && (
+                        <p className="text-gray-500 text-xs line-clamp-2 mb-1">{item.description}</p>
+                      )}
+                      <div className="mt-auto pt-2 flex items-center justify-between gap-1">
+                        <span className="text-primary-600 font-bold text-sm">
+                          {item.cost}<span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
+                          {item.quantity !== null && (
+                            <span className="text-gray-400 font-normal text-xs ml-1">· {item.quantity} max</span>
+                          )}
+                        </span>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleEdit(item)}
+                            className="text-xs font-semibold px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
                           >
-                            Reactivate
-                          </Button>
-                        )}
+                            Edit
+                          </button>
+                          {item.is_active ? (
+                            <button
+                              onClick={() => handleDeactivate(item.id)}
+                              className="text-xs font-semibold px-2 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                            >
+                              Off
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleReactivate(item.id)}
+                              className="text-xs font-semibold px-2 py-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                            >
+                              On
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </Card.Body>
-                </Card>
-              ))}
+                  </div>
+                )
+              })}
             </div>
           )}
         </section>
