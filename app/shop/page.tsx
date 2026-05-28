@@ -172,10 +172,16 @@ function PhysicalConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center">
         <div className="text-6xl mb-4">📦</div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Order Placed!</h3>
-        <p className="text-gray-600 text-sm mb-6">
-          Your teacher has been notified to ship <strong>{itemTitle}</strong> to you. Keep an eye out!
+        <h3 className="text-xl font-bold text-gray-900 mb-2">Redeemed!</h3>
+        <p className="text-gray-600 text-sm mb-3">
+          You&apos;ve successfully redeemed <strong>{itemTitle}</strong>.
         </p>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-left">
+          <p className="text-amber-800 text-sm font-semibold mb-1">📬 How to pick up your item</p>
+          <p className="text-amber-700 text-xs leading-relaxed">
+            This is a physical item — there&apos;s nothing to download. Please <strong>ping Henry</strong> to arrange pickup or delivery of your prize!
+          </p>
+        </div>
         <button
           onClick={onClose}
           className="w-full bg-primary-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-primary-700 transition-colors"
@@ -378,8 +384,9 @@ export default function ShopPage() {
         // Show appropriate modal
         if (data.commodity_type === 'blindbox' && data.image_url) {
           setBlindboxReveal({ imageUrl: data.image_url, itemTitle: item.title })
-        } else if (data.commodity_type === 'physical_blindbox' && data.image_url) {
-          setBlindboxReveal({ imageUrl: data.image_url, itemTitle: item.title + ' 📦' })
+        } else if (data.commodity_type === 'physical_blindbox') {
+          // Physical blind box: show pickup note, no download
+          setPhysicalConfirm({ itemTitle: item.title })
         } else if (data.commodity_type === 'physical') {
           setPhysicalConfirm({ itemTitle: item.title })
         }
