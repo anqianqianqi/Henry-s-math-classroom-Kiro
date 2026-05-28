@@ -726,50 +726,6 @@ function CatLegendary() {
   )
 }
 
-function CatLegendary() {
-  return (
-    <>
-      {/* Glow aura */}
-      <circle cx="100" cy="110" r="88" fill="#8B5CF6" opacity="0.08" />
-      <circle cx="100" cy="110" r="72" fill="#A78BFA" opacity="0.1" />
-      {/* Shadow */}
-      <ellipse cx="100" cy="190" rx="55" ry="9" fill="#3B0764" opacity="0.3" />
-      {/* Body */}
-      <ellipse cx="100" cy="150" rx="52" ry="46" fill="#4C1D95" />
-      {/* Belly */}
-      <ellipse cx="100" cy="158" rx="34" ry="30" fill="#EDE9FE" />
-      {/* Chest fluff */}
-      <ellipse cx="100" cy="136" rx="22" ry="14" fill="#DDD6FE" opacity="0.8" />
-      {/* Head */}
-      <ellipse cx="100" cy="86" rx="44" ry="38" fill="#4C1D95" />
-      {/* Ears — very tall */}
-      <path d="M 68 60 L 56 22 L 80 56" fill="#4C1D95" />
-      <path d="M 132 60 L 144 22 L 120 56" fill="#4C1D95" />
-      <path d="M 69 58 L 58 26 L 79 55" fill="#DDD6FE" />
-      <path d="M 131 58 L 142 26 L 121 55" fill="#DDD6FE" />
-      {/* Ear tufts — magical */}
-      <path d="M 56 22 L 50 10 L 60 20" fill="#C4B5FD" />
-      <path d="M 144 22 L 150 10 L 140 20" fill="#C4B5FD" />
-      {/* Eyes — glowing purple */}
-      <circle cx="78" cy="78" r="13" fill="#EDE9FE" />
-      <circle cx="122" cy="78" r="13" fill="#EDE9FE" />
-      <ellipse cx="78" cy="78" rx="5" ry="10" fill="#1E1B4B" />
-      <ellipse cx="122" cy="78" rx="5" ry="10" fill="#1E1B4B" />
-      {/* Eye glow rings */}
-      <circle cx="78" cy="78" r="13" fill="none" stroke="#A78BFA" strokeWidth="2.5" opacity="0.9" />
-      <circle cx="122" cy="78" r="13" fill="none" stroke="#A78BFA" strokeWidth="2.5" opacity="0.9" />
-      <circle cx="81" cy="74" r="3" fill="white" opacity="0.9" />
-      <circle cx="125" cy="74" r="3" fill="white" opacity="0.9" />
-      {/* Nose */}
-      <path d="M 94 108 L 100 114 L 106 108" fill="#6D28D9" />
-      {/* Mouth */}
-      <path d="M 100 114 Q 91 122 84 118" fill="none" stroke="#6D28D9" strokeWidth="2" strokeLinecap="round" />
-      <path d="M 100 114 Q 109 122 116 118" fill="none" stroke="#6D28D9" strokeWidth="2" strokeLinecap="round" />
-      {/* Whiskers — long magical */}
-      <line x1="80" y1="112" x2="52" y2="106" stroke="#7C3AED" strokeWidth="2" opacity="0.7" />
-      <line x1="80" y1="117" x2="52" y2="117" stroke="#7C3AED" strokeWidth="2" opacity="0.7" />
-      <line x1="80" y1="122" x2="52" y2="128" stroke="#7C3AED" strokeWidth="2" opacity="0.7" />
-      <line x1="120" y1="112" x2="148" y2="106" stroke="#7C3AED" strokeWidth="2" opacity="0.7" />
 // ─── Lookup map ──────────────────────────────────────────────────────────────
 
 type NonEggStage = Exclude<EvolutionStage, 'egg'>
