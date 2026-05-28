@@ -295,6 +295,7 @@ export default function ShopPage() {
   const [redeeming, setRedeeming] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [redeemErrors, setRedeemErrors] = useState<Record<string, string>>({})
+  const [activeTab, setActiveTab] = useState<'all' | 'rewards' | 'food' | 'accessory'>('all')
 
   // Modals
   const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrl: string; itemTitle: string; isPhysical?: boolean } | null>(null)
@@ -532,16 +533,58 @@ export default function ShopPage() {
         </div>
 
         {/* Items Grid */}
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Available Rewards</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-3">Available Rewards</h2>
+
+        {/* Category tabs */}
+        <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+          {([
+            { key: 'all',       label: '🛍️ All' },
+            { key: 'rewards',   label: '🎁 Rewards' },
+            { key: 'food',      label: '🍖 Pet Food' },
+            { key: 'accessory', label: '🎩 Accessories' },
+          ] as const).map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveTab(key)}
+              className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold border-2 transition-colors ${
+                activeTab === key
+                  ? key === 'food'      ? 'border-orange-400 bg-orange-50 text-orange-700'
+                  : key === 'accessory' ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
+                  : key === 'rewards'   ? 'border-purple-400 bg-purple-50 text-purple-700'
+                  : 'border-primary-400 bg-primary-50 text-primary-700'
+                  : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {items.length === 0 ? (
           <div className="mb-8 text-center py-16 text-gray-400">
             <div className="text-5xl mb-3">🛍️</div>
             <p className="text-lg font-medium text-gray-500">No rewards available yet.</p>
             <p className="text-sm mt-1">Check back soon!</p>
           </div>
-        ) : (
+        ) : (() => {
+          const filteredItems = items.filter(item => {
+            if (activeTab === 'all') return true
+            if (activeTab === 'food') return item.category === 'food'
+            if (activeTab === 'accessory') return item.category === 'accessory'
+            // 'rewards' = everything that's NOT food or accessory
+            return item.category !== 'food' && item.category !== 'accessory'
+          })
+          return filteredItems.length === 0 ? (
+            <div className="mb-8 text-center py-12 text-gray-400">
+              <div className="text-4xl mb-2">
+                {activeTab === 'food' ? '🍖' : activeTab === 'accessory' ? '🎩' : '🎁'}
+              </div>
+              <p className="text-sm font-medium text-gray-500">No items in this category yet.</p>
+            </div>
+          ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 mb-10">
-            {items.map((item) => {
+            {filteredItems.map((item) => {
               const commodityType = item.commodity_type ?? 'standard'
               const isBlindbox = commodityType === 'blindbox' || commodityType === 'physical_blindbox'
               const isPhysical = commodityType === 'physical'
@@ -619,7 +662,7 @@ export default function ShopPage() {
 
                   {/* Card body */}
                   <div className="p-3 flex flex-col flex-1">
-                    {/* Commodity badge */}
+                    {/* Commodity badge — shown for blindbox/physical types */}
                     {(isBlindbox || isPhysical) && (
                       <div className="mb-1">
                         {isPhysicalBlindbox ? (
@@ -686,7 +729,8 @@ export default function ShopPage() {
               )
             })}
           </div>
-        )}
+          )
+        })()}
 
         {/* Redemption History */}
         <h2 className="text-xl font-bold text-gray-900 mb-4">Your Redemption History</h2>
