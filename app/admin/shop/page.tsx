@@ -86,15 +86,34 @@ export default function AdminShopPage() {
       .order('redeemed_at', { ascending: false })
 
     // Fetch all claimed blind box images (teacher can see all via RLS)
-    const { data: claimedImages } = await supabase
-      .from('blindbox_images')
-      .select('item_id, claimed_by, image_url')
-      .eq('is_claimed', true)
+    // Check both old blindbox_images.claimed_by AND new blindbox_claims table
+    const [claimedImagesResult, blindboxClaimsResult] = await Promise.all([
+      supabase
+        .from('blindbox_images')
+        .select('item_id, claimed_by, image_url')
+        .eq('is_claimed', true),
+      supabase
+        .from('blindbox_claims')
+        .select('item_id, student_id, blindbox_images(image_url)')
+        .order('claimed_at', { ascending: false }),
+    ])
 
-    // Build a map: `${item_id}:${user_id}` → image_url
+    // Build a map: `${item_id}:${user_id}` → image_url (most recent claim per user+item)
     const claimedImageMap: Record<string, string> = {}
-    for (const img of claimedImages ?? []) {
-      claimedImageMap[`${img.item_id}:${img.claimed_by}`] = img.image_url
+    // From old blindbox_images.claimed_by
+    for (const img of claimedImagesResult.data ?? []) {
+      if (img.claimed_by && img.image_url) {
+        const key = `${img.item_id}:${img.claimed_by}`
+        if (!claimedImageMap[key]) claimedImageMap[key] = img.image_url
+      }
+    }
+    // From new blindbox_claims (overrides if present, as it's more recent)
+    for (const claim of blindboxClaimsResult.data ?? []) {
+      const url = (claim as any).blindbox_images?.image_url
+      if (url) {
+        const key = `${claim.item_id}:${claim.student_id}`
+        if (!claimedImageMap[key]) claimedImageMap[key] = url
+      }
     }
 
     setRedemptions(
@@ -109,7 +128,7 @@ export default function AdminShopPage() {
           'Unknown student',
         item_title: r.shop_items?.title ?? 'Unknown item',
         item_commodity_type: r.shop_items?.commodity_type ?? 'standard',
-        blindbox_image_url: r.shop_items?.commodity_type === 'blindbox'
+        blindbox_image_url: (r.shop_items?.commodity_type === 'blindbox' || r.shop_items?.commodity_type === 'physical_blindbox')
           ? (claimedImageMap[`${r.item_id}:${r.user_id}`] ?? null)
           : null,
       }))
