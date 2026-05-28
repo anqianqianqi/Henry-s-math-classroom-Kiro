@@ -105,6 +105,9 @@ describe('validateShopItemForm', () => {
     cost: '50',
     image_url: '',
     quantity: '',
+    category: 'other',
+    food_xp: '',
+    target_species: '',
   }
 
   it('accepts a valid form', () => {
@@ -132,32 +135,118 @@ describe('validateShopItemForm', () => {
     expect(result.valid).toBe(false)
     expect(result.errors.title).toBeDefined()
   })
+
+  it('rejects food category with empty food_xp', () => {
+    const result = validateShopItemForm({ ...validForm, category: 'food', food_xp: '' })
+    expect(result.valid).toBe(false)
+    expect(result.errors.food_xp).toBeDefined()
+  })
+
+  it('rejects food category with food_xp of 0', () => {
+    const result = validateShopItemForm({ ...validForm, category: 'food', food_xp: '0' })
+    expect(result.valid).toBe(false)
+    expect(result.errors.food_xp).toBeDefined()
+  })
+
+  it('rejects food category with negative food_xp', () => {
+    const result = validateShopItemForm({ ...validForm, category: 'food', food_xp: '-10' })
+    expect(result.valid).toBe(false)
+    expect(result.errors.food_xp).toBeDefined()
+  })
+
+  it('accepts food category with valid food_xp', () => {
+    const result = validateShopItemForm({ ...validForm, category: 'food', food_xp: '50' })
+    expect(result.valid).toBe(true)
+  })
+
+  it('rejects food category with food_xp exceeding 500', () => {
+    const result = validateShopItemForm({ ...validForm, category: 'food', food_xp: '501' })
+    expect(result.valid).toBe(false)
+    expect(result.errors.food_xp).toBeDefined()
+  })
+
+  it('rejects pet category with empty target_species', () => {
+    const result = validateShopItemForm({ ...validForm, category: 'pet', target_species: '' })
+    expect(result.valid).toBe(false)
+    expect(result.errors.target_species).toBeDefined()
+  })
+
+  it('rejects pet category with invalid target_species', () => {
+    const result = validateShopItemForm({ ...validForm, category: 'pet', target_species: 'unicorn' })
+    expect(result.valid).toBe(false)
+    expect(result.errors.target_species).toBeDefined()
+  })
+
+  it('accepts pet category with valid target_species', () => {
+    const result = validateShopItemForm({ ...validForm, category: 'pet', target_species: 'dragon' })
+    expect(result.valid).toBe(true)
+  })
+
+  it('does not require food_xp for non-food categories', () => {
+    const result = validateShopItemForm({ ...validForm, category: 'accessory', food_xp: '' })
+    expect(result.errors.food_xp).toBeUndefined()
+  })
+
+  it('does not require target_species for non-pet categories', () => {
+    const result = validateShopItemForm({ ...validForm, category: 'accessory', target_species: '' })
+    expect(result.errors.target_species).toBeUndefined()
+  })
 })
 
 describe('buildShopItemInsert', () => {
   it('sets is_active to true', () => {
-    const form: ShopItemForm = { title: 'Prize', description: '', cost: '10', image_url: '', quantity: '' }
+    const form: ShopItemForm = { title: 'Prize', description: '', cost: '10', image_url: '', quantity: '', category: 'other', food_xp: '', target_species: '' }
     expect(buildShopItemInsert(form, 'teacher-uuid').is_active).toBe(true)
   })
 
   it('sets created_by to the teacher id', () => {
-    const form: ShopItemForm = { title: 'Prize', description: '', cost: '10', image_url: '', quantity: '' }
+    const form: ShopItemForm = { title: 'Prize', description: '', cost: '10', image_url: '', quantity: '', category: 'other', food_xp: '', target_species: '' }
     expect(buildShopItemInsert(form, 'teacher-uuid').created_by).toBe('teacher-uuid')
   })
 
   it('sets quantity to null when form quantity is empty string', () => {
-    const form: ShopItemForm = { title: 'Prize', description: '', cost: '10', image_url: '', quantity: '' }
+    const form: ShopItemForm = { title: 'Prize', description: '', cost: '10', image_url: '', quantity: '', category: 'other', food_xp: '', target_species: '' }
     expect(buildShopItemInsert(form, 'teacher-uuid').quantity).toBeNull()
   })
 
   it('parses quantity when provided', () => {
-    const form: ShopItemForm = { title: 'Prize', description: '', cost: '10', image_url: '', quantity: '5' }
+    const form: ShopItemForm = { title: 'Prize', description: '', cost: '10', image_url: '', quantity: '5', category: 'other', food_xp: '', target_species: '' }
     expect(buildShopItemInsert(form, 'teacher-uuid').quantity).toBe(5)
   })
 
   it('sets description to null when empty', () => {
-    const form: ShopItemForm = { title: 'Prize', description: '', cost: '10', image_url: '', quantity: '' }
+    const form: ShopItemForm = { title: 'Prize', description: '', cost: '10', image_url: '', quantity: '', category: 'other', food_xp: '', target_species: '' }
     expect(buildShopItemInsert(form, 'teacher-uuid').description).toBeNull()
+  })
+
+  it('sets category from form', () => {
+    const form: ShopItemForm = { title: 'Prize', description: '', cost: '10', image_url: '', quantity: '', category: 'food', food_xp: '50', target_species: '' }
+    expect(buildShopItemInsert(form, 'teacher-uuid').category).toBe('food')
+  })
+
+  it('defaults category to other when empty', () => {
+    const form: ShopItemForm = { title: 'Prize', description: '', cost: '10', image_url: '', quantity: '', category: '', food_xp: '', target_species: '' }
+    expect(buildShopItemInsert(form, 'teacher-uuid').category).toBe('other')
+  })
+
+  it('sets food_xp when category is food', () => {
+    const form: ShopItemForm = { title: 'Apple', description: '', cost: '10', image_url: '', quantity: '', category: 'food', food_xp: '25', target_species: '' }
+    expect(buildShopItemInsert(form, 'teacher-uuid').food_xp).toBe(25)
+  })
+
+  it('sets food_xp to null when category is not food', () => {
+    const form: ShopItemForm = { title: 'Hat', description: '', cost: '10', image_url: '', quantity: '', category: 'accessory', food_xp: '25', target_species: '' }
+    expect(buildShopItemInsert(form, 'teacher-uuid').food_xp).toBeNull()
+  })
+
+  it('sets target_species when category is pet', () => {
+    const form: ShopItemForm = { title: 'Dragon Egg', description: '', cost: '100', image_url: '', quantity: '', category: 'pet', food_xp: '', target_species: 'dragon' }
+    expect(buildShopItemInsert(form, 'teacher-uuid').target_species).toBe('dragon')
+  })
+
+  it('sets target_species to null when category is not pet', () => {
+    const form: ShopItemForm = { title: 'Apple', description: '', cost: '10', image_url: '', quantity: '', category: 'food', food_xp: '50', target_species: 'dragon' }
+    expect(buildShopItemInsert(form, 'teacher-uuid').target_species).toBeNull()
   })
 })
 
@@ -326,7 +415,7 @@ describe('Property-based tests', () => {
         }),
         fc.uuid(),
         (formPartial, teacherId) => {
-          const form: ShopItemForm = { ...formPartial, cost: '10' }
+          const form: ShopItemForm = { ...formPartial, cost: '10', category: 'other', food_xp: '', target_species: '' }
           const insert = buildShopItemInsert(form, teacherId)
           return insert.is_active === true && insert.created_by === teacherId
         }
@@ -347,6 +436,9 @@ describe('Property-based tests', () => {
             cost: String(invalidCost),
             image_url: '',
             quantity: '',
+            category: 'other',
+            food_xp: '',
+            target_species: '',
           }
           const result = validateShopItemForm(form)
           return result.valid === false && result.errors.cost !== undefined
