@@ -305,12 +305,20 @@ export default function ShopPage() {
       countMap[r.item_id] = (countMap[r.item_id] ?? 0) + 1
     }
 
-    // Blind box remaining counts — per-student: total pool minus what THIS student has claimed
+    // Blind box remaining counts
+    // - blindbox (digital): per-student — pool minus what THIS student has claimed
+    // - physical_blindbox: global — globally unclaimed images (is_claimed = false)
     const blindboxIds = (shopItems ?? [])
-      .filter((i: any) => i.commodity_type === 'blindbox' || i.commodity_type === 'physical_blindbox')
+      .filter((i: any) => i.commodity_type === 'blindbox')
+      .map((i: any) => i.id)
+
+    const physicalBlindboxIds = (shopItems ?? [])
+      .filter((i: any) => i.commodity_type === 'physical_blindbox')
       .map((i: any) => i.id)
 
     const remainingMap: Record<string, number> = {}
+
+    // Digital blindbox: per-student remaining
     if (blindboxIds.length > 0) {
       // Total pool size per item
       const { data: poolCounts } = await supabase
@@ -335,6 +343,18 @@ export default function ShopPage() {
 
       for (const id of blindboxIds) {
         remainingMap[id] = (poolMap[id] ?? 0) - (claimedCountMap[id] ?? 0)
+      }
+    }
+
+    // Physical blindbox: global remaining (unclaimed image slots)
+    if (physicalBlindboxIds.length > 0) {
+      const { data: unclaimedCounts } = await supabase
+        .from('blindbox_images')
+        .select('item_id')
+        .in('item_id', physicalBlindboxIds)
+        .eq('is_claimed', false)
+      for (const r of unclaimedCounts ?? []) {
+        remainingMap[r.item_id] = (remainingMap[r.item_id] ?? 0) + 1
       }
     }
 
@@ -408,11 +428,19 @@ export default function ShopPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        const msg =
-          data.error === 'Insufficient balance' ? 'Not enough points' :
-          data.error === 'Item is out of stock' ? 'This item is out of stock' :
-          'Something went wrong, please try again'
-        setRedeemErrors((prev) => ({ ...prev, [item.id]: msg }))
+        if (data.error === 'Item is out of stock' || data.error?.includes('out of stock') || data.error?.includes('out_of_stock')) {
+          // Reload so the sold-out overlay appears — no need for a separate error message
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) await loadData(user.id)
+          // Clear any stale error for this item
+          setRedeemErrors((prev) => ({ ...prev, [item.id]: '' }))
+        } else {
+          const msg =
+            data.error === 'Insufficient balance' ? 'Not enough points' :
+            data.error === 'You have already redeemed this item' ? 'You already have this item' :
+            'Something went wrong, please try again'
+          setRedeemErrors((prev) => ({ ...prev, [item.id]: msg }))
+        }
       } else {
         // Refresh data
         const { data: { user } } = await supabase.auth.getUser()
@@ -511,9 +539,11 @@ export default function ShopPage() {
               const isPhysicalBlindbox = commodityType === 'physical_blindbox'
 
               // Out of stock logic
-              // physical_blindbox uses quantity cap (physical stock), not blindbox pool
+              // physical_blindbox: out of stock when no unclaimed image slots remain (global)
+              // blindbox (digital): out of stock when this student has claimed all images (per-student)
+              // standard/physical: out of stock when quantity cap reached
               const outOfStock = isPhysicalBlindbox
-                ? (item.quantity !== null && (item.redemption_count ?? 0) >= item.quantity)
+                ? (item.blindbox_remaining ?? 0) === 0
                 : isBlindbox
                   ? (item.blindbox_remaining ?? 0) === 0
                   : item.quantity !== null && (item.redemption_count ?? 0) >= item.quantity
@@ -566,7 +596,12 @@ export default function ShopPage() {
                         {item.blindbox_remaining} left
                       </div>
                     )}
-                    {!outOfStock && (!isBlindbox || isPhysicalBlindbox) && item.quantity !== null && (
+                    {!outOfStock && isPhysicalBlindbox && (
+                      <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm text-rose-700 text-xs font-medium px-2 py-0.5 rounded-full shadow-sm">
+                        {item.blindbox_remaining} left
+                      </div>
+                    )}
+                    {!outOfStock && !isBlindbox && !isPhysicalBlindbox && item.quantity !== null && (
                       <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm text-gray-700 text-xs font-medium px-2 py-0.5 rounded-full shadow-sm">
                         {item.quantity - (item.redemption_count ?? 0)} left
                       </div>
@@ -627,7 +662,7 @@ export default function ShopPage() {
                          'Redeem'}
                       </button>
                     </div>
-                    {redeemError && (
+                    {redeemError && !outOfStock && (
                       <p className="text-red-500 text-xs mt-1">{redeemError}</p>
                     )}
                   </div>
