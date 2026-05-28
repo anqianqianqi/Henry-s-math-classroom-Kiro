@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { Species, EvolutionStage, StudentPet, AccessoryItem, PetAnimation } from '@/lib/types/pet'
-import { equipAccessory, unequipAccessory } from '@/lib/utils/pet'
+import { equipAccessory, unequipAccessory, computeEvolutionStage } from '@/lib/utils/pet'
 import EggSvg from '@/components/pet/EggSvg'
 import PetSvg from '@/components/pet/PetSvg'
 import BackgroundScene from '@/components/pet/BackgroundScene'
@@ -15,6 +15,13 @@ import XpBar from '@/components/pet/XpBar'
 import AccessoryInventory from '@/components/pet/AccessoryInventory'
 import SpeciesSelector from '@/components/pet/SpeciesSelector'
 import EvolutionSparkle from '@/components/pet/EvolutionSparkle'
+
+interface PendingFeeding {
+  id: string
+  food_xp: number
+  item_title: string
+  created_at: string
+}
 
 /** Human-readable label for each evolution stage + species combination. */
 function getStageLabel(species: Species | null, stage: string): string {
@@ -38,12 +45,15 @@ export default function PetPage() {
   const [pet, setPet] = useState<StudentPet | null>(null)
   const [accessories, setAccessories] = useState<AccessoryItem[]>([])
   const [balance, setBalance] = useState<number>(0)
+  const [pendingFeedings, setPendingFeedings] = useState<PendingFeeding[]>([])
+  const [feeding, setFeeding] = useState<string | null>(null) // feeding_id being processed
   const [sparkleActive, setSparkleActive] = useState(false)
   const [speciesError, setSpeciesError] = useState<string | null>(null)
   const [accessoryError, setAccessoryError] = useState<string | null>(null)
   const [petAnimation, setPetAnimation] = useState<PetAnimation>('idle')
   const [xpGainedLabel, setXpGainedLabel] = useState<number | null>(null)
   const [xpLabelVisible, setXpLabelVisible] = useState(false)
+  const [evolvedFrom, setEvolvedFrom] = useState<string | null>(null) // stage before feeding
   const sparkleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -100,34 +110,9 @@ export default function PetPage() {
       initializePet(user.id),
       loadAccessories(user.id),
       loadBalance(user.id),
+      loadPendingFeedings(user.id),
     ])
     setLoading(false)
-
-    // Check sessionStorage for XP gained from a food redemption (set by task 10.2)
-    const rawXp = sessionStorage.getItem('pet_xp_gained')
-    if (rawXp !== null) {
-      const xpGained = Number(rawXp)
-      sessionStorage.removeItem('pet_xp_gained')
-
-      if (!isNaN(xpGained) && xpGained > 0) {
-        // Show the +N XP label
-        setXpGainedLabel(xpGained)
-        setXpLabelVisible(true)
-
-        // Apply happy animation
-        setPetAnimation('happy')
-
-        // Fade out the label after 2 seconds
-        xpLabelTimerRef.current = setTimeout(() => {
-          setXpLabelVisible(false)
-        }, 2000)
-
-        // Revert animation to idle after 600ms (happy animation duration)
-        animationTimerRef.current = setTimeout(() => {
-          setPetAnimation('idle')
-        }, 600)
-      }
-    }
   }
 
   async function initializePet(userId: string) {
@@ -216,6 +201,79 @@ export default function PetPage() {
       .eq('user_id', userId)
       .single()
     setBalance(walletData?.spendable_balance ?? 0)
+  }
+
+  async function loadPendingFeedings(userId: string) {
+    const { data } = await supabase
+      .from('pet_feedings')
+      .select('id, food_xp, item_title, created_at')
+      .eq('user_id', userId)
+      .is('fed_at', null)
+      .order('created_at', { ascending: true })
+    setPendingFeedings((data ?? []) as PendingFeeding[])
+  }
+
+  async function handleFeed(feedingId: string) {
+    if (!pet || feeding) return
+    setFeeding(feedingId)
+
+    const stageBefore = pet.evolution_stage
+
+    try {
+      const res = await fetch('/api/pet/feed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feeding_id: feedingId }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        console.error('Feed error:', data.error)
+        return
+      }
+
+      const { xp_gained, new_xp, new_stage } = data
+
+      // Update pet state immediately
+      setPet(prev => prev ? {
+        ...prev,
+        xp: new_xp,
+        evolution_stage: new_stage,
+      } : prev)
+
+      // Remove from pending list
+      setPendingFeedings(prev => prev.filter(f => f.id !== feedingId))
+
+      // Show +XP label
+      setXpGainedLabel(xp_gained)
+      setXpLabelVisible(true)
+
+      // Happy animation
+      setPetAnimation('happy')
+
+      // If evolved, trigger sparkle
+      if (new_stage !== stageBefore && stageBefore !== 'egg') {
+        setEvolvedFrom(stageBefore)
+        setSparkleActive(true)
+        sparkleTimerRef.current = setTimeout(() => {
+          setSparkleActive(false)
+          setEvolvedFrom(null)
+        }, 1200)
+      }
+
+      // Fade out XP label after 2.5s
+      xpLabelTimerRef.current = setTimeout(() => {
+        setXpLabelVisible(false)
+      }, 2500)
+
+      // Revert to idle after happy animation
+      animationTimerRef.current = setTimeout(() => {
+        setPetAnimation('idle')
+      }, 700)
+
+    } finally {
+      setFeeding(null)
+    }
   }
 
   async function handleSpeciesSelect(species: Species) {
@@ -345,6 +403,11 @@ export default function PetPage() {
                   {speciesError}
                 </p>
               )}
+              {pendingFeedings.length > 0 && (
+                <div className="mb-4 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 text-center">
+                  <p className="text-orange-700 text-sm font-semibold">🍖 {pendingFeedings.length} food item{pendingFeedings.length !== 1 ? 's' : ''} waiting — hatch your pet first!</p>
+                </div>
+              )}
               <SpeciesSelector onSelect={handleSpeciesSelect} />
             </div>
           </>
@@ -436,6 +499,40 @@ export default function PetPage() {
                 stage={pet?.evolution_stage ?? 'baby'}
               />
             </div>
+
+            {/* Pending food — feed your pet! */}
+            {pendingFeedings.length > 0 && (
+              <div className="mb-6 bg-orange-50 border border-orange-200 rounded-2xl p-4">
+                <h2 className="text-sm font-bold text-orange-800 mb-3 flex items-center gap-2">
+                  <span>🍖</span>
+                  <span>Feed your pet! ({pendingFeedings.length} item{pendingFeedings.length !== 1 ? 's' : ''} waiting)</span>
+                </h2>
+                <div className="flex flex-col gap-2">
+                  {pendingFeedings.map((f) => (
+                    <div key={f.id} className="flex items-center justify-between bg-white rounded-xl px-3 py-2 shadow-sm border border-orange-100">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{f.item_title}</p>
+                        <p className="text-xs text-orange-600 font-medium">+{f.food_xp} XP</p>
+                      </div>
+                      <button
+                        onClick={() => handleFeed(f.id)}
+                        disabled={feeding === f.id}
+                        className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors active:scale-95"
+                      >
+                        {feeding === f.id ? '🍽️ Feeding…' : '🍖 Feed!'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Evolution notification */}
+            {evolvedFrom && (
+              <div className="mb-4 bg-purple-50 border border-purple-200 rounded-2xl px-4 py-3 text-center animate-pulse">
+                <p className="text-purple-700 font-bold text-sm">✨ Your pet evolved! ✨</p>
+              </div>
+            )}
 
             {/* Accessory inventory */}
             <section aria-labelledby="accessories-heading">

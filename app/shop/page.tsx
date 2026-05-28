@@ -295,7 +295,7 @@ export default function ShopPage() {
   const [redeeming, setRedeeming] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [redeemErrors, setRedeemErrors] = useState<Record<string, string>>({})
-  const [activeTab, setActiveTab] = useState<'all' | 'rewards' | 'food' | 'accessory'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'rewards' | 'food' | 'accessory'>('rewards')
 
   // Modals
   const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrl: string; itemTitle: string; isPhysical?: boolean } | null>(null)
@@ -453,6 +453,12 @@ export default function ShopPage() {
         // Store XP gained in sessionStorage so the pet page can show the +N XP animation
         if (typeof data.xp_gained === 'number' && data.xp_gained > 0) {
           sessionStorage.setItem('pet_xp_gained', String(data.xp_gained))
+        }
+
+        // Show food purchase confirmation
+        if (data.pending === true) {
+          setPhysicalConfirm({ itemTitle: `${item.title} added to your pet's food queue! Visit your pet to feed it.` })
+          return
         }
 
         // Show appropriate modal
