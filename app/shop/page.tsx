@@ -20,6 +20,8 @@ interface ShopItemWithCount extends ShopItem {
 
 interface RedemptionWithTitle extends Redemption {
   item_title: string
+  item_commodity_type?: string
+  blindbox_image_url?: string | null
 }
 
 // ── Blind Box Reveal Modal ────────────────────────────────────────────────────
@@ -122,7 +124,49 @@ function BlindBoxReveal({
   )
 }
 
-// ── Physical Confirmation Modal ───────────────────────────────────────────────
+// ── Blind Box View Modal (revisit already-claimed prize) ─────────────────────
+function BlindBoxView({
+  imageUrl,
+  itemTitle,
+  onClose,
+}: {
+  imageUrl: string
+  itemTitle: string
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center">
+        <p className="text-sm font-semibold text-primary-500 uppercase tracking-widest mb-4">
+          🎁 {itemTitle}
+        </p>
+        <div className="rounded-2xl overflow-hidden shadow-lg mb-6" style={{ width: 200, height: 200, margin: '0 auto 24px' }}>
+          <img src={imageUrl} alt="Your blind box reward" className="w-full h-full object-cover" />
+        </div>
+        <p className="text-sm text-gray-500 mb-6">Your exclusive prize — download it anytime!</p>
+        <div className="flex gap-3">
+          <a
+            href={imageUrl}
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 bg-primary-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-primary-700 transition-colors text-center"
+          >
+            ⬇ Download
+          </a>
+          <button
+            onClick={onClose}
+            className="flex-1 bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-200 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
 function PhysicalConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -194,6 +238,7 @@ export default function ShopPage() {
 
   // Modals
   const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrl: string; itemTitle: string } | null>(null)
+  const [blindboxView, setBlindboxView] = useState<{ imageUrl: string; itemTitle: string } | null>(null)
   const [physicalConfirm, setPhysicalConfirm] = useState<{ itemTitle: string } | null>(null)
 
   const loadData = useCallback(async (userId: string) => {
@@ -258,12 +303,23 @@ export default function ShopPage() {
       }))
     )
 
-    // Redemption history
+    // Redemption history with item details
     const { data: history } = await supabase
       .from('redemptions')
-      .select('*, shop_items(title)')
+      .select('*, shop_items(title, commodity_type)')
       .eq('user_id', userId)
       .order('redeemed_at', { ascending: false })
+
+    // Fetch claimed blind box images for this student
+    const { data: claimedImages } = await supabase
+      .from('blindbox_images')
+      .select('item_id, image_url')
+      .eq('claimed_by', userId)
+
+    const claimedImageMap: Record<string, string> = {}
+    for (const img of claimedImages ?? []) {
+      claimedImageMap[img.item_id] = img.image_url
+    }
 
     setRedemptions(
       (history ?? []).map((r: any) => ({
@@ -273,6 +329,10 @@ export default function ShopPage() {
         points_spent: r.points_spent,
         redeemed_at: r.redeemed_at,
         item_title: r.shop_items?.title ?? 'Unknown item',
+        item_commodity_type: r.shop_items?.commodity_type ?? 'standard',
+        blindbox_image_url: r.shop_items?.commodity_type === 'blindbox'
+          ? (claimedImageMap[r.item_id] ?? null)
+          : null,
       }))
     )
   }, [supabase])
@@ -345,6 +405,13 @@ export default function ShopPage() {
           imageUrl={blindboxReveal.imageUrl}
           itemTitle={blindboxReveal.itemTitle}
           onClose={() => setBlindboxReveal(null)}
+        />
+      )}
+      {blindboxView && (
+        <BlindBoxView
+          imageUrl={blindboxView.imageUrl}
+          itemTitle={blindboxView.itemTitle}
+          onClose={() => setBlindboxView(null)}
         />
       )}
       {physicalConfirm && (
@@ -519,9 +586,17 @@ export default function ShopPage() {
             <Card.Body>
               <div className="divide-y divide-gray-100">
                 {sortedRedemptions.map((r) => (
-                  <div key={r.id} className="py-3 flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900">{r.item_title}</p>
+                  <div key={r.id} className="py-3 flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-gray-900">{r.item_title}</p>
+                        {r.item_commodity_type === 'blindbox' && (
+                          <span className="text-[10px] font-semibold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">🎁 Blind Box</span>
+                        )}
+                        {r.item_commodity_type === 'physical' && (
+                          <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">📦 Physical</span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-500">
                         {new Date(r.redeemed_at).toLocaleDateString(undefined, {
                           year: 'numeric', month: 'short', day: 'numeric',
@@ -529,7 +604,17 @@ export default function ShopPage() {
                         })}
                       </p>
                     </div>
-                    <span className="text-primary-600 font-bold">-{r.points_spent} pts</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {r.item_commodity_type === 'blindbox' && r.blindbox_image_url && (
+                        <button
+                          onClick={() => setBlindboxView({ imageUrl: r.blindbox_image_url!, itemTitle: r.item_title })}
+                          className="text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg transition-colors"
+                        >
+                          View Prize
+                        </button>
+                      )}
+                      <span className="text-primary-600 font-bold">-{r.points_spent} pts</span>
+                    </div>
                   </div>
                 ))}
               </div>
