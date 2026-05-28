@@ -17,18 +17,18 @@ interface PetSvgProps {
 // ─── CSS keyframes injected once via a <style> tag ───────────────────────────
 
 const ANIMATION_STYLES = `
-@keyframes petIdlePulse {
-  0%   { transform: scale(1.0); }
-  50%  { transform: scale(1.04); }
-  100% { transform: scale(1.0); }
+@keyframes petFloat {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-8px); }
+  100% { transform: translateY(0px); }
 }
 @keyframes petHappyBounce {
   0%         { transform: translateY(0); }
-  16.666%    { transform: translateY(-10px); }
+  16.666%    { transform: translateY(-14px); }
   33.333%    { transform: translateY(0); }
-  50%        { transform: translateY(-10px); }
+  50%        { transform: translateY(-14px); }
   66.666%    { transform: translateY(0); }
-  83.333%    { transform: translateY(-10px); }
+  83.333%    { transform: translateY(-14px); }
   100%       { transform: translateY(0); }
 }
 `
@@ -36,8 +36,8 @@ const ANIMATION_STYLES = `
 function getAnimationStyle(animation: PetAnimation): React.CSSProperties {
   if (animation === 'idle') {
     return {
-      animation: 'petIdlePulse 3s ease-in-out infinite',
-      transformOrigin: 'center',
+      animation: 'petFloat 2.4s ease-in-out infinite',
+      transformOrigin: 'center bottom',
       display: 'inline-block',
     }
   }
@@ -472,44 +472,62 @@ function FoxLegendary() {
 }
 
 
-// ─── Cat illustrations (purple/lavender color scheme) ────────────────────────
+// ─── Cat illustrations — mascot style (purple, big eyes, round, fluffy) ──────
+// Inspired by the Henry's Math Classroom purple cat mascot.
 
 function CatBaby() {
   return (
     <>
-      {/* Shadow */}
-      <ellipse cx="100" cy="182" rx="30" ry="6" fill="#4C1D95" opacity="0.2" />
-      {/* Body */}
-      <ellipse cx="100" cy="142" rx="30" ry="28" fill="#A78BFA" />
-      {/* Belly */}
-      <ellipse cx="100" cy="150" rx="18" ry="16" fill="#EDE9FE" />
-      {/* Head */}
-      <circle cx="100" cy="102" r="28" fill="#A78BFA" />
-      {/* Ears */}
-      <path d="M 80 82 L 74 60 L 92 78" fill="#A78BFA" />
-      <path d="M 120 82 L 126 60 L 108 78" fill="#A78BFA" />
-      {/* Inner ears */}
-      <path d="M 81 80 L 76 63 L 91 77" fill="#DDD6FE" />
-      <path d="M 119 80 L 124 63 L 109 77" fill="#DDD6FE" />
-      {/* Eyes — big cute */}
-      <circle cx="90" cy="98" r="8" fill="white" />
-      <circle cx="110" cy="98" r="8" fill="white" />
-      <circle cx="91" cy="99" r="5" fill="#2E1065" />
-      <circle cx="111" cy="99" r="5" fill="#2E1065" />
-      <circle cx="93" cy="97" r="2" fill="white" />
-      <circle cx="113" cy="97" r="2" fill="white" />
-      {/* Nose */}
-      <path d="M 97 108 L 100 111 L 103 108" fill="#7C3AED" />
-      {/* Mouth */}
-      <path d="M 100 111 Q 94 116 90 114" fill="none" stroke="#7C3AED" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M 100 111 Q 106 116 110 114" fill="none" stroke="#7C3AED" strokeWidth="1.5" strokeLinecap="round" />
-      {/* Cheek blush */}
-      <circle cx="80" cy="108" r="7" fill="#C4B5FD" opacity="0.5" />
-      <circle cx="120" cy="108" r="7" fill="#C4B5FD" opacity="0.5" />
+      {/* Drop shadow */}
+      <ellipse cx="100" cy="186" rx="28" ry="6" fill="#6D28D9" opacity="0.18" />
+      {/* Body — round and chubby */}
+      <ellipse cx="100" cy="148" rx="30" ry="32" fill="#8B5CF6" />
+      {/* Belly patch */}
+      <ellipse cx="100" cy="155" rx="18" ry="20" fill="#EDE9FE" />
+      {/* Paws */}
+      <ellipse cx="78" cy="178" rx="12" ry="8" fill="#7C3AED" />
+      <ellipse cx="122" cy="178" rx="12" ry="8" fill="#7C3AED" />
+      <ellipse cx="78" cy="176" rx="10" ry="6" fill="#8B5CF6" />
+      <ellipse cx="122" cy="176" rx="10" ry="6" fill="#8B5CF6" />
+      {/* Toe lines */}
+      <line x1="72" y1="177" x2="72" y2="181" stroke="#6D28D9" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="78" y1="178" x2="78" y2="182" stroke="#6D28D9" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="84" y1="177" x2="84" y2="181" stroke="#6D28D9" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="116" y1="177" x2="116" y2="181" stroke="#6D28D9" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="122" y1="178" x2="122" y2="182" stroke="#6D28D9" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="128" y1="177" x2="128" y2="181" stroke="#6D28D9" strokeWidth="1.2" strokeLinecap="round" />
       {/* Tail */}
-      <path d="M 100 168 Q 78 178 70 168 Q 76 158 86 162 Q 93 166 98 168" fill="#A78BFA" />
-      {/* Tail curl */}
-      <path d="M 70 168 Q 62 160 66 150 Q 72 156 72 164" fill="#A78BFA" />
+      <path d="M 128 160 Q 155 145 150 125 Q 145 110 135 118 Q 128 125 132 140" fill="#7C3AED" />
+      {/* Head — large and round */}
+      <circle cx="100" cy="92" r="38" fill="#8B5CF6" />
+      {/* Ear outer */}
+      <path d="M 70 68 L 62 42 L 88 62" fill="#8B5CF6" />
+      <path d="M 130 68 L 138 42 L 112 62" fill="#8B5CF6" />
+      {/* Ear inner (pink) */}
+      <path d="M 72 66 L 66 46 L 86 62" fill="#F9A8D4" />
+      <path d="M 128 66 L 134 46 L 114 62" fill="#F9A8D4" />
+      {/* Eyes — big cartoon style */}
+      <circle cx="86" cy="90" r="14" fill="white" />
+      <circle cx="114" cy="90" r="14" fill="white" />
+      <circle cx="87" cy="91" r="9" fill="#1E1B4B" />
+      <circle cx="115" cy="91" r="9" fill="#1E1B4B" />
+      <circle cx="91" cy="87" r="4" fill="white" />
+      <circle cx="119" cy="87" r="4" fill="white" />
+      <circle cx="84" cy="94" r="1.5" fill="white" opacity="0.6" />
+      <circle cx="112" cy="94" r="1.5" fill="white" opacity="0.6" />
+      {/* Nose — small triangle */}
+      <path d="M 97 103 L 100 107 L 103 103 Z" fill="#C4B5FD" />
+      {/* Mouth */}
+      <path d="M 100 107 Q 94 113 90 111" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M 100 107 Q 106 113 110 111" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" />
+      {/* Whiskers */}
+      <line x1="60" y1="104" x2="88" y2="107" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.9" />
+      <line x1="60" y1="110" x2="88" y2="110" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.9" />
+      <line x1="112" y1="107" x2="140" y2="104" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.9" />
+      <line x1="112" y1="110" x2="140" y2="110" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.9" />
+      {/* Cheek blush */}
+      <ellipse cx="74" cy="106" rx="9" ry="6" fill="#F9A8D4" opacity="0.55" />
+      <ellipse cx="126" cy="106" rx="9" ry="6" fill="#F9A8D4" opacity="0.55" />
     </>
   )
 }
@@ -517,44 +535,56 @@ function CatBaby() {
 function CatTeen() {
   return (
     <>
-      {/* Shadow */}
-      <ellipse cx="100" cy="185" rx="38" ry="7" fill="#4C1D95" opacity="0.2" />
+      {/* Drop shadow */}
+      <ellipse cx="100" cy="188" rx="34" ry="7" fill="#6D28D9" opacity="0.18" />
       {/* Body */}
-      <ellipse cx="100" cy="148" rx="38" ry="36" fill="#8B5CF6" />
+      <ellipse cx="100" cy="150" rx="36" ry="36" fill="#7C3AED" />
       {/* Belly */}
-      <ellipse cx="100" cy="156" rx="24" ry="22" fill="#EDE9FE" />
+      <ellipse cx="100" cy="158" rx="22" ry="24" fill="#EDE9FE" />
+      {/* Paws */}
+      <ellipse cx="74" cy="182" rx="14" ry="9" fill="#6D28D9" />
+      <ellipse cx="126" cy="182" rx="14" ry="9" fill="#6D28D9" />
+      <ellipse cx="74" cy="180" rx="12" ry="7" fill="#7C3AED" />
+      <ellipse cx="126" cy="180" rx="12" ry="7" fill="#7C3AED" />
+      {/* Toe lines */}
+      <line x1="68" y1="181" x2="68" y2="185" stroke="#5B21B6" strokeWidth="1.3" strokeLinecap="round" />
+      <line x1="74" y1="182" x2="74" y2="186" stroke="#5B21B6" strokeWidth="1.3" strokeLinecap="round" />
+      <line x1="80" y1="181" x2="80" y2="185" stroke="#5B21B6" strokeWidth="1.3" strokeLinecap="round" />
+      <line x1="120" y1="181" x2="120" y2="185" stroke="#5B21B6" strokeWidth="1.3" strokeLinecap="round" />
+      <line x1="126" y1="182" x2="126" y2="186" stroke="#5B21B6" strokeWidth="1.3" strokeLinecap="round" />
+      <line x1="132" y1="181" x2="132" y2="185" stroke="#5B21B6" strokeWidth="1.3" strokeLinecap="round" />
+      {/* Tail — curled up */}
+      <path d="M 134 155 Q 162 140 158 118 Q 154 100 140 108 Q 132 116 136 134" fill="#6D28D9" />
+      <ellipse cx="140" cy="107" rx="7" ry="5" fill="#DDD6FE" opacity="0.8" />
       {/* Head */}
-      <ellipse cx="100" cy="96" rx="32" ry="28" fill="#8B5CF6" />
-      {/* Ears — pointed */}
-      <path d="M 76 72 L 68 48 L 88 68" fill="#8B5CF6" />
-      <path d="M 124 72 L 132 48 L 112 68" fill="#8B5CF6" />
-      <path d="M 77 70 L 70 52 L 87 67" fill="#DDD6FE" />
-      <path d="M 123 70 L 130 52 L 113 67" fill="#DDD6FE" />
+      <circle cx="100" cy="88" r="42" fill="#7C3AED" />
+      {/* Ears */}
+      <path d="M 66 62 L 56 32 L 86 56" fill="#7C3AED" />
+      <path d="M 134 62 L 144 32 L 114 56" fill="#7C3AED" />
+      <path d="M 68 60 L 60 36 L 84 56" fill="#F9A8D4" />
+      <path d="M 132 60 L 140 36 L 116 56" fill="#F9A8D4" />
       {/* Eyes */}
-      <circle cx="86" cy="90" r="9" fill="white" />
-      <circle cx="114" cy="90" r="9" fill="white" />
-      <circle cx="87" cy="91" r="5" fill="#2E1065" />
-      <circle cx="115" cy="91" r="5" fill="#2E1065" />
-      <circle cx="89" cy="89" r="2" fill="white" />
-      <circle cx="117" cy="89" r="2" fill="white" />
+      <circle cx="84" cy="86" r="16" fill="white" />
+      <circle cx="116" cy="86" r="16" fill="white" />
+      <circle cx="85" cy="87" r="10" fill="#1E1B4B" />
+      <circle cx="117" cy="87" r="10" fill="#1E1B4B" />
+      <circle cx="89" cy="83" r="4.5" fill="white" />
+      <circle cx="121" cy="83" r="4.5" fill="white" />
+      <circle cx="82" cy="91" r="1.8" fill="white" opacity="0.5" />
+      <circle cx="114" cy="91" r="1.8" fill="white" opacity="0.5" />
       {/* Nose */}
-      <path d="M 96 108 L 100 112 L 104 108" fill="#6D28D9" />
+      <path d="M 96 101 L 100 106 L 104 101 Z" fill="#C4B5FD" />
       {/* Mouth */}
-      <path d="M 100 112 Q 93 118 88 116" fill="none" stroke="#6D28D9" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M 100 112 Q 107 118 112 116" fill="none" stroke="#6D28D9" strokeWidth="1.5" strokeLinecap="round" />
-      {/* Whisker dots */}
-      <circle cx="84" cy="110" r="1.5" fill="#4C1D95" />
-      <circle cx="78" cy="108" r="1.5" fill="#4C1D95" />
-      <circle cx="116" cy="110" r="1.5" fill="#4C1D95" />
-      <circle cx="122" cy="108" r="1.5" fill="#4C1D95" />
+      <path d="M 100 106 Q 93 113 88 111" fill="none" stroke="#6D28D9" strokeWidth="2" strokeLinecap="round" />
+      <path d="M 100 106 Q 107 113 112 111" fill="none" stroke="#6D28D9" strokeWidth="2" strokeLinecap="round" />
+      {/* Whiskers */}
+      <line x1="56" y1="102" x2="86" y2="106" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.9" />
+      <line x1="56" y1="109" x2="86" y2="109" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.9" />
+      <line x1="114" y1="106" x2="144" y2="102" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.9" />
+      <line x1="114" y1="109" x2="144" y2="109" stroke="white" strokeWidth="1.6" strokeLinecap="round" opacity="0.9" />
       {/* Cheek blush */}
-      <ellipse cx="78" cy="104" rx="9" ry="6" fill="#C4B5FD" opacity="0.5" />
-      <ellipse cx="122" cy="104" rx="9" ry="6" fill="#C4B5FD" opacity="0.5" />
-      {/* Tail — curled */}
-      <path d="M 100 182 Q 70 194 58 180 Q 66 164 80 170 Q 90 176 96 180" fill="#8B5CF6" />
-      <path d="M 58 180 Q 48 168 52 156 Q 60 162 60 174" fill="#8B5CF6" />
-      {/* Tail tip */}
-      <ellipse cx="54" cy="158" rx="8" ry="6" fill="#DDD6FE" opacity="0.9" />
+      <ellipse cx="70" cy="104" rx="10" ry="7" fill="#F9A8D4" opacity="0.55" />
+      <ellipse cx="130" cy="104" rx="10" ry="7" fill="#F9A8D4" opacity="0.55" />
     </>
   )
 }
@@ -562,49 +592,136 @@ function CatTeen() {
 function CatAdult() {
   return (
     <>
-      {/* Shadow */}
-      <ellipse cx="100" cy="188" rx="48" ry="8" fill="#3B0764" opacity="0.25" />
+      {/* Drop shadow */}
+      <ellipse cx="100" cy="190" rx="40" ry="8" fill="#5B21B6" opacity="0.2" />
       {/* Body */}
-      <ellipse cx="100" cy="150" rx="48" ry="42" fill="#7C3AED" />
+      <ellipse cx="100" cy="152" rx="42" ry="40" fill="#6D28D9" />
       {/* Belly */}
-      <ellipse cx="100" cy="158" rx="30" ry="26" fill="#EDE9FE" />
+      <ellipse cx="100" cy="160" rx="26" ry="28" fill="#EDE9FE" />
       {/* Chest fluff */}
-      <ellipse cx="100" cy="138" rx="18" ry="12" fill="#DDD6FE" opacity="0.7" />
+      <ellipse cx="100" cy="138" rx="16" ry="10" fill="#DDD6FE" opacity="0.7" />
+      {/* Paws */}
+      <ellipse cx="70" cy="186" rx="16" ry="10" fill="#5B21B6" />
+      <ellipse cx="130" cy="186" rx="16" ry="10" fill="#5B21B6" />
+      <ellipse cx="70" cy="184" rx="14" ry="8" fill="#6D28D9" />
+      <ellipse cx="130" cy="184" rx="14" ry="8" fill="#6D28D9" />
+      {/* Toe lines */}
+      <line x1="63" y1="185" x2="63" y2="190" stroke="#4C1D95" strokeWidth="1.4" strokeLinecap="round" />
+      <line x1="70" y1="186" x2="70" y2="191" stroke="#4C1D95" strokeWidth="1.4" strokeLinecap="round" />
+      <line x1="77" y1="185" x2="77" y2="190" stroke="#4C1D95" strokeWidth="1.4" strokeLinecap="round" />
+      <line x1="123" y1="185" x2="123" y2="190" stroke="#4C1D95" strokeWidth="1.4" strokeLinecap="round" />
+      <line x1="130" y1="186" x2="130" y2="191" stroke="#4C1D95" strokeWidth="1.4" strokeLinecap="round" />
+      <line x1="137" y1="185" x2="137" y2="190" stroke="#4C1D95" strokeWidth="1.4" strokeLinecap="round" />
+      {/* Tail — elegant curl */}
+      <path d="M 140 158 Q 170 140 165 112 Q 160 90 144 100 Q 134 110 140 130" fill="#5B21B6" />
+      <ellipse cx="144" cy="99" rx="8" ry="6" fill="#DDD6FE" opacity="0.85" />
       {/* Head */}
-      <ellipse cx="100" cy="90" rx="38" ry="32" fill="#7C3AED" />
-      {/* Ears — tall with tufts */}
-      <path d="M 72 64 L 62 36 L 84 60" fill="#7C3AED" />
-      <path d="M 128 64 L 138 36 L 116 60" fill="#7C3AED" />
-      <path d="M 73 62 L 64 40 L 83 59" fill="#DDD6FE" />
-      <path d="M 127 62 L 136 40 L 117 59" fill="#DDD6FE" />
-      {/* Ear tufts */}
-      <path d="M 62 36 L 58 26 L 66 34" fill="#C4B5FD" />
-      <path d="M 138 36 L 142 26 L 134 34" fill="#C4B5FD" />
-      {/* Eyes — slit pupils */}
-      <circle cx="82" cy="84" r="11" fill="#EDE9FE" />
-      <circle cx="118" cy="84" r="11" fill="#EDE9FE" />
-      <ellipse cx="82" cy="84" rx="4" ry="8" fill="#1E1B4B" />
-      <ellipse cx="118" cy="84" rx="4" ry="8" fill="#1E1B4B" />
-      <circle cx="84" cy="81" r="2.5" fill="white" />
-      <circle cx="120" cy="81" r="2.5" fill="white" />
+      <circle cx="100" cy="84" r="46" fill="#6D28D9" />
+      {/* Ears */}
+      <path d="M 62 56 L 50 22 L 84 50" fill="#6D28D9" />
+      <path d="M 138 56 L 150 22 L 116 50" fill="#6D28D9" />
+      <path d="M 64 54 L 54 26 L 82 50" fill="#F9A8D4" />
+      <path d="M 136 54 L 146 26 L 118 50" fill="#F9A8D4" />
+      {/* Eyes — large expressive */}
+      <circle cx="82" cy="82" r="18" fill="white" />
+      <circle cx="118" cy="82" r="18" fill="white" />
+      <circle cx="83" cy="83" r="12" fill="#1E1B4B" />
+      <circle cx="119" cy="83" r="12" fill="#1E1B4B" />
+      <circle cx="88" cy="78" r="5" fill="white" />
+      <circle cx="124" cy="78" r="5" fill="white" />
+      <circle cx="80" cy="88" r="2" fill="white" opacity="0.5" />
+      <circle cx="116" cy="88" r="2" fill="white" opacity="0.5" />
       {/* Nose */}
-      <path d="M 95 108 L 100 113 L 105 108" fill="#5B21B6" />
+      <path d="M 95 100 L 100 106 L 105 100 Z" fill="#C4B5FD" />
       {/* Mouth */}
-      <path d="M 100 113 Q 92 120 86 117" fill="none" stroke="#5B21B6" strokeWidth="2" strokeLinecap="round" />
-      <path d="M 100 113 Q 108 120 114 117" fill="none" stroke="#5B21B6" strokeWidth="2" strokeLinecap="round" />
+      <path d="M 100 106 Q 92 114 86 112" fill="none" stroke="#5B21B6" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M 100 106 Q 108 114 114 112" fill="none" stroke="#5B21B6" strokeWidth="2.2" strokeLinecap="round" />
       {/* Whiskers */}
-      <line x1="82" y1="112" x2="60" y2="108" stroke="#4C1D95" strokeWidth="1.5" opacity="0.7" />
-      <line x1="82" y1="116" x2="60" y2="116" stroke="#4C1D95" strokeWidth="1.5" opacity="0.7" />
-      <line x1="118" y1="112" x2="140" y2="108" stroke="#4C1D95" strokeWidth="1.5" opacity="0.7" />
-      <line x1="118" y1="116" x2="140" y2="116" stroke="#4C1D95" strokeWidth="1.5" opacity="0.7" />
-      {/* Cheek markings */}
-      <ellipse cx="74" cy="100" rx="10" ry="7" fill="#A78BFA" opacity="0.5" />
-      <ellipse cx="126" cy="100" rx="10" ry="7" fill="#A78BFA" opacity="0.5" />
-      {/* Tail — long curled */}
-      <path d="M 100 190 Q 62 204 46 188 Q 58 168 74 176 Q 88 184 96 190" fill="#7C3AED" />
-      <path d="M 46 188 Q 32 174 36 158 Q 46 166 46 180" fill="#7C3AED" />
-      {/* Tail tip */}
-      <ellipse cx="38" cy="162" rx="12" ry="9" fill="#DDD6FE" opacity="0.95" />
+      <line x1="50" y1="100" x2="84" y2="104" stroke="white" strokeWidth="1.8" strokeLinecap="round" opacity="0.9" />
+      <line x1="50" y1="108" x2="84" y2="108" stroke="white" strokeWidth="1.8" strokeLinecap="round" opacity="0.9" />
+      <line x1="116" y1="104" x2="150" y2="100" stroke="white" strokeWidth="1.8" strokeLinecap="round" opacity="0.9" />
+      <line x1="116" y1="108" x2="150" y2="108" stroke="white" strokeWidth="1.8" strokeLinecap="round" opacity="0.9" />
+      {/* Cheek blush */}
+      <ellipse cx="66" cy="102" rx="12" ry="8" fill="#F9A8D4" opacity="0.55" />
+      <ellipse cx="134" cy="102" rx="12" ry="8" fill="#F9A8D4" opacity="0.55" />
+    </>
+  )
+}
+
+function CatLegendary() {
+  return (
+    <>
+      {/* Glow aura */}
+      <circle cx="100" cy="110" r="90" fill="#8B5CF6" opacity="0.1" />
+      <circle cx="100" cy="110" r="70" fill="#A78BFA" opacity="0.12" />
+      {/* Drop shadow */}
+      <ellipse cx="100" cy="192" rx="48" ry="9" fill="#4C1D95" opacity="0.25" />
+      {/* Body */}
+      <ellipse cx="100" cy="152" rx="48" ry="44" fill="#4C1D95" />
+      {/* Belly */}
+      <ellipse cx="100" cy="162" rx="30" ry="30" fill="#EDE9FE" />
+      {/* Chest fluff */}
+      <ellipse cx="100" cy="138" rx="20" ry="12" fill="#DDD6FE" opacity="0.8" />
+      {/* Paws */}
+      <ellipse cx="66" cy="188" rx="18" ry="11" fill="#3B0764" />
+      <ellipse cx="134" cy="188" rx="18" ry="11" fill="#3B0764" />
+      <ellipse cx="66" cy="186" rx="16" ry="9" fill="#4C1D95" />
+      <ellipse cx="134" cy="186" rx="16" ry="9" fill="#4C1D95" />
+      {/* Toe lines */}
+      <line x1="58" y1="187" x2="58" y2="192" stroke="#2E1065" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="66" y1="188" x2="66" y2="193" stroke="#2E1065" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="74" y1="187" x2="74" y2="192" stroke="#2E1065" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="126" y1="187" x2="126" y2="192" stroke="#2E1065" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="134" y1="188" x2="134" y2="193" stroke="#2E1065" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="142" y1="187" x2="142" y2="192" stroke="#2E1065" strokeWidth="1.5" strokeLinecap="round" />
+      {/* Multiple tails — legendary */}
+      <path d="M 142 155 Q 172 136 168 106 Q 164 82 148 92 Q 138 102 144 126" fill="#3B0764" />
+      <path d="M 148 160 Q 178 148 176 118 Q 174 96 158 104 Q 148 112 152 136" fill="#4C1D95" opacity="0.85" />
+      <ellipse cx="148" cy="91" rx="9" ry="7" fill="#DDD6FE" opacity="0.9" />
+      <ellipse cx="158" cy="103" rx="8" ry="6" fill="#DDD6FE" opacity="0.8" />
+      {/* Head */}
+      <circle cx="100" cy="82" r="50" fill="#4C1D95" />
+      {/* Crown */}
+      <path d="M 74 50 L 80 30 L 90 46 L 100 24 L 110 46 L 120 30 L 126 50" fill="none" stroke="#FCD34D" strokeWidth="3.5" strokeLinejoin="round" />
+      <circle cx="100" cy="24" r="5" fill="#FCD34D" />
+      <circle cx="80" cy="30" r="4" fill="#FCD34D" />
+      <circle cx="120" cy="30" r="4" fill="#FCD34D" />
+      {/* Ears */}
+      <path d="M 58 52 L 44 16 L 80 46" fill="#4C1D95" />
+      <path d="M 142 52 L 156 16 L 120 46" fill="#4C1D95" />
+      <path d="M 60 50 L 48 20 L 78 46" fill="#F9A8D4" />
+      <path d="M 140 50 L 152 20 L 122 46" fill="#F9A8D4" />
+      {/* Eyes — glowing legendary */}
+      <circle cx="80" cy="80" r="20" fill="white" />
+      <circle cx="120" cy="80" r="20" fill="white" />
+      <circle cx="80" cy="80" r="20" fill="none" stroke="#A78BFA" strokeWidth="2.5" opacity="0.7" />
+      <circle cx="120" cy="80" r="20" fill="none" stroke="#A78BFA" strokeWidth="2.5" opacity="0.7" />
+      <circle cx="81" cy="81" r="13" fill="#1E1B4B" />
+      <circle cx="121" cy="81" r="13" fill="#1E1B4B" />
+      <circle cx="81" cy="81" r="13" fill="none" stroke="#7C3AED" strokeWidth="2" opacity="0.5" />
+      <circle cx="121" cy="81" r="13" fill="none" stroke="#7C3AED" strokeWidth="2" opacity="0.5" />
+      <circle cx="87" cy="75" r="6" fill="white" />
+      <circle cx="127" cy="75" r="6" fill="white" />
+      <circle cx="78" cy="87" r="2.5" fill="white" opacity="0.5" />
+      <circle cx="118" cy="87" r="2.5" fill="white" opacity="0.5" />
+      {/* Nose */}
+      <path d="M 94 98 L 100 105 L 106 98 Z" fill="#C4B5FD" />
+      {/* Mouth */}
+      <path d="M 100 105 Q 91 114 84 112" fill="none" stroke="#4C1D95" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M 100 105 Q 109 114 116 112" fill="none" stroke="#4C1D95" strokeWidth="2.5" strokeLinecap="round" />
+      {/* Whiskers — long magical */}
+      <line x1="44" y1="98" x2="82" y2="103" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.9" />
+      <line x1="44" y1="107" x2="82" y2="107" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.9" />
+      <line x1="118" y1="103" x2="156" y2="98" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.9" />
+      <line x1="118" y1="107" x2="156" y2="107" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.9" />
+      {/* Cheek blush */}
+      <ellipse cx="62" cy="100" rx="14" ry="9" fill="#F9A8D4" opacity="0.55" />
+      <ellipse cx="138" cy="100" rx="14" ry="9" fill="#F9A8D4" opacity="0.55" />
+      {/* Magic sparkles */}
+      <path d="M 28 52 L 30 44 L 32 52 L 40 54 L 32 56 L 30 64 L 28 56 L 20 54 Z" fill="#FCD34D" opacity="0.85" />
+      <path d="M 168 52 L 170 44 L 172 52 L 180 54 L 172 56 L 170 64 L 168 56 L 160 54 Z" fill="#FCD34D" opacity="0.85" />
+      <circle cx="30" cy="80" r="3.5" fill="#A78BFA" opacity="0.8" />
+      <circle cx="170" cy="80" r="3.5" fill="#A78BFA" opacity="0.8" />
     </>
   )
 }
@@ -653,35 +770,6 @@ function CatLegendary() {
       <line x1="80" y1="117" x2="52" y2="117" stroke="#7C3AED" strokeWidth="2" opacity="0.7" />
       <line x1="80" y1="122" x2="52" y2="128" stroke="#7C3AED" strokeWidth="2" opacity="0.7" />
       <line x1="120" y1="112" x2="148" y2="106" stroke="#7C3AED" strokeWidth="2" opacity="0.7" />
-      <line x1="120" y1="117" x2="148" y2="117" stroke="#7C3AED" strokeWidth="2" opacity="0.7" />
-      <line x1="120" y1="122" x2="148" y2="128" stroke="#7C3AED" strokeWidth="2" opacity="0.7" />
-      {/* Crescent moon marking on forehead */}
-      <path d="M 94 56 Q 88 62 90 70 Q 96 64 104 66 Q 108 58 104 52 Q 98 56 94 56" fill="#A78BFA" opacity="0.8" />
-      {/* Multiple tails — legendary cat */}
-      <path d="M 100 192 Q 60 208 44 190 Q 56 170 72 178 Q 86 186 96 192" fill="#4C1D95" />
-      <path d="M 96 192 Q 70 210 56 196 Q 64 176 76 182" fill="#6D28D9" opacity="0.9" />
-      <path d="M 100 192 Q 78 212 64 200 Q 70 180 82 186" fill="#7C3AED" opacity="0.8" />
-      {/* Tail tips */}
-      <ellipse cx="46" cy="192" rx="10" ry="8" fill="#DDD6FE" opacity="0.95" />
-      <ellipse cx="58" cy="198" rx="9" ry="7" fill="#EDE9FE" opacity="0.9" />
-      <ellipse cx="66" cy="202" rx="8" ry="6" fill="#EDE9FE" opacity="0.85" />
-      {/* Magic sparkles */}
-      <circle cx="30" cy="55" r="4" fill="#A78BFA" opacity="0.8" />
-      <circle cx="170" cy="55" r="4" fill="#A78BFA" opacity="0.8" />
-      <circle cx="22" cy="88" r="2.5" fill="#C4B5FD" opacity="0.7" />
-      <circle cx="178" cy="88" r="2.5" fill="#C4B5FD" opacity="0.7" />
-      <path d="M 28 53 L 30 45 L 32 53 L 40 55 L 32 57 L 30 65 L 28 57 L 20 55 Z" fill="#EDE9FE" opacity="0.8" />
-      <path d="M 168 53 L 170 45 L 172 53 L 180 55 L 172 57 L 170 65 L 168 57 L 160 55 Z" fill="#EDE9FE" opacity="0.8" />
-      {/* Floating orbs */}
-      <circle cx="40" cy="120" r="5" fill="#A78BFA" opacity="0.5" />
-      <circle cx="160" cy="120" r="5" fill="#A78BFA" opacity="0.5" />
-      <circle cx="40" cy="120" r="5" fill="none" stroke="#DDD6FE" strokeWidth="1.5" opacity="0.7" />
-      <circle cx="160" cy="120" r="5" fill="none" stroke="#DDD6FE" strokeWidth="1.5" opacity="0.7" />
-    </>
-  )
-}
-
-
 // ─── Lookup map ──────────────────────────────────────────────────────────────
 
 type NonEggStage = Exclude<EvolutionStage, 'egg'>
