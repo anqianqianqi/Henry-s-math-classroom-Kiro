@@ -75,10 +75,11 @@ export default function AdminShopPage() {
   const [setDrafts, setSetDrafts] = useState<SetDraft[]>([])
 
   const loadData = useCallback(async () => {
-    // Fetch all shop items (active + inactive)
+    // Fetch all shop items (active + inactive) — hide pet categories on main
     const { data: shopItems, error: itemsError } = await supabase
       .from('shop_items')
       .select('*')
+      .not('category', 'in', '("food","accessory","pet")')
       .order('created_at', { ascending: false })
 
     if (itemsError) {
