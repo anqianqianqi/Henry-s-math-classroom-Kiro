@@ -9,8 +9,6 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import NotificationBell from '@/components/NotificationBell'
 import { localDateString } from '@/lib/utils/date'
-import PetPreviewCard from '@/components/pet/PetPreviewCard'
-import EggSvg from '@/components/pet/EggSvg'
 import PetSvg from '@/components/pet/PetSvg'
 import type { StudentPet, Species, EvolutionStage } from '@/lib/types/pet'
 
@@ -48,7 +46,6 @@ export default function DashboardPage() {
     spendableBalance: 0,
   })
   const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean }>>([])
-  const [studentPet, setStudentPet] = useState<StudentPet | null>(null)
   const [studentPets, setStudentPets] = useState<StudentPetEntry[]>([])
   const router = useRouter()
   const supabase = createClient()
@@ -261,18 +258,6 @@ export default function DashboardPage() {
       }
 
       setStats(newStats)
-
-      // Fetch student pet (non-teacher/non-admin only)
-      const { data: petData, error: petError } = await supabase
-        .from('student_pets')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
-
-      if (petError && petError.code !== 'PGRST116') {
-        console.error('Failed to load student pet:', petError)
-      }
-      setStudentPet(petData ?? null)
     } catch (err) {
       console.error('Failed to load stats:', err)
     }
@@ -529,12 +514,6 @@ export default function DashboardPage() {
                 <div className="text-gray-600 font-medium">Shop Balance</div>
               </Card.Body>
             </Card>
-          )}
-
-          {!isTeacher && !isAdmin && (
-            <div className="flex items-center justify-center">
-              <PetPreviewCard pet={studentPet} className="w-full h-full justify-center" />
-            </div>
           )}
 
           <Card 
