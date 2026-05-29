@@ -275,7 +275,7 @@ export default function ShopPage() {
   const [redeeming, setRedeeming] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [redeemErrors, setRedeemErrors] = useState<Record<string, string>>({})
-  const [activeTab, setActiveTab] = useState<'all' | 'rewards' | 'food' | 'accessory'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'rewards' | 'food' | 'accessory'>('rewards')
 
   // Modals
   const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrl: string; itemTitle: string; isPhysical?: boolean } | null>(null)
