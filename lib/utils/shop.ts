@@ -134,6 +134,8 @@ export function buildShopItemInsert(
   form: ShopItemForm,
   teacherId: string
 ): ShopItemInsert {
+  const drawsRaw = parseInt(form.draws_per_redemption ?? '1', 10)
+  const draws = isNaN(drawsRaw) || drawsRaw < 1 ? 1 : Math.min(drawsRaw, 20)
   return {
     title: form.title.trim(),
     description: form.description.trim() || null,
@@ -147,6 +149,7 @@ export function buildShopItemInsert(
     commodity_type: (form.commodity_type || 'standard') as CommodityType,
     food_xp: form.category === 'food' ? parseInt(form.food_xp, 10) : null,
     target_species: form.category === 'pet' ? form.target_species as Species : null,
+    draws_per_redemption: draws,
   }
 }
 

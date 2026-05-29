@@ -16,6 +16,7 @@ import type {
   ShopItemForm,
   RedemptionWithDetails,
   StudentBalance,
+  BlindboxSet,
 } from '@/lib/types/shop'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,6 +40,7 @@ const EMPTY_FORM: ShopItemForm = {
   commodity_type: 'standard',
   food_xp: '',
   target_species: '',
+  draws_per_redemption: '1',
 }
 
 export default function AdminShopPage() {
@@ -58,13 +60,19 @@ export default function AdminShopPage() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
-  // Blind box image pool state
-  const [blindboxFiles, setBlindboxFiles] = useState<File[]>([])
-  const [blindboxPreviews, setBlindboxPreviews] = useState<string[]>([])
   const [uploadingBlindbox, setUploadingBlindbox] = useState(false)
-  // Existing blindbox images (when editing)
-  const [existingBlindboxImages, setExistingBlindboxImages] = useState<Array<{id: string; image_url: string}>>([])
-  const [removedBlindboxIds, setRemovedBlindboxIds] = useState<string[]>([])
+  // Set-based blind box state
+  // Each set: { id (temp or real), name, existingImages: [{id,image_url}], newFiles: File[], newPreviews: string[], removedImageIds: string[], isNew: bool }
+  type SetDraft = {
+    tempId: string          // client-only id for new sets; real UUID for existing
+    dbId: string | null     // null = not yet saved to DB
+    name: string
+    existingImages: Array<{ id: string; image_url: string }>
+    newFiles: File[]
+    newPreviews: string[]
+    removedImageIds: string[]
+  }
+  const [setDrafts, setSetDrafts] = useState<SetDraft[]>([])
 
   const loadData = useCallback(async () => {
     // Fetch all shop items (active + inactive)
@@ -254,16 +262,60 @@ export default function AdminShopPage() {
     setForm((prev) => ({ ...prev, image_url: '' }))
   }
 
-  function handleBlindboxFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    const valid = files.filter(f => f.type.startsWith('image/') && f.size <= 5 * 1024 * 1024)
-    setBlindboxFiles((prev) => [...prev, ...valid])
-    setBlindboxPreviews((prev) => [...prev, ...valid.map(f => URL.createObjectURL(f))])
+  // ── Set-based blind box helpers ──────────────────────────────────────────
+
+  function addSet() {
+    setSetDrafts(prev => [...prev, {
+      tempId: `new-${Date.now()}-${Math.random()}`,
+      dbId: null,
+      name: `Set ${prev.length + 1}`,
+      existingImages: [],
+      newFiles: [],
+      newPreviews: [],
+      removedImageIds: [],
+    }])
   }
 
-  function removeBlindboxImage(index: number) {
-    setBlindboxFiles((prev) => prev.filter((_, i) => i !== index))
-    setBlindboxPreviews((prev) => prev.filter((_, i) => i !== index))
+  function removeSet(tempId: string) {
+    setSetDrafts(prev => prev.filter(s => s.tempId !== tempId))
+  }
+
+  function updateSetName(tempId: string, name: string) {
+    setSetDrafts(prev => prev.map(s => s.tempId === tempId ? { ...s, name } : s))
+  }
+
+  function addImagesToSet(tempId: string, files: File[]) {
+    const valid = files.filter(f => f.type.startsWith('image/') && f.size <= 5 * 1024 * 1024)
+    const previews = valid.map(f => URL.createObjectURL(f))
+    setSetDrafts(prev => prev.map(s =>
+      s.tempId === tempId
+        ? { ...s, newFiles: [...s.newFiles, ...valid], newPreviews: [...s.newPreviews, ...previews] }
+        : s
+    ))
+  }
+
+  function removeNewImageFromSet(tempId: string, index: number) {
+    setSetDrafts(prev => prev.map(s => {
+      if (s.tempId !== tempId) return s
+      return {
+        ...s,
+        newFiles: s.newFiles.filter((_, i) => i !== index),
+        newPreviews: s.newPreviews.filter((_, i) => i !== index),
+      }
+    }))
+  }
+
+  function toggleRemoveExistingImage(tempId: string, imageId: string) {
+    setSetDrafts(prev => prev.map(s => {
+      if (s.tempId !== tempId) return s
+      const already = s.removedImageIds.includes(imageId)
+      return {
+        ...s,
+        removedImageIds: already
+          ? s.removedImageIds.filter(id => id !== imageId)
+          : [...s.removedImageIds, imageId],
+      }
+    }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -315,6 +367,7 @@ export default function AdminShopPage() {
             category: form.category || 'other',
             food_xp: form.category === 'food' ? parseInt(form.food_xp, 10) : null,
             target_species: form.category === 'pet' ? form.target_species || null : null,
+            draws_per_redemption: Math.max(1, Math.min(20, parseInt(form.draws_per_redemption || '1', 10) || 1)),
           })
           .eq('id', editingId)
 
@@ -323,55 +376,47 @@ export default function AdminShopPage() {
           return
         }
 
-        // Handle blindbox image pool changes when editing
+        // Handle set-based blindbox changes when editing
         if (form.commodity_type === 'blindbox' || form.commodity_type === 'physical_blindbox') {
-          // Remove deleted images
-          if (removedBlindboxIds.length > 0) {
-            await supabase.from('blindbox_images').delete().in('id', removedBlindboxIds)
-          }
-          // Upload new images
-          if (blindboxFiles.length > 0) {
-            setUploadingBlindbox(true)
-            const uploadedUrls: string[] = []
-            const currentMax = existingBlindboxImages.filter(img => !removedBlindboxIds.includes(img.id)).length
-            for (const file of blindboxFiles) {
+          setUploadingBlindbox(true)
+          for (const draft of setDrafts) {
+            // Delete removed existing images
+            if (draft.removedImageIds.length > 0) {
+              await supabase.from('blindbox_images').delete().in('id', draft.removedImageIds)
+            }
+
+            let setDbId = draft.dbId
+            if (!setDbId) {
+              // Create new set in DB
+              const { data: newSet } = await supabase
+                .from('blindbox_sets')
+                .insert({ item_id: editingId, name: draft.name, sort_order: setDrafts.indexOf(draft) })
+                .select('id')
+                .single()
+              setDbId = newSet?.id ?? null
+            } else {
+              // Update set name
+              await supabase.from('blindbox_sets').update({ name: draft.name }).eq('id', setDbId)
+            }
+
+            if (!setDbId) continue
+
+            // Upload new images for this set
+            const existingCount = draft.existingImages.filter(img => !draft.removedImageIds.includes(img.id)).length
+            for (let i = 0; i < draft.newFiles.length; i++) {
+              const file = draft.newFiles[i]
               const fileExt = file.name.split('.').pop()
-              const fileName = `blindbox/${editingId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+              const fileName = `blindbox/${editingId}/${setDbId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
               const { error: uploadErr } = await supabase.storage.from('shop-images').upload(fileName, file)
               if (!uploadErr) {
                 const { data: { publicUrl } } = supabase.storage.from('shop-images').getPublicUrl(fileName)
-                uploadedUrls.push(publicUrl)
+                await supabase.from('blindbox_images').insert({
+                  item_id: editingId,
+                  set_id: setDbId,
+                  image_url: publicUrl,
+                  sort_order: existingCount + i,
+                })
               }
-            }
-            setUploadingBlindbox(false)
-            if (uploadedUrls.length > 0) {
-              const rows = uploadedUrls.map((url, i) => ({
-                item_id: editingId,
-                image_url: url,
-                sort_order: currentMax + i,
-              }))
-              await supabase.from('blindbox_images').insert(rows)
-            }
-          }
-        }
-
-        // Remove blindbox images that were marked for deletion
-        if (removedBlindboxIds.length > 0) {
-          await supabase.from('blindbox_images').delete().in('id', removedBlindboxIds)
-        }
-
-        // Upload new blindbox images if any were added
-        if ((form.commodity_type === 'blindbox' || form.commodity_type === 'physical_blindbox') && blindboxFiles.length > 0) {
-          setUploadingBlindbox(true)
-          const existingCount = existingBlindboxImages.filter(img => !removedBlindboxIds.includes(img.id)).length
-          for (let i = 0; i < blindboxFiles.length; i++) {
-            const file = blindboxFiles[i]
-            const fileExt = file.name.split('.').pop()
-            const fileName = `blindbox/${editingId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
-            const { error: uploadErr } = await supabase.storage.from('shop-images').upload(fileName, file)
-            if (!uploadErr) {
-              const { data: { publicUrl } } = supabase.storage.from('shop-images').getPublicUrl(fileName)
-              await supabase.from('blindbox_images').insert({ item_id: editingId, image_url: publicUrl, sort_order: existingCount + i })
             }
           }
           setUploadingBlindbox(false)
@@ -394,31 +439,40 @@ export default function AdminShopPage() {
           return
         }
 
-        // Upload blind box images if commodity_type is blindbox or physical_blindbox
-        if ((form.commodity_type === 'blindbox' || form.commodity_type === 'physical_blindbox') && blindboxFiles.length > 0) {
+        // Upload set-based blindbox images for new item
+        if ((form.commodity_type === 'blindbox' || form.commodity_type === 'physical_blindbox') && setDrafts.length > 0) {
           setUploadingBlindbox(true)
-          const uploadedUrls: string[] = []
-          for (const file of blindboxFiles) {
-            const fileExt = file.name.split('.').pop()
-            const fileName = `blindbox/${newItem.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
-            const { error: uploadErr } = await supabase.storage
-              .from('shop-images')
-              .upload(fileName, file)
-            if (!uploadErr) {
-              const { data: { publicUrl } } = supabase.storage.from('shop-images').getPublicUrl(fileName)
-              uploadedUrls.push(publicUrl)
+          for (let si = 0; si < setDrafts.length; si++) {
+            const draft = setDrafts[si]
+            if (draft.newFiles.length === 0) continue
+
+            // Create the set in DB
+            const { data: newSet } = await supabase
+              .from('blindbox_sets')
+              .insert({ item_id: newItem.id, name: draft.name, sort_order: si })
+              .select('id')
+              .single()
+            const setDbId = newSet?.id
+            if (!setDbId) continue
+
+            // Upload images for this set
+            for (let i = 0; i < draft.newFiles.length; i++) {
+              const file = draft.newFiles[i]
+              const fileExt = file.name.split('.').pop()
+              const fileName = `blindbox/${newItem.id}/${setDbId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+              const { error: uploadErr } = await supabase.storage.from('shop-images').upload(fileName, file)
+              if (!uploadErr) {
+                const { data: { publicUrl } } = supabase.storage.from('shop-images').getPublicUrl(fileName)
+                await supabase.from('blindbox_images').insert({
+                  item_id: newItem.id,
+                  set_id: setDbId,
+                  image_url: publicUrl,
+                  sort_order: i,
+                })
+              }
             }
           }
           setUploadingBlindbox(false)
-
-          if (uploadedUrls.length > 0) {
-            const rows = uploadedUrls.map((url, i) => ({
-              item_id: newItem.id,
-              image_url: url,
-              sort_order: i,
-            }))
-            await supabase.from('blindbox_images').insert(rows)
-          }
         }
       }
 
@@ -426,10 +480,7 @@ export default function AdminShopPage() {
       setEditingId(null)
       setImageFile(null)
       setImagePreview(null)
-      setBlindboxFiles([])
-      setBlindboxPreviews([])
-      setExistingBlindboxImages([])
-      setRemovedBlindboxIds([])
+      setSetDrafts([])
       await loadData()
     } finally {
       setSubmitting(false)
@@ -449,23 +500,52 @@ export default function AdminShopPage() {
       commodity_type: item.commodity_type ?? 'standard',
       food_xp: item.food_xp !== null ? String(item.food_xp) : '',
       target_species: item.target_species ?? '',
+      draws_per_redemption: String(item.draws_per_redemption ?? 1),
     })
     setImageFile(null)
     setImagePreview(item.image_url ?? null)
-    setBlindboxFiles([])
-    setBlindboxPreviews([])
-    setRemovedBlindboxIds([])
-    setExistingBlindboxImages([])
+    setSetDrafts([])
 
-    // Fetch existing blindbox images if applicable
+    // Fetch existing blindbox sets and their images if applicable
     if (item.commodity_type === 'blindbox' || item.commodity_type === 'physical_blindbox') {
       supabase
-        .from('blindbox_images')
-        .select('id, image_url')
+        .from('blindbox_sets')
+        .select('id, name, sort_order, blindbox_images(id, image_url, sort_order)')
         .eq('item_id', item.id)
         .order('sort_order', { ascending: true })
         .then(({ data }) => {
-          setExistingBlindboxImages(data ?? [])
+          if (data && data.length > 0) {
+            setSetDrafts(data.map((s: any) => ({
+              tempId: s.id,
+              dbId: s.id,
+              name: s.name,
+              existingImages: (s.blindbox_images ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order),
+              newFiles: [],
+              newPreviews: [],
+              removedImageIds: [],
+            })))
+          } else {
+            // Legacy: item has images but no sets — show one default set
+            supabase
+              .from('blindbox_images')
+              .select('id, image_url')
+              .eq('item_id', item.id)
+              .is('set_id', null)
+              .order('sort_order', { ascending: true })
+              .then(({ data: imgs }) => {
+                if (imgs && imgs.length > 0) {
+                  setSetDrafts([{
+                    tempId: 'legacy',
+                    dbId: null,
+                    name: 'Set 1',
+                    existingImages: imgs,
+                    newFiles: [],
+                    newPreviews: [],
+                    removedImageIds: [],
+                  }])
+                }
+              })
+          }
         })
     }
 
@@ -609,7 +689,7 @@ export default function AdminShopPage() {
                     ))}
                   </div>
                   {form.commodity_type === 'blindbox' && (
-                    <p className="text-xs text-purple-600 mt-1">Students get a random image from the pool. Each image can only be claimed once.</p>
+                    <p className="text-xs text-purple-600 mt-1">Students draw one set at a time. Each set is a group of images revealed together. Define sets below.</p>
                   )}
                   {form.commodity_type === 'physical' && (
                     <p className="text-xs text-amber-600 mt-1">You will receive an in-app notification when a student redeems this item.</p>
@@ -618,6 +698,8 @@ export default function AdminShopPage() {
                     <p className="text-xs text-rose-600 mt-1">Student gets a random image from the pool (each claimed once) AND you get notified to ship the physical item.</p>
                   )}
                 </div>
+
+                {/* Draws per redemption hidden for set-based boxes — sets define the group size */}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -800,81 +882,134 @@ export default function AdminShopPage() {
                   )}
                 </div>
 
-                {/* Blind box image pool */}
+                {/* Blind box draw sets */}
                 {(form.commodity_type === 'blindbox' || form.commodity_type === 'physical_blindbox') && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Blind Box Image Pool <span className="text-red-500">*</span>
-                      <span className="text-gray-400 font-normal ml-1">
-                        ({existingBlindboxImages.filter(img => !removedBlindboxIds.includes(img.id)).length + blindboxPreviews.length} images in pool)
-                      </span>
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Draw Sets <span className="text-red-500">*</span>
+                        <span className="text-gray-400 font-normal ml-1 text-xs">
+                          — each draw reveals all images in one randomly selected set
+                        </span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addSet}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
+                      >
+                        + Add Set
+                      </button>
+                    </div>
 
-                    {/* Existing images from DB */}
-                    {existingBlindboxImages.length > 0 && (
-                      <div className="mb-3">
-                        <p className="text-xs text-gray-500 mb-2">Current pool images:</p>
-                        <div className="grid grid-cols-4 gap-2">
-                          {existingBlindboxImages.map((img) => {
-                            const isRemoved = removedBlindboxIds.includes(img.id)
-                            return (
-                              <div key={img.id} className={`relative aspect-square rounded-lg overflow-hidden border ${isRemoved ? 'border-red-300 opacity-40' : 'border-gray-200'}`}>
-                                <img src={img.image_url} alt="Pool image" className="w-full h-full object-cover" />
-                                {isRemoved ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setRemovedBlindboxIds(prev => prev.filter(id => id !== img.id))}
-                                    className="absolute inset-0 flex items-center justify-center bg-red-100/80 text-red-600 text-xs font-semibold"
-                                  >
-                                    Undo
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => setRemovedBlindboxIds(prev => [...prev, img.id])}
-                                    className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center hover:bg-red-600"
-                                  >
-                                    ×
-                                  </button>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
+                    {setDrafts.length === 0 && (
+                      <div className="border-2 border-dashed border-purple-200 rounded-xl p-6 text-center text-sm text-purple-400">
+                        No sets yet. Click "Add Set" to create your first draw set.
                       </div>
                     )}
 
-                    <div className="border-2 border-dashed border-purple-300 rounded-xl p-4 bg-purple-50">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleBlindboxFilesChange}
-                        className="hidden"
-                        id="blindbox-images"
-                      />
-                      <label htmlFor="blindbox-images" className="cursor-pointer flex flex-col items-center">
-                        <div className="text-3xl mb-1">🎲</div>
-                        <div className="text-sm text-purple-700 font-medium">Click to add more images to the pool</div>
-                        <div className="text-xs text-purple-500 mt-0.5">Each image will be claimed by exactly one student</div>
-                      </label>
-                    </div>
-                    {blindboxPreviews.length > 0 && (
-                      <div className="mt-3 grid grid-cols-4 gap-2">
-                        {blindboxPreviews.map((url, i) => (
-                          <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-purple-200">
-                            <img src={url} alt={`New pool image ${i + 1}`} className="w-full h-full object-cover" />
+                    <div className="space-y-4">
+                      {setDrafts.map((draft, si) => (
+                        <div key={draft.tempId} className="border border-purple-200 rounded-xl p-4 bg-purple-50/50">
+                          {/* Set header */}
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="text-purple-500 font-bold text-sm">#{si + 1}</span>
+                            <input
+                              type="text"
+                              value={draft.name}
+                              onChange={e => updateSetName(draft.tempId, e.target.value)}
+                              className="flex-1 border border-purple-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
+                              placeholder="Set name (e.g. Rare Pack, Series A)"
+                            />
                             <button
                               type="button"
-                              onClick={() => removeBlindboxImage(i)}
-                              className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center hover:bg-red-600"
+                              onClick={() => removeSet(draft.tempId)}
+                              className="text-xs px-2 py-1 rounded-lg bg-red-100 text-red-600 hover:bg-red-200"
                             >
-                              ×
+                              Remove set
                             </button>
                           </div>
-                        ))}
-                      </div>
-                    )}
+
+                          {/* Existing images */}
+                          {draft.existingImages.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs text-gray-500 mb-1">Saved images:</p>
+                              <div className="grid grid-cols-5 gap-1.5">
+                                {draft.existingImages.map(img => {
+                                  const removed = draft.removedImageIds.includes(img.id)
+                                  return (
+                                    <div key={img.id} className={`relative aspect-square rounded-lg overflow-hidden border ${removed ? 'border-red-300 opacity-40' : 'border-purple-200'}`}>
+                                      <img src={img.image_url} alt="" className="w-full h-full object-cover" />
+                                      {removed ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleRemoveExistingImage(draft.tempId, img.id)}
+                                          className="absolute inset-0 flex items-center justify-center bg-red-100/80 text-red-600 text-[10px] font-semibold"
+                                        >
+                                          Undo
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleRemoveExistingImage(draft.tempId, img.id)}
+                                          className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center hover:bg-red-600"
+                                        >
+                                          ×
+                                        </button>
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* New image previews */}
+                          {draft.newPreviews.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs text-gray-500 mb-1">New images to upload:</p>
+                              <div className="grid grid-cols-5 gap-1.5">
+                                {draft.newPreviews.map((url, i) => (
+                                  <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-purple-300">
+                                    <img src={url} alt="" className="w-full h-full object-cover" />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeNewImageFromSet(draft.tempId, i)}
+                                      className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center hover:bg-red-600"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Add images to this set */}
+                          <label
+                            htmlFor={`set-images-${draft.tempId}`}
+                            className="cursor-pointer flex items-center gap-2 text-xs text-purple-600 hover:text-purple-800 mt-1"
+                          >
+                            <span className="text-base">🖼️</span>
+                            <span>Add images to this set</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              id={`set-images-${draft.tempId}`}
+                              className="hidden"
+                              onChange={e => {
+                                addImagesToSet(draft.tempId, Array.from(e.target.files ?? []))
+                                e.target.value = ''
+                              }}
+                            />
+                          </label>
+
+                          <p className="text-[10px] text-purple-400 mt-1">
+                            {draft.existingImages.filter(img => !draft.removedImageIds.includes(img.id)).length + draft.newFiles.length} image(s) in this set
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -886,7 +1021,7 @@ export default function AdminShopPage() {
                     <Button
                       type="button"
                       variant="ghost"
-                      onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setImageFile(null); setImagePreview(null); setBlindboxFiles([]); setBlindboxPreviews([]); setExistingBlindboxImages([]); setRemovedBlindboxIds([]) }}
+                      onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setImageFile(null); setImagePreview(null); setSetDrafts([]) }}
                     >
                       Cancel
                     </Button>

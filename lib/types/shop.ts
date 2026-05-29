@@ -23,6 +23,7 @@ export interface ShopItem {
   commodity_type: CommodityType
   food_xp: number | null        // only set when category = 'food'
   target_species: Species | null  // only set when category = 'pet'
+  draws_per_redemption: number  // how many images per blind box draw (default 1)
   // Computed client-side for display:
   redemption_count?: number     // how many times this item has been redeemed
   blindbox_total?: number       // total images in pool (blindbox only)
@@ -63,6 +64,7 @@ export interface ShopItemForm {
   commodity_type: string      // 'standard' | 'blindbox' | 'physical'
   food_xp: string             // empty string = not applicable; parsed to int for food items
   target_species: string      // '' | 'dragon' | 'fox' | 'cat'
+  draws_per_redemption: string  // number of images per blind box draw; default '1'
 }
 
 export interface ValidationResult {
@@ -83,6 +85,7 @@ export interface ShopItemInsert {
   commodity_type: CommodityType
   food_xp: number | null      // only set when category = 'food'
   target_species: Species | null  // only set when category = 'pet'
+  draws_per_redemption: number  // images per blind box draw
 }
 
 export interface BlindboxImage {
@@ -93,6 +96,16 @@ export interface BlindboxImage {
   claimed_by: string | null
   claimed_at: string | null
   sort_order: number
+  set_id: string | null
+}
+
+export interface BlindboxSet {
+  id: string
+  item_id: string
+  name: string
+  sort_order: number
+  // Client-side: images belonging to this set
+  images?: BlindboxImage[]
 }
 
 export interface PhysicalRedemptionRequest {

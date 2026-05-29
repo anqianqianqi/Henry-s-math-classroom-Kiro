@@ -94,14 +94,13 @@ BEGIN
   VALUES
     (v_redemption_id, p_item_id, auth.uid(), v_teacher_id, 'pending');
 
-  -- Send in-app notification to teacher
-  INSERT INTO notifications (user_id, type, title, message, related_id)
+  -- Send in-app notification to teacher (omit related_id if column doesn't exist)
+  INSERT INTO notifications (user_id, type, title, message)
   VALUES (
     v_teacher_id,
     'physical_redemption',
     '📦 Physical Blind Box Redeemed',
-    v_student_name || ' redeemed "' || v_title || '" — please ship the physical item!',
-    v_redemption_id
+    v_student_name || ' redeemed "' || v_title || '" — please ship the physical item!'
   );
 
   RETURN jsonb_build_object(
