@@ -505,23 +505,29 @@ export default function DesktopPet() {
               />
             </div>
 
-            {/* Size slider — appears on hover */}
+            {/* Size slider — floats below as absolute overlay, doesn't push Didi up */}
             {showSizer && !isDragging && (
               <div
                 onClick={e => e.stopPropagation()}
                 onMouseDown={e => e.stopPropagation()}
                 style={{
+                  position: 'absolute',
+                  bottom: -28,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 4,
-                  marginTop: 4,
-                  padding: '2px 4px',
-                  background: 'rgba(255,255,255,0.9)',
+                  padding: '2px 6px',
+                  background: 'rgba(255,255,255,0.92)',
                   borderRadius: 8,
                   border: '1px solid #f0e6d3',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  whiteSpace: 'nowrap',
+                  zIndex: 10002,
                 }}
               >
-                <span style={{ fontSize: 9, color: '#a07060' }}>🐾</span>
+                <span style={{ fontSize: 9, color: '#a07060' }}>S</span>
                 <input
                   type="range"
                   min={60}
@@ -532,7 +538,7 @@ export default function DesktopPet() {
                   style={{ width: 70, accentColor: '#a07060', cursor: 'ew-resize' }}
                   title="Resize Didi"
                 />
-                <span style={{ fontSize: 9, color: '#a07060' }}>🐾</span>
+                <span style={{ fontSize: 9, color: '#a07060' }}>L</span>
               </div>
             )}
 
