@@ -106,36 +106,45 @@ type Behavior =
   | { pose: 'playing';  ms: number }
   | { pose: 'walking';  ms: number; targetX: number }
 
+// Behavior weights — Didi is a lazy Ragdoll:
+//   sleeping ~65% of the time, idle ~20%, yawn ~10%, walk ~4%, play ~1%
 function nextBehavior(cur: Behavior, winW: number): Behavior {
   const r = Math.random()
   const pad = 80
 
   if (cur.pose === 'sleeping') {
-    return r < 0.65
+    // After a long sleep: 80% yawn first, 20% go straight to idle
+    return r < 0.80
       ? { pose: 'yawning', ms: 3200 }
-      : { pose: 'idle', ms: 4000 + r * 3000 }
+      : { pose: 'idle', ms: 3000 + r * 2000 }
   }
   if (cur.pose === 'yawning') {
-    return r < 0.35
-      ? { pose: 'sleeping', ms: 9000 + r * 7000 }
+    // After yawning: almost always go back to sleep
+    return r < 0.85
+      ? { pose: 'sleeping', ms: 12000 + r * 10000 }
       : { pose: 'idle', ms: 3000 + r * 2000 }
   }
   if (cur.pose === 'playing') {
-    return { pose: 'idle', ms: 3000 + r * 2000 }
+    // After playing: yawn then sleep
+    return r < 0.6
+      ? { pose: 'yawning', ms: 3200 }
+      : { pose: 'idle', ms: 2000 + r * 2000 }
   }
   if (cur.pose === 'walking') {
-    if (r < 0.3) return { pose: 'sleeping', ms: 9000 + r * 7000 }
-    if (r < 0.5) return { pose: 'yawning', ms: 3200 }
-    return { pose: 'idle', ms: 3000 + r * 3000 }
+    // After walking: tired, go sleep
+    return r < 0.75
+      ? { pose: 'sleeping', ms: 12000 + r * 8000 }
+      : { pose: 'yawning', ms: 3200 }
   }
-  // from idle
-  if (r < 0.22) return { pose: 'sleeping', ms: 9000 + r * 9000 }
-  if (r < 0.40) return { pose: 'yawning', ms: 3200 }
-  if (r < 0.72) {
+  // From idle:
+  // 65% → sleep, 20% → yawn, 10% → walk, 5% → play
+  if (r < 0.65) return { pose: 'sleeping', ms: 12000 + r * 10000 }
+  if (r < 0.85) return { pose: 'yawning', ms: 3200 }
+  if (r < 0.95) {
     const tx = pad + Math.random() * (winW - pad * 2 - 140)
-    return { pose: 'walking', ms: 4000 + r * 3000, targetX: tx }
+    return { pose: 'walking', ms: 3000 + r * 2000, targetX: tx }
   }
-  return { pose: 'idle', ms: 4000 + r * 4000 }
+  return { pose: 'playing', ms: 2500 }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -144,22 +153,27 @@ export default function DesktopPet() {
   const [mounted,    setMounted]    = useState(false)
   const [minimized,  setMinimized]  = useState(false)
   const [posX,       setPosX]       = useState(0)
-  const [behavior,   setBehavior]   = useState<Behavior>({ pose: 'idle', ms: 4000 })
+  const [posY,       setPosY]       = useState(0)   // distance from bottom
+  const [behavior,   setBehavior]   = useState<Behavior>({ pose: 'sleeping', ms: 14000 })
   const [facingLeft, setFacingLeft] = useState(false)
   const [speech,     setSpeech]     = useState<string | null>(null)
   const [speechKey,  setSpeechKey]  = useState(0)
   const [showHeart,  setShowHeart]  = useState(false)
   const [popIn,      setPopIn]      = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
 
-  const behaviorRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const walkRef     = useRef<ReturnType<typeof setInterval> | null>(null)
-  const speechRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const heartRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const behaviorRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const walkRef      = useRef<ReturnType<typeof setInterval> | null>(null)
+  const speechRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const heartRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dragOffset   = useRef({ x: 0, y: 0 })
+  const dragMoved    = useRef(false)  // distinguish drag from click
 
   // ── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const x = window.innerWidth - 160
     setPosX(x)
+    setPosY(0)
     setMounted(true)
     setTimeout(() => setPopIn(true), 100)
   }, [])
@@ -211,8 +225,59 @@ export default function DesktopPet() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [behavior])
 
-  // ── Click ────────────────────────────────────────────────────────────────
+  // ── Hover → yawn (only when sleeping) ──────────────────────────────────
+  const handleHover = useCallback(() => {
+    if (behavior.pose === 'sleeping') {
+      if (behaviorRef.current) clearTimeout(behaviorRef.current)
+      setBehavior({ pose: 'yawning', ms: 3200 })
+      say(pick(MESSAGES.yawning))
+    }
+  }, [behavior.pose, say])
+
+  // ── Drag to move ─────────────────────────────────────────────────────────
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Don't drag when clicking the minimize button
+    if ((e.target as HTMLElement).closest('button')) return
+    e.preventDefault()
+
+    dragMoved.current = false
+    dragOffset.current = { x: e.clientX - posX, y: e.clientY }
+
+    // Interrupt auto-behavior while dragging
+    if (behaviorRef.current) clearTimeout(behaviorRef.current)
+    if (walkRef.current) clearInterval(walkRef.current)
+
+    const onMove = (ev: MouseEvent) => {
+      dragMoved.current = true
+      setIsDragging(true)
+      const newX = Math.max(0, Math.min(window.innerWidth - 140, ev.clientX - dragOffset.current.x))
+      const newY = Math.max(0, window.innerHeight - ev.clientY - 10)
+      setPosX(newX)
+      setPosY(newY)
+    }
+
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      setIsDragging(false)
+      // Snap back to floor with a bounce, then sleep
+      setPosY(0)
+      setBehavior({ pose: 'playing', ms: 1200 })
+      say('*thud*')
+      setTimeout(() => {
+        setBehavior({ pose: 'sleeping', ms: 12000 })
+        say(pick(MESSAGES.sleeping))
+      }, 1400)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }, [posX, say])
+
+
   const handleClick = useCallback(() => {
+    // Ignore if this was actually a drag
+    if (dragMoved.current) return
     if (minimized) { setMinimized(false); return }
 
     // Show heart
@@ -259,15 +324,17 @@ export default function DesktopPet() {
       <div
         style={{
           position: 'fixed',
-          bottom: 0,
+          bottom: posY,
           left: posX,
           zIndex: 9999,
-          cursor: 'pointer',
+          cursor: isDragging ? 'grabbing' : 'grab',
           userSelect: 'none',
-          transition: behavior.pose === 'walking' ? 'none' : 'left 0.4s cubic-bezier(0.34,1.56,0.64,1)',
-          animation: popIn ? 'didi-pop-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards' : undefined,
+          transition: isDragging || behavior.pose === 'walking' ? 'none' : 'left 0.4s cubic-bezier(0.34,1.56,0.64,1), bottom 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+          animation: popIn && !isDragging ? 'didi-pop-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards' : undefined,
         }}
         onClick={handleClick}
+        onMouseDown={handleMouseDown}
+        onMouseEnter={handleHover}
         role="button"
         aria-label="Didi — click to interact"
         tabIndex={0}
@@ -418,7 +485,11 @@ export default function DesktopPet() {
             )}
 
             {/* Cat image with animation */}
-            <div style={catAnim}>
+            <div style={{
+              ...catAnim,
+              filter: isDragging ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))' : undefined,
+              transform: isDragging ? 'scale(1.08)' : undefined,
+            }}>
               <DidiSvg
                 pose={pose}
                 size={130}
