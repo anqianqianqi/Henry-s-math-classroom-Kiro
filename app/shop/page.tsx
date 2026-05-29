@@ -69,30 +69,6 @@ function BlindBoxReveal({
           </div>
         )}
 
-        {/* Reveal — single image */}
-        {phase === 'reveal' && !multiple && (
-          <div className="relative mx-auto mb-6 rounded-2xl overflow-hidden shadow-lg animate-[fadeIn_0.5s_ease-out]" style={{ width: 200, height: 200 }}>
-            <img
-              src={imageUrls[0]}
-              alt="Your blind box reward"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
-
-        {/* Reveal — multiple images grid */}
-        {phase === 'reveal' && multiple && (
-          <div className="mb-6 animate-[fadeIn_0.5s_ease-out]">
-            <div className={`grid gap-2 mx-auto ${imageUrls.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`} style={{ maxWidth: 280 }}>
-              {imageUrls.map((url, i) => (
-                <div key={i} className="aspect-square rounded-xl overflow-hidden shadow border border-gray-100">
-                  <img src={url} alt={`Prize ${i + 1}`} className="w-full h-full object-cover" />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {phase === 'reveal' ? (
           <>
             <p className="text-xl font-bold text-gray-900 mb-1">
