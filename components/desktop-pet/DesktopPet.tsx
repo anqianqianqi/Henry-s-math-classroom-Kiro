@@ -1,361 +1,391 @@
 // components/desktop-pet/DesktopPet.tsx
 // Floating desktop pet — Didi the Ragdoll cat.
-// Lives in the bottom-right corner of every page.
-// Auto-cycles through: idle → walking → sleeping → yawning → playing
-// Click to trigger play/yawn. Minimizable.
+// Uses real PNG images from /public/didi/ for each pose.
+// Falls back to emoji until images are added.
+//
+// Behaviors: idle → walking → sleeping → yawning → playing
+// Click to interact. Minimize button to hide.
 
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import DidiSvg, { type DidiPose } from './DidiSvg'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type BehaviorState =
-  | { pose: 'idle';     duration: number }
-  | { pose: 'sleeping'; duration: number }
-  | { pose: 'yawning';  duration: number }
-  | { pose: 'playing';  duration: number }
-  | { pose: 'walking';  duration: number; targetX: number; facingLeft: boolean }
-
-// ─── CSS keyframes (injected once) ───────────────────────────────────────────
+// ─── CSS keyframes ────────────────────────────────────────────────────────────
 
 const STYLES = `
-@keyframes didiWalkBob {
+@keyframes didi-float {
   0%   { transform: translateY(0px); }
-  25%  { transform: translateY(-3px); }
-  50%  { transform: translateY(0px); }
-  75%  { transform: translateY(-3px); }
+  50%  { transform: translateY(-6px); }
   100% { transform: translateY(0px); }
 }
-@keyframes didiBreath {
-  0%   { transform: scaleY(1); }
-  50%  { transform: scaleY(1.03); }
-  100% { transform: scaleY(1); }
+@keyframes didi-breathe {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.025); }
+  100% { transform: scale(1); }
 }
-@keyframes didiIdleTail {
-  0%   { transform: rotate(0deg); }
-  50%  { transform: rotate(4deg); }
-  100% { transform: rotate(0deg); }
+@keyframes didi-walk-bob {
+  0%   { transform: translateY(0px); }
+  25%  { transform: translateY(-4px); }
+  50%  { transform: translateY(0px); }
+  75%  { transform: translateY(-4px); }
+  100% { transform: translateY(0px); }
 }
-@keyframes didiPlayBounce {
+@keyframes didi-play-bounce {
   0%   { transform: translateY(0px) rotate(0deg); }
-  20%  { transform: translateY(-8px) rotate(-3deg); }
-  40%  { transform: translateY(0px) rotate(3deg); }
-  60%  { transform: translateY(-5px) rotate(-2deg); }
-  80%  { transform: translateY(0px) rotate(1deg); }
+  20%  { transform: translateY(-10px) rotate(-4deg); }
+  40%  { transform: translateY(0px) rotate(4deg); }
+  60%  { transform: translateY(-6px) rotate(-2deg); }
+  80%  { transform: translateY(0px) rotate(2deg); }
   100% { transform: translateY(0px) rotate(0deg); }
 }
-@keyframes didiYawnShake {
-  0%   { transform: rotate(0deg); }
-  15%  { transform: rotate(-2deg); }
-  30%  { transform: rotate(2deg); }
-  45%  { transform: rotate(-1deg); }
-  60%  { transform: rotate(1deg); }
-  100% { transform: rotate(0deg); }
+@keyframes didi-yawn-shake {
+  0%   { transform: rotate(0deg) scale(1); }
+  20%  { transform: rotate(-3deg) scale(1.05); }
+  40%  { transform: rotate(3deg) scale(1.05); }
+  60%  { transform: rotate(-2deg) scale(1.02); }
+  80%  { transform: rotate(1deg) scale(1.01); }
+  100% { transform: rotate(0deg) scale(1); }
 }
-@keyframes didiSleepBreath {
+@keyframes didi-sleep-breathe {
   0%   { transform: scaleX(1) scaleY(1); }
-  50%  { transform: scaleX(1.02) scaleY(0.98); }
+  50%  { transform: scaleX(1.03) scaleY(0.97); }
   100% { transform: scaleX(1) scaleY(1); }
 }
-@keyframes didiPopIn {
-  0%   { transform: scale(0) translateY(20px); opacity: 0; }
-  70%  { transform: scale(1.1) translateY(-4px); opacity: 1; }
+@keyframes didi-pop-in {
+  0%   { transform: scale(0.3) translateY(30px); opacity: 0; }
+  60%  { transform: scale(1.08) translateY(-4px); opacity: 1; }
+  80%  { transform: scale(0.96) translateY(2px); }
   100% { transform: scale(1) translateY(0px); opacity: 1; }
 }
-@keyframes didiSpeechBubble {
-  0%   { opacity: 0; transform: scale(0.8) translateY(4px); }
-  20%  { opacity: 1; transform: scale(1) translateY(0px); }
-  80%  { opacity: 1; transform: scale(1) translateY(0px); }
-  100% { opacity: 0; transform: scale(0.8) translateY(-4px); }
+@keyframes didi-speech-in {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.7) translateY(6px); }
+  60%  { opacity: 1; transform: translateX(-50%) scale(1.05) translateY(-2px); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1) translateY(0px); }
+}
+@keyframes didi-speech-out {
+  0%   { opacity: 1; transform: translateX(-50%) scale(1) translateY(0px); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.8) translateY(-8px); }
+}
+@keyframes didi-zzz {
+  0%   { opacity: 0; transform: translate(0px, 0px) scale(0.5); }
+  30%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(12px, -24px) scale(1.2); }
+}
+@keyframes didi-zzz2 {
+  0%   { opacity: 0; transform: translate(0px, 0px) scale(0.4); }
+  30%  { opacity: 0.8; }
+  100% { opacity: 0; transform: translate(18px, -36px) scale(1); }
+}
+@keyframes didi-heart {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0) translateY(0px); }
+  30%  { opacity: 1; transform: translateX(-50%) scale(1.2) translateY(-4px); }
+  70%  { opacity: 1; transform: translateX(-50%) scale(1) translateY(-12px); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.8) translateY(-20px); }
 }
 `
 
-// ─── Speech bubble messages ───────────────────────────────────────────────────
+// ─── Speech messages ──────────────────────────────────────────────────────────
 
-const IDLE_MESSAGES = ['喵~', '...', '😺', '(*^▽^*)', '喵喵喵']
-const PLAY_MESSAGES  = ['喵！', '玩！', '抓到了！', '嘿嘿~', '⚡']
-const YAWN_MESSAGES  = ['哈~', '困了...', '呼~', '😪']
-const SLEEP_MESSAGES = ['Zzz...', '💤', '呼噜噜~']
-
-function randomFrom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]
+const MESSAGES = {
+  idle:     ['喵~', '(*^▽^*)', '...', '🐾', '喵喵喵', '在吗？'],
+  playing:  ['喵！', '玩！', '抓到了！', '嘿嘿~', '⚡', '好玩！'],
+  yawning:  ['哈~', '困了...', '呼~', '😪', '好困啊'],
+  sleeping: ['Zzz...', '💤', '呼噜噜~', '好梦~'],
+  walking:  ['溜达溜达~', '去哪儿呢', '巡逻中'],
 }
 
-// ─── Behavior schedule ───────────────────────────────────────────────────────
+function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)] }
 
-function nextBehavior(current: BehaviorState, windowWidth: number): BehaviorState {
-  const roll = Math.random()
+// ─── Behavior types ───────────────────────────────────────────────────────────
 
-  if (current.pose === 'sleeping') {
-    // After sleeping: yawn then idle
-    if (roll < 0.6) return { pose: 'yawning', duration: 3000 }
-    return { pose: 'idle', duration: 4000 + Math.random() * 3000 }
-  }
+type Behavior =
+  | { pose: 'idle';     ms: number }
+  | { pose: 'sleeping'; ms: number }
+  | { pose: 'yawning';  ms: number }
+  | { pose: 'playing';  ms: number }
+  | { pose: 'walking';  ms: number; targetX: number }
 
-  if (current.pose === 'yawning') {
-    // After yawning: idle or sleep
-    if (roll < 0.4) return { pose: 'sleeping', duration: 8000 + Math.random() * 6000 }
-    return { pose: 'idle', duration: 3000 + Math.random() * 2000 }
-  }
+function nextBehavior(cur: Behavior, winW: number): Behavior {
+  const r = Math.random()
+  const pad = 80
 
-  if (current.pose === 'playing') {
-    return { pose: 'idle', duration: 3000 + Math.random() * 2000 }
+  if (cur.pose === 'sleeping') {
+    return r < 0.65
+      ? { pose: 'yawning', ms: 3200 }
+      : { pose: 'idle', ms: 4000 + r * 3000 }
   }
-
-  if (current.pose === 'walking') {
-    if (roll < 0.3) return { pose: 'sleeping', duration: 8000 + Math.random() * 6000 }
-    if (roll < 0.5) return { pose: 'yawning', duration: 3000 }
-    return { pose: 'idle', duration: 3000 + Math.random() * 3000 }
+  if (cur.pose === 'yawning') {
+    return r < 0.35
+      ? { pose: 'sleeping', ms: 9000 + r * 7000 }
+      : { pose: 'idle', ms: 3000 + r * 2000 }
   }
-
-  // From idle
-  if (roll < 0.25) {
-    return { pose: 'sleeping', duration: 8000 + Math.random() * 8000 }
+  if (cur.pose === 'playing') {
+    return { pose: 'idle', ms: 3000 + r * 2000 }
   }
-  if (roll < 0.45) {
-    return { pose: 'yawning', duration: 3000 }
+  if (cur.pose === 'walking') {
+    if (r < 0.3) return { pose: 'sleeping', ms: 9000 + r * 7000 }
+    if (r < 0.5) return { pose: 'yawning', ms: 3200 }
+    return { pose: 'idle', ms: 3000 + r * 3000 }
   }
-  if (roll < 0.75) {
-    const maxX = Math.max(60, windowWidth - 160)
-    const targetX = 60 + Math.random() * (maxX - 60)
-    return {
-      pose: 'walking',
-      duration: 4000 + Math.random() * 3000,
-      targetX,
-      facingLeft: false, // will be computed at render time
-    }
+  // from idle
+  if (r < 0.22) return { pose: 'sleeping', ms: 9000 + r * 9000 }
+  if (r < 0.40) return { pose: 'yawning', ms: 3200 }
+  if (r < 0.72) {
+    const tx = pad + Math.random() * (winW - pad * 2 - 140)
+    return { pose: 'walking', ms: 4000 + r * 3000, targetX: tx }
   }
-  return { pose: 'idle', duration: 4000 + Math.random() * 4000 }
+  return { pose: 'idle', ms: 4000 + r * 4000 }
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function DesktopPet() {
-  const [minimized, setMinimized]     = useState(false)
-  const [mounted, setMounted]         = useState(false)
-  const [posX, setPosX]               = useState<number | null>(null)
-  const [behavior, setBehavior]       = useState<BehaviorState>({ pose: 'idle', duration: 3000 })
-  const [facingLeft, setFacingLeft]   = useState(false)
-  const [speech, setSpeech]           = useState<string | null>(null)
-  const [speechKey, setSpeechKey]     = useState(0)
+  const [mounted,    setMounted]    = useState(false)
+  const [minimized,  setMinimized]  = useState(false)
+  const [posX,       setPosX]       = useState(0)
+  const [behavior,   setBehavior]   = useState<Behavior>({ pose: 'idle', ms: 4000 })
+  const [facingLeft, setFacingLeft] = useState(false)
+  const [speech,     setSpeech]     = useState<string | null>(null)
+  const [speechKey,  setSpeechKey]  = useState(0)
+  const [showHeart,  setShowHeart]  = useState(false)
+  const [popIn,      setPopIn]      = useState(false)
 
-  const behaviorTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const walkTimer     = useRef<ReturnType<typeof setInterval> | null>(null)
-  const speechTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const behaviorRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const walkRef     = useRef<ReturnType<typeof setInterval> | null>(null)
+  const speechRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const heartRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // ── Mount: set initial position ──────────────────────────────────────────
+  // ── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
+    const x = window.innerWidth - 160
+    setPosX(x)
     setMounted(true)
-    setPosX(window.innerWidth - 150)
+    setTimeout(() => setPopIn(true), 100)
   }, [])
 
-  // ── Show speech bubble ────────────────────────────────────────────────────
-  const showSpeech = useCallback((msg: string) => {
+  // ── Speech helper ────────────────────────────────────────────────────────
+  const say = useCallback((msg: string) => {
     setSpeech(msg)
     setSpeechKey(k => k + 1)
-    if (speechTimer.current) clearTimeout(speechTimer.current)
-    speechTimer.current = setTimeout(() => setSpeech(null), 3000)
+    if (speechRef.current) clearTimeout(speechRef.current)
+    speechRef.current = setTimeout(() => setSpeech(null), 3200)
   }, [])
 
-  // ── Advance behavior ──────────────────────────────────────────────────────
-  const advanceBehavior = useCallback((current: BehaviorState) => {
-    const next = nextBehavior(current, window.innerWidth)
+  // ── Advance behavior ─────────────────────────────────────────────────────
+  const advance = useCallback((cur: Behavior) => {
+    const next = nextBehavior(cur, window.innerWidth)
     setBehavior(next)
+    if (next.pose === 'sleeping') say(pick(MESSAGES.sleeping))
+    if (next.pose === 'yawning')  say(pick(MESSAGES.yawning))
+    if (next.pose === 'walking')  say(pick(MESSAGES.walking))
+    if (next.pose === 'idle' && Math.random() < 0.25) say(pick(MESSAGES.idle))
+  }, [say])
 
-    // Show speech for certain poses
-    if (next.pose === 'sleeping') showSpeech(randomFrom(SLEEP_MESSAGES))
-    if (next.pose === 'yawning')  showSpeech(randomFrom(YAWN_MESSAGES))
-    if (next.pose === 'idle' && Math.random() < 0.3) showSpeech(randomFrom(IDLE_MESSAGES))
-
-    return next
-  }, [showSpeech])
-
-  // ── Behavior timer ────────────────────────────────────────────────────────
+  // ── Behavior timer ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!mounted || minimized) return
+    if (behaviorRef.current) clearTimeout(behaviorRef.current)
+    behaviorRef.current = setTimeout(() => advance(behavior), behavior.ms)
+    return () => { if (behaviorRef.current) clearTimeout(behaviorRef.current) }
+  }, [behavior, mounted, minimized, advance])
 
-    if (behaviorTimer.current) clearTimeout(behaviorTimer.current)
-
-    behaviorTimer.current = setTimeout(() => {
-      advanceBehavior(behavior)
-    }, behavior.duration)
-
-    return () => {
-      if (behaviorTimer.current) clearTimeout(behaviorTimer.current)
-    }
-  }, [behavior, mounted, minimized, advanceBehavior])
-
-  // ── Walking movement ──────────────────────────────────────────────────────
+  // ── Walk movement ────────────────────────────────────────────────────────
   useEffect(() => {
-    if (walkTimer.current) clearInterval(walkTimer.current)
+    if (walkRef.current) clearInterval(walkRef.current)
+    if (behavior.pose !== 'walking') return
 
-    if (behavior.pose !== 'walking' || posX === null) return
+    const target = behavior.targetX
+    setFacingLeft(target < posX)
 
-    const targetX = behavior.targetX
-    const goLeft  = targetX < posX
-    setFacingLeft(goLeft)
-
-    const STEP = 1.5
-    walkTimer.current = setInterval(() => {
+    const STEP = 1.2
+    walkRef.current = setInterval(() => {
       setPosX(prev => {
-        if (prev === null) return prev
-        const diff = targetX - prev
-        if (Math.abs(diff) < STEP + 1) {
-          clearInterval(walkTimer.current!)
-          return targetX
-        }
+        const diff = target - prev
+        if (Math.abs(diff) <= STEP + 1) { clearInterval(walkRef.current!); return target }
         return prev + (diff > 0 ? STEP : -STEP)
       })
     }, 16)
 
-    return () => {
-      if (walkTimer.current) clearInterval(walkTimer.current)
-    }
-  }, [behavior, posX])
+    return () => { if (walkRef.current) clearInterval(walkRef.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [behavior])
 
-  // ── Click handler ─────────────────────────────────────────────────────────
+  // ── Click ────────────────────────────────────────────────────────────────
   const handleClick = useCallback(() => {
-    if (minimized) {
-      setMinimized(false)
-      return
-    }
-    const roll = Math.random()
-    if (roll < 0.5) {
-      setBehavior({ pose: 'playing', duration: 2500 })
-      showSpeech(randomFrom(PLAY_MESSAGES))
-    } else {
-      setBehavior({ pose: 'yawning', duration: 3000 })
-      showSpeech(randomFrom(YAWN_MESSAGES))
-    }
-  }, [minimized, showSpeech])
+    if (minimized) { setMinimized(false); return }
 
-  // ── Cleanup ───────────────────────────────────────────────────────────────
-  useEffect(() => {
-    return () => {
-      if (behaviorTimer.current) clearTimeout(behaviorTimer.current)
-      if (walkTimer.current)     clearInterval(walkTimer.current)
-      if (speechTimer.current)   clearTimeout(speechTimer.current)
+    // Show heart
+    setShowHeart(true)
+    if (heartRef.current) clearTimeout(heartRef.current)
+    heartRef.current = setTimeout(() => setShowHeart(false), 1200)
+
+    if (Math.random() < 0.5) {
+      setBehavior({ pose: 'playing', ms: 2500 })
+      say(pick(MESSAGES.playing))
+    } else {
+      setBehavior({ pose: 'yawning', ms: 3200 })
+      say(pick(MESSAGES.yawning))
     }
+  }, [minimized, say])
+
+  // ── Cleanup ──────────────────────────────────────────────────────────────
+  useEffect(() => () => {
+    if (behaviorRef.current) clearTimeout(behaviorRef.current)
+    if (walkRef.current)     clearInterval(walkRef.current)
+    if (speechRef.current)   clearTimeout(speechRef.current)
+    if (heartRef.current)    clearTimeout(heartRef.current)
   }, [])
 
-  if (!mounted || posX === null) return null
+  if (!mounted) return null
 
-  // ── Compute animation style per pose ─────────────────────────────────────
-  const pose: DidiPose = behavior.pose === 'walking' ? 'walking' : behavior.pose
-
-  const catStyle: React.CSSProperties = (() => {
+  // ── Animation style per pose ─────────────────────────────────────────────
+  const catAnim: React.CSSProperties = (() => {
     switch (behavior.pose) {
-      case 'sleeping':
-        return { animation: 'didiSleepBreath 3s ease-in-out infinite', transformOrigin: 'center' }
-      case 'yawning':
-        return { animation: 'didiYawnShake 0.6s ease-in-out 2', transformOrigin: 'center bottom' }
-      case 'playing':
-        return { animation: 'didiPlayBounce 0.5s ease-in-out 3', transformOrigin: 'center bottom' }
-      case 'walking':
-        return { animation: 'didiWalkBob 0.4s ease-in-out infinite', transformOrigin: 'center bottom' }
-      default:
-        return { animation: 'didiBreath 3s ease-in-out infinite', transformOrigin: 'center bottom' }
+      case 'sleeping': return { animation: 'didi-sleep-breathe 3.5s ease-in-out infinite', transformOrigin: 'center' }
+      case 'yawning':  return { animation: 'didi-yawn-shake 0.55s ease-in-out 2', transformOrigin: 'center bottom' }
+      case 'playing':  return { animation: 'didi-play-bounce 0.45s ease-in-out 4', transformOrigin: 'center bottom' }
+      case 'walking':  return { animation: 'didi-walk-bob 0.38s ease-in-out infinite', transformOrigin: 'center bottom' }
+      default:         return { animation: 'didi-float 3s ease-in-out infinite', transformOrigin: 'center bottom' }
     }
   })()
 
-  const containerStyle: React.CSSProperties = {
-    position: 'fixed',
-    bottom: 0,
-    left: `${posX}px`,
-    zIndex: 9999,
-    cursor: 'pointer',
-    userSelect: 'none',
-    transition: behavior.pose === 'walking' ? 'none' : 'left 0.3s ease',
-    animation: mounted ? 'didiPopIn 0.5s ease-out forwards' : undefined,
-  }
+  const pose: DidiPose = behavior.pose
 
   return (
     <>
       <style>{STYLES}</style>
 
-      <div style={containerStyle} onClick={handleClick} title="点击逗逗迪迪！">
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: posX,
+          zIndex: 9999,
+          cursor: 'pointer',
+          userSelect: 'none',
+          transition: behavior.pose === 'walking' ? 'none' : 'left 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+          animation: popIn ? 'didi-pop-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards' : undefined,
+        }}
+        onClick={handleClick}
+        role="button"
+        aria-label="迪迪 — 点击互动"
+        tabIndex={0}
+        onKeyDown={e => e.key === 'Enter' && handleClick()}
+      >
+        {/* ── Heart on click ── */}
+        {showHeart && (
+          <div style={{
+            position: 'absolute',
+            top: minimized ? -10 : -20,
+            left: '50%',
+            fontSize: 22,
+            animation: 'didi-heart 1.2s ease-out forwards',
+            pointerEvents: 'none',
+            zIndex: 10002,
+          }}>
+            ❤️
+          </div>
+        )}
 
-        {/* Speech bubble */}
+        {/* ── Speech bubble ── */}
         {speech && !minimized && (
           <div
             key={speechKey}
             style={{
               position: 'absolute',
-              bottom: minimized ? 36 : 118,
+              bottom: 138,
               left: '50%',
               transform: 'translateX(-50%)',
               background: 'white',
-              border: '2px solid #E8E0D0',
-              borderRadius: '12px',
-              padding: '4px 10px',
-              fontSize: '13px',
-              fontWeight: 600,
-              color: '#4A2C1A',
+              border: '2px solid #f0e6d3',
+              borderRadius: 14,
+              padding: '5px 12px',
+              fontSize: 13,
+              fontWeight: 700,
+              color: '#5c3d2e',
               whiteSpace: 'nowrap',
-              boxShadow: '0 2px 8px rgba(44,24,16,0.15)',
-              animation: 'didiSpeechBubble 3s ease-in-out forwards',
+              boxShadow: '0 4px 16px rgba(92,61,46,0.18)',
+              animation: 'didi-speech-in 0.3s ease-out forwards',
               pointerEvents: 'none',
-              zIndex: 10000,
+              zIndex: 10001,
+              fontFamily: 'system-ui, sans-serif',
             }}
           >
             {speech}
             {/* Bubble tail */}
             <div style={{
               position: 'absolute',
-              bottom: -8,
+              bottom: -9,
               left: '50%',
               transform: 'translateX(-50%)',
               width: 0,
               height: 0,
-              borderLeft: '6px solid transparent',
-              borderRight: '6px solid transparent',
-              borderTop: '8px solid white',
+              borderLeft: '7px solid transparent',
+              borderRight: '7px solid transparent',
+              borderTop: '9px solid white',
+            }} />
+            <div style={{
+              position: 'absolute',
+              bottom: -12,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 0,
+              height: 0,
+              borderLeft: '8px solid transparent',
+              borderRight: '8px solid transparent',
+              borderTop: '10px solid #f0e6d3',
+              zIndex: -1,
             }} />
           </div>
         )}
 
         {minimized ? (
-          /* ── Minimized: just a small cat icon ── */
+          /* ── Minimized pill ── */
           <div style={{
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            background: 'white',
-            border: '2px solid #E8E0D0',
-            boxShadow: '0 2px 8px rgba(44,24,16,0.2)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '22px',
-            marginBottom: 8,
+            gap: 6,
+            background: 'white',
+            border: '2px solid #f0e6d3',
+            borderRadius: 24,
+            padding: '6px 12px 6px 8px',
+            boxShadow: '0 4px 16px rgba(92,61,46,0.18)',
+            marginBottom: 12,
+            fontSize: 13,
+            fontWeight: 600,
+            color: '#5c3d2e',
+            fontFamily: 'system-ui, sans-serif',
           }}>
-            🐱
+            <span style={{ fontSize: 20 }}>🐱</span>
+            <span>迪迪</span>
           </div>
         ) : (
-          /* ── Full cat ── */
-          <div style={{ position: 'relative' }}>
+          /* ── Full pet ── */
+          <div style={{ position: 'relative', paddingBottom: 4 }}>
             {/* Minimize button */}
             <button
               onClick={e => { e.stopPropagation(); setMinimized(true) }}
               style={{
                 position: 'absolute',
-                top: 4,
-                right: -4,
-                width: 18,
-                height: 18,
+                top: 8,
+                right: -2,
+                width: 20,
+                height: 20,
                 borderRadius: '50%',
-                background: 'rgba(255,255,255,0.9)',
-                border: '1px solid #E8E0D0',
+                background: 'rgba(255,255,255,0.95)',
+                border: '1.5px solid #e8d5c0',
                 cursor: 'pointer',
-                fontSize: '10px',
-                lineHeight: '16px',
+                fontSize: 11,
+                lineHeight: '18px',
                 textAlign: 'center',
-                color: '#8B6060',
+                color: '#a07060',
                 zIndex: 10001,
                 padding: 0,
-                boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
               title="隐藏迪迪"
               aria-label="隐藏迪迪"
@@ -363,13 +393,53 @@ export default function DesktopPet() {
               ×
             </button>
 
-            {/* Cat SVG with animation */}
-            <div style={catStyle}>
+            {/* ZZZ for sleeping */}
+            {behavior.pose === 'sleeping' && (
+              <>
+                <div style={{
+                  position: 'absolute',
+                  top: 10,
+                  right: 10,
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: '#8b9dc3',
+                  animation: 'didi-zzz 2s ease-in-out infinite',
+                  pointerEvents: 'none',
+                }}>z</div>
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 4,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: '#8b9dc3',
+                  animation: 'didi-zzz2 2s ease-in-out 0.7s infinite',
+                  pointerEvents: 'none',
+                }}>z</div>
+              </>
+            )}
+
+            {/* Cat image with animation */}
+            <div style={catAnim}>
               <DidiSvg
                 pose={pose}
-                size={120}
+                size={130}
                 facingLeft={behavior.pose === 'walking' ? facingLeft : false}
               />
+            </div>
+
+            {/* Name tag */}
+            <div style={{
+              textAlign: 'center',
+              fontSize: 11,
+              fontWeight: 700,
+              color: '#a07060',
+              letterSpacing: '0.05em',
+              marginTop: 2,
+              fontFamily: 'system-ui, sans-serif',
+              opacity: 0.8,
+            }}>
+              迪迪 🐾
             </div>
           </div>
         )}
