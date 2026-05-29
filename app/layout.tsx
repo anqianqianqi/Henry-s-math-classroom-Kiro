@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import DesktopPetWrapper from '@/components/desktop-pet/DesktopPetWrapper'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +28,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-      <body className="pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">{children}</body>
+      <body className="pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+        {children}
+        <DesktopPetWrapper />
+      </body>
     </html>
   )
 }
