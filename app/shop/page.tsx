@@ -22,6 +22,7 @@ interface RedemptionWithTitle extends Redemption {
   item_title: string
   item_commodity_type?: string
   blindbox_image_url?: string | null
+  blindbox_image_urls?: string[]
 }
 
 // ── Blind Box Reveal Modal ────────────────────────────────────────────────────
@@ -94,13 +95,13 @@ function BlindBoxReveal({
 
         {phase === 'reveal' ? (
           <>
-            <p className="text-lg font-bold text-gray-900 mb-1">
-              {multiple ? `You got ${imageUrls.length} prizes! 🎉` : 'You got it! 🎉'}
+            <p className="text-xl font-bold text-gray-900 mb-1">
+              {multiple ? `${imageUrls.length} prizes unlocked! 🎉` : 'You got it! 🎉'}
             </p>
             {isPhysical ? (
               <>
                 <p className="text-sm text-gray-500 mb-3">Here&apos;s a preview of your physical prize{multiple ? 's' : ''}!</p>
-                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-left">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5 text-left">
                   <p className="text-amber-800 text-sm font-semibold mb-1">📬 How to pick up your item</p>
                   <p className="text-amber-700 text-xs leading-relaxed">
                     This is a physical item — please <strong>ping Henry</strong> to arrange pickup or delivery!
@@ -108,41 +109,46 @@ function BlindBoxReveal({
                 </div>
               </>
             ) : (
-              <p className="text-sm text-gray-500 mb-6">Download your exclusive image{multiple ? 's' : ''} below.</p>
+              <p className="text-sm text-gray-400 mb-4">Tap any image to open full size</p>
             )}
-            <div className="flex gap-3">
-              {!isPhysical && (
-                multiple ? (
-                  // Download all as separate links
-                  <div className="flex-1 flex flex-col gap-2">
-                    {imageUrls.map((url, i) => (
-                      <a
-                        key={i}
-                        href={url}
-                        download
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full bg-primary-600 text-white text-sm font-semibold py-2 rounded-xl hover:bg-primary-700 transition-colors text-center"
-                      >
-                        ⬇ Download #{i + 1}
-                      </a>
-                    ))}
+
+            {/* Modern image gallery */}
+            <div className={`grid gap-2 mb-5 ${imageUrls.length === 1 ? 'grid-cols-1' : imageUrls.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              {imageUrls.map((url, i) => (
+                <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                  className="group relative block aspect-square rounded-2xl overflow-hidden shadow-md ring-1 ring-black/5 hover:ring-2 hover:ring-primary-400 transition-all">
+                  <img src={url} alt={`Prize ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center">
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-semibold bg-black/50 px-2 py-1 rounded-full">View</span>
                   </div>
-                ) : (
-                  <a
-                    href={imageUrls[0]}
-                    download
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 bg-primary-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-primary-700 transition-colors text-center"
-                  >
-                    ⬇ Download
-                  </a>
-                )
+                </a>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              {!isPhysical && (
+                <a
+                  href={imageUrls[0]}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => {
+                    imageUrls.slice(1).forEach((url, i) => {
+                      setTimeout(() => {
+                        const a = document.createElement('a')
+                        a.href = url; a.download = ''; a.target = '_blank'
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a)
+                      }, (i + 1) * 300)
+                    })
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white text-sm font-semibold py-3 rounded-2xl hover:from-primary-600 hover:to-primary-700 transition-all shadow-sm"
+                >
+                  ↓ {multiple ? `Download All (${imageUrls.length})` : 'Download'}
+                </a>
               )}
               <button
                 onClick={onClose}
-                className={`${isPhysical || !multiple ? 'flex-1' : 'w-full mt-1'} bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-200 transition-colors`}
+                className="flex-1 bg-gray-100 text-gray-600 text-sm font-semibold py-3 rounded-2xl hover:bg-gray-200 transition-colors"
               >
                 {isPhysical ? 'Got it!' : 'Close'}
               </button>
@@ -189,49 +195,61 @@ function BlindBoxView({
   const multiple = imageUrls.length > 1
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center">
-        <p className="text-sm font-semibold text-primary-500 uppercase tracking-widest mb-4">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center">
+        <p className="text-xs font-semibold text-primary-500 uppercase tracking-widest mb-1">
           {isPhysical ? '📦' : '🎁'} {itemTitle}
         </p>
-        {multiple ? (
-          <div className={`grid gap-2 mx-auto mb-6 ${imageUrls.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`} style={{ maxWidth: 280 }}>
-            {imageUrls.map((url, i) => (
-              <div key={i} className="aspect-square rounded-xl overflow-hidden shadow border border-gray-100">
-                <img src={url} alt={`Prize ${i + 1}`} className="w-full h-full object-cover" />
+        <p className="text-lg font-bold text-gray-900 mb-1">
+          {multiple ? `Your ${imageUrls.length} prizes` : 'Your prize'}
+        </p>
+        <p className="text-sm text-gray-400 mb-4">Tap any image to open full size</p>
+
+        {/* Modern image gallery */}
+        <div className={`grid gap-2 mb-5 ${imageUrls.length === 1 ? 'grid-cols-1' : imageUrls.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          {imageUrls.map((url, i) => (
+            <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+              className="group relative block aspect-square rounded-2xl overflow-hidden shadow-md ring-1 ring-black/5 hover:ring-2 hover:ring-primary-400 transition-all">
+              <img src={url} alt={`Prize ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center">
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-semibold bg-black/50 px-2 py-1 rounded-full">View</span>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl overflow-hidden shadow-lg mb-6" style={{ width: 200, height: 200, margin: '0 auto 24px' }}>
-            <img src={imageUrls[0]} alt="Your blind box reward" className="w-full h-full object-cover" />
-          </div>
-        )}
-        {isPhysical ? (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-left">
+            </a>
+          ))}
+        </div>
+
+        {isPhysical && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-left">
             <p className="text-amber-800 text-sm font-semibold mb-1">📬 Physical item</p>
             <p className="text-amber-700 text-xs leading-relaxed">
-              Please <strong>ping Henry</strong> to arrange pickup or delivery of your prize!
+              Please <strong>ping Henry</strong> to arrange pickup or delivery!
             </p>
           </div>
-        ) : (
-          <p className="text-sm text-gray-500 mb-6">Your exclusive prize{multiple ? 's' : ''} — download anytime!</p>
         )}
-        <div className="flex flex-col gap-2">
-          {!isPhysical && imageUrls.map((url, i) => (
+
+        <div className="flex gap-2">
+          {!isPhysical && (
             <a
-              key={i}
-              href={url}
+              href={imageUrls[0]}
               download
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full bg-primary-600 text-white text-sm font-semibold py-2 rounded-xl hover:bg-primary-700 transition-colors text-center"
+              onClick={() => {
+                imageUrls.slice(1).forEach((url, i) => {
+                  setTimeout(() => {
+                    const a = document.createElement('a')
+                    a.href = url; a.download = ''; a.target = '_blank'
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a)
+                  }, (i + 1) * 300)
+                })
+              }}
+              className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white text-sm font-semibold py-3 rounded-2xl hover:from-primary-600 hover:to-primary-700 transition-all shadow-sm"
             >
-              {multiple ? `⬇ Download #${i + 1}` : '⬇ Download'}
+              ↓ {multiple ? `Download All (${imageUrls.length})` : 'Download'}
             </a>
-          ))}
+          )}
           <button
             onClick={onClose}
-            className="w-full bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-200 transition-colors"
+            className="flex-1 bg-gray-100 text-gray-600 text-sm font-semibold py-3 rounded-2xl hover:bg-gray-200 transition-colors"
           >
             Close
           </button>
@@ -402,48 +420,31 @@ export default function ShopPage() {
       countMap[r.item_id] = (countMap[r.item_id] ?? 0) + 1
     }
 
-    // Blind box remaining counts
-    // - blindbox (digital): per-student — pool minus what THIS student has claimed
-    // - physical_blindbox: global — globally unclaimed images (is_claimed = false)
-    const blindboxIds = (shopItems ?? [])
-      .filter((i: any) => i.commodity_type === 'blindbox')
-      .map((i: any) => i.id)
-
-    const physicalBlindboxIds = (shopItems ?? [])
-      .filter((i: any) => i.commodity_type === 'physical_blindbox')
+    // Blind box remaining counts — use the RPC which handles both set-based and legacy modes
+    const allBlindboxIds = (shopItems ?? [])
+      .filter((i: any) => i.commodity_type === 'blindbox' || i.commodity_type === 'physical_blindbox')
       .map((i: any) => i.id)
 
     const remainingMap: Record<string, number> = {}
 
-    // Digital blindbox: per-student remaining
-    if (blindboxIds.length > 0) {
-      // Total pool size per item
-      const { data: poolCounts } = await supabase
-        .from('blindbox_images')
-        .select('item_id')
-        .in('item_id', blindboxIds)
-      const poolMap: Record<string, number> = {}
-      for (const r of poolCounts ?? []) {
-        poolMap[r.item_id] = (poolMap[r.item_id] ?? 0) + 1
-      }
+    // Digital blindbox: per-student remaining via RPC
+    const digitalBlindboxIds = (shopItems ?? [])
+      .filter((i: any) => i.commodity_type === 'blindbox')
+      .map((i: any) => i.id)
 
-      // How many this student has already claimed
-      const { data: studentClaims } = await supabase
-        .from('blindbox_claims')
-        .select('item_id')
-        .in('item_id', blindboxIds)
-        .eq('student_id', userId)
-      const claimedCountMap: Record<string, number> = {}
-      for (const r of studentClaims ?? []) {
-        claimedCountMap[r.item_id] = (claimedCountMap[r.item_id] ?? 0) + 1
-      }
-
-      for (const id of blindboxIds) {
-        remainingMap[id] = (poolMap[id] ?? 0) - (claimedCountMap[id] ?? 0)
-      }
+    for (const itemId of digitalBlindboxIds) {
+      const { data: remaining } = await supabase.rpc('get_blindbox_remaining_for_student', {
+        p_item_id: itemId,
+        p_user_id: userId,
+      })
+      remainingMap[itemId] = remaining ?? 0
     }
 
     // Physical blindbox: global remaining (unclaimed image slots)
+    const physicalBlindboxIds = (shopItems ?? [])
+      .filter((i: any) => i.commodity_type === 'physical_blindbox')
+      .map((i: any) => i.id)
+
     if (physicalBlindboxIds.length > 0) {
       const { data: unclaimedCounts } = await supabase
         .from('blindbox_images')
@@ -847,7 +848,7 @@ export default function ShopPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       {(r.item_commodity_type === 'blindbox' || r.item_commodity_type === 'physical_blindbox') && r.blindbox_image_url && (
                         <button
-                          onClick={() => setBlindboxView({ imageUrls: [r.blindbox_image_url!], itemTitle: r.item_title, isPhysical: r.item_commodity_type === 'physical_blindbox' })}
+                          onClick={() => setBlindboxView({ imageUrls: r.blindbox_image_urls?.length ? r.blindbox_image_urls : [r.blindbox_image_url!], itemTitle: r.item_title, isPhysical: r.item_commodity_type === 'physical_blindbox' })}
                           className="text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg transition-colors"
                         >
                           View Prize

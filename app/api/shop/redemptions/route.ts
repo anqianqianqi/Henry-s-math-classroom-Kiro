@@ -69,22 +69,29 @@ export async function GET() {
         .order('claimed_at', { ascending: false }),
     ])
 
-    const claimedImageMap: Record<string, string> = {}
+    // Build a map: item_id → array of all claimed image URLs for this student
+    const claimedImageMap: Record<string, string[]> = {}
     for (const img of claimedImagesResult.data ?? []) {
-      if (img.image_url && !claimedImageMap[img.item_id]) {
-        claimedImageMap[img.item_id] = img.image_url
+      if (img.image_url) {
+        if (!claimedImageMap[img.item_id]) claimedImageMap[img.item_id] = []
+        claimedImageMap[img.item_id].push(img.image_url)
       }
     }
     for (const claim of blindboxClaimsResult.data ?? []) {
       const url = (claim as any).blindbox_images?.image_url
-      if (url && !claimedImageMap[claim.item_id]) {
-        claimedImageMap[claim.item_id] = url
+      if (url) {
+        if (!claimedImageMap[claim.item_id]) claimedImageMap[claim.item_id] = []
+        // Avoid duplicates
+        if (!claimedImageMap[claim.item_id].includes(url)) {
+          claimedImageMap[claim.item_id].push(url)
+        }
       }
     }
 
     const result = redemptions.map(r => {
       const item = itemMap[r.item_id]
       const commodityType = item?.commodity_type ?? 'standard'
+      const imageUrls = claimedImageMap[r.item_id] ?? []
       return {
         id: r.id,
         user_id: userId,
@@ -95,8 +102,12 @@ export async function GET() {
         item_commodity_type: commodityType,
         blindbox_image_url:
           (commodityType === 'blindbox' || commodityType === 'physical_blindbox')
-            ? (claimedImageMap[r.item_id] ?? null)
+            ? (imageUrls[0] ?? null)
             : null,
+        blindbox_image_urls:
+          (commodityType === 'blindbox' || commodityType === 'physical_blindbox')
+            ? imageUrls
+            : [],
       }
     })
 
