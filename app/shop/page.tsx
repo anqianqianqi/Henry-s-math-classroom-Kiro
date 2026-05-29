@@ -646,16 +646,12 @@ export default function ShopPage() {
         ) : (() => {
           const filteredItems = items.filter(item => {
             if (activeTab === 'all') return true
-            if (activeTab === 'food') return item.category === 'food'
-            if (activeTab === 'accessory') return item.category === 'accessory'
-            // 'rewards' = everything that's NOT food or accessory
-            return item.category !== 'food' && item.category !== 'accessory'
+            // 'rewards' = everything (pet categories already excluded at query level)
+            return true
           })
           return filteredItems.length === 0 ? (
             <div className="mb-8 text-center py-12 text-gray-400">
-              <div className="text-4xl mb-2">
-                {activeTab === 'food' ? '🍖' : activeTab === 'accessory' ? '🎩' : '🎁'}
-              </div>
+              <div className="text-4xl mb-2">🎁</div>
               <p className="text-sm font-medium text-gray-500">No items in this category yet.</p>
             </div>
           ) : (
