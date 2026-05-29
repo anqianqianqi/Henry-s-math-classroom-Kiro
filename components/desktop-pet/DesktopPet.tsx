@@ -91,7 +91,7 @@ const MESSAGES = {
   idle:     ['meow~', '( ´ ▽ ` )', '...', '🐾', 'mrrp!', 'hello?'],
   playing:  ['meow!', 'got it!', 'catch me!', 'hehe~', '⚡', 'so fun!'],
   yawning:  ['yaaawn~', 'sleepy...', 'so tired', '😪', '*yawns*'],
-  sleeping: ['Zzz...', '💤', 'purrrr~', 'sweet dreams~'],
+  sleeping: ['Zzz...', '💤', 'purrrr~'],
   walking:  ['strolling~', 'where to?', 'on patrol', 'exploring!'],
 }
 
@@ -161,6 +161,8 @@ export default function DesktopPet() {
   const [showHeart,  setShowHeart]  = useState(false)
   const [popIn,      setPopIn]      = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [catSize,    setCatSize]    = useState(130)  // px, range 60–220
+  const [showSizer,  setShowSizer]  = useState(false)
 
   const behaviorRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const walkRef      = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -334,7 +336,8 @@ export default function DesktopPet() {
         }}
         onClick={handleClick}
         onMouseDown={handleMouseDown}
-        onMouseEnter={handleHover}
+        onMouseEnter={() => { handleHover(); setShowSizer(true) }}
+        onMouseLeave={() => setShowSizer(false)}
         role="button"
         aria-label="Didi — click to interact"
         tabIndex={0}
@@ -492,10 +495,41 @@ export default function DesktopPet() {
             }}>
               <DidiSvg
                 pose={pose}
-                size={130}
+                size={catSize}
                 facingLeft={behavior.pose === 'walking' ? facingLeft : false}
               />
             </div>
+
+            {/* Size slider — appears on hover */}
+            {showSizer && !isDragging && (
+              <div
+                onClick={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  marginTop: 4,
+                  padding: '2px 4px',
+                  background: 'rgba(255,255,255,0.9)',
+                  borderRadius: 8,
+                  border: '1px solid #f0e6d3',
+                }}
+              >
+                <span style={{ fontSize: 9, color: '#a07060' }}>🐾</span>
+                <input
+                  type="range"
+                  min={60}
+                  max={220}
+                  step={10}
+                  value={catSize}
+                  onChange={e => setCatSize(Number(e.target.value))}
+                  style={{ width: 70, accentColor: '#a07060', cursor: 'ew-resize' }}
+                  title="Resize Didi"
+                />
+                <span style={{ fontSize: 9, color: '#a07060' }}>🐾</span>
+              </div>
+            )}
 
             {/* Name tag */}
             <div style={{
