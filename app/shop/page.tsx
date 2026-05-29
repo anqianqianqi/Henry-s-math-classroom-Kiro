@@ -567,9 +567,7 @@ export default function ShopPage() {
               onClick={() => setActiveTab(key)}
               className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold border-2 transition-colors ${
                 activeTab === key
-                  ? key === 'food'      ? 'border-orange-400 bg-orange-50 text-orange-700'
-                  : key === 'accessory' ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
-                  : key === 'rewards'   ? 'border-purple-400 bg-purple-50 text-purple-700'
+                  ? key === 'rewards' ? 'border-purple-400 bg-purple-50 text-purple-700'
                   : 'border-primary-400 bg-primary-50 text-primary-700'
                   : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
               }`}

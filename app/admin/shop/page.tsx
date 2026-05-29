@@ -67,10 +67,11 @@ export default function AdminShopPage() {
   const [removedBlindboxIds, setRemovedBlindboxIds] = useState<string[]>([])
 
   const loadData = useCallback(async () => {
-    // Fetch all shop items (active + inactive)
+    // Fetch all shop items (active + inactive) — hide pet categories on main
     const { data: shopItems, error: itemsError } = await supabase
       .from('shop_items')
       .select('*')
+      .not('category', 'in', '("food","accessory","pet")')
       .order('created_at', { ascending: false })
 
     if (itemsError) {
@@ -829,10 +830,19 @@ export default function AdminShopPage() {
                     {/* Image area */}
                     <div className="relative w-full aspect-square bg-gray-50 overflow-hidden">
                       {isBlindbox ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200">
-                          <span className="text-4xl mb-1">🎁</span>
-                          <span className="text-xs font-semibold text-purple-600">Mystery Box</span>
-                        </div>
+                        item.image_url ? (
+                          <div className="relative w-full h-full">
+                            <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                            <div className="absolute bottom-1 right-1 bg-purple-600/80 text-white text-[9px] font-semibold px-1.5 py-0.5 rounded-full">
+                              🎁 Mystery
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200">
+                            <span className="text-4xl mb-1">🎁</span>
+                            <span className="text-xs font-semibold text-purple-600">Mystery Box</span>
+                          </div>
+                        )
                       ) : isPhysical ? (
                         <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100">
                           {item.image_url ? (
