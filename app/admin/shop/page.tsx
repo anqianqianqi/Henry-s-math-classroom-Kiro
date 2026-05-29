@@ -414,14 +414,22 @@ export default function AdminShopPage() {
               const fileExt = file.name.split('.').pop()
               const fileName = `blindbox/${editingId}/${setDbId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
               const { error: uploadErr } = await supabase.storage.from('shop-images').upload(fileName, file)
-              if (!uploadErr) {
-                const { data: { publicUrl } } = supabase.storage.from('shop-images').getPublicUrl(fileName)
-                await supabase.from('blindbox_images').insert({
-                  item_id: editingId,
-                  set_id: setDbId,
-                  image_url: publicUrl,
-                  sort_order: existingCount + i,
-                })
+              if (uploadErr) {
+                setError('Failed to upload image to set "' + draft.name + '": ' + uploadErr.message)
+                setUploadingBlindbox(false)
+                return
+              }
+              const { data: { publicUrl } } = supabase.storage.from('shop-images').getPublicUrl(fileName)
+              const { error: imgInsertErr } = await supabase.from('blindbox_images').insert({
+                item_id: editingId,
+                set_id: setDbId,
+                image_url: publicUrl,
+                sort_order: existingCount + i,
+              })
+              if (imgInsertErr) {
+                setError('Failed to save image record: ' + imgInsertErr.message)
+                setUploadingBlindbox(false)
+                return
               }
             }
           }
