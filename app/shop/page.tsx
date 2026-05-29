@@ -26,17 +26,18 @@ interface RedemptionWithTitle extends Redemption {
 
 // ── Blind Box Reveal Modal ────────────────────────────────────────────────────
 function BlindBoxReveal({
-  imageUrl,
+  imageUrls,
   itemTitle,
   onClose,
   isPhysical = false,
 }: {
-  imageUrl: string
+  imageUrls: string[]
   itemTitle: string
   onClose: () => void
   isPhysical?: boolean
 }) {
   const [phase, setPhase] = useState<'shake' | 'open' | 'reveal'>('shake')
+  const multiple = imageUrls.length > 1
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase('open'), 800)
@@ -51,13 +52,11 @@ function BlindBoxReveal({
           🎁 {itemTitle}
         </p>
 
-        {/* Box animation */}
-        <div className="relative mx-auto mb-6" style={{ width: 200, height: 200 }}>
-          {phase !== 'reveal' && (
+        {/* Box animation — shown while not yet revealed */}
+        {phase !== 'reveal' && (
+          <div className="relative mx-auto mb-6" style={{ width: 200, height: 200 }}>
             <div
-              className={`absolute inset-0 flex items-center justify-center rounded-2xl bg-gradient-to-br from-primary-400 to-accent-blue shadow-lg ${
-                phase === 'shake' ? 'animate-[wiggle_0.15s_ease-in-out_4]' : 'animate-[scaleUp_0.4s_ease-out_forwards]'
-              }`}
+              className="absolute inset-0 flex items-center justify-center rounded-2xl bg-gradient-to-br from-primary-400 to-accent-blue shadow-lg"
               style={{
                 animation: phase === 'shake'
                   ? 'wiggle 0.15s ease-in-out 4'
@@ -66,24 +65,41 @@ function BlindBoxReveal({
             >
               <span className="text-7xl select-none">🎁</span>
             </div>
-          )}
-          {phase === 'reveal' && (
-            <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-lg animate-[fadeIn_0.5s_ease-out]">
-              <img
-                src={imageUrl}
-                alt="Your blind box reward"
-                className="w-full h-full object-cover"
-              />
+          </div>
+        )}
+
+        {/* Reveal — single image */}
+        {phase === 'reveal' && !multiple && (
+          <div className="relative mx-auto mb-6 rounded-2xl overflow-hidden shadow-lg animate-[fadeIn_0.5s_ease-out]" style={{ width: 200, height: 200 }}>
+            <img
+              src={imageUrls[0]}
+              alt="Your blind box reward"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
+        {/* Reveal — multiple images grid */}
+        {phase === 'reveal' && multiple && (
+          <div className="mb-6 animate-[fadeIn_0.5s_ease-out]">
+            <div className={`grid gap-2 mx-auto ${imageUrls.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`} style={{ maxWidth: 280 }}>
+              {imageUrls.map((url, i) => (
+                <div key={i} className="aspect-square rounded-xl overflow-hidden shadow border border-gray-100">
+                  <img src={url} alt={`Prize ${i + 1}`} className="w-full h-full object-cover" />
+                </div>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {phase === 'reveal' ? (
           <>
-            <p className="text-lg font-bold text-gray-900 mb-1">You got it! 🎉</p>
+            <p className="text-lg font-bold text-gray-900 mb-1">
+              {multiple ? `You got ${imageUrls.length} prizes! 🎉` : 'You got it! 🎉'}
+            </p>
             {isPhysical ? (
               <>
-                <p className="text-sm text-gray-500 mb-3">Here&apos;s a preview of your physical prize!</p>
+                <p className="text-sm text-gray-500 mb-3">Here&apos;s a preview of your physical prize{multiple ? 's' : ''}!</p>
                 <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-left">
                   <p className="text-amber-800 text-sm font-semibold mb-1">📬 How to pick up your item</p>
                   <p className="text-amber-700 text-xs leading-relaxed">
@@ -92,23 +108,41 @@ function BlindBoxReveal({
                 </div>
               </>
             ) : (
-              <p className="text-sm text-gray-500 mb-6">Download your exclusive image below.</p>
+              <p className="text-sm text-gray-500 mb-6">Download your exclusive image{multiple ? 's' : ''} below.</p>
             )}
             <div className="flex gap-3">
               {!isPhysical && (
-                <a
-                  href={imageUrl}
-                  download
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 bg-primary-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-primary-700 transition-colors text-center"
-                >
-                  ⬇ Download
-                </a>
+                multiple ? (
+                  // Download all as separate links
+                  <div className="flex-1 flex flex-col gap-2">
+                    {imageUrls.map((url, i) => (
+                      <a
+                        key={i}
+                        href={url}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full bg-primary-600 text-white text-sm font-semibold py-2 rounded-xl hover:bg-primary-700 transition-colors text-center"
+                      >
+                        ⬇ Download #{i + 1}
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <a
+                    href={imageUrls[0]}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 bg-primary-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-primary-700 transition-colors text-center"
+                  >
+                    ⬇ Download
+                  </a>
+                )
               )}
               <button
                 onClick={onClose}
-                className={`${isPhysical ? 'w-full' : 'flex-1'} bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-200 transition-colors`}
+                className={`${isPhysical || !multiple ? 'flex-1' : 'w-full mt-1'} bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-200 transition-colors`}
               >
                 {isPhysical ? 'Got it!' : 'Close'}
               </button>
@@ -142,25 +176,36 @@ function BlindBoxReveal({
 
 // ── Blind Box View Modal (revisit already-claimed prize) ─────────────────────
 function BlindBoxView({
-  imageUrl,
+  imageUrls,
   itemTitle,
   onClose,
   isPhysical = false,
 }: {
-  imageUrl: string
+  imageUrls: string[]
   itemTitle: string
   onClose: () => void
   isPhysical?: boolean
 }) {
+  const multiple = imageUrls.length > 1
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center">
         <p className="text-sm font-semibold text-primary-500 uppercase tracking-widest mb-4">
           {isPhysical ? '📦' : '🎁'} {itemTitle}
         </p>
-        <div className="rounded-2xl overflow-hidden shadow-lg mb-6" style={{ width: 200, height: 200, margin: '0 auto 24px' }}>
-          <img src={imageUrl} alt="Your blind box reward" className="w-full h-full object-cover" />
-        </div>
+        {multiple ? (
+          <div className={`grid gap-2 mx-auto mb-6 ${imageUrls.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`} style={{ maxWidth: 280 }}>
+            {imageUrls.map((url, i) => (
+              <div key={i} className="aspect-square rounded-xl overflow-hidden shadow border border-gray-100">
+                <img src={url} alt={`Prize ${i + 1}`} className="w-full h-full object-cover" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl overflow-hidden shadow-lg mb-6" style={{ width: 200, height: 200, margin: '0 auto 24px' }}>
+            <img src={imageUrls[0]} alt="Your blind box reward" className="w-full h-full object-cover" />
+          </div>
+        )}
         {isPhysical ? (
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-left">
             <p className="text-amber-800 text-sm font-semibold mb-1">📬 Physical item</p>
@@ -169,23 +214,24 @@ function BlindBoxView({
             </p>
           </div>
         ) : (
-          <p className="text-sm text-gray-500 mb-6">Your exclusive prize — download it anytime!</p>
+          <p className="text-sm text-gray-500 mb-6">Your exclusive prize{multiple ? 's' : ''} — download anytime!</p>
         )}
-        <div className="flex gap-3">
-          {!isPhysical && (
+        <div className="flex flex-col gap-2">
+          {!isPhysical && imageUrls.map((url, i) => (
             <a
-              href={imageUrl}
+              key={i}
+              href={url}
               download
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 bg-primary-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-primary-700 transition-colors text-center"
+              className="w-full bg-primary-600 text-white text-sm font-semibold py-2 rounded-xl hover:bg-primary-700 transition-colors text-center"
             >
-              ⬇ Download
+              {multiple ? `⬇ Download #${i + 1}` : '⬇ Download'}
             </a>
-          )}
+          ))}
           <button
             onClick={onClose}
-            className={`${isPhysical ? 'w-full' : 'flex-1'} bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-200 transition-colors`}
+            className="w-full bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-200 transition-colors"
           >
             Close
           </button>
@@ -222,6 +268,31 @@ function PhysicalConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: (
   )
 }
 
+// ── Food queued confirmation ──────────────────────────────────────────────────
+function FoodConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: () => void }) {
+  // Extract the leading emoji from the item title for the modal icon
+  const emojiMatch = itemTitle.match(/^\p{Emoji}/u)
+  const icon = emojiMatch ? emojiMatch[0] : '🍖'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center">
+        <div className="text-6xl mb-4">{icon}</div>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">Added to food queue!</h3>
+        <p className="text-gray-600 text-sm mb-6">
+          <strong>{itemTitle}</strong> is waiting for your pet. Head to your pet page to feed it and earn XP!
+        </p>
+        <button
+          onClick={onClose}
+          className="w-full bg-orange-500 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-orange-600 transition-colors"
+        >
+          Got it! 🐾
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Collapsible Details ───────────────────────────────────────────────────────
 function ItemDetails({ details }: { details: string }) {
   const [open, setOpen] = useState(false)
@@ -241,6 +312,26 @@ function ItemDetails({ details }: { details: string }) {
       )}
     </div>
   )
+}
+
+// ── Category badge ────────────────────────────────────────────────────────────
+function CategoryBadge({ category }: { category: string }) {
+  if (category === 'food') return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-orange-100 text-amber-700 px-1.5 py-0.5 rounded-full">
+      🍖 Food
+    </span>
+  )
+  if (category === 'accessory') return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">
+      🎩 Accessory
+    </span>
+  )
+  if (category === 'pet') return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+      🐾 New Pet
+    </span>
+  )
+  return null
 }
 
 // ── Commodity type badge ──────────────────────────────────────────────────────
@@ -275,32 +366,23 @@ export default function ShopPage() {
   const [redeeming, setRedeeming] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [redeemErrors, setRedeemErrors] = useState<Record<string, string>>({})
-  const [activeTab, setActiveTab] = useState<'all' | 'rewards'>('rewards')
+  const [activeTab, setActiveTab] = useState<'all' | 'rewards' | 'food' | 'accessory'>('rewards')
 
   // Modals
-  const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrl: string; itemTitle: string; isPhysical?: boolean } | null>(null)
-  const [blindboxView, setBlindboxView] = useState<{ imageUrl: string; itemTitle: string; isPhysical?: boolean } | null>(null)
+  const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrls: string[]; itemTitle: string; isPhysical?: boolean } | null>(null)
+  const [blindboxView, setBlindboxView] = useState<{ imageUrls: string[]; itemTitle: string; isPhysical?: boolean } | null>(null)
   const [physicalConfirm, setPhysicalConfirm] = useState<{ itemTitle: string } | null>(null)
+  const [foodConfirm, setFoodConfirm] = useState<{ itemTitle: string } | null>(null)
 
   const loadData = useCallback(async (userId: string) => {
-    // Balance from wallet
+    // Balance: read directly from student_wallets — the RPC keeps it in sync on every purchase
     let newBalance = 0
-    try {
-      const { data: walletData } = await supabase
-        .from('student_wallets')
-        .select('spendable_balance')
-        .eq('user_id', userId)
-        .single()
-      newBalance = walletData?.spendable_balance ?? 0
-    } catch {
-      const [submissionsResult, spentResult] = await Promise.all([
-        supabase.from('challenge_submissions').select('points').eq('user_id', userId).not('points', 'is', null),
-        supabase.from('redemptions').select('points_spent').eq('user_id', userId),
-      ])
-      const lockedPoints = (submissionsResult.data ?? []).map((s: any) => s.points ?? 0)
-      const pointsSpent = (spentResult.data ?? []).map((r: any) => r.points_spent ?? 0)
-      newBalance = computeSpendableBalance(lockedPoints, pointsSpent)
-    }
+    const { data: walletData } = await supabase
+      .from('student_wallets')
+      .select('spendable_balance')
+      .eq('user_id', userId)
+      .single()
+    newBalance = walletData?.spendable_balance ?? 0
     setBalance(newBalance)
 
     // Shop items — hide pet-related categories (food/accessory/pet) until pet feature launches
@@ -431,11 +513,24 @@ export default function ShopPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) await loadData(user.id)
 
+        // Store XP gained in sessionStorage so the pet page can show the +N XP animation
+        if (typeof data.xp_gained === 'number' && data.xp_gained > 0) {
+          sessionStorage.setItem('pet_xp_gained', String(data.xp_gained))
+        }
+
+        // Show food purchase confirmation
+        if (data.pending === true) {
+          setFoodConfirm({ itemTitle: item.title })
+          return
+        }
+
         // Show appropriate modal
-        if (data.commodity_type === 'blindbox' && data.image_url) {
-          setBlindboxReveal({ imageUrl: data.image_url, itemTitle: item.title })
-        } else if (data.commodity_type === 'physical_blindbox' && data.image_url) {
-          setBlindboxReveal({ imageUrl: data.image_url, itemTitle: item.title, isPhysical: true })
+        if (data.commodity_type === 'blindbox' && (data.image_urls?.length || data.image_url)) {
+          const urls: string[] = data.image_urls?.length ? data.image_urls : [data.image_url]
+          setBlindboxReveal({ imageUrls: urls, itemTitle: item.title })
+        } else if (data.commodity_type === 'physical_blindbox' && (data.image_urls?.length || data.image_url)) {
+          const urls: string[] = data.image_urls?.length ? data.image_urls : [data.image_url]
+          setBlindboxReveal({ imageUrls: urls, itemTitle: item.title, isPhysical: true })
         } else if (data.commodity_type === 'physical') {
           setPhysicalConfirm({ itemTitle: item.title })
         }
@@ -465,7 +560,7 @@ export default function ShopPage() {
       {/* Modals */}
       {blindboxReveal && (
         <BlindBoxReveal
-          imageUrl={blindboxReveal.imageUrl}
+          imageUrls={blindboxReveal.imageUrls}
           itemTitle={blindboxReveal.itemTitle}
           isPhysical={blindboxReveal.isPhysical}
           onClose={() => setBlindboxReveal(null)}
@@ -473,7 +568,7 @@ export default function ShopPage() {
       )}
       {blindboxView && (
         <BlindBoxView
-          imageUrl={blindboxView.imageUrl}
+          imageUrls={blindboxView.imageUrls}
           itemTitle={blindboxView.itemTitle}
           isPhysical={blindboxView.isPhysical}
           onClose={() => setBlindboxView(null)}
@@ -483,6 +578,12 @@ export default function ShopPage() {
         <PhysicalConfirm
           itemTitle={physicalConfirm.itemTitle}
           onClose={() => setPhysicalConfirm(null)}
+        />
+      )}
+      {foodConfirm && (
+        <FoodConfirm
+          itemTitle={foodConfirm.itemTitle}
+          onClose={() => setFoodConfirm(null)}
         />
       )}
 
@@ -511,11 +612,13 @@ export default function ShopPage() {
         {/* Items Grid */}
         <h2 className="text-xl font-bold text-gray-900 mb-3">Available Rewards</h2>
 
-        {/* Category tabs — pet categories hidden until pet feature launches on main */}
+        {/* Category tabs */}
         <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
           {([
-            { key: 'all',     label: '🛍️ All' },
-            { key: 'rewards', label: '🎁 Rewards' },
+            { key: 'all',       label: '🛍️ All' },
+            { key: 'rewards',   label: '🎁 Rewards' },
+            { key: 'food',      label: '🍖 Pet Food' },
+            { key: 'accessory', label: '🎩 Accessories' },
           ] as const).map(({ key, label }) => (
             <button
               key={key}
@@ -652,6 +755,13 @@ export default function ShopPage() {
                       </div>
                     )}
 
+                    {/* Category badge */}
+                    {item.category !== 'other' && (
+                      <div className="mb-1">
+                        <CategoryBadge category={item.category} />
+                      </div>
+                    )}
+
                     <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-0.5 line-clamp-2">
                       {item.title}
                     </h3>
@@ -739,7 +849,7 @@ export default function ShopPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       {(r.item_commodity_type === 'blindbox' || r.item_commodity_type === 'physical_blindbox') && r.blindbox_image_url && (
                         <button
-                          onClick={() => setBlindboxView({ imageUrl: r.blindbox_image_url!, itemTitle: r.item_title, isPhysical: r.item_commodity_type === 'physical_blindbox' })}
+                          onClick={() => setBlindboxView({ imageUrls: [r.blindbox_image_url!], itemTitle: r.item_title, isPhysical: r.item_commodity_type === 'physical_blindbox' })}
                           className="text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg transition-colors"
                         >
                           View Prize

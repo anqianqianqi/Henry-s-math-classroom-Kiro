@@ -60,10 +60,13 @@ export async function POST(request: Request) {
         console.error('[shop/redeem] blindbox RPC error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
       }
-      // data contains { success, image_id, image_url }
+      // data contains { success, image_ids, image_urls, image_id, image_url }
       return NextResponse.json({
         success: true,
         commodity_type: 'blindbox',
+        image_urls: (data as any)?.image_urls ?? [],
+        image_ids: (data as any)?.image_ids ?? [],
+        // Legacy single-image fields for backward compat
         image_url: (data as any)?.image_url ?? null,
         image_id: (data as any)?.image_id ?? null,
       }, { status: 200 })
@@ -80,12 +83,14 @@ export async function POST(request: Request) {
         if (msg.includes('already_redeemed')) return NextResponse.json({ error: 'You have already redeemed this item' }, { status: 400 })
         const mapped = mapRpcError(msg)
         if (mapped) return NextResponse.json({ error: mapped.error }, { status: mapped.status })
-        // Return the actual error message in dev so we can diagnose
         return NextResponse.json({ error: 'Internal server error', detail: msg }, { status: 500 })
       }
       return NextResponse.json({
         success: true,
         commodity_type: 'physical_blindbox',
+        image_urls: (data as any)?.image_urls ?? [],
+        image_ids: (data as any)?.image_ids ?? [],
+        // Legacy single-image fields for backward compat
         image_url: (data as any)?.image_url ?? null,
         image_id: (data as any)?.image_id ?? null,
       }, { status: 200 })
