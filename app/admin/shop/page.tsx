@@ -753,9 +753,6 @@ export default function AdminShopPage() {
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       {([
-                        { value: 'food', label: '🍖 Food' },
-                        { value: 'accessory', label: '🎩 Accessory' },
-                        { value: 'pet', label: '🐾 New Pet' },
                         { value: 'other', label: '🎁 Other' },
                       ] as const).map(({ value, label }) => (
                         <button
@@ -764,10 +761,7 @@ export default function AdminShopPage() {
                           onClick={() => handleCategoryChange(value)}
                           className={`py-2 px-3 rounded-xl text-xs font-semibold border-2 transition-colors ${
                             form.category === value
-                              ? value === 'food' ? 'border-orange-500 bg-orange-50 text-orange-700'
-                                : value === 'accessory' ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                                : value === 'pet' ? 'border-green-500 bg-green-50 text-green-700'
-                                : 'border-primary-500 bg-primary-50 text-primary-700'
+                              ? 'border-primary-500 bg-primary-50 text-primary-700'
                               : 'border-gray-200 text-gray-500 hover:border-gray-300'
                           }`}
                         >
@@ -780,60 +774,7 @@ export default function AdminShopPage() {
                     )}
                   </div>
 
-                  {/* food_xp — only shown when category = 'food' */}
-                  {form.category === 'food' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Food XP <span className="text-red-500">*</span>
-                        <span className="text-gray-400 font-normal ml-1">(1–500)</span>
-                      </label>
-                      <input
-                        type="number"
-                        value={form.food_xp}
-                        onChange={(e) => handleFormChange('food_xp', e.target.value)}
-                        min={1}
-                        max={500}
-                        className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                        placeholder="e.g. 50"
-                      />
-                      {formErrors.food_xp && (
-                        <p className="text-red-500 text-xs mt-1">{formErrors.food_xp}</p>
-                      )}
-                    </div>
-                  )}
                 </div>
-
-                {/* target_species — only shown when category = 'pet' */}
-                {form.category === 'pet' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Target Species <span className="text-red-500">*</span>
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {([
-                        { value: 'dragon', label: '🐉 Dragon' },
-                        { value: 'fox', label: '🦊 Fox' },
-                        { value: 'cat', label: '🐱 Cat' },
-                      ] as const).map(({ value, label }) => (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => handleFormChange('target_species', value)}
-                          className={`py-2 px-3 rounded-xl text-xs font-semibold border-2 transition-colors ${
-                            form.target_species === value
-                              ? 'border-green-500 bg-green-50 text-green-700'
-                              : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                    {formErrors.target_species && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.target_species}</p>
-                    )}
-                  </div>
-                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
