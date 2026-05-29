@@ -88,11 +88,11 @@ const STYLES = `
 // ─── Speech messages ──────────────────────────────────────────────────────────
 
 const MESSAGES = {
-  idle:     ['喵~', '(*^▽^*)', '...', '🐾', '喵喵喵', '在吗？'],
-  playing:  ['喵！', '玩！', '抓到了！', '嘿嘿~', '⚡', '好玩！'],
-  yawning:  ['哈~', '困了...', '呼~', '😪', '好困啊'],
-  sleeping: ['Zzz...', '💤', '呼噜噜~', '好梦~'],
-  walking:  ['溜达溜达~', '去哪儿呢', '巡逻中'],
+  idle:     ['meow~', '( ´ ▽ ` )', '...', '🐾', 'mrrp!', 'hello?'],
+  playing:  ['meow!', 'got it!', 'catch me!', 'hehe~', '⚡', 'so fun!'],
+  yawning:  ['yaaawn~', 'sleepy...', 'so tired', '😪', '*yawns*'],
+  sleeping: ['Zzz...', '💤', 'purrrr~', 'sweet dreams~'],
+  walking:  ['strolling~', 'where to?', 'on patrol', 'exploring!'],
 }
 
 function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)] }
@@ -269,7 +269,7 @@ export default function DesktopPet() {
         }}
         onClick={handleClick}
         role="button"
-        aria-label="迪迪 — 点击互动"
+        aria-label="Didi — click to interact"
         tabIndex={0}
         onKeyDown={e => e.key === 'Enter' && handleClick()}
       >
@@ -288,15 +288,15 @@ export default function DesktopPet() {
           </div>
         )}
 
-        {/* ── Speech bubble ── */}
+        {/* ── Speech bubble — floats above and to the left, tail points down-right toward Didi ── */}
         {speech && !minimized && (
           <div
             key={speechKey}
             style={{
               position: 'absolute',
-              bottom: 138,
-              left: '50%',
-              transform: 'translateX(-50%)',
+              bottom: 155,       // well above Didi's head
+              right: 10,         // anchored to the right side so it doesn't cover the cat
+              transform: 'none',
               background: 'white',
               border: '2px solid #f0e6d3',
               borderRadius: 14,
@@ -313,12 +313,11 @@ export default function DesktopPet() {
             }}
           >
             {speech}
-            {/* Bubble tail */}
+            {/* Tail pointing down-right toward Didi's face */}
             <div style={{
               position: 'absolute',
               bottom: -9,
-              left: '50%',
-              transform: 'translateX(-50%)',
+              right: 18,
               width: 0,
               height: 0,
               borderLeft: '7px solid transparent',
@@ -328,8 +327,7 @@ export default function DesktopPet() {
             <div style={{
               position: 'absolute',
               bottom: -12,
-              left: '50%',
-              transform: 'translateX(-50%)',
+              right: 17,
               width: 0,
               height: 0,
               borderLeft: '8px solid transparent',
@@ -358,7 +356,7 @@ export default function DesktopPet() {
             fontFamily: 'system-ui, sans-serif',
           }}>
             <span style={{ fontSize: 20 }}>🐱</span>
-            <span>迪迪</span>
+            <span>Didi</span>
           </div>
         ) : (
           /* ── Full pet ── */
@@ -387,8 +385,8 @@ export default function DesktopPet() {
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
-              title="隐藏迪迪"
-              aria-label="隐藏迪迪"
+              title="Hide Didi"
+              aria-label="Hide Didi"
             >
               ×
             </button>
@@ -439,7 +437,7 @@ export default function DesktopPet() {
               fontFamily: 'system-ui, sans-serif',
               opacity: 0.8,
             }}>
-              迪迪 🐾
+              Didi 🐾
             </div>
           </div>
         )}
