@@ -1575,7 +1575,7 @@ export default function ChallengePage() {
                                 Publish Grade
                               </button>
                               {submission.points != null && (
-                                <span className="text-xs text-green-600 font-medium">Current: {submission.points}/${challenge?.max_points || 100}</span>
+                                <span className="text-xs text-green-600 font-medium">Current: {submission.points}/{challenge?.max_points || 100}</span>
                               )}
                             </div>
                             )
