@@ -839,8 +839,7 @@ export default function AdminShopPage() {
                           </div>
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200">
-                            <span className="text-4xl mb-1">🎁</span>
-                            <span className="text-xs font-semibold text-purple-600">Mystery Box</span>
+                            <span className="text-7xl select-none">🎁</span>
                           </div>
                         )
                       ) : isPhysical ? (
