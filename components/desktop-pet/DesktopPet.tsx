@@ -121,7 +121,7 @@ function nextBehavior(cur: Behavior, winW: number): Behavior {
   if (cur.pose === 'yawning') {
     // After yawn: back to sleep 70%, idle 30%
     return r < 0.70
-      ? { pose: 'sleeping', ms: 10000 + r * 8000 }
+      ? { pose: 'sleeping', ms: 120000 + r * 60000 }
       : { pose: 'idle', ms: 2000 + r * 2000 }
   }
   if (cur.pose === 'playing') {
@@ -133,7 +133,7 @@ function nextBehavior(cur: Behavior, winW: number): Behavior {
   if (cur.pose === 'walking') {
     // After walk: sleep 60%, yawn 40%
     return r < 0.60
-      ? { pose: 'sleeping', ms: 10000 + r * 8000 }
+      ? { pose: 'sleeping', ms: 120000 + r * 60000 }
       : { pose: 'yawning', ms: 3200 }
   }
   // From idle — this is where the target distribution is set:
@@ -142,7 +142,7 @@ function nextBehavior(cur: Behavior, winW: number): Behavior {
   // 0.70–0.85 → walk  (15%)
   // 0.85–0.95 → play  (10%)
   // 0.95–1.00 → idle  (5%)
-  if (r < 0.50) return { pose: 'sleeping', ms: 10000 + r * 8000 }
+  if (r < 0.50) return { pose: 'sleeping', ms: 120000 + r * 60000 }
   if (r < 0.70) return { pose: 'yawning',  ms: 3200 }
   if (r < 0.85) {
     const tx = pad + Math.random() * (winW - pad * 2 - 140)
@@ -159,7 +159,7 @@ export default function DesktopPet() {
   const [minimized,  setMinimized]  = useState(false)
   const [posX,       setPosX]       = useState(0)
   const [posY,       setPosY]       = useState(0)   // distance from bottom
-  const [behavior,   setBehavior]   = useState<Behavior>({ pose: 'sleeping', ms: 14000 })
+  const [behavior,   setBehavior]   = useState<Behavior>({ pose: 'sleeping', ms: 120000 })
   const [facingLeft, setFacingLeft] = useState(false)
   const [speech,     setSpeech]     = useState<string | null>(null)
   const [speechKey,  setSpeechKey]  = useState(0)
@@ -272,7 +272,7 @@ export default function DesktopPet() {
       setBehavior({ pose: 'playing', ms: 1200 })
       say('*thud*')
       setTimeout(() => {
-        setBehavior({ pose: 'sleeping', ms: 12000 })
+        setBehavior({ pose: 'sleeping', ms: 120000 })
         say(pick(MESSAGES.sleeping))
       }, 1400)
     }
