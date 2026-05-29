@@ -389,11 +389,16 @@ export default function AdminShopPage() {
             let setDbId = draft.dbId
             if (!setDbId) {
               // Create new set in DB
-              const { data: newSet } = await supabase
+              const { data: newSet, error: setErr } = await supabase
                 .from('blindbox_sets')
                 .insert({ item_id: editingId, name: draft.name, sort_order: setDrafts.indexOf(draft) })
                 .select('id')
                 .single()
+              if (setErr) {
+                setError('Failed to create set "' + draft.name + '": ' + setErr.message + '. Have you run supabase/add-blindbox-sets.sql?')
+                setUploadingBlindbox(false)
+                return
+              }
               setDbId = newSet?.id ?? null
             } else {
               // Update set name
@@ -445,16 +450,15 @@ export default function AdminShopPage() {
           setUploadingBlindbox(true)
           for (let si = 0; si < setDrafts.length; si++) {
             const draft = setDrafts[si]
-            if (draft.newFiles.length === 0) continue
 
-            // Create the set in DB
-            const { data: newSet } = await supabase
+            // Create the set in DB (always, even if no images yet)
+            const { data: newSet, error: setErr } = await supabase
               .from('blindbox_sets')
               .insert({ item_id: newItem.id, name: draft.name, sort_order: si })
               .select('id')
               .single()
-            const setDbId = newSet?.id
-            if (!setDbId) continue
+            if (setErr || !newSet?.id) continue
+            const setDbId = newSet.id
 
             // Upload images for this set
             for (let i = 0; i < draft.newFiles.length; i++) {
@@ -509,18 +513,33 @@ export default function AdminShopPage() {
 
     // Fetch existing blindbox sets and their images if applicable
     if (item.commodity_type === 'blindbox' || item.commodity_type === 'physical_blindbox') {
+      // Fetch sets first, then images separately (nested select doesn't work for this FK direction)
       supabase
         .from('blindbox_sets')
-        .select('id, name, sort_order, blindbox_images(id, image_url, sort_order)')
+        .select('id, name, sort_order')
         .eq('item_id', item.id)
         .order('sort_order', { ascending: true })
-        .then(({ data }) => {
-          if (data && data.length > 0) {
-            setSetDrafts(data.map((s: any) => ({
+        .then(async ({ data: sets }) => {
+          if (sets && sets.length > 0) {
+            // Fetch all images for this item that belong to a set
+            const { data: allImages } = await supabase
+              .from('blindbox_images')
+              .select('id, image_url, sort_order, set_id')
+              .eq('item_id', item.id)
+              .not('set_id', 'is', null)
+              .order('sort_order', { ascending: true })
+
+            const imagesBySet: Record<string, Array<{ id: string; image_url: string }>> = {}
+            for (const img of allImages ?? []) {
+              if (!imagesBySet[img.set_id]) imagesBySet[img.set_id] = []
+              imagesBySet[img.set_id].push({ id: img.id, image_url: img.image_url })
+            }
+
+            setSetDrafts(sets.map((s: any) => ({
               tempId: s.id,
               dbId: s.id,
               name: s.name,
-              existingImages: (s.blindbox_images ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order),
+              existingImages: imagesBySet[s.id] ?? [],
               newFiles: [],
               newPreviews: [],
               removedImageIds: [],
