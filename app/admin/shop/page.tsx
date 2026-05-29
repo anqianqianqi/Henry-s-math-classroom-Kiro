@@ -475,6 +475,19 @@ export default function AdminShopPage() {
     await loadData()
   }
 
+  async function handleDelete(itemId: string) {
+    if (!confirm('Permanently delete this item? This cannot be undone.')) return
+    const { error: deleteError } = await supabase
+      .from('shop_items')
+      .delete()
+      .eq('id', itemId)
+    if (deleteError) {
+      setError('Failed to delete item: ' + deleteError.message)
+      return
+    }
+    await loadData()
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
@@ -892,6 +905,13 @@ export default function AdminShopPage() {
                               On
                             </button>
                           )}
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            className="text-xs font-semibold px-2 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                            title="Permanently delete"
+                          >
+                            🗑️
+                          </button>
                         </div>
                       </div>
                     </div>

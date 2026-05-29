@@ -275,7 +275,7 @@ export default function ShopPage() {
   const [redeeming, setRedeeming] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [redeemErrors, setRedeemErrors] = useState<Record<string, string>>({})
-  const [activeTab, setActiveTab] = useState<'all' | 'rewards' | 'food' | 'accessory'>('rewards')
+  const [activeTab, setActiveTab] = useState<'all' | 'rewards'>('rewards')
 
   // Modals
   const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrl: string; itemTitle: string; isPhysical?: boolean } | null>(null)
@@ -303,11 +303,12 @@ export default function ShopPage() {
     }
     setBalance(newBalance)
 
-    // Shop items
+    // Shop items — hide pet-related categories (food/accessory/pet) until pet feature launches
     const { data: shopItems, error: itemsError } = await supabase
       .from('shop_items')
       .select('*')
       .eq('is_active', true)
+      .not('category', 'in', '("food","accessory","pet")')
       .order('created_at', { ascending: false })
 
     if (itemsError) { setError('Failed to load shop items'); return }
@@ -554,13 +555,11 @@ export default function ShopPage() {
         {/* Items Grid */}
         <h2 className="text-xl font-bold text-gray-900 mb-3">Available Rewards</h2>
 
-        {/* Category tabs */}
+        {/* Category tabs — pet categories hidden until pet feature launches on main */}
         <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
           {([
-            { key: 'all',       label: '🛍️ All' },
-            { key: 'rewards',   label: '🎁 Rewards' },
-            { key: 'food',      label: '🍖 Pet Food' },
-            { key: 'accessory', label: '🎩 Accessories' },
+            { key: 'all',     label: '🛍️ All' },
+            { key: 'rewards', label: '🎁 Rewards' },
           ] as const).map(({ key, label }) => (
             <button
               key={key}
