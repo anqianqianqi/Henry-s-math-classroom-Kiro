@@ -106,45 +106,50 @@ type Behavior =
   | { pose: 'playing';  ms: number }
   | { pose: 'walking';  ms: number; targetX: number }
 
-// Behavior weights — Didi is a lazy Ragdoll:
-//   sleeping ~65% of the time, idle ~20%, yawn ~10%, walk ~4%, play ~1%
+// Behavior weights — target distribution:
+//   sleeping 50%, yawning 20%, walking 15%, playing 10%, idle 5%
 function nextBehavior(cur: Behavior, winW: number): Behavior {
   const r = Math.random()
   const pad = 80
 
   if (cur.pose === 'sleeping') {
-    // After a long sleep: 80% yawn first, 20% go straight to idle
-    return r < 0.80
-      ? { pose: 'yawning', ms: 3200 }
-      : { pose: 'idle', ms: 3000 + r * 2000 }
-  }
-  if (cur.pose === 'yawning') {
-    // After yawning: almost always go back to sleep
-    return r < 0.85
-      ? { pose: 'sleeping', ms: 12000 + r * 10000 }
-      : { pose: 'idle', ms: 3000 + r * 2000 }
-  }
-  if (cur.pose === 'playing') {
-    // After playing: yawn then sleep
-    return r < 0.6
+    // After sleep: yawn 75%, idle 25%
+    return r < 0.75
       ? { pose: 'yawning', ms: 3200 }
       : { pose: 'idle', ms: 2000 + r * 2000 }
   }
+  if (cur.pose === 'yawning') {
+    // After yawn: back to sleep 70%, idle 30%
+    return r < 0.70
+      ? { pose: 'sleeping', ms: 10000 + r * 8000 }
+      : { pose: 'idle', ms: 2000 + r * 2000 }
+  }
+  if (cur.pose === 'playing') {
+    // After play: yawn 60%, idle 40%
+    return r < 0.60
+      ? { pose: 'yawning', ms: 3200 }
+      : { pose: 'idle', ms: 2000 + r * 1500 }
+  }
   if (cur.pose === 'walking') {
-    // After walking: tired, go sleep
-    return r < 0.75
-      ? { pose: 'sleeping', ms: 12000 + r * 8000 }
+    // After walk: sleep 60%, yawn 40%
+    return r < 0.60
+      ? { pose: 'sleeping', ms: 10000 + r * 8000 }
       : { pose: 'yawning', ms: 3200 }
   }
-  // From idle:
-  // 65% → sleep, 20% → yawn, 10% → walk, 5% → play
-  if (r < 0.65) return { pose: 'sleeping', ms: 12000 + r * 10000 }
-  if (r < 0.85) return { pose: 'yawning', ms: 3200 }
-  if (r < 0.95) {
+  // From idle — this is where the target distribution is set:
+  // 0.00–0.50 → sleep (50%)
+  // 0.50–0.70 → yawn  (20%)
+  // 0.70–0.85 → walk  (15%)
+  // 0.85–0.95 → play  (10%)
+  // 0.95–1.00 → idle  (5%)
+  if (r < 0.50) return { pose: 'sleeping', ms: 10000 + r * 8000 }
+  if (r < 0.70) return { pose: 'yawning',  ms: 3200 }
+  if (r < 0.85) {
     const tx = pad + Math.random() * (winW - pad * 2 - 140)
     return { pose: 'walking', ms: 3000 + r * 2000, targetX: tx }
   }
-  return { pose: 'playing', ms: 2500 }
+  if (r < 0.95) return { pose: 'playing', ms: 2500 }
+  return { pose: 'idle', ms: 3000 + r * 2000 }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
