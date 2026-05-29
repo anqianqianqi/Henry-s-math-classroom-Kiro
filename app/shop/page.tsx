@@ -631,10 +631,20 @@ export default function ShopPage() {
                   {/* Image area */}
                   <div className="relative w-full aspect-square bg-gray-50 overflow-hidden">
                     {isBlindbox ? (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200 group-hover:from-purple-200 group-hover:to-purple-300 transition-colors">
-                        <span className="text-5xl mb-1 group-hover:scale-110 transition-transform">🎁</span>
-                        <span className="text-xs font-semibold text-purple-600">Mystery Box</span>
-                      </div>
+                      item.image_url ? (
+                        <div className="relative w-full h-full">
+                          <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          {/* Mystery box overlay badge */}
+                          <div className="absolute bottom-2 right-2 bg-purple-600/80 backdrop-blur-sm text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                            🎁 Mystery
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200 group-hover:from-purple-200 group-hover:to-purple-300 transition-colors">
+                          <span className="text-5xl mb-1 group-hover:scale-110 transition-transform">🎁</span>
+                          <span className="text-xs font-semibold text-purple-600">Mystery Box</span>
+                        </div>
+                      )
                     ) : isPhysical ? (
                       <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100 group-hover:from-amber-100 group-hover:to-amber-200 transition-colors">
                         {item.image_url ? (
