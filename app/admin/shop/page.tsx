@@ -324,8 +324,12 @@ export default function AdminShopPage() {
     const validation = validateShopItemForm(form)
     if (!validation.valid) {
       setFormErrors(validation.errors)
+      // Show a summary error so it's visible
+      const firstError = Object.values(validation.errors)[0]
+      setError('Please fix the form errors: ' + firstError)
       return
     }
+    setError(null)
 
     setSubmitting(true)
     try {
