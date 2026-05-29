@@ -109,7 +109,7 @@ function BlindBoxReveal({
                 </div>
               </>
             ) : (
-              <p className="text-sm text-gray-400 mb-4">Tap any image to open full size</p>
+              <span />
             )}
 
             {/* Modern image gallery */}
@@ -118,9 +118,6 @@ function BlindBoxReveal({
                 <a key={i} href={url} target="_blank" rel="noopener noreferrer"
                   className="group relative block aspect-square rounded-2xl overflow-hidden shadow-md ring-1 ring-black/5 hover:ring-2 hover:ring-primary-400 transition-all">
                   <img src={url} alt={`Prize ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center">
-                    <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-semibold bg-black/50 px-2 py-1 rounded-full">View</span>
-                  </div>
                 </a>
               ))}
             </div>
@@ -202,7 +199,6 @@ function BlindBoxView({
         <p className="text-lg font-bold text-gray-900 mb-1">
           {multiple ? `Your ${imageUrls.length} prizes` : 'Your prize'}
         </p>
-        <p className="text-sm text-gray-400 mb-4">Tap any image to open full size</p>
 
         {/* Modern image gallery */}
         <div className={`grid gap-2 mb-5 ${imageUrls.length === 1 ? 'grid-cols-1' : imageUrls.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
@@ -210,9 +206,6 @@ function BlindBoxView({
             <a key={i} href={url} target="_blank" rel="noopener noreferrer"
               className="group relative block aspect-square rounded-2xl overflow-hidden shadow-md ring-1 ring-black/5 hover:ring-2 hover:ring-primary-400 transition-all">
               <img src={url} alt={`Prize ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center">
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-semibold bg-black/50 px-2 py-1 rounded-full">View</span>
-              </div>
             </a>
           ))}
         </div>
