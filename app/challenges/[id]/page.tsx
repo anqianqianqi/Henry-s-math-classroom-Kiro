@@ -61,6 +61,7 @@ export default function ChallengePage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [isTeacher, setIsTeacher] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [showCelebration, setShowCelebration] = useState(false)
   const [totalStudents, setTotalStudents] = useState(0)
@@ -297,8 +298,10 @@ export default function ChallengePage() {
         .select('name')
         .in('id', roles.map((r: any) => r.role_id))
 
-      teacherRole = roleData?.some((r: any) => r.name === 'teacher') || false
+      teacherRole = roleData?.some((r: any) => r.name === 'teacher' || r.name === 'administrator') || false
+      const adminRole = roleData?.some((r: any) => r.name === 'administrator') || false
       setIsTeacher(teacherRole)
+      setIsAdmin(adminRole)
     }
 
     // Block students from viewing future challenges (not applicable to bank items)
@@ -788,6 +791,26 @@ export default function ChallengePage() {
         }
       } catch (notifErr) {
         console.error('Failed to send grade notification:', notifErr)
+      }
+    }
+  }
+
+  async function handleUnlockSubmission(submissionId: string) {
+    if (!confirm('Unlock this submission? The student will be able to edit their answer again.')) return
+    const { error } = await supabase
+      .from('challenge_submissions')
+      .update({ is_locked: false })
+      .eq('id', submissionId)
+
+    if (error) {
+      console.error('Error unlocking:', error)
+      alert('Failed to unlock: ' + error.message)
+    } else {
+      setOtherSubmissions(prev => prev.map(s =>
+        s.id === submissionId ? { ...s, is_locked: false } : s
+      ))
+      if (userSubmission?.id === submissionId) {
+        setUserSubmission({ ...userSubmission, is_locked: false })
       }
     }
   }
@@ -1511,10 +1534,18 @@ export default function ChallengePage() {
                           {/* Grading - Teacher only */}
                           {isTeacher && (
                             submission.is_locked ? (
-                              <div className="flex items-center gap-2 mb-3 p-3 bg-gray-100 rounded-lg border-2 border-gray-300">
+                              <div className="flex items-center gap-2 mb-3 p-3 bg-gray-100 rounded-lg border-2 border-gray-300 flex-wrap">
                                 <span className="text-sm font-bold text-gray-700">📝 Grade:</span>
                                 <span className="text-sm font-bold">{submission.points ?? '—'}/{challenge?.max_points || 100}</span>
                                 <span className="text-xs text-orange-600 font-medium">🔒 Student locked their grade</span>
+                                {isAdmin && (
+                                  <button
+                                    onClick={() => handleUnlockSubmission(submission.id)}
+                                    className="ml-auto px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg hover:bg-orange-200 transition-colors border border-orange-300"
+                                  >
+                                    🔓 Unlock
+                                  </button>
+                                )}
                               </div>
                             ) : (
                             <div className="flex items-center gap-2 mb-3 p-3 bg-yellow-50 rounded-lg border-2 border-yellow-200 flex-wrap">
