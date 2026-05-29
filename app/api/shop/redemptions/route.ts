@@ -55,37 +55,72 @@ export async function GET() {
       itemMap[item.id] = { title: item.title, commodity_type: item.commodity_type }
     }
 
-    // Fetch claimed blindbox images for this student
-    const [claimedImagesResult, blindboxClaimsResult] = await Promise.all([
-      serviceClient
-        .from('blindbox_images')
-        .select('item_id, image_url')
-        .eq('claimed_by', userId)
-        .eq('is_claimed', true),
-      serviceClient
-        .from('blindbox_claims')
-        .select('item_id, blindbox_images(image_url)')
-        .eq('student_id', userId)
-        .order('claimed_at', { ascending: false }),
-    ])
+    // Fetch all blindbox_claims rows for this student (includes set_id and image_id)
+    const { data: blindboxClaims } = await serviceClient
+      .from('blindbox_claims')
+      .select('item_id, image_id, set_id')
+      .eq('student_id', userId)
+
+    // Collect all unique set_ids that were claimed
+    const claimedSetIds = [...new Set(
+      (blindboxClaims ?? []).map((c: any) => c.set_id).filter(Boolean)
+    )]
+
+    // Collect all unique image_ids claimed without a set (legacy mode)
+    const legacyImageIds = [...new Set(
+      (blindboxClaims ?? [])
+        .filter((c: any) => !c.set_id && c.image_id)
+        .map((c: any) => c.image_id)
+    )]
+
+    // Fetch all images belonging to claimed sets (set-based model)
+    const setImagesResult = claimedSetIds.length > 0
+      ? await serviceClient
+          .from('blindbox_images')
+          .select('item_id, set_id, image_url')
+          .in('set_id', claimedSetIds)
+          .order('sort_order', { ascending: true })
+      : { data: [] }
+
+    // Fetch legacy images by image_id
+    const legacyImagesResult = legacyImageIds.length > 0
+      ? await serviceClient
+          .from('blindbox_images')
+          .select('id, item_id, image_url')
+          .in('id', legacyImageIds)
+      : { data: [] }
+
+    // Also fetch images claimed via old claimed_by mechanism (oldest legacy)
+    const oldLegacyResult = await serviceClient
+      .from('blindbox_images')
+      .select('item_id, image_url')
+      .eq('claimed_by', userId)
+      .eq('is_claimed', true)
 
     // Build a map: item_id → array of all claimed image URLs for this student
     const claimedImageMap: Record<string, string[]> = {}
-    for (const img of claimedImagesResult.data ?? []) {
-      if (img.image_url) {
-        if (!claimedImageMap[img.item_id]) claimedImageMap[img.item_id] = []
-        claimedImageMap[img.item_id].push(img.image_url)
+
+    const addUrl = (itemId: string, url: string) => {
+      if (!url) return
+      if (!claimedImageMap[itemId]) claimedImageMap[itemId] = []
+      if (!claimedImageMap[itemId].includes(url)) {
+        claimedImageMap[itemId].push(url)
       }
     }
-    for (const claim of blindboxClaimsResult.data ?? []) {
-      const url = (claim as any).blindbox_images?.image_url
-      if (url) {
-        if (!claimedImageMap[claim.item_id]) claimedImageMap[claim.item_id] = []
-        // Avoid duplicates
-        if (!claimedImageMap[claim.item_id].includes(url)) {
-          claimedImageMap[claim.item_id].push(url)
-        }
-      }
+
+    // Set-based images (new model) — grouped by item_id
+    for (const img of setImagesResult.data ?? []) {
+      addUrl(img.item_id, img.image_url)
+    }
+
+    // Legacy individual image claims
+    for (const img of legacyImagesResult.data ?? []) {
+      addUrl(img.item_id, img.image_url)
+    }
+
+    // Oldest legacy (claimed_by column)
+    for (const img of oldLegacyResult.data ?? []) {
+      addUrl(img.item_id, img.image_url)
     }
 
     const result = redemptions.map(r => {
