@@ -55,11 +55,12 @@ export async function GET() {
       itemMap[item.id] = { title: item.title, commodity_type: item.commodity_type }
     }
 
-    // Fetch all blindbox_claims rows for this student (includes set_id and image_id)
+    // Fetch all blindbox_claims rows for this student, ordered by claim time
     const { data: blindboxClaims } = await serviceClient
       .from('blindbox_claims')
-      .select('item_id, image_id, set_id')
+      .select('item_id, image_id, set_id, claimed_at')
       .eq('student_id', userId)
+      .order('claimed_at', { ascending: true })
 
     // Collect all unique set_ids that were claimed
     const claimedSetIds = [...new Set(
@@ -93,40 +94,92 @@ export async function GET() {
     // Also fetch images claimed via old claimed_by mechanism (oldest legacy)
     const oldLegacyResult = await serviceClient
       .from('blindbox_images')
-      .select('item_id, image_url')
+      .select('item_id, image_url, claimed_at')
       .eq('claimed_by', userId)
       .eq('is_claimed', true)
+      .order('claimed_at', { ascending: true })
 
-    // Build a map: item_id → array of all claimed image URLs for this student
-    const claimedImageMap: Record<string, string[]> = {}
+    // Build lookup maps
+    // set_id → image URLs (all images in that set)
+    const setImageMap: Record<string, string[]> = {}
+    for (const img of setImagesResult.data ?? []) {
+      if (!setImageMap[img.set_id]) setImageMap[img.set_id] = []
+      if (img.image_url) setImageMap[img.set_id].push(img.image_url)
+    }
 
-    const addUrl = (itemId: string, url: string) => {
-      if (!url) return
-      if (!claimedImageMap[itemId]) claimedImageMap[itemId] = []
-      if (!claimedImageMap[itemId].includes(url)) {
-        claimedImageMap[itemId].push(url)
+    // image_id → image URL (legacy)
+    const legacyImageUrlMap: Record<string, string> = {}
+    for (const img of legacyImagesResult.data ?? []) {
+      if (img.image_url) legacyImageUrlMap[img.id] = img.image_url
+    }
+
+    // Group claims by item_id, in chronological order — one entry per draw
+    // Each draw = one set claim (set-based) or one image claim (legacy)
+    const claimsByItem: Record<string, Array<{ urls: string[]; claimed_at: string }>> = {}
+
+    for (const claim of blindboxClaims ?? []) {
+      if (!claimsByItem[claim.item_id]) claimsByItem[claim.item_id] = []
+      if (claim.set_id) {
+        // Set-based draw: all images in the set
+        const urls = setImageMap[claim.set_id] ?? []
+        if (urls.length > 0) {
+          claimsByItem[claim.item_id].push({ urls, claimed_at: claim.claimed_at })
+        }
+      } else if (claim.image_id) {
+        // Legacy: single image
+        const url = legacyImageUrlMap[claim.image_id]
+        if (url) {
+          claimsByItem[claim.item_id].push({ urls: [url], claimed_at: claim.claimed_at })
+        }
       }
     }
 
-    // Set-based images (new model) — grouped by item_id
-    for (const img of setImagesResult.data ?? []) {
-      addUrl(img.item_id, img.image_url)
-    }
-
-    // Legacy individual image claims
-    for (const img of legacyImagesResult.data ?? []) {
-      addUrl(img.item_id, img.image_url)
-    }
-
-    // Oldest legacy (claimed_by column)
+    // Old legacy (claimed_by): group by item, one entry per image
     for (const img of oldLegacyResult.data ?? []) {
-      addUrl(img.item_id, img.image_url)
+      if (!claimsByItem[img.item_id]) claimsByItem[img.item_id] = []
+      if (img.image_url) {
+        claimsByItem[img.item_id].push({ urls: [img.image_url], claimed_at: img.claimed_at })
+      }
+    }
+
+    // Match each redemption to its corresponding draw by chronological order
+    // redemptions are sorted desc (newest first), claims are sorted asc (oldest first)
+    // We reverse-match: nth redemption for an item → nth claim for that item (both sorted by time)
+    const redemptionCountByItem: Record<string, number> = {}
+
+    // Sort redemptions oldest-first for matching, then we'll reverse the result
+    const redemptionsSortedAsc = [...redemptions].sort(
+      (a, b) => new Date(a.redeemed_at).getTime() - new Date(b.redeemed_at).getTime()
+    )
+
+    // Assign claim index to each redemption
+    const redemptionClaimIndex: Record<string, number> = {}
+    for (const r of redemptionsSortedAsc) {
+      const commodityType = itemMap[r.item_id]?.commodity_type ?? 'standard'
+      if (commodityType === 'blindbox' || commodityType === 'physical_blindbox') {
+        const idx = redemptionCountByItem[r.item_id] ?? 0
+        redemptionClaimIndex[r.id] = idx
+        redemptionCountByItem[r.item_id] = idx + 1
+      }
     }
 
     const result = redemptions.map(r => {
       const item = itemMap[r.item_id]
       const commodityType = item?.commodity_type ?? 'standard'
-      const imageUrls = claimedImageMap[r.item_id] ?? []
+      const isBlindbox = commodityType === 'blindbox' || commodityType === 'physical_blindbox'
+
+      let imageUrls: string[] = []
+      if (isBlindbox) {
+        const claimIdx = redemptionClaimIndex[r.id]
+        const draws = claimsByItem[r.item_id] ?? []
+        if (claimIdx !== undefined && draws[claimIdx]) {
+          imageUrls = draws[claimIdx].urls
+        } else if (draws.length > 0) {
+          // Fallback: show all images if matching fails
+          imageUrls = [...new Set(draws.flatMap(d => d.urls))]
+        }
+      }
+
       return {
         id: r.id,
         user_id: userId,
@@ -135,14 +188,8 @@ export async function GET() {
         redeemed_at: r.redeemed_at,
         item_title: item?.title ?? 'Deleted item',
         item_commodity_type: commodityType,
-        blindbox_image_url:
-          (commodityType === 'blindbox' || commodityType === 'physical_blindbox')
-            ? (imageUrls[0] ?? null)
-            : null,
-        blindbox_image_urls:
-          (commodityType === 'blindbox' || commodityType === 'physical_blindbox')
-            ? imageUrls
-            : [],
+        blindbox_image_url: isBlindbox ? (imageUrls[0] ?? null) : null,
+        blindbox_image_urls: isBlindbox ? imageUrls : [],
       }
     })
 
