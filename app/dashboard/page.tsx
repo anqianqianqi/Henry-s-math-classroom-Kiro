@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import NotificationBell from '@/components/NotificationBell'
 import { localDateString } from '@/lib/utils/date'
+import EggSvg from '@/components/pet/EggSvg'
 import PetSvg from '@/components/pet/PetSvg'
 import type { StudentPet, Species, EvolutionStage } from '@/lib/types/pet'
 
