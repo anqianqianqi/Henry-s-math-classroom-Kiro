@@ -294,7 +294,7 @@ export default function AdminShopPage() {
       tempId: `new-${Date.now()}-${Math.random()}`,
       dbId: null,
       name: `Set ${prev.length + 1}`,
-      quantity: '',
+      quantity: form.commodity_type === 'physical_blindbox' ? '0' : '',
       existingImages: [],
       newFiles: [],
       newPreviews: [],
@@ -435,8 +435,8 @@ export default function AdminShopPage() {
                   item_id: editingId,
                   name: draft.name,
                   sort_order: setDrafts.indexOf(draft),
-                  quantity: form.commodity_type === 'physical_blindbox' && draft.quantity !== ''
-                    ? parseInt(draft.quantity, 10) : null,
+                  quantity: form.commodity_type === 'physical_blindbox'
+                    ? parseInt(draft.quantity || '0', 10) : null,
                 })
                 .select('id')
                 .single()
@@ -450,8 +450,8 @@ export default function AdminShopPage() {
               // Update set name and quantity
               await supabase.from('blindbox_sets').update({
                 name: draft.name,
-                quantity: form.commodity_type === 'physical_blindbox' && draft.quantity !== ''
-                  ? parseInt(draft.quantity, 10) : null,
+                quantity: form.commodity_type === 'physical_blindbox'
+                  ? parseInt(draft.quantity || '0', 10) : null,
               }).eq('id', setDbId)
             }
 
@@ -524,8 +524,8 @@ export default function AdminShopPage() {
                 item_id: newItem.id,
                 name: draft.name,
                 sort_order: si,
-                quantity: form.commodity_type === 'physical_blindbox' && draft.quantity !== ''
-                  ? parseInt(draft.quantity, 10) : null,
+                quantity: form.commodity_type === 'physical_blindbox'
+                  ? parseInt(draft.quantity || '0', 10) : null,
               })
               .select('id')
               .single()
@@ -867,8 +867,7 @@ export default function AdminShopPage() {
                       <div className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-gray-50 text-gray-500">
                         {setDrafts.some(s => s.quantity !== '')
                           ? `${setDrafts.reduce((sum, s) => sum + (s.quantity !== '' ? parseInt(s.quantity, 10) || 0 : 0), 0)} total items`
-                          : 'Set per-set quantities below'}
-                      </div>
+                          : 'Set per-set quantities below'}                      </div>
                     ) : (
                       <input
                         type="number"
@@ -990,7 +989,7 @@ export default function AdminShopPage() {
                                   min={0}
                                   max={9999}
                                   className="w-16 border border-purple-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white text-center"
-                                  placeholder="∞"
+                                  placeholder="0"
                                   title="How many physical copies of this set are available"
                                 />
                               </div>
@@ -1081,9 +1080,9 @@ export default function AdminShopPage() {
 
                           <p className="text-[10px] text-purple-400 mt-1">
                             {draft.existingImages.filter(img => !draft.removedImageIds.includes(img.id)).length + draft.newFiles.length} image(s) in this set
-                            {form.commodity_type === 'physical_blindbox' && draft.quantity !== '' && (
+                            {form.commodity_type === 'physical_blindbox' && (
                               <span className="ml-2 text-orange-500 font-semibold">
-                                · {draft.quantity} physical {parseInt(draft.quantity, 10) === 1 ? 'copy' : 'copies'} in stock
+                                · {draft.quantity || '0'} physical {parseInt(draft.quantity || '0', 10) === 1 ? 'copy' : 'copies'} in stock
                               </span>
                             )}
                           </p>
