@@ -964,7 +964,7 @@ export default function AdminShopPage() {
                                   type="number"
                                   value={draft.quantity}
                                   onChange={e => updateSetQuantity(draft.tempId, e.target.value)}
-                                  min={1}
+                                  min={0}
                                   max={9999}
                                   className="w-16 border border-purple-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white text-center"
                                   placeholder="∞"

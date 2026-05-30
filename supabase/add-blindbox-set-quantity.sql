@@ -11,8 +11,8 @@
 
 ALTER TABLE blindbox_sets
   ADD COLUMN IF NOT EXISTS quantity INTEGER
-    CHECK (quantity IS NULL OR quantity >= 1);
+    CHECK (quantity IS NULL OR quantity >= 0);
 
 COMMENT ON COLUMN blindbox_sets.quantity IS
   'Physical stock count for this set. NULL = unlimited (digital). '
-  'For physical_blindbox items, set this to the number of physical copies available.';
+  '0 = sold out. For physical_blindbox items, set this to the number of physical copies available.';
