@@ -75,6 +75,8 @@ export default function AdminShopPage() {
   }
   const [setDrafts, setSetDrafts] = useState<SetDraft[]>([])
 
+  const [physicalBlindboxInventory, setPhysicalBlindboxInventory] = useState<Record<string, { total: number; remaining: number }>>({})
+
   const loadData = useCallback(async () => {
     // Fetch all shop items (active + inactive) — hide pet categories on main
     const { data: shopItems, error: itemsError } = await supabase
@@ -88,6 +90,27 @@ export default function AdminShopPage() {
       return
     }
     setItems(shopItems ?? [])
+
+    // Fetch inventory for physical_blindbox items (set quantities)
+    const physicalBoxIds = (shopItems ?? [])
+      .filter((i: any) => i.commodity_type === 'physical_blindbox')
+      .map((i: any) => i.id)
+
+    if (physicalBoxIds.length > 0) {
+      const { data: sets } = await supabase
+        .from('blindbox_sets')
+        .select('item_id, quantity')
+        .in('item_id', physicalBoxIds)
+
+      const inv: Record<string, { total: number; remaining: number }> = {}
+      for (const s of sets ?? []) {
+        if (!inv[s.item_id]) inv[s.item_id] = { total: 0, remaining: 0 }
+        const qty = s.quantity ?? 0
+        inv[s.item_id].total += qty
+        if (qty > 0) inv[s.item_id].remaining += qty
+      }
+      setPhysicalBlindboxInventory(inv)
+    }
 
     // Fetch all redemptions with student name, item title, and commodity type
     const { data: redemptionData } = await supabase
@@ -1168,12 +1191,27 @@ export default function AdminShopPage() {
                         <p className="text-gray-500 text-xs line-clamp-2 mb-1">{item.description}</p>
                       )}
                       <div className="mt-auto pt-2 flex items-center justify-between gap-1">
-                        <span className="text-primary-600 font-bold text-sm">
-                          {item.cost}<span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
-                          {item.quantity !== null && (
-                            <span className="text-gray-400 font-normal text-xs ml-1">· {item.quantity} max</span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-primary-600 font-bold text-sm">
+                            {item.cost}<span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
+                            {!isPhysicalBlindbox && item.quantity !== null && (
+                              <span className="text-gray-400 font-normal text-xs ml-1">· {item.quantity} max</span>
+                            )}
+                          </span>
+                          {isPhysicalBlindbox && physicalBlindboxInventory[item.id] !== undefined && (
+                            <div className="flex items-center gap-1">
+                              {physicalBlindboxInventory[item.id].remaining === 0 ? (
+                                <span className="text-[10px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full">
+                                  🚫 Sold out
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full">
+                                  📦 {physicalBlindboxInventory[item.id].remaining} left
+                                </span>
+                              )}
+                            </div>
                           )}
-                        </span>
+                        </div>
                         <div className="flex gap-1">
                           <button
                             onClick={() => handleEdit(item)}
