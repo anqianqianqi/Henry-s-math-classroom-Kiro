@@ -62,11 +62,12 @@ export default function AdminShopPage() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [uploadingBlindbox, setUploadingBlindbox] = useState(false)
   // Set-based blind box state
-  // Each set: { id (temp or real), name, existingImages: [{id,image_url}], newFiles: File[], newPreviews: string[], removedImageIds: string[], isNew: bool }
+  // Each set: { id (temp or real), name, quantity (physical copies), existingImages, newFiles, newPreviews, removedImageIds }
   type SetDraft = {
     tempId: string          // client-only id for new sets; real UUID for existing
     dbId: string | null     // null = not yet saved to DB
     name: string
+    quantity: string        // physical copies of this set ('' = unlimited for digital)
     existingImages: Array<{ id: string; image_url: string }>
     newFiles: File[]
     newPreviews: string[]
@@ -270,6 +271,7 @@ export default function AdminShopPage() {
       tempId: `new-${Date.now()}-${Math.random()}`,
       dbId: null,
       name: `Set ${prev.length + 1}`,
+      quantity: '',
       existingImages: [],
       newFiles: [],
       newPreviews: [],
@@ -283,6 +285,10 @@ export default function AdminShopPage() {
 
   function updateSetName(tempId: string, name: string) {
     setSetDrafts(prev => prev.map(s => s.tempId === tempId ? { ...s, name } : s))
+  }
+
+  function updateSetQuantity(tempId: string, quantity: string) {
+    setSetDrafts(prev => prev.map(s => s.tempId === tempId ? { ...s, quantity } : s))
   }
 
   function addImagesToSet(tempId: string, files: File[]) {
@@ -358,6 +364,13 @@ export default function AdminShopPage() {
       }
 
       if (editingId) {
+        // For physical_blindbox, auto-compute quantity from set quantities
+        const computedQuantity = form.commodity_type === 'physical_blindbox'
+          ? (setDrafts.some(s => s.quantity !== '')
+              ? setDrafts.reduce((sum, s) => sum + (s.quantity !== '' ? parseInt(s.quantity, 10) || 0 : 0), 0)
+              : null)
+          : (form.quantity.trim() !== '' ? parseInt(form.quantity, 10) : null)
+
         // Update existing item
         const { error: updateError } = await supabase
           .from('shop_items')
@@ -367,7 +380,7 @@ export default function AdminShopPage() {
             details: form.details.trim() || null,
             cost: parseInt(form.cost, 10),
             image_url: finalImageUrl,
-            quantity: form.quantity.trim() !== '' ? parseInt(form.quantity, 10) : null,
+            quantity: computedQuantity,
             commodity_type: form.commodity_type || 'standard',
             category: form.category || 'other',
             food_xp: form.category === 'food' ? parseInt(form.food_xp, 10) : null,
@@ -395,7 +408,13 @@ export default function AdminShopPage() {
               // Create new set in DB
               const { data: newSet, error: setErr } = await supabase
                 .from('blindbox_sets')
-                .insert({ item_id: editingId, name: draft.name, sort_order: setDrafts.indexOf(draft) })
+                .insert({
+                  item_id: editingId,
+                  name: draft.name,
+                  sort_order: setDrafts.indexOf(draft),
+                  quantity: form.commodity_type === 'physical_blindbox' && draft.quantity !== ''
+                    ? parseInt(draft.quantity, 10) : null,
+                })
                 .select('id')
                 .single()
               if (setErr) {
@@ -405,8 +424,12 @@ export default function AdminShopPage() {
               }
               setDbId = newSet?.id ?? null
             } else {
-              // Update set name
-              await supabase.from('blindbox_sets').update({ name: draft.name }).eq('id', setDbId)
+              // Update set name and quantity
+              await supabase.from('blindbox_sets').update({
+                name: draft.name,
+                quantity: form.commodity_type === 'physical_blindbox' && draft.quantity !== ''
+                  ? parseInt(draft.quantity, 10) : null,
+              }).eq('id', setDbId)
             }
 
             if (!setDbId) continue
@@ -441,11 +464,19 @@ export default function AdminShopPage() {
         }
       } else {
         // Create new item — override image_url with uploaded URL
+        // For physical_blindbox, auto-compute quantity from set quantities
+        const newItemQuantity = form.commodity_type === 'physical_blindbox'
+          ? (setDrafts.some(s => s.quantity !== '')
+              ? setDrafts.reduce((sum, s) => sum + (s.quantity !== '' ? parseInt(s.quantity, 10) || 0 : 0), 0)
+              : null)
+          : undefined  // let buildShopItemInsert handle it from form.quantity
+
         const payload = {
           ...buildShopItemInsert(form, user.id),
           image_url: finalImageUrl,
           details: form.details.trim() || null,
           commodity_type: form.commodity_type || 'standard',
+          ...(newItemQuantity !== undefined ? { quantity: newItemQuantity } : {}),
         }
         const { data: newItem, error: insertError } = await supabase
           .from('shop_items')
@@ -466,7 +497,13 @@ export default function AdminShopPage() {
             // Create the set in DB (always, even if no images yet)
             const { data: newSet, error: setErr } = await supabase
               .from('blindbox_sets')
-              .insert({ item_id: newItem.id, name: draft.name, sort_order: si })
+              .insert({
+                item_id: newItem.id,
+                name: draft.name,
+                sort_order: si,
+                quantity: form.commodity_type === 'physical_blindbox' && draft.quantity !== ''
+                  ? parseInt(draft.quantity, 10) : null,
+              })
               .select('id')
               .single()
             if (setErr || !newSet?.id) continue
@@ -528,7 +565,7 @@ export default function AdminShopPage() {
       // Fetch sets first, then images separately (nested select doesn't work for this FK direction)
       supabase
         .from('blindbox_sets')
-        .select('id, name, sort_order')
+        .select('id, name, sort_order, quantity')
         .eq('item_id', item.id)
         .order('sort_order', { ascending: true })
         .then(async ({ data: sets }) => {
@@ -551,6 +588,7 @@ export default function AdminShopPage() {
               tempId: s.id,
               dbId: s.id,
               name: s.name,
+              quantity: s.quantity !== null && s.quantity !== undefined ? String(s.quantity) : '',
               existingImages: imagesBySet[s.id] ?? [],
               newFiles: [],
               newPreviews: [],
@@ -570,6 +608,7 @@ export default function AdminShopPage() {
                     tempId: 'legacy',
                     dbId: null,
                     name: 'Set 1',
+                    quantity: '',
                     existingImages: imgs,
                     newFiles: [],
                     newPreviews: [],
@@ -797,17 +836,27 @@ export default function AdminShopPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Quantity (blank = unlimited)
+                      {form.commodity_type === 'physical_blindbox'
+                        ? 'Total inventory (auto-computed from sets)'
+                        : 'Quantity (blank = unlimited)'}
                     </label>
-                    <input
-                      type="number"
-                      value={form.quantity}
-                      onChange={(e) => handleFormChange('quantity', e.target.value)}
-                      min={1}
-                      max={9999}
-                      className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
-                      placeholder="Unlimited"
-                    />
+                    {form.commodity_type === 'physical_blindbox' ? (
+                      <div className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-gray-50 text-gray-500">
+                        {setDrafts.some(s => s.quantity !== '')
+                          ? `${setDrafts.reduce((sum, s) => sum + (s.quantity !== '' ? parseInt(s.quantity, 10) || 0 : 0), 0)} total items`
+                          : 'Set per-set quantities below'}
+                      </div>
+                    ) : (
+                      <input
+                        type="number"
+                        value={form.quantity}
+                        onChange={(e) => handleFormChange('quantity', e.target.value)}
+                        min={1}
+                        max={9999}
+                        className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+                        placeholder="Unlimited"
+                      />
+                    )}
                     {formErrors.quantity && (
                       <p className="text-red-500 text-xs mt-1">{formErrors.quantity}</p>
                     )}
@@ -873,9 +922,11 @@ export default function AdminShopPage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-sm font-medium text-gray-700">
-                        Draw Sets <span className="text-red-500">*</span>
+                        {form.commodity_type === 'physical_blindbox' ? 'Inventory Sets' : 'Draw Sets'} <span className="text-red-500">*</span>
                         <span className="text-gray-400 font-normal ml-1 text-xs">
-                          — each draw reveals all images in one randomly selected set
+                          {form.commodity_type === 'physical_blindbox'
+                            ? '— each set is a physical item; set quantity = copies in stock'
+                            : '— each draw reveals all images in one randomly selected set'}
                         </span>
                       </label>
                       <button
@@ -906,10 +957,25 @@ export default function AdminShopPage() {
                               className="flex-1 border border-purple-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
                               placeholder="Set name (e.g. Rare Pack, Series A)"
                             />
+                            {form.commodity_type === 'physical_blindbox' && (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <label className="text-xs text-gray-500 whitespace-nowrap">Qty in stock:</label>
+                                <input
+                                  type="number"
+                                  value={draft.quantity}
+                                  onChange={e => updateSetQuantity(draft.tempId, e.target.value)}
+                                  min={1}
+                                  max={9999}
+                                  className="w-16 border border-purple-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white text-center"
+                                  placeholder="∞"
+                                  title="How many physical copies of this set are available"
+                                />
+                              </div>
+                            )}
                             <button
                               type="button"
                               onClick={() => removeSet(draft.tempId)}
-                              className="text-xs px-2 py-1 rounded-lg bg-red-100 text-red-600 hover:bg-red-200"
+                              className="text-xs px-2 py-1 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 shrink-0"
                             >
                               Remove set
                             </button>
@@ -992,6 +1058,11 @@ export default function AdminShopPage() {
 
                           <p className="text-[10px] text-purple-400 mt-1">
                             {draft.existingImages.filter(img => !draft.removedImageIds.includes(img.id)).length + draft.newFiles.length} image(s) in this set
+                            {form.commodity_type === 'physical_blindbox' && draft.quantity !== '' && (
+                              <span className="ml-2 text-orange-500 font-semibold">
+                                · {draft.quantity} physical {parseInt(draft.quantity, 10) === 1 ? 'copy' : 'copies'} in stock
+                              </span>
+                            )}
                           </p>
                         </div>
                       ))}
