@@ -7,6 +7,7 @@
 
 import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import type { DidiStage } from './DidiSvg'
 
 const DesktopPet = dynamic(() => import('./DesktopPet'), { ssr: false })
@@ -25,7 +26,14 @@ export default function DesktopPetWrapper() {
   const [status, setStatus] = useState<PetStatus | null>(null)
   const [cracking, setCracking] = useState(false)
   const [crackError, setCrackError] = useState<string | null>(null)
-  const xpGranted = useRef(false) // in-memory flag, resets on page reload (intentional)
+  const xpGranted = useRef(false)
+  const pathname = usePathname()
+
+  // Don't show pet on auth pages
+  const isAuthPage = pathname === '/login' || pathname === '/signup' ||
+    pathname === '/forgot-password' || pathname === '/reset-password'
+
+  if (isAuthPage) return null
 
   useEffect(() => {
     // Grant daily XP first (creates pet row if needed), then fetch status.
