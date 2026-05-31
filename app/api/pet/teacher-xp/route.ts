@@ -29,11 +29,17 @@ export async function POST(request: Request) {
     const userId = session.user.id
 
     // Ensure pet row exists
-    await supabase
+    const { data: existingPet } = await supabase
       .from('student_pets')
-      .insert({ user_id: userId, xp: 0, evolution_stage: 'egg' })
-      .onConflict('user_id')
-      .ignore()
+      .select('id')
+      .eq('user_id', userId)
+      .single()
+
+    if (!existingPet) {
+      await supabase
+        .from('student_pets')
+        .insert({ user_id: userId, xp: 0, evolution_stage: 'egg' })
+    }
 
     // Fetch current pet
     const { data: pet } = await supabase
