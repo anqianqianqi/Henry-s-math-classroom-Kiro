@@ -377,11 +377,13 @@ export default function NewChallengePage() {
         }
       }
 
-      // Success! Grant teacher pet XP for creating a challenge (fire-and-forget)
+      // Success! Grant teacher pet XP for creating a challenge, then refresh pet status
       fetch('/api/pet/teacher-xp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'create_challenge' }),
+      }).then(() => {
+        window.dispatchEvent(new CustomEvent('didi-pet-refresh'))
       }).catch(() => {})
 
       // Redirect to challenges

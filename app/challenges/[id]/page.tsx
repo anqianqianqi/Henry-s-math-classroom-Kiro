@@ -732,7 +732,9 @@ export default function ChallengePage() {
           // Notify teachers of new submission
           await notifyTeachers(userId, 'submitted a solution')
           // Grant pet XP for completing a challenge (fire-and-forget, non-blocking)
-          fetch('/api/pet/challenge-xp', { method: 'POST' }).catch(() => {})
+          fetch('/api/pet/challenge-xp', { method: 'POST' }).then(() => {
+            window.dispatchEvent(new CustomEvent('didi-pet-refresh'))
+          }).catch(() => {})
         }
       }
       setSolutionImage(null)

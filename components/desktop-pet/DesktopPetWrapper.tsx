@@ -79,6 +79,18 @@ export default function DesktopPetWrapper() {
     }
   }, [])
 
+  // Re-fetch pet status when any action grants XP (challenge complete, grading, etc.)
+  useEffect(() => {
+    function handlePetRefresh() {
+      fetch('/api/pet/status')
+        .then(r => r.json())
+        .then((data: PetStatus) => setStatus(data))
+        .catch(() => {})
+    }
+    window.addEventListener('didi-pet-refresh', handlePetRefresh)
+    return () => window.removeEventListener('didi-pet-refresh', handlePetRefresh)
+  }, [])
+
   async function grantDailyLoginXp(): Promise<void> {
     if (xpGranted.current) return
     xpGranted.current = true
