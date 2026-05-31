@@ -16,7 +16,7 @@
 
 import React, { useState, useEffect } from 'react'
 
-export type DidiPose = 'idle' | 'sleeping' | 'yawning' | 'playing' | 'walking' | 'scratching'
+export type DidiPose = 'idle' | 'sleeping' | 'yawning' | 'playing' | 'walking' | 'walking2' | 'scratching'
 export type DidiStage = 'egg' | 'baby' | 'teen' | 'adult'
 
 interface DidiSvgProps {
@@ -35,6 +35,7 @@ const POSE_LABELS: Record<DidiPose, string> = {
   yawning:     'Didi yawning',
   playing:     'Didi playing',
   walking:     'Didi walking',
+  walking2:    'Didi walking',
   scratching:  'Didi enjoying a belly scratch',
 }
 
@@ -52,12 +53,14 @@ const FALLBACK_EMOJI: Record<DidiPose, string> = {
   yawning:     '🥱',
   playing:     '🐾',
   walking:     '🐈',
+  walking2:    '🐈',
   scratching:  '😻',
 }
 
 function getImageSrc(stage: DidiStage, pose: DidiPose): string {
   // Egg stage always uses the single egg image regardless of pose
   if (stage === 'egg') return '/didi/ai/didi-egg.png'
+  // walking2 maps to the same naming pattern
   if (stage === 'adult') return `/didi/ai/didi-${pose}.png`
   return `/didi/ai/didi-${stage}-${pose}.png`
 }

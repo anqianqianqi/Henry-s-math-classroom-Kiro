@@ -207,6 +207,7 @@ export default function DesktopPet({
   const [catSize,    setCatSize]    = useState(130)  // px, range 60–220
   const [showSizer,  setShowSizer]  = useState(false)
   const [showPopover, setShowPopover] = useState(false)
+  const [walkFrame,  setWalkFrame]  = useState<'walking' | 'walking2'>('walking')
 
   const behaviorRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const walkRef      = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -271,6 +272,18 @@ export default function DesktopPet({
     return () => { if (walkRef.current) clearInterval(walkRef.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [behavior])
+
+  // ── Walk frame alternation (swap images every 200ms for smooth walk cycle) ─
+  useEffect(() => {
+    if (behavior.pose !== 'walking') {
+      setWalkFrame('walking')
+      return
+    }
+    const frameInterval = setInterval(() => {
+      setWalkFrame(f => f === 'walking' ? 'walking2' : 'walking')
+    }, 200)
+    return () => clearInterval(frameInterval)
+  }, [behavior.pose])
 
   // ── Hover → scratching (belly rub!) — only for hatched pets, not eggs ────
   const handleHover = useCallback(() => {
@@ -372,7 +385,7 @@ export default function DesktopPet({
     }
   })()
 
-  const pose: DidiPose = behavior.pose
+  const pose: DidiPose = behavior.pose === 'walking' ? walkFrame : behavior.pose
 
   return (
     <>
