@@ -83,11 +83,24 @@ export default function DesktopPetWrapper() {
 
   // Re-fetch pet status when any action grants XP (challenge complete, grading, etc.)
   useEffect(() => {
-    function handlePetRefresh() {
-      fetch('/api/pet/status')
-        .then(r => r.json())
-        .then((data: PetStatus) => setStatus(data))
-        .catch(() => {})
+    function handlePetRefresh(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail?.xp != null) {
+        // Direct update from event payload — no re-fetch needed
+        setStatus(prev => prev ? {
+          ...prev,
+          xp:        detail.xp,
+          happiness: detail.happiness ?? prev.happiness,
+          hunger:    detail.hunger    ?? prev.hunger,
+          stage:     detail.stage     ?? prev.stage,
+        } : prev)
+      } else {
+        // Generic refresh — re-fetch from server
+        fetch('/api/pet/status')
+          .then(r => r.json())
+          .then((data: PetStatus) => setStatus(data))
+          .catch(() => {})
+      }
     }
     window.addEventListener('didi-pet-refresh', handlePetRefresh)
     return () => window.removeEventListener('didi-pet-refresh', handlePetRefresh)
