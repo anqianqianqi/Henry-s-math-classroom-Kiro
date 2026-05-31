@@ -20,6 +20,7 @@ interface PetStatus {
   happiness?: number | null
   hunger?: number | null
   streak?: number | null
+  xp?: number | null
 }
 
 export default function DesktopPetWrapper() {
@@ -138,6 +139,7 @@ export default function DesktopPetWrapper() {
       happiness={status.happiness ?? undefined}
       hunger={status.hunger ?? undefined}
       streak={status.streak ?? undefined}
+      xp={status.xp ?? undefined}
     />
   )
 }

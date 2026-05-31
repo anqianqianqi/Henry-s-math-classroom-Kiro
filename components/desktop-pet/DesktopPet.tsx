@@ -166,6 +166,7 @@ export default function DesktopPet({
   happiness,
   hunger,
   streak,
+  xp,
   isEgg = false,
   onHatch,
   cracking = false,
@@ -177,6 +178,7 @@ export default function DesktopPet({
   happiness?: number
   hunger?: number
   streak?: number
+  xp?: number
   isEgg?: boolean
   onHatch?: () => void
   cracking?: boolean
@@ -626,6 +628,25 @@ export default function DesktopPet({
                 {streak != null && (
                   <div style={{ fontSize: 12, color: '#5c3d2e', marginBottom: 6, fontWeight: 600 }}>
                     🔥 {streak} day streak
+                  </div>
+                )}
+
+                {/* XP progress toward next stage */}
+                {!isEgg && (
+                  <div style={{ marginBottom: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#a07060', marginBottom: 2 }}>
+                      <span>⭐ XP</span>
+                      <span>{petStage === 'baby' ? `${xp ?? 0}/100 → teen` : petStage === 'teen' ? `${xp ?? 0}/300 → adult` : petStage === 'adult' ? `${xp ?? 0} XP` : `${xp ?? 0} XP`}</span>
+                    </div>
+                    <div style={{ height: 6, background: '#f0e6d3', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${petStage === 'baby' ? Math.min(((xp ?? 0) / 100) * 100, 100) : petStage === 'teen' ? Math.min((((xp ?? 0) - 100) / 200) * 100, 100) : 100}%`,
+                        background: '#6366f1',
+                        borderRadius: 3,
+                        transition: 'width 0.3s',
+                      }} />
+                    </div>
                   </div>
                 )}
 

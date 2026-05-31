@@ -56,9 +56,22 @@ export async function POST(request: Request) {
       newXp >= 100 ? 'teen' : 'baby'
     )
 
+    // Fetch happiness/hunger for update
+    const { data: petFull } = await supabase
+      .from('student_pets')
+      .select('happiness, hunger')
+      .eq('user_id', userId)
+      .single()
+
     await supabase
       .from('student_pets')
-      .update({ xp: newXp, evolution_stage: newStage, updated_at: new Date().toISOString() })
+      .update({
+        xp: newXp,
+        evolution_stage: newStage,
+        happiness: Math.min((petFull?.happiness ?? 80) + 5, 100),
+        hunger: Math.min((petFull?.hunger ?? 80) + 5, 100),
+        updated_at: new Date().toISOString(),
+      })
       .eq('user_id', userId)
 
     return NextResponse.json({ ok: true, xp_gained: xpGained, new_xp: newXp, new_stage: newStage }, { status: 200 })
