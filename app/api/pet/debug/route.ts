@@ -1,6 +1,5 @@
 // app/api/pet/debug/route.ts
-// TEMPORARY debug endpoint — remove before production
-// Visit /api/pet/debug in the browser to see exactly what's happening
+// Temporary debug endpoint — remove after diagnosing teacher-xp issue
 
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
@@ -14,32 +13,35 @@ export async function GET() {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
     if (!session) {
-      return NextResponse.json({ step: 'no_session', sessionError }, { status: 200 })
+      return NextResponse.json({ error: 'no session', sessionError }, { status: 401 })
     }
 
-    // Step 1: check if student_pets table exists and has the row
-    const { data: pet, error: petError } = await supabase
+    const userId = session.user.id
+
+    // 1. Fetch pet
+    const { data: pet, error: fetchError } = await supabase
       .from('student_pets')
-      .select('id, species, evolution_stage, xp')
-      .eq('user_id', session.user.id)
+      .select('*')
+      .eq('user_id', userId)
       .single()
 
-    // Step 2: check if extra columns exist
-    const { data: extra, error: extraError } = await supabase
+    // 2. Try a simple XP update
+    const newXp = (pet?.xp ?? 0) + 1
+    const { data: updateData, error: updateError } = await supabase
       .from('student_pets')
-      .select('pet_name, happiness, hunger, current_streak')
-      .eq('user_id', session.user.id)
-      .single()
+      .update({ xp: newXp, updated_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .select()
 
     return NextResponse.json({
-      user_id: session.user.id,
-      email: session.user.email,
+      userId,
       pet,
-      petError: petError ? { code: petError.code, message: petError.message } : null,
-      extra,
-      extraError: extraError ? { code: extraError.code, message: extraError.message } : null,
-    }, { status: 200 })
-  } catch (err: any) {
-    return NextResponse.json({ step: 'unhandled_error', message: err?.message }, { status: 200 })
+      fetchError,
+      updateData,
+      updateError,
+      newXp,
+    })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
