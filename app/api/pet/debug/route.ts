@@ -1,5 +1,5 @@
 // app/api/pet/debug/route.ts
-// Debug endpoint — shows pet state and tests a direct XP update
+// Debug endpoint — tests pet XP update directly
 // Visit: /api/pet/debug
 
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
@@ -31,13 +31,22 @@ export async function GET() {
       return NextResponse.json({ step: 'fetch', userId, email, fetchError }, { status: 200 })
     }
 
-    // 2. Try updating XP by +1
-    const newXp = (pet?.xp ?? 0) + 1
+    // 2. Try the exact same update as teacher-xp
+    const newXp = (pet?.xp ?? 0) + 10
+    const newHappiness = Math.min((pet?.happiness ?? 80) + 5, 100)
+    const newHunger = Math.min((pet?.hunger ?? 80) + 5, 100)
+
     const { data: updateData, error: updateError } = await supabase
       .from('student_pets')
-      .update({ xp: newXp, updated_at: new Date().toISOString() })
+      .update({
+        xp: newXp,
+        evolution_stage: pet?.species ? (newXp >= 300 ? 'adult' : newXp >= 100 ? 'teen' : 'baby') : pet?.evolution_stage,
+        happiness: newHappiness,
+        hunger: newHunger,
+        updated_at: new Date().toISOString(),
+      })
       .eq('user_id', userId)
-      .select('xp, updated_at')
+      .select('xp, happiness, hunger, evolution_stage, updated_at')
 
     // 3. Re-fetch to confirm
     const { data: afterPet } = await supabase
@@ -49,10 +58,14 @@ export async function GET() {
     return NextResponse.json({
       userId,
       email,
-      before: pet,
-      updateAttempt: { newXp, updateData, updateError },
+      before: { xp: pet?.xp, happiness: pet?.happiness, hunger: pet?.hunger, stage: pet?.evolution_stage },
+      updateAttempt: { newXp, newHappiness, newHunger, updateData, updateError },
       after: afterPet,
-      verdict: updateError ? '❌ UPDATE FAILED' : afterPet?.xp === newXp ? '✅ UPDATE WORKED' : '⚠️ UPDATE RETURNED NO ERROR BUT XP DID NOT CHANGE',
+      verdict: updateError
+        ? `❌ UPDATE FAILED: ${updateError.message}`
+        : afterPet?.xp === newXp
+          ? '✅ UPDATE WORKED'
+          : `⚠️ XP did not change (before: ${pet?.xp}, expected: ${newXp}, got: ${afterPet?.xp})`,
     })
   } catch (err) {
     return NextResponse.json({ step: 'exception', error: String(err) }, { status: 500 })
