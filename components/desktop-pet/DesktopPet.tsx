@@ -161,6 +161,10 @@ export default function DesktopPet({
   happiness,
   hunger,
   streak,
+  isEgg = false,
+  onPickSpecies,
+  cracking = false,
+  crackError,
 }: {
   petStage?: DidiStage
   petName?: string
@@ -168,6 +172,10 @@ export default function DesktopPet({
   happiness?: number
   hunger?: number
   streak?: number
+  isEgg?: boolean
+  onPickSpecies?: (species: 'dragon' | 'fox' | 'cat') => void
+  cracking?: boolean
+  crackError?: string
 }) {
   const [mounted,    setMounted]    = useState(false)
   const [minimized,  setMinimized]  = useState(false)
@@ -615,20 +623,58 @@ export default function DesktopPet({
 
                 {/* Action buttons */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <a
-                    href="/pet"
-                    style={{ display: 'block', textAlign: 'center', background: '#f0e6d3', color: '#5c3d2e', fontSize: 12, fontWeight: 700, padding: '6px 0', borderRadius: 10, textDecoration: 'none' }}
-                    onClick={() => setShowPopover(false)}
-                  >
-                    Visit Pet →
-                  </a>
-                  <a
-                    href="/challenges"
-                    style={{ display: 'block', textAlign: 'center', background: '#dcfce7', color: '#15803d', fontSize: 12, fontWeight: 700, padding: '6px 0', borderRadius: 10, textDecoration: 'none' }}
-                    onClick={() => setShowPopover(false)}
-                  >
-                    🧮 Do today's challenge
-                  </a>
+                  {isEgg && onPickSpecies ? (
+                    /* ── Egg: pick a species to crack it ── */
+                    <>
+                      <p style={{ fontSize: 11, color: '#a07060', textAlign: 'center', marginBottom: 4, fontWeight: 600 }}>
+                        🥚 Tap to hatch your egg!
+                      </p>
+                      {crackError && (
+                        <p style={{ fontSize: 10, color: '#ef4444', textAlign: 'center', marginBottom: 4 }}>{crackError}</p>
+                      )}
+                      {(['dragon', 'fox', 'cat'] as const).map(s => (
+                        <button
+                          key={s}
+                          disabled={cracking}
+                          onClick={() => onPickSpecies(s)}
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            textAlign: 'center',
+                            background: cracking ? '#f5f5f5' : '#f0e6d3',
+                            color: '#5c3d2e',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            padding: '7px 0',
+                            borderRadius: 10,
+                            border: 'none',
+                            cursor: cracking ? 'not-allowed' : 'pointer',
+                            opacity: cracking ? 0.6 : 1,
+                          }}
+                        >
+                          {s === 'dragon' ? '🐉 Dragon' : s === 'fox' ? '🦊 Fox' : '🐱 Cat'}
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    /* ── Hatched pet: quick actions ── */
+                    <>
+                      <a
+                        href="/pet"
+                        style={{ display: 'block', textAlign: 'center', background: '#f0e6d3', color: '#5c3d2e', fontSize: 12, fontWeight: 700, padding: '6px 0', borderRadius: 10, textDecoration: 'none' }}
+                        onClick={() => setShowPopover(false)}
+                      >
+                        Visit Pet →
+                      </a>
+                      <a
+                        href="/challenges"
+                        style={{ display: 'block', textAlign: 'center', background: '#dcfce7', color: '#15803d', fontSize: 12, fontWeight: 700, padding: '6px 0', borderRadius: 10, textDecoration: 'none' }}
+                        onClick={() => setShowPopover(false)}
+                      >
+                        🧮 Do today's challenge
+                      </a>
+                    </>
+                  )}
                 </div>
               </div>
             )}

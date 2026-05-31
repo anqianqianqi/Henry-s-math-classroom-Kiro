@@ -112,8 +112,8 @@ export default function PetPage() {
     }
 
     if (!isStudent) {
-      router.push('/dashboard')
-      return
+      // Teachers and admins can also use the pet page
+      // (previously redirected to dashboard, now allowed)
     }
 
     await Promise.all([

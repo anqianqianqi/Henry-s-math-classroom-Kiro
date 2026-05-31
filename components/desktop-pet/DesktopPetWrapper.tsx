@@ -26,6 +26,33 @@ interface PetStatus {
 
 export default function DesktopPetWrapper() {
   const [status, setStatus] = useState<PetStatus | null>(null)
+  const [cracking, setCracking] = useState(false)
+  const [crackError, setCrackError] = useState<string | null>(null)
+
+  async function pickSpecies(species: 'dragon' | 'fox' | 'cat') {
+    setCracking(true)
+    setCrackError(null)
+    try {
+      const supabase = (await import('@/lib/supabase/client')).createClient()
+      const { error } = await supabase
+        .from('student_pets')
+        .update({ species, evolution_stage: 'baby', xp: 0, equipped_accessories: [] })
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '')
+
+      if (error) throw error
+
+      // Invalidate cache and re-fetch
+      sessionStorage.removeItem('pet_status_cache')
+      const res = await fetch('/api/pet/status')
+      const data: PetStatus = await res.json()
+      setStatus(data)
+      sessionStorage.setItem('pet_status_cache', JSON.stringify({ data, ts: Date.now() }))
+    } catch {
+      setCrackError('Something went wrong. Try again.')
+    } finally {
+      setCracking(false)
+    }
+  }
 
   useEffect(() => {
     // Check sessionStorage cache first (60s TTL)
@@ -83,7 +110,7 @@ export default function DesktopPetWrapper() {
 
   // Student with egg → show egg
   if (status.isEgg) {
-    return <DesktopPet petStage="egg" petName={status.petName ?? undefined} />
+    return <DesktopPet petStage="egg" petName={status.petName ?? undefined} isEgg onPickSpecies={pickSpecies} cracking={cracking} crackError={crackError ?? undefined} />
   }
 
   // Student with hatched pet → show at correct stage
