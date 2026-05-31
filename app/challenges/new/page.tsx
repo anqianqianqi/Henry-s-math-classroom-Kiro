@@ -379,12 +379,16 @@ export default function NewChallengePage() {
 
       // Success! Grant teacher pet XP for creating a challenge (await so DB is updated before redirect)
       try {
-        await fetch('/api/pet/teacher-xp', {
+        const xpRes = await fetch('/api/pet/teacher-xp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'create_challenge' }),
         })
-      } catch { /* non-blocking */ }
+        const xpData = await xpRes.json()
+        console.log('[teacher-xp] response:', xpRes.status, xpData)
+      } catch (e) {
+        console.error('[teacher-xp] fetch error:', e)
+      }
 
       // Redirect — DesktopPetWrapper re-fetches pet status on pathname change
       router.push(saveToPool ? '/admin/challenge-bank' : '/challenges')
