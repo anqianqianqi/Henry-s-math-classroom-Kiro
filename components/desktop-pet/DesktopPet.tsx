@@ -664,13 +664,6 @@ export default function DesktopPet({
                     /* ── Hatched pet: quick actions ── */
                     <>
                       <a
-                        href="/pet"
-                        style={{ display: 'block', textAlign: 'center', background: '#f0e6d3', color: '#5c3d2e', fontSize: 12, fontWeight: 700, padding: '6px 0', borderRadius: 10, textDecoration: 'none' }}
-                        onClick={() => setShowPopover(false)}
-                      >
-                        Visit Pet →
-                      </a>
-                      <a
                         href="/challenges"
                         style={{ display: 'block', textAlign: 'center', background: '#dcfce7', color: '#15803d', fontSize: 12, fontWeight: 700, padding: '6px 0', borderRadius: 10, textDecoration: 'none' }}
                         onClick={() => setShowPopover(false)}
