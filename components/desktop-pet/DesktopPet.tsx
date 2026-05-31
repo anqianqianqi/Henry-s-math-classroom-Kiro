@@ -289,7 +289,11 @@ export default function DesktopPet({
     const onUp = () => {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
-      setIsDragging(false)
+      // Reset dragMoved after a tick so the click handler (which fires after mouseup) sees it
+      setTimeout(() => {
+        setIsDragging(false)
+        dragMoved.current = false
+      }, 0)
       // Snap back to floor with a bounce, then sleep
       setPosY(0)
       setBehavior({ pose: 'playing', ms: 1200 })

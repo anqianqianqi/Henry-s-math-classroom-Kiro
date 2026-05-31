@@ -24,10 +24,12 @@ export async function GET() {
 
     // Everyone (students, teachers, admins) gets a pet
 
-    // Fetch pet data
+    // Fetch pet data — select only base columns that always exist
+    // Extra columns (pet_name, happiness, hunger, current_streak) added by migration
+    // are fetched separately so a missing column doesn't break the whole widget
     const { data: pet, error } = await supabase
       .from('student_pets')
-      .select('id, species, evolution_stage, xp, pet_name, happiness, hunger, current_streak')
+      .select('id, species, evolution_stage, xp')
       .eq('user_id', session.user.id)
       .single()
 
@@ -53,17 +55,35 @@ export async function GET() {
 
     const isEgg = !pet.species || pet.evolution_stage === 'egg'
 
+    // Try to fetch extra columns added by the evolution migration (may not exist yet)
+    let petName: string | null = null
+    let happiness: number | null = null
+    let hunger: number | null = null
+    let streak: number | null = null
+    try {
+      const { data: extra } = await supabase
+        .from('student_pets')
+        .select('pet_name, happiness, hunger, current_streak')
+        .eq('user_id', session.user.id)
+        .single()
+      if (extra) {
+        petName = extra.pet_name ?? null
+        happiness = extra.happiness ?? null
+        hunger = extra.hunger ?? null
+        streak = extra.current_streak ?? null
+      }
+    } catch { /* migration not run yet — fine, widget still shows */ }
+
     return NextResponse.json({
       hasPet: true,
       isEgg,
       species: pet.species,
       stage: pet.evolution_stage,
       xp: pet.xp,
-      petName: pet.pet_name ?? null,
-      // happiness/hunger/streak may be null if columns not yet added
-      happiness: pet.happiness ?? null,
-      hunger: pet.hunger ?? null,
-      streak: pet.current_streak ?? null,
+      petName,
+      happiness,
+      hunger,
+      streak,
     }, {
       status: 200,
       headers: {
