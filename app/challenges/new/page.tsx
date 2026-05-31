@@ -377,7 +377,14 @@ export default function NewChallengePage() {
         }
       }
 
-      // Success! Redirect to challenges
+      // Success! Grant teacher pet XP for creating a challenge (fire-and-forget)
+      fetch('/api/pet/teacher-xp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create_challenge' }),
+      }).catch(() => {})
+
+      // Redirect to challenges
       router.push(saveToPool ? '/admin/challenge-bank' : '/challenges')
     } catch (err) {
       console.error('Error creating challenge:', err)

@@ -301,6 +301,15 @@ export default function GradingInterface({
 
       if (upsertError) throw upsertError
 
+      // Grant teacher pet XP for grading (published grades only, fire-and-forget)
+      if (!isDraft) {
+        fetch('/api/pet/teacher-xp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'grade' }),
+        }).catch(() => {})
+      }
+
       // Reload submissions
       await loadSubmissions()
       

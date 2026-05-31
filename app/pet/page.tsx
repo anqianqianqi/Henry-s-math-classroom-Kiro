@@ -54,6 +54,7 @@ export default function PetPage() {
   const [xpGainedLabel, setXpGainedLabel] = useState<number | null>(null)
   const [xpLabelVisible, setXpLabelVisible] = useState(false)
   const [evolvedFrom, setEvolvedFrom] = useState<string | null>(null) // stage before feeding
+  const [showEvolutionCelebration, setShowEvolutionCelebration] = useState(false)
   const [showRestartConfirm, setShowRestartConfirm] = useState(false)
   const [restarting, setRestarting] = useState(false)
   const [restartError, setRestartError] = useState<string | null>(null)
@@ -261,14 +262,17 @@ export default function PetPage() {
       // Happy animation
       setPetAnimation('happy')
 
-      // If evolved, trigger sparkle
+      // If evolved, trigger sparkle + celebration overlay
       if (new_stage !== stageBefore && stageBefore !== 'egg') {
         setEvolvedFrom(stageBefore)
+        setShowEvolutionCelebration(true)
         setSparkleActive(true)
         sparkleTimerRef.current = setTimeout(() => {
           setSparkleActive(false)
           setEvolvedFrom(null)
         }, 1200)
+        // Auto-dismiss celebration after 4s
+        setTimeout(() => setShowEvolutionCelebration(false), 4000)
       }
 
       // Fade out XP label after 2.5s
@@ -691,10 +695,33 @@ export default function PetPage() {
               </div>
             )}
 
-            {/* Evolution notification */}
-            {evolvedFrom && (
-              <div className="mb-4 bg-purple-50 border border-purple-200 rounded-2xl px-4 py-3 text-center animate-pulse">
-                <p className="text-purple-700 font-bold text-sm">✨ Your pet evolved! ✨</p>
+            {/* Evolution celebration — full-screen overlay */}
+            {showEvolutionCelebration && pet && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                onClick={() => setShowEvolutionCelebration(false)}
+              >
+                <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center" onClick={e => e.stopPropagation()}>
+                  <div className="text-5xl mb-3">✨</div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                    {pet.evolution_stage === 'legendary' ? '🌟 Legendary!' : '🎉 Evolved!'}
+                  </h2>
+                  <p className="text-gray-600 text-sm mb-4">
+                    {petName || 'Your pet'} is now a{' '}
+                    <span className="font-bold text-primary-600">
+                      {getStageLabel(pet.species ?? null, pet.evolution_stage)}
+                    </span>!
+                  </p>
+                  <div className="flex justify-center mb-5">
+                    <EvolutionSparkle active={true} />
+                  </div>
+                  <button
+                    onClick={() => setShowEvolutionCelebration(false)}
+                    className="w-full bg-primary-600 text-white font-semibold py-2.5 rounded-xl hover:bg-primary-700 transition-colors"
+                  >
+                    Amazing! 🐾
+                  </button>
+                </div>
               </div>
             )}
 
