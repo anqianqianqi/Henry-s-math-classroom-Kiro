@@ -340,6 +340,7 @@ export default function PetPage() {
   }
 
   async function handleRestart() {
+    if (!pet || restarting) return
     setRestarting(true)
     setRestartError(null)
 
