@@ -57,6 +57,12 @@ export default function PetPage() {
   const [showRestartConfirm, setShowRestartConfirm] = useState(false)
   const [restarting, setRestarting] = useState(false)
   const [restartError, setRestartError] = useState<string | null>(null)
+  // Pet naming
+  const [petName, setPetName] = useState<string>('')
+  const [editingName, setEditingName] = useState(false)
+  const [nameInput, setNameInput] = useState('')
+  const [nameError, setNameError] = useState<string | null>(null)
+  const [savingName, setSavingName] = useState(false)
   const sparkleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -134,6 +140,7 @@ export default function PetPage() {
 
     if (existingPet) {
       setPet(existingPet as StudentPet)
+      setPetName((existingPet as any).pet_name ?? '')
       return
     }
 
@@ -309,8 +316,26 @@ export default function PetPage() {
     }, 800)
   }
 
+  async function handleSaveName() {
+    if (!pet) return
+    const trimmed = nameInput.trim()
+    if (!trimmed) { setNameError('Name cannot be empty'); return }
+    if (trimmed.length > 20) { setNameError('Max 20 characters'); return }
+    if (!/^[a-zA-Z0-9 \-]+$/.test(trimmed)) { setNameError('Letters, numbers, spaces and hyphens only'); return }
+    setNameError(null)
+    setSavingName(true)
+    const { error } = await supabase
+      .from('student_pets')
+      .update({ pet_name: trimmed })
+      .eq('id', pet.id)
+    setSavingName(false)
+    if (error) { setNameError('Failed to save name'); return }
+    setPetName(trimmed)
+    setEditingName(false)
+    if (typeof window !== 'undefined') sessionStorage.removeItem('pet_status_cache')
+  }
+
   async function handleRestart() {
-    if (!pet || restarting) return
     setRestarting(true)
     setRestartError(null)
 
@@ -592,9 +617,40 @@ export default function PetPage() {
                 )}
               </div>
 
-              {/* Evolution stage label */}
-              <div className="bg-white px-4 py-2 border-t border-gray-100">
-                <p className="text-center text-sm font-semibold text-gray-700">
+              {/* Evolution stage label + pet nameplate */}
+              <div className="bg-white px-4 py-3 border-t border-gray-100">
+                {/* Pet name */}
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  {editingName ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={nameInput}
+                        onChange={e => setNameInput(e.target.value)}
+                        maxLength={20}
+                        className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 w-32"
+                        placeholder="Name your pet"
+                        autoFocus
+                        onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false) }}
+                      />
+                      <button onClick={handleSaveName} disabled={savingName} className="text-xs font-semibold text-primary-600 hover:text-primary-800">
+                        {savingName ? '…' : 'Save'}
+                      </button>
+                      <button onClick={() => setEditingName(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setNameInput(petName); setEditingName(true); setNameError(null) }}
+                      className="flex items-center gap-1 text-sm font-bold text-gray-800 hover:text-primary-600 transition-colors group"
+                      title="Click to rename"
+                    >
+                      {petName || 'Unnamed Pet'}
+                      <span className="text-gray-300 group-hover:text-primary-400 text-xs">✏️</span>
+                    </button>
+                  )}
+                </div>
+                {nameError && <p className="text-center text-xs text-red-500 mb-1">{nameError}</p>}
+                <p className="text-center text-xs text-gray-500">
                   {getStageLabel(pet?.species ?? null, pet?.evolution_stage ?? 'baby')}
                 </p>
               </div>

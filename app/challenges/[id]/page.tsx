@@ -731,6 +731,8 @@ export default function ChallengePage() {
           setTimeout(() => setShowCelebration(false), 3000)
           // Notify teachers of new submission
           await notifyTeachers(userId, 'submitted a solution')
+          // Grant pet XP for completing a challenge (fire-and-forget, non-blocking)
+          fetch('/api/pet/challenge-xp', { method: 'POST' }).catch(() => {})
         }
       }
       setSolutionImage(null)
