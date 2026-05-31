@@ -27,6 +27,7 @@ export default function DesktopPetWrapper() {
   const [cracking, setCracking] = useState(false)
   const [crackError, setCrackError] = useState<string | null>(null)
   const xpGranted = useRef(false)
+  const initialFetchDone = useRef(false)
   const pathname = usePathname()
 
   // Don't show pet on auth pages — checked in render, not before hooks
@@ -34,13 +35,19 @@ export default function DesktopPetWrapper() {
     pathname === '/forgot-password' || pathname === '/reset-password'
 
   useEffect(() => {
-    // Grant daily XP first (creates pet row if needed), then fetch status.
-    // Both are fire-and-forget safe — status fetch always runs via finally.
+    // Initial fetch on mount
+    initialFetchDone.current = false
     grantDailyLoginXp().finally(() => {
       fetch('/api/pet/status')
         .then(r => r.json())
-        .then((data: PetStatus) => setStatus(data))
-        .catch(() => setStatus({ hasPet: false }))
+        .then((data: PetStatus) => {
+          setStatus(data)
+          initialFetchDone.current = true
+        })
+        .catch(() => {
+          setStatus({ hasPet: false })
+          initialFetchDone.current = true
+        })
     })
 
     // Listen for auth changes — hide pet on sign-out, reload pet on sign-in
@@ -51,20 +58,16 @@ export default function DesktopPetWrapper() {
           setStatus({ hasPet: false })
           xpGranted.current = false
         } else if (event === 'SIGNED_IN') {
-          // Only re-fetch if we already had a status (i.e. user switched accounts)
-          // On initial load, the useEffect above handles the first fetch
-          setStatus(prev => {
-            if (prev !== null) {
-              // Different user signed in — reload their pet
-              xpGranted.current = false
-              grantDailyLoginXp().finally(() => {
-                fetch('/api/pet/status')
-                  .then(r => r.json())
-                  .then((data: PetStatus) => setStatus(data))
-                  .catch(() => setStatus({ hasPet: false }))
-              })
-            }
-            return prev
+          // Skip if this is the initial page load (useEffect handles that)
+          if (!initialFetchDone.current) return
+          // Clear immediately so previous user's pet doesn't flash
+          setStatus(null)
+          xpGranted.current = false
+          grantDailyLoginXp().finally(() => {
+            fetch('/api/pet/status')
+              .then(r => r.json())
+              .then((data: PetStatus) => setStatus(data))
+              .catch(() => setStatus({ hasPet: false }))
           })
         }
       })
