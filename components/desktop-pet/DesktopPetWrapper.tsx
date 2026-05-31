@@ -37,13 +37,23 @@ export default function DesktopPetWrapper() {
         .catch(() => setStatus({ hasPet: false }))
     })
 
-    // Listen for auth changes — hide pet immediately on sign-out
+    // Listen for auth changes — hide pet on sign-out, reload pet on sign-in
     let supabaseClient: any = null
     import('@/lib/supabase/client').then(({ createClient }) => {
       supabaseClient = createClient()
       supabaseClient.auth.onAuthStateChange((event: string) => {
         if (event === 'SIGNED_OUT') {
           setStatus({ hasPet: false })
+          xpGranted.current = false
+        } else if (event === 'SIGNED_IN') {
+          // New user logged in — fetch their pet (not the previous user's)
+          setStatus(null) // show loading briefly
+          grantDailyLoginXp().finally(() => {
+            fetch('/api/pet/status')
+              .then(r => r.json())
+              .then((data: PetStatus) => setStatus(data))
+              .catch(() => setStatus({ hasPet: false }))
+          })
         }
       })
     })
