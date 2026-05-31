@@ -702,8 +702,23 @@ export default function DesktopPet({
                 {/* Action buttons */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {isEgg && onHatch ? (
-                    /* ── Egg: single hatch button ── */
+                    /* ── Egg: XP display + hatch button ── */
                     <>
+                      {/* XP bar even for egg — shows progress toward hatching */}
+                      {xp != null && (
+                        <div style={{ marginBottom: 6 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#a07060', marginBottom: 2 }}>
+                            <span>⭐ XP</span>
+                            <span>{xp} XP earned</span>
+                          </div>
+                          <div style={{ height: 6, background: '#f0e6d3', borderRadius: 3, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${Math.min((xp / 100) * 100, 100)}%`, background: '#6366f1', borderRadius: 3, transition: 'width 0.3s' }} />
+                          </div>
+                          <div style={{ fontSize: 9, color: '#a07060', marginTop: 2, textAlign: 'center' }}>
+                            Hatch at any time — XP carries over!
+                          </div>
+                        </div>
+                      )}
                       <p style={{ fontSize: 11, color: '#a07060', textAlign: 'center', marginBottom: 6, fontWeight: 600 }}>
                         🥚 Your egg is ready to hatch!
                       </p>

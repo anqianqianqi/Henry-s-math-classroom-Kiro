@@ -160,6 +160,7 @@ export default function DesktopPetWrapper() {
         petStage="egg"
         petName={status.petName ?? undefined}
         isEgg
+        xp={status.xp ?? undefined}
         onHatch={hatchEgg}
         cracking={cracking}
         crackError={crackError ?? undefined}
