@@ -11,8 +11,6 @@ export default function SignOut() {
   const supabase = createClient()
 
   useEffect(() => {
-    sessionStorage.removeItem('pet_status_cache')
-    sessionStorage.removeItem('login_xp_granted_today')
     supabase.auth.signOut().then(() => {
       router.push('/')
     })

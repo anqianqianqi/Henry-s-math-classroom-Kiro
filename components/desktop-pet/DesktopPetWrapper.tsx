@@ -1,15 +1,12 @@
 // components/desktop-pet/DesktopPetWrapper.tsx
 //
-// Fetches the student's pet status on mount, then renders:
-//   - Student's own evolving pet (Didi at the correct stage) if logged in as student
-//   - Didi the adult mascot if teacher/admin or not logged in
-//
-// SSR-safe: uses dynamic import with ssr:false.
+// Fetches pet status on mount — no sessionStorage caching so it always
+// reflects the real DB state regardless of browser or session.
 
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { DidiStage } from './DidiSvg'
 
 const DesktopPet = dynamic(() => import('./DesktopPet'), { ssr: false })
@@ -28,25 +25,47 @@ export default function DesktopPetWrapper() {
   const [status, setStatus] = useState<PetStatus | null>(null)
   const [cracking, setCracking] = useState(false)
   const [crackError, setCrackError] = useState<string | null>(null)
+  const xpGranted = useRef(false) // in-memory flag, resets on page reload (intentional)
+
+  useEffect(() => {
+    // Grant daily XP first (creates pet row if needed), then fetch status.
+    // Both are fire-and-forget safe — status fetch always runs via finally.
+    grantDailyLoginXp().finally(() => {
+      fetch('/api/pet/status')
+        .then(r => r.json())
+        .then((data: PetStatus) => setStatus(data))
+        .catch(() => setStatus({ hasPet: false }))
+    })
+  }, [])
+
+  async function grantDailyLoginXp(): Promise<void> {
+    if (xpGranted.current) return
+    xpGranted.current = true
+    try {
+      await fetch('/api/pet/login-xp', { method: 'POST' })
+    } catch { /* silent */ }
+  }
 
   async function pickSpecies(species: 'dragon' | 'fox' | 'cat') {
     setCracking(true)
     setCrackError(null)
     try {
-      const supabase = (await import('@/lib/supabase/client')).createClient()
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not logged in')
+
       const { error } = await supabase
         .from('student_pets')
         .update({ species, evolution_stage: 'baby', xp: 0, equipped_accessories: [] })
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '')
+        .eq('user_id', user.id)
 
       if (error) throw error
 
-      // Invalidate cache and re-fetch
-      sessionStorage.removeItem('pet_status_cache')
+      // Re-fetch status to update widget
       const res = await fetch('/api/pet/status')
       const data: PetStatus = await res.json()
       setStatus(data)
-      sessionStorage.setItem('pet_status_cache', JSON.stringify({ data, ts: Date.now() }))
     } catch {
       setCrackError('Something went wrong. Try again.')
     } finally {
@@ -54,66 +73,25 @@ export default function DesktopPetWrapper() {
     }
   }
 
-  useEffect(() => {
-    // Check sessionStorage cache first (60s TTL)
-    const cached = sessionStorage.getItem('pet_status_cache')
-    if (cached) {
-      try {
-        const { data, ts } = JSON.parse(cached)
-        if (Date.now() - ts < 60_000) {
-          setStatus(data)
-          // Still fire login XP in background even if we have cached status
-          // (idempotent — safe to call multiple times per day)
-          grantDailyLoginXp()
-          return
-        }
-      } catch { /* ignore */ }
-    }
-
-    // Grant daily login XP first (creates the student_pets row if needed),
-    // then fetch status so we always see the egg on first login.
-    // Use Promise.allSettled-style: always fetch status even if XP grant fails
-    grantDailyLoginXp().catch(() => {}).finally(() => {
-      fetch('/api/pet/status')
-        .then(r => r.json())
-        .then((data: PetStatus) => {
-          setStatus(data)
-          sessionStorage.setItem('pet_status_cache', JSON.stringify({ data, ts: Date.now() }))
-        })
-        .catch(() => {
-          setStatus({ hasPet: false })
-        })
-    })
-  }, [])
-
-  async function grantDailyLoginXp(): Promise<void> {
-    // Only fire once per session to avoid hammering the DB
-    if (sessionStorage.getItem('login_xp_granted_today')) return
-
-    try {
-      const res = await fetch('/api/pet/login-xp', { method: 'POST' })
-      if (res.ok) {
-        sessionStorage.setItem('login_xp_granted_today', '1')
-        // Invalidate cache so the subsequent status fetch picks up the new row
-        sessionStorage.removeItem('pet_status_cache')
-      }
-    } catch { /* silent — non-critical */ }
-  }
-
-  // Still loading — render nothing (avoids flash)
+  // Still loading
   if (status === null) return null
 
-  // Not logged in or no pet yet → show nothing
-  if (!status.hasPet) {
-    return null
-  }
+  // Not logged in or no pet row
+  if (!status.hasPet) return null
 
-  // Student with egg → show egg
   if (status.isEgg) {
-    return <DesktopPet petStage="egg" petName={status.petName ?? undefined} isEgg onPickSpecies={pickSpecies} cracking={cracking} crackError={crackError ?? undefined} />
+    return (
+      <DesktopPet
+        petStage="egg"
+        petName={status.petName ?? undefined}
+        isEgg
+        onPickSpecies={pickSpecies}
+        cracking={cracking}
+        crackError={crackError ?? undefined}
+      />
+    )
   }
 
-  // Student with hatched pet → show at correct stage
   const stage = (status.stage ?? 'adult') as DidiStage
   return (
     <DesktopPet

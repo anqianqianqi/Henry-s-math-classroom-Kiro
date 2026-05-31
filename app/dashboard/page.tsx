@@ -239,9 +239,6 @@ export default function DashboardPage() {
   }
 
   async function handleSignOut() {
-    // Clear pet cache so the widget doesn't show on the login page
-    sessionStorage.removeItem('pet_status_cache')
-    sessionStorage.removeItem('login_xp_granted_today')
     await supabase.auth.signOut()
     router.push('/login')
   }
