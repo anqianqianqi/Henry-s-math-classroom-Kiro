@@ -14,10 +14,10 @@
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 export type DidiPose = 'idle' | 'sleeping' | 'yawning' | 'playing' | 'walking'
-export type DidiStage = 'egg' | 'baby' | 'teen' | 'adult' | 'legendary'
+export type DidiStage = 'egg' | 'baby' | 'teen' | 'adult'
 
 interface DidiSvgProps {
   pose: DidiPose
@@ -42,7 +42,6 @@ const STAGE_LABELS: Record<DidiStage, string> = {
   baby:      'Baby Didi',
   teen:      'Teen Didi',
   adult:     'Didi',
-  legendary: 'Legendary Didi',
 }
 
 // Fallback emoji per pose
@@ -55,13 +54,13 @@ const FALLBACK_EMOJI: Record<DidiPose, string> = {
 }
 
 function getImageSrc(stage: DidiStage, pose: DidiPose): string {
-  if (stage === 'egg') return '/didi/didi-egg.png'
-  if (stage === 'adult') return `/didi/didi-${pose}.png`
-  return `/didi/didi-${stage}-${pose}.png`
+  if (stage === 'egg') return '/didi/ai/didi-egg.png'
+  if (stage === 'adult') return `/didi/ai/didi-${pose}.png`
+  return `/didi/ai/didi-${stage}-${pose}.png`
 }
 
 function getAdultFallbackSrc(pose: DidiPose): string {
-  return `/didi/didi-${pose}.png`
+  return `/didi/ai/didi-${pose}.png`
 }
 
 export default function DidiSvg({
@@ -74,6 +73,12 @@ export default function DidiSvg({
 }: DidiSvgProps) {
   const [triedStage, setTriedStage] = useState(false)
   const [triedAdult, setTriedAdult] = useState(false)
+
+  // Reset fallback state whenever stage or pose changes so new images are tried fresh
+  useEffect(() => {
+    setTriedStage(false)
+    setTriedAdult(false)
+  }, [stage, pose])
 
   const primarySrc = getImageSrc(stage, pose)
   const adultFallback = getAdultFallbackSrc(pose)

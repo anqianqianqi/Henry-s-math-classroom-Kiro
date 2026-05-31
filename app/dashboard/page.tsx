@@ -239,6 +239,9 @@ export default function DashboardPage() {
   }
 
   async function handleSignOut() {
+    // Clear pet cache so the widget doesn't show on the login page
+    sessionStorage.removeItem('pet_status_cache')
+    sessionStorage.removeItem('login_xp_granted_today')
     await supabase.auth.signOut()
     router.push('/login')
   }
@@ -458,6 +461,19 @@ export default function DashboardPage() {
                   {stats.spendableBalance}
                 </div>
                 <div className="text-gray-600 font-medium">Shop Balance</div>
+              </Card.Body>
+            </Card>
+          )}
+
+          {!isTeacher && !isAdmin && (
+            <Card
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow border-purple-100"
+              onClick={() => router.push('/pet')}
+            >
+              <Card.Body>
+                <div className="text-5xl mb-3 hidden sm:block">🥚</div>
+                <div className="text-3xl font-bold text-purple-600 mb-1">My Pet</div>
+                <div className="text-gray-600 font-medium">View &amp; Evolve</div>
               </Card.Body>
             </Card>
           )}

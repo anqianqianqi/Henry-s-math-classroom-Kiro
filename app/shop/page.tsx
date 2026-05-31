@@ -409,15 +409,14 @@ export default function ShopPage() {
       remainingMap[itemId] = remaining ?? 0
     }
 
-    // Physical blindbox: per-student remaining via new RPC (uses set quantity tracking)
+    // Physical blindbox: global remaining stock (total copies across all sets)
     const physicalBlindboxIds = (shopItems ?? [])
       .filter((i: any) => i.commodity_type === 'physical_blindbox')
       .map((i: any) => i.id)
 
     for (const itemId of physicalBlindboxIds) {
-      const { data: remaining } = await supabase.rpc('get_physical_blindbox_remaining_for_student', {
+      const { data: remaining } = await supabase.rpc('get_physical_blindbox_total_remaining', {
         p_item_id: itemId,
-        p_user_id: userId,
       })
       remainingMap[itemId] = remaining ?? 0
     }
@@ -627,8 +626,8 @@ export default function ShopPage() {
               const isPhysicalBlindbox = commodityType === 'physical_blindbox'
 
               // Out of stock logic
-              // physical_blindbox: out of stock when no sets with stock remain for this student
-              // blindbox (digital): out of stock when this student has claimed all sets
+              // physical_blindbox: out of stock when global stock (SUM of set quantities) = 0
+              // blindbox (digital): out of stock when this student has claimed all sets (per-student)
               // standard/physical: out of stock when quantity cap reached
               const outOfStock = isPhysicalBlindbox
                 ? (item.blindbox_remaining ?? 0) === 0

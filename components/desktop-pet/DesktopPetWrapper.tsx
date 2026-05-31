@@ -43,21 +43,22 @@ export default function DesktopPetWrapper() {
       } catch { /* ignore */ }
     }
 
-    fetch('/api/pet/status')
-      .then(r => r.json())
-      .then((data: PetStatus) => {
-        setStatus(data)
-        sessionStorage.setItem('pet_status_cache', JSON.stringify({ data, ts: Date.now() }))
-      })
-      .catch(() => {
-        setStatus({ hasPet: false })
-      })
-
-    // Fire daily login XP grant (idempotent RPC — safe to call on every page load)
-    grantDailyLoginXp()
+    // Grant daily login XP first (creates the student_pets row if needed),
+    // then fetch status so we always see the egg on first login.
+    grantDailyLoginXp().then(() => {
+      fetch('/api/pet/status')
+        .then(r => r.json())
+        .then((data: PetStatus) => {
+          setStatus(data)
+          sessionStorage.setItem('pet_status_cache', JSON.stringify({ data, ts: Date.now() }))
+        })
+        .catch(() => {
+          setStatus({ hasPet: false })
+        })
+    })
   }, [])
 
-  async function grantDailyLoginXp() {
+  async function grantDailyLoginXp(): Promise<void> {
     // Only fire once per session to avoid hammering the DB
     if (sessionStorage.getItem('login_xp_granted_today')) return
 
@@ -66,20 +67,8 @@ export default function DesktopPetWrapper() {
       if (res.ok) {
         const data = await res.json()
         sessionStorage.setItem('login_xp_granted_today', '1')
-
-        // If XP was newly granted, invalidate the pet status cache so the
-        // widget reflects the updated stage/streak on next render
-        if (!data.already_granted) {
-          sessionStorage.removeItem('pet_status_cache')
-          // Re-fetch updated pet status
-          fetch('/api/pet/status')
-            .then(r => r.json())
-            .then((updated: PetStatus) => {
-              setStatus(updated)
-              sessionStorage.setItem('pet_status_cache', JSON.stringify({ data: updated, ts: Date.now() }))
-            })
-            .catch(() => {})
-        }
+        // Invalidate cache so the subsequent status fetch picks up the new row
+        sessionStorage.removeItem('pet_status_cache')
       }
     } catch { /* silent — non-critical */ }
   }

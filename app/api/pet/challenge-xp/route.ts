@@ -50,7 +50,6 @@ export async function POST() {
 
     // Recompute stage (only if species is set — egg stays egg)
     const newStage = !pet.species ? pet.evolution_stage : (
-      newXp >= 700 ? 'legendary' :
       newXp >= 300 ? 'adult' :
       newXp >= 100 ? 'teen' : 'baby'
     )
