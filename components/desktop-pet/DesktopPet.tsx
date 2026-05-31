@@ -281,6 +281,15 @@ export default function DesktopPet({
     }
   }, [behavior.pose, say])
 
+  // ── Mouse leave → stop scratching immediately ────────────────────────────
+  const handleMouseLeave = useCallback(() => {
+    setShowSizer(false)
+    if (behavior.pose === 'scratching') {
+      if (behaviorRef.current) clearTimeout(behaviorRef.current)
+      setBehavior({ pose: 'idle', ms: 2000 })
+    }
+  }, [behavior.pose])
+
   // ── Drag to move ─────────────────────────────────────────────────────────
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     // Don't drag when clicking the minimize button
@@ -382,7 +391,7 @@ export default function DesktopPet({
         onClick={handleClick}
         onMouseDown={handleMouseDown}
         onMouseEnter={() => { handleHover(); setShowSizer(true) }}
-        onMouseLeave={() => setShowSizer(false)}
+        onMouseLeave={handleMouseLeave}
         role="button"
         aria-label="Didi — click to interact"
         tabIndex={0}

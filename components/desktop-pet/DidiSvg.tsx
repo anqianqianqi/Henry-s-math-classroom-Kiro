@@ -56,6 +56,7 @@ const FALLBACK_EMOJI: Record<DidiPose, string> = {
 }
 
 function getImageSrc(stage: DidiStage, pose: DidiPose): string {
+  // Egg stage always uses the single egg image regardless of pose
   if (stage === 'egg') return '/didi/ai/didi-egg.png'
   if (stage === 'adult') return `/didi/ai/didi-${pose}.png`
   return `/didi/ai/didi-${stage}-${pose}.png`
@@ -93,6 +94,23 @@ export default function DidiSvg({
     justifyContent: 'center',
     transform: facingLeft ? 'scaleX(-1)' : undefined,
     ...style,
+  }
+
+  // Egg stage: always show the single egg image, no pose variants, no fallback
+  if (stage === 'egg') {
+    return (
+      <div style={containerStyle} className={className}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/didi/ai/didi-egg.png"
+          alt="Didi egg"
+          width={size}
+          height={size}
+          style={{ objectFit: 'contain', objectPosition: 'bottom', display: 'block' }}
+          draggable={false}
+        />
+      </div>
+    )
   }
 
   // Both fallbacks exhausted — show emoji
