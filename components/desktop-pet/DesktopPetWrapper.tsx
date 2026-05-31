@@ -72,7 +72,8 @@ export default function DesktopPetWrapper() {
 
     // Grant daily login XP first (creates the student_pets row if needed),
     // then fetch status so we always see the egg on first login.
-    grantDailyLoginXp().then(() => {
+    // Use Promise.allSettled-style: always fetch status even if XP grant fails
+    grantDailyLoginXp().catch(() => {}).finally(() => {
       fetch('/api/pet/status')
         .then(r => r.json())
         .then((data: PetStatus) => {
@@ -92,7 +93,6 @@ export default function DesktopPetWrapper() {
     try {
       const res = await fetch('/api/pet/login-xp', { method: 'POST' })
       if (res.ok) {
-        const data = await res.json()
         sessionStorage.setItem('login_xp_granted_today', '1')
         // Invalidate cache so the subsequent status fetch picks up the new row
         sessionStorage.removeItem('pet_status_cache')

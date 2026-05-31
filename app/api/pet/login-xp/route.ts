@@ -25,12 +25,16 @@ export async function POST() {
     const { data, error } = await supabase.rpc('grant_daily_login_xp')
 
     if (error) {
-      // If the RPC doesn't exist yet (migration not run), return gracefully
-      if (error.message?.includes('does not exist') || error.code === '42883') {
-        return NextResponse.json({ already_granted: true, note: 'migration_pending' }, { status: 200 })
-      }
-      console.error('[pet/login-xp] RPC error:', error)
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      // RPC failed (migration not run, or wallet update failed for teachers)
+      // Fall back: just ensure the pet row exists so the widget shows
+      console.error('[pet/login-xp] RPC error:', error.code, error.message)
+      await supabase
+        .from('student_pets')
+        .insert({ user_id: session.user.id, xp: 0, evolution_stage: 'egg', species: null })
+        .select()
+        .single()
+        .catch(() => {}) // ignore — row may already exist
+      return NextResponse.json({ already_granted: true, note: 'rpc_failed_pet_row_ensured' }, { status: 200 })
     }
 
     return NextResponse.json(data ?? { already_granted: true }, { status: 200 })
