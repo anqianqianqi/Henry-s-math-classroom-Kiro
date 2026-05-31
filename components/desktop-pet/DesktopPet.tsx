@@ -643,6 +643,28 @@ export default function DesktopPet({
                   </div>
                 )}
 
+                {/* Contextual hint */}
+                {!isEgg && (
+                  <div style={{
+                    fontSize: 10,
+                    color: '#a07060',
+                    textAlign: 'center',
+                    marginBottom: 6,
+                    lineHeight: 1.4,
+                    fontStyle: 'italic',
+                  }}>
+                    {happiness != null && happiness < 40
+                      ? '💡 Log in daily to make Didi happy & grow!'
+                      : hunger != null && hunger < 40
+                      ? '💡 Come back every day — Didi needs you!'
+                      : streak != null && streak === 0
+                      ? '💡 Daily logins give Didi XP to evolve ✨'
+                      : streak != null && streak >= 7
+                      ? `🌟 ${streak} day streak! Didi loves you!`
+                      : '💡 Log in daily to help Didi grow stronger!'}
+                  </div>
+                )}
+
                 {/* Action buttons */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {isEgg && onHatch ? (
