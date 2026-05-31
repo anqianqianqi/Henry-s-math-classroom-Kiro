@@ -91,13 +91,17 @@ export async function POST(request: Request) {
     }
 
     // Create profile row
-    await supabaseAdmin.from('profiles').insert({
-      id: authData.user.id,
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-      nickname: nickname?.trim() || null,
-      email,
-    }).catch(err => console.error('[signup] Profile insert error:', err))
+    try {
+      await supabaseAdmin.from('profiles').insert({
+        id: authData.user.id,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        nickname: nickname?.trim() || null,
+        email,
+      })
+    } catch (err) {
+      console.error('[signup] Profile insert error:', err)
+    }
 
     // Generate confirmation link via Admin API
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
