@@ -135,14 +135,21 @@ export default function DesktopPetWrapper() {
     if (prevPathname.current === pathname) return
     prevPathname.current = pathname
 
-    // Small delay so any in-flight DB writes (teacher-xp, challenge-xp) complete first
-    const t = setTimeout(() => {
-      fetch('/api/pet/status')
-        .then(r => r.json())
-        .then((data: PetStatus) => setStatus(data))
-        .catch(() => {})
-    }, 1200)
-    return () => clearTimeout(t)
+    // No delay needed — teacher-xp is awaited before router.push(), so DB is already updated
+    // Check for pending XP stored before navigation
+    const pending = sessionStorage.getItem('didi-pending-xp')
+    if (pending) {
+      sessionStorage.removeItem('didi-pending-xp')
+      try {
+        const data = JSON.parse(pending)
+        setStatus(prev => prev ? { ...prev, xp: data.xp, happiness: data.happiness ?? prev.happiness, hunger: data.hunger ?? prev.hunger, stage: data.stage ?? prev.stage } : prev)
+        return
+      } catch { /* fall through to re-fetch */ }
+    }
+    fetch('/api/pet/status')
+      .then(r => r.json())
+      .then((data: PetStatus) => setStatus(data))
+      .catch(() => {})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 

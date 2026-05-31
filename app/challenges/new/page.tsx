@@ -386,22 +386,20 @@ export default function NewChallengePage() {
         })
         const xpData = await xpRes.json()
         console.log('[teacher-xp] response:', xpRes.status, xpData)
-        // Immediately update Didi with the new values — no re-fetch needed
+        // Store the XP gain so DesktopPetWrapper can pick it up after navigation
         if (xpData?.ok && xpData?.new_xp != null) {
-          window.dispatchEvent(new CustomEvent('didi-pet-refresh', {
-            detail: {
-              xp:        xpData.new_xp,
-              happiness: xpData.new_happiness,
-              hunger:    xpData.new_hunger,
-              stage:     xpData.new_stage,
-            }
+          sessionStorage.setItem('didi-pending-xp', JSON.stringify({
+            xp:        xpData.new_xp,
+            happiness: xpData.new_happiness,
+            hunger:    xpData.new_hunger,
+            stage:     xpData.new_stage,
           }))
         }
       } catch (e) {
         console.error('[teacher-xp] fetch error:', e)
       }
 
-      // Redirect — DesktopPetWrapper already has updated state from the event above
+      // Redirect — DesktopPetWrapper will pick up the pending XP on pathname change
       router.push(saveToPool ? '/admin/challenge-bank' : '/challenges')
     } catch (err) {
       console.error('Error creating challenge:', err)
