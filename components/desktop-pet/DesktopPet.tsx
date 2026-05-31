@@ -162,7 +162,7 @@ export default function DesktopPet({
   hunger,
   streak,
   isEgg = false,
-  onPickSpecies,
+  onHatch,
   cracking = false,
   crackError,
 }: {
@@ -173,7 +173,7 @@ export default function DesktopPet({
   hunger?: number
   streak?: number
   isEgg?: boolean
-  onPickSpecies?: (species: 'dragon' | 'fox' | 'cat') => void
+  onHatch?: () => void
   cracking?: boolean
   crackError?: string
 }) {
@@ -627,38 +627,35 @@ export default function DesktopPet({
 
                 {/* Action buttons */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {isEgg && onPickSpecies ? (
-                    /* ── Egg: pick a species to crack it ── */
+                  {isEgg && onHatch ? (
+                    /* ── Egg: single hatch button ── */
                     <>
-                      <p style={{ fontSize: 11, color: '#a07060', textAlign: 'center', marginBottom: 4, fontWeight: 600 }}>
-                        🥚 Tap to hatch your egg!
+                      <p style={{ fontSize: 11, color: '#a07060', textAlign: 'center', marginBottom: 6, fontWeight: 600 }}>
+                        🥚 Your egg is ready to hatch!
                       </p>
                       {crackError && (
                         <p style={{ fontSize: 10, color: '#ef4444', textAlign: 'center', marginBottom: 4 }}>{crackError}</p>
                       )}
-                      {(['dragon', 'fox', 'cat'] as const).map(s => (
-                        <button
-                          key={s}
-                          disabled={cracking}
-                          onClick={() => onPickSpecies(s)}
-                          style={{
-                            display: 'block',
-                            width: '100%',
-                            textAlign: 'center',
-                            background: cracking ? '#f5f5f5' : '#f0e6d3',
-                            color: '#5c3d2e',
-                            fontSize: 12,
-                            fontWeight: 700,
-                            padding: '7px 0',
-                            borderRadius: 10,
-                            border: 'none',
-                            cursor: cracking ? 'not-allowed' : 'pointer',
-                            opacity: cracking ? 0.6 : 1,
-                          }}
-                        >
-                          {s === 'dragon' ? '🐉 Dragon' : s === 'fox' ? '🦊 Fox' : '🐱 Cat'}
-                        </button>
-                      ))}
+                      <button
+                        disabled={cracking}
+                        onClick={onHatch}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          textAlign: 'center',
+                          background: cracking ? '#f5f5f5' : '#fef3c7',
+                          color: '#92400e',
+                          fontSize: 13,
+                          fontWeight: 700,
+                          padding: '9px 0',
+                          borderRadius: 10,
+                          border: '2px solid #fcd34d',
+                          cursor: cracking ? 'not-allowed' : 'pointer',
+                          opacity: cracking ? 0.6 : 1,
+                        }}
+                      >
+                        {cracking ? 'Hatching...' : '🐣 Hatch!'}
+                      </button>
                     </>
                   ) : (
                     /* ── Hatched pet: quick actions ── */

@@ -71,7 +71,7 @@ export default function DesktopPetWrapper() {
     } catch { /* silent */ }
   }
 
-  async function pickSpecies(species: 'dragon' | 'fox' | 'cat') {
+  async function hatchEgg() {
     setCracking(true)
     setCrackError(null)
     try {
@@ -80,14 +80,14 @@ export default function DesktopPetWrapper() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not logged in')
 
+      // Hatch into Didi (cat) at baby stage
       const { error } = await supabase
         .from('student_pets')
-        .update({ species, evolution_stage: 'baby', xp: 0, equipped_accessories: [] })
+        .update({ species: 'cat', evolution_stage: 'baby', xp: 0, equipped_accessories: [] })
         .eq('user_id', user.id)
 
       if (error) throw error
 
-      // Re-fetch status to update widget
       const res = await fetch('/api/pet/status')
       const data: PetStatus = await res.json()
       setStatus(data)
@@ -110,7 +110,7 @@ export default function DesktopPetWrapper() {
         petStage="egg"
         petName={status.petName ?? undefined}
         isEgg
-        onPickSpecies={pickSpecies}
+        onHatch={hatchEgg}
         cracking={cracking}
         crackError={crackError ?? undefined}
       />
