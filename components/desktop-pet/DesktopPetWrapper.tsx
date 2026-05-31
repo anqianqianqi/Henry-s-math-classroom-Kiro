@@ -36,6 +36,21 @@ export default function DesktopPetWrapper() {
         .then((data: PetStatus) => setStatus(data))
         .catch(() => setStatus({ hasPet: false }))
     })
+
+    // Listen for auth changes — hide pet immediately on sign-out
+    let supabaseClient: any = null
+    import('@/lib/supabase/client').then(({ createClient }) => {
+      supabaseClient = createClient()
+      supabaseClient.auth.onAuthStateChange((event: string) => {
+        if (event === 'SIGNED_OUT') {
+          setStatus({ hasPet: false })
+        }
+      })
+    })
+
+    return () => {
+      // cleanup handled by Supabase subscription automatically
+    }
   }, [])
 
   async function grantDailyLoginXp(): Promise<void> {
