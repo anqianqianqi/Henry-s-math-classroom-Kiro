@@ -41,8 +41,8 @@ export async function POST() {
       stage: pet?.evolution_stage,
       xp: pet?.xp,
       petName: null,
-      happiness: null,
-      hunger: null,
+      happiness: 30,
+      hunger: 20,
       streak: null,
     }, { status: 200 })
   } catch (err) {
