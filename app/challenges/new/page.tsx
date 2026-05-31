@@ -386,9 +386,8 @@ export default function NewChallengePage() {
         })
       } catch { /* non-blocking */ }
 
-      // Redirect to challenges — fire pet refresh after navigation settles
+      // Redirect — DesktopPetWrapper re-fetches pet status on pathname change
       router.push(saveToPool ? '/admin/challenge-bank' : '/challenges')
-      setTimeout(() => window.dispatchEvent(new CustomEvent('didi-pet-refresh')), 800)
     } catch (err) {
       console.error('Error creating challenge:', err)
       setError('An unexpected error occurred')

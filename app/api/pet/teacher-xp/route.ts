@@ -36,12 +36,11 @@ export async function POST(request: Request) {
       .single()
 
     if (fetchError && fetchError.code === 'PGRST116') {
-      // No pet row — create one first
+      // No pet row — create one and grant XP immediately
       await supabase
         .from('student_pets')
-        .insert({ user_id: userId, xp: 0, evolution_stage: 'egg', species: null })
-      // Return early — egg stage, no XP to grant yet
-      return NextResponse.json({ ok: true }, { status: 200 })
+        .insert({ user_id: userId, xp: xpGained, evolution_stage: 'egg', species: null })
+      return NextResponse.json({ ok: true, xp_gained: xpGained, new_xp: xpGained, new_stage: 'egg' }, { status: 200 })
     }
 
     if (!pet) {

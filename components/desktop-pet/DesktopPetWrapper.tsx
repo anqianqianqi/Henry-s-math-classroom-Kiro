@@ -110,7 +110,7 @@ export default function DesktopPetWrapper() {
         .then(r => r.json())
         .then((data: PetStatus) => setStatus(data))
         .catch(() => {})
-    }, 600)
+    }, 1200)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
