@@ -135,16 +135,10 @@ function nextBehavior(cur: Behavior, winW: number): Behavior {
       : { pose: 'idle', ms: 2000 + r * 2000 }
   }
   if (cur.pose === 'playing') {
-    // After play: idle 60%, walking 40%
-    return r < 0.60
+    // After play: idle 70%, yawning 30%
+    return r < 0.70
       ? { pose: 'idle', ms: 2000 + r * 2000 }
-      : { pose: 'walking', ms: 3000 + r * 2000, targetX: pad + Math.random() * (winW - pad * 2 - 140) }
-  }
-  if (cur.pose === 'walking') {
-    // After walk: idle 50%, playing 30%, yawning 20%
-    if (r < 0.50) return { pose: 'idle', ms: 2000 + r * 2000 }
-    if (r < 0.80) return { pose: 'playing', ms: 2500 }
-    return { pose: 'yawning', ms: 3200 }
+      : { pose: 'yawning', ms: 3200 }
   }
   if (cur.pose === 'scratching') {
     // After scratching: idle 70%, playing 30%
@@ -152,19 +146,14 @@ function nextBehavior(cur: Behavior, winW: number): Behavior {
       ? { pose: 'idle', ms: 2000 + r * 2000 }
       : { pose: 'playing', ms: 2500 }
   }
-  // From idle — new distribution:
+  // From idle — no walking:
   // 0.00–0.30 → sleep    (30%)
-  // 0.30–0.50 → walk     (20%)
-  // 0.50–0.70 → play     (20%)
-  // 0.70–0.85 → yawn     (15%)
-  // 0.85–1.00 → idle     (15%)
+  // 0.30–0.55 → play     (25%)
+  // 0.55–0.75 → yawn     (20%)
+  // 0.75–1.00 → idle     (25%)
   if (r < 0.30) return { pose: 'sleeping', ms: 60000 + r * 30000 }
-  if (r < 0.50) {
-    const tx = pad + Math.random() * (winW - pad * 2 - 140)
-    return { pose: 'walking', ms: 3000 + r * 2000, targetX: tx }
-  }
-  if (r < 0.70) return { pose: 'playing', ms: 2500 }
-  if (r < 0.85) return { pose: 'yawning', ms: 3200 }
+  if (r < 0.55) return { pose: 'playing', ms: 2500 }
+  if (r < 0.75) return { pose: 'yawning', ms: 3200 }
   return { pose: 'idle', ms: 3000 + r * 2000 }
 }
 
@@ -283,9 +272,7 @@ export default function DesktopPet({
       setWalkFrame(f => f === 'walking' ? 'walking2' : 'walking')
     }, 200)
     return () => clearInterval(frameInterval)
-  }, [behavior.pose])
-
-  // ── Hover → scratching (belly rub!) — only for hatched pets, not eggs ────
+  }, [behavior.pose])  // ── Hover → scratching (belly rub!) — only for hatched pets, not eggs ────
   const handleHover = useCallback(() => {
     if (isEgg) return  // eggs don't scratch
     if (behavior.pose === 'sleeping' || behavior.pose === 'idle' || behavior.pose === 'yawning') {
