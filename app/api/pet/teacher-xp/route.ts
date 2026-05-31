@@ -1,5 +1,5 @@
 // app/api/pet/teacher-xp/route.ts
-// Grants XP to a teacher's pet via SECURITY DEFINER RPC (bypasses RLS).
+// Grants XP to a teacher's pet for teaching actions.
 // Actions: 'grade' (+5 XP), 'create_challenge' (+10 XP)
 
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
@@ -25,20 +25,54 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}))
     const action = body?.action ?? 'grade'
     const xpGained = XP_BY_ACTION[action] ?? 5
+    const userId = session.user.id
 
-    // Use SECURITY DEFINER RPC — bypasses RLS for teachers/admins
-    const { data, error } = await supabase.rpc('grant_pet_xp', {
-      p_xp_gained:       xpGained,
-      p_happiness_boost: 5,
-      p_hunger_boost:    5,
-    })
+    // Fetch current pet state
+    const { data: pet, error: fetchError } = await supabase
+      .from('student_pets')
+      .select('xp, species, evolution_stage, happiness, hunger')
+      .eq('user_id', userId)
+      .single()
 
-    if (error) {
-      console.error('[pet/teacher-xp] RPC error:', error)
-      return NextResponse.json({ ok: false, error: error.message }, { status: 200 })
+    if (fetchError && fetchError.code === 'PGRST116') {
+      // No row — create one with the XP already applied
+      await supabase
+        .from('student_pets')
+        .insert({ user_id: userId, xp: xpGained, evolution_stage: 'egg', species: null })
+      return NextResponse.json({ ok: true, xp_gained: xpGained, new_xp: xpGained }, { status: 200 })
     }
 
-    return NextResponse.json(data, { status: 200 })
+    if (!pet) {
+      return NextResponse.json({ ok: false, error: String(fetchError) }, { status: 200 })
+    }
+
+    const newXp = (pet.xp ?? 0) + xpGained
+    const newStage = !pet.species ? pet.evolution_stage : (
+      newXp >= 300 ? 'adult' : newXp >= 100 ? 'teen' : 'baby'
+    )
+    const newHappiness = Math.min((pet.happiness ?? 80) + 5, 100)
+    const newHunger    = Math.min((pet.hunger    ?? 80) + 5, 100)
+
+    const { error: updateError } = await supabase
+      .from('student_pets')
+      .update({
+        xp:              newXp,
+        evolution_stage: newStage,
+        happiness:       newHappiness,
+        hunger:          newHunger,
+        updated_at:      new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+
+    if (updateError) {
+      console.error('[pet/teacher-xp] update error:', updateError)
+      return NextResponse.json({ ok: false, error: updateError.message }, { status: 200 })
+    }
+
+    return NextResponse.json({
+      ok: true, xp_gained: xpGained, new_xp: newXp, new_stage: newStage,
+      new_happiness: newHappiness, new_hunger: newHunger,
+    }, { status: 200 })
   } catch (err) {
     console.error('[pet/teacher-xp] error:', err)
     return NextResponse.json({ ok: false, error: String(err) }, { status: 200 })

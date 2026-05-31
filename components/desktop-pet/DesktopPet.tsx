@@ -167,6 +167,7 @@ export default function DesktopPet({
   hunger,
   streak,
   xp,
+  xpGainToast,
   isEgg = false,
   onHatch,
   cracking = false,
@@ -179,6 +180,7 @@ export default function DesktopPet({
   hunger?: number
   streak?: number
   xp?: number
+  xpGainToast?: number
   isEgg?: boolean
   onHatch?: () => void
   cracking?: boolean
@@ -227,19 +229,13 @@ export default function DesktopPet({
     speechRef.current = setTimeout(() => setSpeech(null), 3200)
   }, [])
 
-  // ── Show XP gain toast when xp prop increases ────────────────────────────
+  // ── Show XP gain toast from wrapper (survives navigation) ────────────────
   useEffect(() => {
-    if (xp == null) return
-    if (prevXp.current == null) {
-      prevXp.current = xp
-      return
+    if (xpGainToast != null && xpGainToast > 0) {
+      say(`+${xpGainToast} XP ⭐`)
     }
-    const gained = xp - prevXp.current
-    if (gained > 0) {
-      say(`+${gained} XP ⭐`)
-    }
-    prevXp.current = xp
-  }, [xp, say])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [xpGainToast])
 
   // ── Advance behavior ─────────────────────────────────────────────────────
   const advance = useCallback((cur: Behavior) => {

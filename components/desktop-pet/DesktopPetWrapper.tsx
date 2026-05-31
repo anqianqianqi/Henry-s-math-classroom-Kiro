@@ -27,8 +27,10 @@ export default function DesktopPetWrapper() {
   const [status, setStatus] = useState<PetStatus | null>(null)
   const [cracking, setCracking] = useState(false)
   const [crackError, setCrackError] = useState<string | null>(null)
+  const [xpGainToast, setXpGainToast] = useState<number | null>(null)
   const xpGranted = useRef(false)
   const initialFetchDone = useRef(false)
+  const prevXp = useRef<number | null>(null)
   const pathname = usePathname()
 
   // Don't show pet on auth pages — checked in render, not before hooks
@@ -90,6 +92,22 @@ export default function DesktopPetWrapper() {
     window.addEventListener('didi-pet-refresh', handlePetRefresh)
     return () => window.removeEventListener('didi-pet-refresh', handlePetRefresh)
   }, [])
+
+  // Detect XP gains and trigger toast — tracked here so it survives navigation
+  useEffect(() => {
+    const currentXp = status?.xp ?? null
+    if (currentXp === null) return
+    if (prevXp.current === null) {
+      prevXp.current = currentXp
+      return
+    }
+    const gained = currentXp - prevXp.current
+    if (gained > 0) {
+      setXpGainToast(gained)
+      setTimeout(() => setXpGainToast(null), 3500)
+    }
+    prevXp.current = currentXp
+  }, [status?.xp])
 
   // Re-fetch on every page navigation so stats are always fresh after actions
   // (e.g. after creating a challenge and being redirected to /challenges)
@@ -161,6 +179,7 @@ export default function DesktopPetWrapper() {
         petName={status.petName ?? undefined}
         isEgg
         xp={status.xp ?? undefined}
+        xpGainToast={xpGainToast ?? undefined}
         onHatch={hatchEgg}
         cracking={cracking}
         crackError={crackError ?? undefined}
@@ -177,6 +196,7 @@ export default function DesktopPetWrapper() {
       hunger={status.hunger ?? undefined}
       streak={status.streak ?? undefined}
       xp={status.xp ?? undefined}
+      xpGainToast={xpGainToast ?? undefined}
     />
   )
 }
