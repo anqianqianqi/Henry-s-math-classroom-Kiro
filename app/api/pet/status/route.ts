@@ -84,13 +84,7 @@ export async function GET() {
       happiness,
       hunger,
       streak,
-    }, {
-      status: 200,
-      headers: {
-        // Cache 60s on client, 30s on CDN edge
-        'Cache-Control': 'private, max-age=60, stale-while-revalidate=30',
-      },
-    })
+    }, { status: 200 })
   } catch (err) {
     console.error('[pet/status] Unhandled error:', err)
     return NextResponse.json({ hasPet: false }, { status: 200 })

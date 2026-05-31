@@ -23,7 +23,16 @@ export async function POST() {
 
     if (error) {
       console.error('[pet/hatch] RPC error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      // Fall back to direct update
+      const { error: updateError } = await supabase
+        .from('student_pets')
+        .update({ species: 'cat', evolution_stage: 'baby', xp: 0 })
+        .eq('user_id', session.user.id)
+
+      if (updateError) {
+        console.error('[pet/hatch] direct update error:', updateError)
+        return NextResponse.json({ error: updateError.message }, { status: 500 })
+      }
     }
 
     // Return updated status directly
