@@ -35,6 +35,9 @@ export default function DesktopPetWrapper() {
         const { data, ts } = JSON.parse(cached)
         if (Date.now() - ts < 60_000) {
           setStatus(data)
+          // Still fire login XP in background even if we have cached status
+          // (idempotent — safe to call multiple times per day)
+          grantDailyLoginXp()
           return
         }
       } catch { /* ignore */ }
@@ -47,10 +50,39 @@ export default function DesktopPetWrapper() {
         sessionStorage.setItem('pet_status_cache', JSON.stringify({ data, ts: Date.now() }))
       })
       .catch(() => {
-        // On error, fall back to Didi mascot
         setStatus({ hasPet: false })
       })
+
+    // Fire daily login XP grant (idempotent RPC — safe to call on every page load)
+    grantDailyLoginXp()
   }, [])
+
+  async function grantDailyLoginXp() {
+    // Only fire once per session to avoid hammering the DB
+    if (sessionStorage.getItem('login_xp_granted_today')) return
+
+    try {
+      const res = await fetch('/api/pet/login-xp', { method: 'POST' })
+      if (res.ok) {
+        const data = await res.json()
+        sessionStorage.setItem('login_xp_granted_today', '1')
+
+        // If XP was newly granted, invalidate the pet status cache so the
+        // widget reflects the updated stage/streak on next render
+        if (!data.already_granted) {
+          sessionStorage.removeItem('pet_status_cache')
+          // Re-fetch updated pet status
+          fetch('/api/pet/status')
+            .then(r => r.json())
+            .then((updated: PetStatus) => {
+              setStatus(updated)
+              sessionStorage.setItem('pet_status_cache', JSON.stringify({ data: updated, ts: Date.now() }))
+            })
+            .catch(() => {})
+        }
+      }
+    } catch { /* silent — non-critical */ }
+  }
 
   // Still loading — render nothing (avoids flash)
   if (status === null) return null

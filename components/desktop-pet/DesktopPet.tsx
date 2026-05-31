@@ -182,6 +182,7 @@ export default function DesktopPet({
   const [isDragging, setIsDragging] = useState(false)
   const [catSize,    setCatSize]    = useState(130)  // px, range 60–220
   const [showSizer,  setShowSizer]  = useState(false)
+  const [showPopover, setShowPopover] = useState(false)
 
   const behaviorRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const walkRef      = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -301,19 +302,14 @@ export default function DesktopPet({
     if (dragMoved.current) return
     if (minimized) { setMinimized(false); return }
 
-    // Show heart
+    // Toggle quick-action popover
+    setShowPopover(prev => !prev)
+
+    // Also show heart
     setShowHeart(true)
     if (heartRef.current) clearTimeout(heartRef.current)
     heartRef.current = setTimeout(() => setShowHeart(false), 1200)
-
-    if (Math.random() < 0.5) {
-      setBehavior({ pose: 'playing', ms: 2500 })
-      say(pick(MESSAGES.playing))
-    } else {
-      setBehavior({ pose: 'yawning', ms: 3200 })
-      say(pick(MESSAGES.yawning))
-    }
-  }, [minimized, say])
+  }, [minimized])
 
   // ── Cleanup ──────────────────────────────────────────────────────────────
   useEffect(() => () => {
@@ -553,6 +549,87 @@ export default function DesktopPet({
                   title="Resize Didi"
                 />
                 <span style={{ fontSize: 9, color: '#a07060' }}>L</span>
+              </div>
+            )}
+
+            {/* Quick-action popover — opens on click, closes on outside click */}
+            {showPopover && !isDragging && (
+              <div
+                onClick={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
+                style={{
+                  position: 'absolute',
+                  bottom: catSize + 28,
+                  right: 0,
+                  width: 200,
+                  background: 'white',
+                  border: '2px solid #f0e6d3',
+                  borderRadius: 16,
+                  padding: '12px 14px',
+                  boxShadow: '0 8px 24px rgba(92,61,46,0.18)',
+                  zIndex: 10003,
+                  fontFamily: 'system-ui, sans-serif',
+                }}
+              >
+                {/* Pet name + mood */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: '#5c3d2e' }}>
+                    {petName ?? 'My Pet'} 🐾
+                  </span>
+                  <button
+                    onClick={() => setShowPopover(false)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#a07060', padding: 0 }}
+                  >×</button>
+                </div>
+
+                {/* Streak */}
+                {streak != null && (
+                  <div style={{ fontSize: 12, color: '#5c3d2e', marginBottom: 6, fontWeight: 600 }}>
+                    🔥 {streak} day streak
+                  </div>
+                )}
+
+                {/* Happiness bar */}
+                {happiness != null && (
+                  <div style={{ marginBottom: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#a07060', marginBottom: 2 }}>
+                      <span>❤️ Happiness</span><span>{happiness}/100</span>
+                    </div>
+                    <div style={{ height: 6, background: '#f0e6d3', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${happiness}%`, background: happiness > 60 ? '#22c55e' : happiness > 30 ? '#f97316' : '#ef4444', borderRadius: 3, transition: 'width 0.3s' }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Hunger bar */}
+                {hunger != null && (
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#a07060', marginBottom: 2 }}>
+                      <span>🍖 Hunger</span><span>{hunger}/100</span>
+                    </div>
+                    <div style={{ height: 6, background: '#f0e6d3', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${hunger}%`, background: hunger > 60 ? '#22c55e' : hunger > 30 ? '#f97316' : '#ef4444', borderRadius: 3, transition: 'width 0.3s' }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <a
+                    href="/pet"
+                    style={{ display: 'block', textAlign: 'center', background: '#f0e6d3', color: '#5c3d2e', fontSize: 12, fontWeight: 700, padding: '6px 0', borderRadius: 10, textDecoration: 'none' }}
+                    onClick={() => setShowPopover(false)}
+                  >
+                    Visit Pet →
+                  </a>
+                  <a
+                    href="/challenges"
+                    style={{ display: 'block', textAlign: 'center', background: '#dcfce7', color: '#15803d', fontSize: 12, fontWeight: 700, padding: '6px 0', borderRadius: 10, textDecoration: 'none' }}
+                    onClick={() => setShowPopover(false)}
+                  >
+                    🧮 Do today's challenge
+                  </a>
+                </div>
               </div>
             )}
 
