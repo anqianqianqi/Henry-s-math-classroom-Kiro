@@ -16,7 +16,7 @@
 
 import React, { useState, useEffect } from 'react'
 
-export type DidiPose = 'idle' | 'sleeping' | 'yawning' | 'playing' | 'walking'
+export type DidiPose = 'idle' | 'sleeping' | 'yawning' | 'playing' | 'walking' | 'scratching'
 export type DidiStage = 'egg' | 'baby' | 'teen' | 'adult'
 
 interface DidiSvgProps {
@@ -30,11 +30,12 @@ interface DidiSvgProps {
 
 // Accessible labels
 const POSE_LABELS: Record<DidiPose, string> = {
-  idle:     'Didi sitting and looking at you',
-  sleeping: 'Didi sleeping',
-  yawning:  'Didi yawning',
-  playing:  'Didi playing',
-  walking:  'Didi walking',
+  idle:        'Didi sitting and looking at you',
+  sleeping:    'Didi sleeping',
+  yawning:     'Didi yawning',
+  playing:     'Didi playing',
+  walking:     'Didi walking',
+  scratching:  'Didi enjoying a belly scratch',
 }
 
 const STAGE_LABELS: Record<DidiStage, string> = {
@@ -46,11 +47,12 @@ const STAGE_LABELS: Record<DidiStage, string> = {
 
 // Fallback emoji per pose
 const FALLBACK_EMOJI: Record<DidiPose, string> = {
-  idle:     '🐱',
-  sleeping: '😴',
-  yawning:  '🥱',
-  playing:  '🐾',
-  walking:  '🐈',
+  idle:        '🐱',
+  sleeping:    '😴',
+  yawning:     '🥱',
+  playing:     '🐾',
+  walking:     '🐈',
+  scratching:  '😻',
 }
 
 function getImageSrc(stage: DidiStage, pose: DidiPose): string {

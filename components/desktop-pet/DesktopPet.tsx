@@ -77,7 +77,15 @@ const STYLES = `
   30%  { opacity: 0.8; }
   100% { opacity: 0; transform: translate(18px, -36px) scale(1); }
 }
-@keyframes didi-heart {
+@keyframes didi-scratch {
+  0%   { transform: rotate(0deg) scale(1); }
+  15%  { transform: rotate(-8deg) scale(1.05) translateY(-3px); }
+  30%  { transform: rotate(8deg) scale(1.05) translateY(-3px); }
+  45%  { transform: rotate(-6deg) scale(1.03) translateY(-2px); }
+  60%  { transform: rotate(6deg) scale(1.03) translateY(-2px); }
+  75%  { transform: rotate(-4deg) scale(1.01); }
+  100% { transform: rotate(0deg) scale(1); }
+}
   0%   { opacity: 0; transform: translateX(-50%) scale(0) translateY(0px); }
   30%  { opacity: 1; transform: translateX(-50%) scale(1.2) translateY(-4px); }
   70%  { opacity: 1; transform: translateX(-50%) scale(1) translateY(-12px); }
@@ -88,11 +96,12 @@ const STYLES = `
 // ─── Speech messages ──────────────────────────────────────────────────────────
 
 const MESSAGES = {
-  idle:     ['meow~', '( ´ ▽ ` )', '...', '🐾', 'mrrp!', 'hello?'],
-  playing:  ['meow!', 'got it!', 'catch me!', 'hehe~', '⚡', 'so fun!'],
-  yawning:  ['yaaawn~', 'sleepy...', 'so tired', '😪', '*yawns*'],
-  sleeping: ['Zzz...', '💤', 'purrrr~'],
-  walking:  ['strolling~', 'where to?', 'on patrol', 'exploring!'],
+  idle:        ['meow~', '( ´ ▽ ` )', '...', '🐾', 'mrrp!', 'hello?'],
+  playing:     ['meow!', 'got it!', 'catch me!', 'hehe~', '⚡', 'so fun!'],
+  yawning:     ['yaaawn~', 'sleepy...', 'so tired', '😪', '*yawns*'],
+  sleeping:    ['Zzz...', '💤', 'purrrr~'],
+  walking:     ['strolling~', 'where to?', 'on patrol', 'exploring!'],
+  scratching:  ['purrrr~', '😻', 'right there!', 'don\'t stop~', '♡'],
 }
 
 function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)] }
@@ -100,11 +109,12 @@ function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length
 // ─── Behavior types ───────────────────────────────────────────────────────────
 
 type Behavior =
-  | { pose: 'idle';     ms: number }
-  | { pose: 'sleeping'; ms: number }
-  | { pose: 'yawning';  ms: number }
-  | { pose: 'playing';  ms: number }
-  | { pose: 'walking';  ms: number; targetX: number }
+  | { pose: 'idle';        ms: number }
+  | { pose: 'sleeping';    ms: number }
+  | { pose: 'yawning';     ms: number }
+  | { pose: 'playing';     ms: number }
+  | { pose: 'walking';     ms: number; targetX: number }
+  | { pose: 'scratching';  ms: number }
 
 // Behavior weights — target distribution:
 //   sleeping 50%, yawning 20%, walking 15%, playing 10%, idle 5%
@@ -119,36 +129,42 @@ function nextBehavior(cur: Behavior, winW: number): Behavior {
       : { pose: 'idle', ms: 2000 + r * 2000 }
   }
   if (cur.pose === 'yawning') {
-    // After yawn: back to sleep 70%, idle 30%
-    return r < 0.70
-      ? { pose: 'sleeping', ms: 120000 + r * 60000 }
+    // After yawn: back to sleep 50%, idle 50%
+    return r < 0.50
+      ? { pose: 'sleeping', ms: 60000 + r * 30000 }
       : { pose: 'idle', ms: 2000 + r * 2000 }
   }
   if (cur.pose === 'playing') {
-    // After play: yawn 60%, idle 40%
+    // After play: idle 60%, walking 40%
     return r < 0.60
-      ? { pose: 'yawning', ms: 3200 }
-      : { pose: 'idle', ms: 2000 + r * 1500 }
+      ? { pose: 'idle', ms: 2000 + r * 2000 }
+      : { pose: 'walking', ms: 3000 + r * 2000, targetX: pad + Math.random() * (winW - pad * 2 - 140) }
   }
   if (cur.pose === 'walking') {
-    // After walk: sleep 60%, yawn 40%
-    return r < 0.60
-      ? { pose: 'sleeping', ms: 120000 + r * 60000 }
-      : { pose: 'yawning', ms: 3200 }
+    // After walk: idle 50%, playing 30%, yawning 20%
+    if (r < 0.50) return { pose: 'idle', ms: 2000 + r * 2000 }
+    if (r < 0.80) return { pose: 'playing', ms: 2500 }
+    return { pose: 'yawning', ms: 3200 }
   }
-  // From idle — this is where the target distribution is set:
-  // 0.00–0.50 → sleep (50%)
-  // 0.50–0.70 → yawn  (20%)
-  // 0.70–0.85 → walk  (15%)
-  // 0.85–0.95 → play  (10%)
-  // 0.95–1.00 → idle  (5%)
-  if (r < 0.50) return { pose: 'sleeping', ms: 120000 + r * 60000 }
-  if (r < 0.70) return { pose: 'yawning',  ms: 3200 }
-  if (r < 0.85) {
+  if (cur.pose === 'scratching') {
+    // After scratching: idle 70%, playing 30%
+    return r < 0.70
+      ? { pose: 'idle', ms: 2000 + r * 2000 }
+      : { pose: 'playing', ms: 2500 }
+  }
+  // From idle — new distribution:
+  // 0.00–0.30 → sleep    (30%)
+  // 0.30–0.50 → walk     (20%)
+  // 0.50–0.70 → play     (20%)
+  // 0.70–0.85 → yawn     (15%)
+  // 0.85–1.00 → idle     (15%)
+  if (r < 0.30) return { pose: 'sleeping', ms: 60000 + r * 30000 }
+  if (r < 0.50) {
     const tx = pad + Math.random() * (winW - pad * 2 - 140)
     return { pose: 'walking', ms: 3000 + r * 2000, targetX: tx }
   }
-  if (r < 0.95) return { pose: 'playing', ms: 2500 }
+  if (r < 0.70) return { pose: 'playing', ms: 2500 }
+  if (r < 0.85) return { pose: 'yawning', ms: 3200 }
   return { pose: 'idle', ms: 3000 + r * 2000 }
 }
 
@@ -223,6 +239,7 @@ export default function DesktopPet({
     if (next.pose === 'sleeping') say(pick(MESSAGES.sleeping))
     if (next.pose === 'yawning')  say(pick(MESSAGES.yawning))
     if (next.pose === 'walking')  say(pick(MESSAGES.walking))
+    if (next.pose === 'scratching') say(pick(MESSAGES.scratching))
     if (next.pose === 'idle' && Math.random() < 0.25) say(pick(MESSAGES.idle))
   }, [say])
 
@@ -255,12 +272,12 @@ export default function DesktopPet({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [behavior])
 
-  // ── Hover → yawn (only when sleeping) ──────────────────────────────────
+  // ── Hover → scratching (belly rub!) ──────────────────────────────────────
   const handleHover = useCallback(() => {
-    if (behavior.pose === 'sleeping') {
+    if (behavior.pose === 'sleeping' || behavior.pose === 'idle' || behavior.pose === 'yawning') {
       if (behaviorRef.current) clearTimeout(behaviorRef.current)
-      setBehavior({ pose: 'yawning', ms: 3200 })
-      say(pick(MESSAGES.yawning))
+      setBehavior({ pose: 'scratching', ms: 4000 })
+      say(pick(MESSAGES.scratching))
     }
   }, [behavior.pose, say])
 
@@ -336,10 +353,11 @@ export default function DesktopPet({
   // ── Animation style per pose ─────────────────────────────────────────────
   const catAnim: React.CSSProperties = (() => {
     switch (behavior.pose) {
-      case 'sleeping': return { animation: 'didi-sleep-breathe 3.5s ease-in-out infinite', transformOrigin: 'center' }
-      case 'yawning':  return { animation: 'didi-yawn-shake 0.55s ease-in-out 2', transformOrigin: 'center bottom' }
-      case 'playing':  return { animation: 'didi-play-bounce 0.45s ease-in-out 4', transformOrigin: 'center bottom' }
-      case 'walking':  return { animation: 'didi-walk-bob 0.38s ease-in-out infinite', transformOrigin: 'center bottom' }
+      case 'sleeping':   return { animation: 'didi-sleep-breathe 3.5s ease-in-out infinite', transformOrigin: 'center' }
+      case 'yawning':    return { animation: 'didi-yawn-shake 0.55s ease-in-out 2', transformOrigin: 'center bottom' }
+      case 'playing':    return { animation: 'didi-play-bounce 0.45s ease-in-out 4', transformOrigin: 'center bottom' }
+      case 'walking':    return { animation: 'didi-walk-bob 0.38s ease-in-out infinite', transformOrigin: 'center bottom' }
+      case 'scratching': return { animation: 'didi-scratch 0.4s ease-in-out infinite', transformOrigin: 'center' }
       default:         return { animation: 'didi-float 3s ease-in-out infinite', transformOrigin: 'center bottom' }
     }
   })()
