@@ -83,15 +83,19 @@ export default function DesktopPetWrapper() {
       // Hatch into Didi (cat) at baby stage
       const { error } = await supabase
         .from('student_pets')
-        .update({ species: 'cat', evolution_stage: 'baby', xp: 0, equipped_accessories: [] })
+        .update({ species: 'cat', evolution_stage: 'baby', xp: 0 })
         .eq('user_id', user.id)
 
-      if (error) throw error
+      if (error) {
+        console.error('[hatchEgg] update error:', error)
+        throw error
+      }
 
       const res = await fetch('/api/pet/status')
       const data: PetStatus = await res.json()
       setStatus(data)
-    } catch {
+    } catch (err) {
+      console.error('[hatchEgg] error:', err)
       setCrackError('Something went wrong. Try again.')
     } finally {
       setCracking(false)
