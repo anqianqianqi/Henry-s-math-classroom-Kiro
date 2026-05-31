@@ -28,12 +28,13 @@ export async function POST() {
       // RPC failed (migration not run, or wallet update failed for teachers)
       // Fall back: just ensure the pet row exists so the widget shows
       console.error('[pet/login-xp] RPC error:', error.code, error.message)
-      await supabase
-        .from('student_pets')
-        .insert({ user_id: session.user.id, xp: 0, evolution_stage: 'egg', species: null })
-        .select()
-        .single()
-        .catch(() => {}) // ignore — row may already exist
+      try {
+        await supabase
+          .from('student_pets')
+          .insert({ user_id: session.user.id, xp: 0, evolution_stage: 'egg', species: null })
+          .select()
+          .single()
+      } catch { /* ignore — row may already exist */ }
       return NextResponse.json({ already_granted: true, note: 'rpc_failed_pet_row_ensured' }, { status: 200 })
     }
 
