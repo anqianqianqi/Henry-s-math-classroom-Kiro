@@ -16,7 +16,6 @@ const DesktopPet = dynamic(() => import('./DesktopPet'), { ssr: false })
 
 interface PetStatus {
   hasPet: boolean
-  isTeacher?: boolean
   isEgg?: boolean
   stage?: string
   petName?: string | null
@@ -56,9 +55,9 @@ export default function DesktopPetWrapper() {
   // Still loading — render nothing (avoids flash)
   if (status === null) return null
 
-  // Teacher/admin or not logged in → show Didi mascot (adult, no stage)
-  if (!status.hasPet || status.isTeacher) {
-    return <DesktopPet petStage="adult" petName="Didi" showAsMascot />
+  // Not logged in or no pet yet → show nothing
+  if (!status.hasPet) {
+    return null
   }
 
   // Student with egg → show egg

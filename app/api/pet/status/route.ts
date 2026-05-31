@@ -33,13 +33,8 @@ export async function GET() {
         .select('name')
         .in('id', userRoles.map((r: any) => r.role_id))
 
-      const isTeacherOrAdmin = roleData?.some(
-        (r: any) => r.name === 'teacher' || r.name === 'administrator'
-      )
-      if (isTeacherOrAdmin) {
-        // Teachers see Didi (the mascot), not their own pet
-        return NextResponse.json({ hasPet: false, isTeacher: true }, { status: 200 })
-      }
+      // Teachers and admins also get their own pet — no special handling needed
+      // (previously we excluded them, but now everyone gets a pet)
     }
 
     // Fetch pet data
