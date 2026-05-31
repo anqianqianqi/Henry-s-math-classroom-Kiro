@@ -198,6 +198,9 @@ export default function DesktopPet({
   const [catSize,    setCatSize]    = useState(130)  // px, range 60–220
   const [showSizer,  setShowSizer]  = useState(false)
   const [showPopover, setShowPopover] = useState(false)
+
+  // Track previous XP to show gain toast when XP increases
+  const prevXp = useRef<number | undefined>(undefined)
   const [walkFrame,  setWalkFrame]  = useState<'walking' | 'walking2'>('walking')
 
   const behaviorRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -223,6 +226,20 @@ export default function DesktopPet({
     if (speechRef.current) clearTimeout(speechRef.current)
     speechRef.current = setTimeout(() => setSpeech(null), 3200)
   }, [])
+
+  // ── Show XP gain toast when xp prop increases ────────────────────────────
+  useEffect(() => {
+    if (xp == null) return
+    if (prevXp.current == null) {
+      prevXp.current = xp
+      return
+    }
+    const gained = xp - prevXp.current
+    if (gained > 0) {
+      say(`+${gained} XP ⭐`)
+    }
+    prevXp.current = xp
+  }, [xp, say])
 
   // ── Advance behavior ─────────────────────────────────────────────────────
   const advance = useCallback((cur: Behavior) => {
