@@ -276,7 +276,10 @@ export default function DesktopPet({
     return () => clearInterval(frameInterval)
   }, [behavior.pose])  // ── Hover → scratching (belly rub!) — only for hatched pets, not eggs ────
   const handleHover = useCallback(() => {
-    if (isEgg) return  // eggs don't scratch
+    if (isEgg) {
+      say('click to hatch! 🐣')
+      return
+    }
     if (behavior.pose === 'sleeping' || behavior.pose === 'idle' || behavior.pose === 'yawning') {
       if (behaviorRef.current) clearTimeout(behaviorRef.current)
       setBehavior({ pose: 'scratching', ms: 4000 })
