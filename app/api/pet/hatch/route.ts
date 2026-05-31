@@ -18,13 +18,11 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { error } = await supabase
-      .from('student_pets')
-      .update({ species: 'cat', evolution_stage: 'baby', xp: 0 })
-      .eq('user_id', session.user.id)
+    // Use SECURITY DEFINER RPC to bypass RLS (works for all roles)
+    const { error } = await supabase.rpc('hatch_pet')
 
     if (error) {
-      console.error('[pet/hatch] error:', error)
+      console.error('[pet/hatch] RPC error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
