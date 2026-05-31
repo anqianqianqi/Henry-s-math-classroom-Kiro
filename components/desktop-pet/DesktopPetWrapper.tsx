@@ -75,25 +75,16 @@ export default function DesktopPetWrapper() {
     setCracking(true)
     setCrackError(null)
     try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not logged in')
+      const res = await fetch('/api/pet/hatch', { method: 'POST' })
+      const data = await res.json()
 
-      // Hatch into Didi (cat) at baby stage
-      const { error } = await supabase
-        .from('student_pets')
-        .update({ species: 'cat', evolution_stage: 'baby', xp: 0 })
-        .eq('user_id', user.id)
-
-      if (error) {
-        console.error('[hatchEgg] update error:', error)
-        throw error
+      if (!res.ok) {
+        console.error('[hatchEgg] API error:', data)
+        throw new Error(data.error ?? 'Hatch failed')
       }
 
-      const res = await fetch('/api/pet/status')
-      const data: PetStatus = await res.json()
-      setStatus(data)
+      // API returns the updated pet status directly
+      setStatus(data as PetStatus)
     } catch (err) {
       console.error('[hatchEgg] error:', err)
       setCrackError('Something went wrong. Try again.')
