@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import { Card } from '@/components/ui/Card'
@@ -37,48 +36,26 @@ export default function SignUpPage() {
     setIsLoading(true)
 
     try {
-      const supabase = createClient()
-      
-      const fName = firstName.trim()
-      const lName = lastName.trim()
-      
-      // Sign up user
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: fName,
-            last_name: lName,
-            nickname: nickname || null,
-          },
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback`,
-        },
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          nickname: nickname.trim() || null,
+        }),
       })
 
-      if (signUpError) {
-        setError(signUpError.message)
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error ?? 'An unexpected error occurred')
         return
       }
 
-      if (authData.user) {
-        // Create profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            first_name: fName,
-            last_name: lName,
-            nickname: nickname || null,
-            email: email,
-          })
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError)
-        }
-
-        setEmailSent(true)
-      }
+      setEmailSent(true)
     } catch (err) {
       setError('An unexpected error occurred')
       console.error(err)
