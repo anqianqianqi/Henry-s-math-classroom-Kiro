@@ -91,6 +91,30 @@ export default function DesktopPetWrapper() {
     return () => window.removeEventListener('didi-pet-refresh', handlePetRefresh)
   }, [])
 
+  // Re-fetch on every page navigation so stats are always fresh after actions
+  // (e.g. after creating a challenge and being redirected to /challenges)
+  const prevPathname = useRef<string | null>(null)
+  useEffect(() => {
+    // Skip the very first render (initial fetch handles it)
+    if (prevPathname.current === null) {
+      prevPathname.current = pathname
+      return
+    }
+    // Only re-fetch if pathname actually changed
+    if (prevPathname.current === pathname) return
+    prevPathname.current = pathname
+
+    // Small delay so any in-flight DB writes (teacher-xp, challenge-xp) complete first
+    const t = setTimeout(() => {
+      fetch('/api/pet/status')
+        .then(r => r.json())
+        .then((data: PetStatus) => setStatus(data))
+        .catch(() => {})
+    }, 600)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
+
   async function grantDailyLoginXp(): Promise<void> {
     if (xpGranted.current) return
     xpGranted.current = true
