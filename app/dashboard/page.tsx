@@ -465,18 +465,16 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          {!isTeacher && !isAdmin && (
-            <Card
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow border-purple-100"
-              onClick={() => router.push('/pet')}
-            >
-              <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">🥚</div>
-                <div className="text-3xl font-bold text-purple-600 mb-1">My Pet</div>
-                <div className="text-gray-600 font-medium">View &amp; Evolve</div>
-              </Card.Body>
-            </Card>
-          )}
+          <Card
+            className="text-center cursor-pointer hover:shadow-lg transition-shadow border-purple-100"
+            onClick={() => router.push('/pet')}
+          >
+            <Card.Body>
+              <div className="text-5xl mb-3 hidden sm:block">🥚</div>
+              <div className="text-3xl font-bold text-purple-600 mb-1">My Pet</div>
+              <div className="text-gray-600 font-medium">View &amp; Evolve</div>
+            </Card.Body>
+          </Card>
 
           <Card 
             className="text-center cursor-pointer hover:shadow-lg transition-shadow"

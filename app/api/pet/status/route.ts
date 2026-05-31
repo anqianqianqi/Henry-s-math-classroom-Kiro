@@ -22,22 +22,7 @@ export async function GET() {
       return NextResponse.json({ hasPet: false }, { status: 200 })
     }
 
-    // Check role — only students get the evolving pet widget
-    const { data: userRoles } = await supabase
-      .from('user_roles')
-      .select('role_id')
-      .eq('user_id', session.user.id)
-      .is('class_id', null)
-
-    if (userRoles && userRoles.length > 0) {
-      const { data: roleData } = await supabase
-        .from('roles')
-        .select('name')
-        .in('id', userRoles.map((r: any) => r.role_id))
-
-      // Teachers and admins also get their own pet — no special handling needed
-      // (previously we excluded them, but now everyone gets a pet)
-    }
+    // Everyone (students, teachers, admins) gets a pet
 
     // Fetch pet data
     const { data: pet, error } = await supabase
@@ -47,8 +32,18 @@ export async function GET() {
       .single()
 
     if (error && error.code === 'PGRST116') {
-      // No pet row yet
-      return NextResponse.json({ hasPet: false }, { status: 200 })
+      // No pet row yet — create one so the egg appears immediately
+      const { error: insertError } = await supabase
+        .from('student_pets')
+        .insert({ user_id: session.user.id, xp: 0, evolution_stage: 'egg', species: null })
+        .single()
+
+      if (insertError && insertError.code !== '23505') {
+        // 23505 = unique violation (row created by concurrent request) — safe to ignore
+        console.error('[pet/status] Failed to create pet row:', insertError)
+      }
+
+      return NextResponse.json({ hasPet: true, isEgg: true, stage: 'egg', xp: 0, petName: null, happiness: 80, hunger: 80, streak: 0 }, { status: 200 })
     }
 
     if (error) {
