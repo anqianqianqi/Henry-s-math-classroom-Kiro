@@ -272,14 +272,15 @@ export default function DesktopPet({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [behavior])
 
-  // ── Hover → scratching (belly rub!) ──────────────────────────────────────
+  // ── Hover → scratching (belly rub!) — only for hatched pets, not eggs ────
   const handleHover = useCallback(() => {
+    if (isEgg) return  // eggs don't scratch
     if (behavior.pose === 'sleeping' || behavior.pose === 'idle' || behavior.pose === 'yawning') {
       if (behaviorRef.current) clearTimeout(behaviorRef.current)
       setBehavior({ pose: 'scratching', ms: 4000 })
       say(pick(MESSAGES.scratching))
     }
-  }, [behavior.pose, say])
+  }, [isEgg, behavior.pose, say])
 
   // ── Mouse leave → stop scratching immediately ────────────────────────────
   const handleMouseLeave = useCallback(() => {
