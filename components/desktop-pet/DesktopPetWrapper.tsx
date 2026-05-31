@@ -30,7 +30,7 @@ export default function DesktopPetWrapper() {
   const pathname = usePathname()
 
   // Don't show pet on auth pages — checked in render, not before hooks
-  const isAuthPage = pathname === '/login' || pathname === '/signup' ||
+  const isAuthPage = pathname === '/' || pathname === '/login' || pathname === '/signup' ||
     pathname === '/forgot-password' || pathname === '/reset-password'
 
   useEffect(() => {
