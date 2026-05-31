@@ -378,7 +378,7 @@ export default function DesktopPet({
     switch (behavior.pose) {
       case 'sleeping':   return { animation: 'didi-sleep-breathe 3.5s ease-in-out infinite', transformOrigin: 'center' }
       case 'yawning':    return { animation: 'didi-yawn-shake 0.55s ease-in-out 2', transformOrigin: 'center bottom' }
-      case 'playing':    return { animation: 'didi-play-bounce 0.45s ease-in-out 4', transformOrigin: 'center bottom' }
+      case 'playing':    return { animation: 'didi-float 0.6s ease-in-out infinite', transformOrigin: 'center bottom' }
       case 'walking':    return { animation: 'didi-walk-bob 0.38s ease-in-out infinite', transformOrigin: 'center bottom' }
       case 'scratching': return { animation: 'didi-scratch 0.4s ease-in-out infinite', transformOrigin: 'center' }
       default:         return { animation: 'didi-float 3s ease-in-out infinite', transformOrigin: 'center bottom' }
