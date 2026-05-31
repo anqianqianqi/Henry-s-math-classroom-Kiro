@@ -308,7 +308,7 @@ export default function GradingInterface({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'grade' }),
         }).then(() => {
-          window.dispatchEvent(new CustomEvent('didi-pet-refresh'))
+          setTimeout(() => window.dispatchEvent(new CustomEvent('didi-pet-refresh')), 500)
         }).catch(() => {})
       }
 

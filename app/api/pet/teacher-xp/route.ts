@@ -28,51 +28,61 @@ export async function POST(request: Request) {
     const xpGained = XP_BY_ACTION[action] ?? 5
     const userId = session.user.id
 
-    // Ensure pet row exists
-    const { data: existingPet } = await supabase
+    // Fetch current pet state (single query — same pattern as challenge-xp)
+    const { data: pet, error: fetchError } = await supabase
       .from('student_pets')
-      .select('id')
+      .select('xp, species, evolution_stage, happiness, hunger')
       .eq('user_id', userId)
       .single()
 
-    if (!existingPet) {
+    if (fetchError && fetchError.code === 'PGRST116') {
+      // No pet row — create one first
       await supabase
         .from('student_pets')
-        .insert({ user_id: userId, xp: 0, evolution_stage: 'egg' })
+        .insert({ user_id: userId, xp: 0, evolution_stage: 'egg', species: null })
+      // Return early — egg stage, no XP to grant yet
+      return NextResponse.json({ ok: true }, { status: 200 })
     }
 
-    // Fetch current pet
-    const { data: pet } = await supabase
-      .from('student_pets')
-      .select('xp, species, evolution_stage')
-      .eq('user_id', userId)
-      .single()
-
-    if (!pet) return NextResponse.json({ ok: true }, { status: 200 })
+    if (!pet) {
+      console.error('[pet/teacher-xp] could not fetch pet:', fetchError)
+      return NextResponse.json({ ok: true }, { status: 200 })
+    }
 
     const newXp = (pet.xp ?? 0) + xpGained
+
+    // Recompute stage (only if species is set — egg stays egg)
     const newStage = !pet.species ? pet.evolution_stage : (
       newXp >= 300 ? 'adult' :
       newXp >= 100 ? 'teen' : 'baby'
     )
 
-    // Fetch happiness/hunger for update
-    const { data: petFull } = await supabase
-      .from('student_pets')
-      .select('happiness, hunger')
-      .eq('user_id', userId)
-      .single()
+    // Build update — try with happiness/hunger first, fall back without if columns missing
+    const updatePayload: Record<string, unknown> = {
+      xp: newXp,
+      evolution_stage: newStage,
+      updated_at: new Date().toISOString(),
+    }
 
-    await supabase
+    // Only include happiness/hunger if they came back from the fetch (columns exist)
+    if (pet.happiness != null || pet.hunger != null) {
+      updatePayload.happiness = Math.min((pet.happiness ?? 80) + 5, 100)
+      updatePayload.hunger    = Math.min((pet.hunger    ?? 80) + 5, 100)
+    }
+
+    const { error: updateError } = await supabase
       .from('student_pets')
-      .update({
-        xp: newXp,
-        evolution_stage: newStage,
-        happiness: Math.min((petFull?.happiness ?? 80) + 5, 100),
-        hunger: Math.min((petFull?.hunger ?? 80) + 5, 100),
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('user_id', userId)
+
+    if (updateError) {
+      console.error('[pet/teacher-xp] update error:', updateError)
+      // Try again without happiness/hunger in case columns don't exist
+      await supabase
+        .from('student_pets')
+        .update({ xp: newXp, evolution_stage: newStage, updated_at: new Date().toISOString() })
+        .eq('user_id', userId)
+    }
 
     return NextResponse.json({ ok: true, xp_gained: xpGained, new_xp: newXp, new_stage: newStage }, { status: 200 })
   } catch (err) {

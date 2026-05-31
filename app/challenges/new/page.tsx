@@ -377,17 +377,18 @@ export default function NewChallengePage() {
         }
       }
 
-      // Success! Grant teacher pet XP for creating a challenge, then refresh pet status
-      fetch('/api/pet/teacher-xp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_challenge' }),
-      }).then(() => {
-        window.dispatchEvent(new CustomEvent('didi-pet-refresh'))
-      }).catch(() => {})
+      // Success! Grant teacher pet XP for creating a challenge (await so DB is updated before redirect)
+      try {
+        await fetch('/api/pet/teacher-xp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create_challenge' }),
+        })
+      } catch { /* non-blocking */ }
 
-      // Redirect to challenges
+      // Redirect to challenges — fire pet refresh after navigation settles
       router.push(saveToPool ? '/admin/challenge-bank' : '/challenges')
+      setTimeout(() => window.dispatchEvent(new CustomEvent('didi-pet-refresh')), 800)
     } catch (err) {
       console.error('Error creating challenge:', err)
       setError('An unexpected error occurred')

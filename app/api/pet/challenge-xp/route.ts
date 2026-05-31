@@ -1,6 +1,7 @@
 // app/api/pet/challenge-xp/route.ts
-// Called when a student submits a challenge answer for the first time.
+// Called when a student submits a challenge answer for the FIRST time.
 // Grants +10 XP to the pet and +10 points to the wallet.
+// Idempotent: one challenge = one XP grant, resubmissions are ignored.
 // Fire-and-forget from the client — always returns 200.
 
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic'
 
 const CHALLENGE_XP = 10
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     const { data: { session } } = await supabase.auth.getSession()
@@ -22,25 +23,40 @@ export async function POST() {
 
     const userId = session.user.id
 
-    // Ensure pet row exists (upsert with no-op on conflict)
-    const { data: existingPet } = await supabase
-      .from('student_pets')
-      .select('xp, species, evolution_stage, happiness, hunger')
-      .eq('user_id', userId)
-      .single()
+    // Parse challenge_id from body — required for deduplication
+    const body = await request.json().catch(() => ({}))
+    const challengeId: string | undefined = body?.challenge_id
 
-    if (!existingPet) {
-      await supabase
-        .from('student_pets')
-        .insert({ user_id: userId, xp: 0, evolution_stage: 'egg' })
+    // If challenge_id provided, check if this user already has a submission
+    // (i.e. this is a resubmission — don't grant XP again)
+    if (challengeId) {
+      const { count } = await supabase
+        .from('challenge_submissions')
+        .select('id', { count: 'exact', head: true })
+        .eq('challenge_id', challengeId)
+        .eq('user_id', userId)
+
+      // count > 1 means there was already a prior submission before this one
+      // (the current submission was just inserted, so count === 1 is the first time)
+      if ((count ?? 0) > 1) {
+        return NextResponse.json({ ok: true, skipped: true, reason: 'resubmission' }, { status: 200 })
+      }
     }
 
     // Fetch current pet state
-    const { data: pet } = await supabase
+    const { data: pet, error: fetchError } = await supabase
       .from('student_pets')
       .select('xp, species, evolution_stage, happiness, hunger')
       .eq('user_id', userId)
       .single()
+
+    if (fetchError && fetchError.code === 'PGRST116') {
+      // No pet row yet — create one
+      await supabase
+        .from('student_pets')
+        .insert({ user_id: userId, xp: 0, evolution_stage: 'egg', species: null })
+      return NextResponse.json({ ok: true }, { status: 200 })
+    }
 
     if (!pet) {
       return NextResponse.json({ ok: true }, { status: 200 })
@@ -54,17 +70,31 @@ export async function POST() {
       newXp >= 100 ? 'teen' : 'baby'
     )
 
-    // Update pet XP, stage, happiness, hunger
-    await supabase
+    // Build update payload
+    const updatePayload: Record<string, unknown> = {
+      xp: newXp,
+      evolution_stage: newStage,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (pet.happiness != null || pet.hunger != null) {
+      updatePayload.happiness = Math.min((pet.happiness ?? 80) + 5, 100)
+      updatePayload.hunger    = Math.min((pet.hunger    ?? 80) + 5, 100)
+    }
+
+    const { error: updateError } = await supabase
       .from('student_pets')
-      .update({
-        xp: newXp,
-        evolution_stage: newStage,
-        happiness: Math.min((pet.happiness ?? 80) + 5, 100),
-        hunger: Math.min((pet.hunger ?? 80) + 5, 100),
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('user_id', userId)
+
+    if (updateError) {
+      console.error('[pet/challenge-xp] update error:', updateError)
+      // Fallback without happiness/hunger
+      await supabase
+        .from('student_pets')
+        .update({ xp: newXp, evolution_stage: newStage, updated_at: new Date().toISOString() })
+        .eq('user_id', userId)
+    }
 
     // Grant 10 points to wallet
     const { data: wallet } = await supabase
@@ -92,6 +122,6 @@ export async function POST() {
 
   } catch (err) {
     console.error('[pet/challenge-xp] error:', err)
-    return NextResponse.json({ ok: true }, { status: 200 }) // always 200 — fire-and-forget
+    return NextResponse.json({ ok: true }, { status: 200 })
   }
 }
