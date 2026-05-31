@@ -29,11 +29,9 @@ export default function DesktopPetWrapper() {
   const xpGranted = useRef(false)
   const pathname = usePathname()
 
-  // Don't show pet on auth pages
+  // Don't show pet on auth pages — checked in render, not before hooks
   const isAuthPage = pathname === '/login' || pathname === '/signup' ||
     pathname === '/forgot-password' || pathname === '/reset-password'
-
-  if (isAuthPage) return null
 
   useEffect(() => {
     // Grant daily XP first (creates pet row if needed), then fetch status.
@@ -109,6 +107,9 @@ export default function DesktopPetWrapper() {
 
   // Still loading
   if (status === null) return null
+
+  // Don't show on auth pages
+  if (isAuthPage) return null
 
   // Not logged in or no pet row
   if (!status.hasPet) return null
