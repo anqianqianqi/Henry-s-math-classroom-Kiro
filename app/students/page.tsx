@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 
-interface Student {
+interface UserEntry {
   id: string
   full_name: string
   first_name?: string | null
@@ -16,25 +16,26 @@ interface Student {
   nickname?: string | null
   email?: string
   submission_count?: number
+  role?: string  // 'student' | 'teacher' | 'administrator' | 'none'
 }
 
 export default function StudentsPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  const [students, setStudents] = useState<Student[]>([])
-  const [filtered, setFiltered] = useState<Student[]>([])
+  const [allUsers, setAllUsers] = useState<UserEntry[]>([])
+  const [filtered, setFiltered] = useState<UserEntry[]>([])
   const [search, setSearch] = useState('')
+  const [showAll, setShowAll] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadStudents()
-  }, [])
+  useEffect(() => { loadUsers() }, [])
 
   useEffect(() => {
     const q = search.toLowerCase()
+    const base = showAll ? allUsers : allUsers.filter(u => u.role === 'student')
     setFiltered(
-      students.filter(s =>
+      base.filter(s =>
         (s.full_name || '').toLowerCase().includes(q) ||
         (s.first_name || '').toLowerCase().includes(q) ||
         (s.last_name || '').toLowerCase().includes(q) ||
@@ -42,75 +43,80 @@ export default function StudentsPage() {
         (s.email || '').toLowerCase().includes(q)
       )
     )
-  }, [search, students])
+  }, [search, showAll, allUsers])
 
-  async function loadStudents() {
+  async function loadUsers() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
 
     // Verify teacher/admin
-    const { data: roles } = await supabase
+    const { data: myRoles } = await supabase
       .from('user_roles')
       .select('role_id, roles!inner(name)')
       .eq('user_id', user.id)
       .is('class_id', null)
 
-    const isTeacher = (roles || []).some((r: any) =>
+    const isTeacher = (myRoles || []).some((r: any) =>
       r.roles?.name === 'teacher' || r.roles?.name === 'administrator'
     )
     if (!isTeacher) { router.push('/dashboard'); return }
 
-    // Get only users with explicit 'student' role
-    const { data: studentRoles } = await supabase
+    // Get all global roles (class_id IS NULL)
+    const { data: allRoles } = await supabase
       .from('user_roles')
       .select('user_id, roles!inner(name)')
       .is('class_id', null)
 
-    const studentUserIds = new Set(
-      (studentRoles || [])
-        .filter((r: any) => r.roles?.name === 'student')
-        .map((r: any) => r.user_id)
-    )
-
-    if (studentUserIds.size === 0) {
-      setStudents([])
-      setFiltered([])
-      setLoading(false)
-      return
+    // Build a map: user_id → highest role
+    const roleMap: Record<string, string> = {}
+    for (const r of allRoles || []) {
+      const name = (r as any).roles?.name
+      if (!name) continue
+      // Priority: administrator > teacher > student
+      const current = roleMap[r.user_id]
+      if (!current || name === 'administrator' || (name === 'teacher' && current === 'student')) {
+        roleMap[r.user_id] = name
+      }
     }
 
-    // Get profiles for those student user IDs only
+    // Get all profiles
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, full_name, first_name, last_name, nickname, email')
-      .in('id', Array.from(studentUserIds))
       .order('full_name')
 
-    const studentProfiles = profiles || []
+    const allIds = (profiles || []).map(p => p.id)
 
-    // Get submission counts per student
-    const studentIds = studentProfiles.map(p => p.id)
+    // Get submission counts
     let submissionCounts: Record<string, number> = {}
-
-    if (studentIds.length > 0) {
+    if (allIds.length > 0) {
       const { data: subs } = await supabase
         .from('challenge_submissions')
         .select('user_id')
-        .in('user_id', studentIds)
-
+        .in('user_id', allIds)
       for (const s of subs || []) {
         submissionCounts[s.user_id] = (submissionCounts[s.user_id] || 0) + 1
       }
     }
 
-    const result: Student[] = studentProfiles.map(p => ({
+    const result: UserEntry[] = (profiles || []).map(p => ({
       ...p,
       submission_count: submissionCounts[p.id] || 0,
+      role: roleMap[p.id] || 'none',
     }))
 
-    setStudents(result)
-    setFiltered(result)
+    setAllUsers(result)
     setLoading(false)
+  }
+
+  const studentCount = allUsers.filter(u => u.role === 'student').length
+  const displayCount = showAll ? allUsers.length : studentCount
+
+  const roleLabel = (role?: string) => {
+    if (role === 'teacher') return <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Teacher</span>
+    if (role === 'administrator') return <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">Admin</span>
+    if (role === 'none') return <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">No role</span>
+    return null
   }
 
   if (loading) {
@@ -118,7 +124,7 @@ export default function StudentsPage() {
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">📊</div>
-          <p className="text-gray-600">Loading students...</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     )
@@ -128,12 +134,25 @@ export default function StudentsPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 sm:py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>← Dashboard</Button>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900">Student History</h1>
-              <p className="text-sm text-gray-500">{students.length} students</p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>← Dashboard</Button>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">Student History</h1>
+                <p className="text-sm text-gray-500">{displayCount} {showAll ? 'users' : 'students'}</p>
+              </div>
             </div>
+            {/* Toggle */}
+            <button
+              onClick={() => setShowAll(v => !v)}
+              className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+                showAll
+                  ? 'bg-gray-800 text-white border-gray-800'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500'
+              }`}
+            >
+              {showAll ? '👥 All users' : '🎓 Students only'}
+            </button>
           </div>
         </div>
       </header>
@@ -154,36 +173,37 @@ export default function StudentsPage() {
           <Card className="text-center py-16">
             <div className="text-5xl mb-4">👥</div>
             <h3 className="text-lg font-semibold text-gray-700">
-              {search ? 'No students found' : 'No students yet'}
+              {search ? 'No users found' : showAll ? 'No users yet' : 'No students yet'}
             </h3>
           </Card>
         ) : (
           <div className="space-y-2">
-            {filtered.map(student => {
-              const name = [student.first_name, student.last_name].filter(Boolean).join(' ')
-                || student.full_name
-                || student.nickname
-                || 'Unknown'
+            {filtered.map(u => {
+              const name = [u.first_name, u.last_name].filter(Boolean).join(' ')
+                || u.full_name || u.nickname || 'Unknown'
               return (
                 <div
-                  key={student.id}
+                  key={u.id}
                   className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-primary-200 transition-all cursor-pointer p-4 flex items-center justify-between"
-                  onClick={() => router.push(`/students/${student.id}`)}
+                  onClick={() => router.push(`/students/${u.id}`)}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-sm flex-shrink-0">
                       {name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div className="font-semibold text-gray-900">{name}</div>
-                      {student.email && (
-                        <div className="text-sm text-gray-500">{student.email}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-900">{name}</span>
+                        {showAll && roleLabel(u.role)}
+                      </div>
+                      {u.email && (
+                        <div className="text-sm text-gray-500">{u.email}</div>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <div className="text-lg font-bold text-primary-600">{student.submission_count}</div>
+                      <div className="text-lg font-bold text-primary-600">{u.submission_count}</div>
                       <div className="text-xs text-gray-400">submissions</div>
                     </div>
                     <span className="text-gray-300 text-lg">→</span>
