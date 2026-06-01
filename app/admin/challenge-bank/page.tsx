@@ -127,22 +127,37 @@ export default function ChallengeBankPage() {
       const bankIds = challengesData.map((c: any) => c.id)
       const { data: published } = await supabase
         .from('daily_challenges')
-        .select('id, challenge_date, source_bank_id, challenge_assignments(class_id, classes(name))')
+        .select('id, challenge_date, source_bank_id')
         .in('source_bank_id', bankIds)
         .order('challenge_date', { ascending: false })
 
       const historyMap: Record<string, Array<{ date: string; classNames: string[]; challengeId: string }>> = {}
-      for (const p of published || []) {
-        if (!p.source_bank_id) continue
-        const classNames = (p.challenge_assignments || [])
-          .map((a: any) => a.classes?.name)
-          .filter(Boolean)
-        if (!historyMap[p.source_bank_id]) historyMap[p.source_bank_id] = []
-        historyMap[p.source_bank_id].push({
-          date: p.challenge_date,
-          classNames,
-          challengeId: p.id,
-        })
+
+      if (published && published.length > 0) {
+        // Fetch class assignments for these published challenges
+        const publishedIds = published.map((p: any) => p.id)
+        const { data: assignments } = await supabase
+          .from('challenge_assignments')
+          .select('challenge_id, class_id, classes(name)')
+          .in('challenge_id', publishedIds)
+
+        // Build a map: challenge_id → class names
+        const assignmentMap: Record<string, string[]> = {}
+        for (const a of assignments || []) {
+          if (!assignmentMap[a.challenge_id]) assignmentMap[a.challenge_id] = []
+          const name = (a as any).classes?.name
+          if (name) assignmentMap[a.challenge_id].push(name)
+        }
+
+        for (const p of published) {
+          if (!p.source_bank_id) continue
+          if (!historyMap[p.source_bank_id]) historyMap[p.source_bank_id] = []
+          historyMap[p.source_bank_id].push({
+            date: p.challenge_date,
+            classNames: assignmentMap[p.id] || [],
+            challengeId: p.id,
+          })
+        }
       }
       setPublishHistory(historyMap)
     }
