@@ -81,6 +81,8 @@ export default function ChallengeBankPage() {
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false)
   const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
   const [allTagData, setAllTagData] = useState<any[]>([])
+  // Map: bank challenge id → list of { date, classNames }
+  const [publishHistory, setPublishHistory] = useState<Record<string, Array<{ date: string; classNames: string[]; challengeId: string }>>>({})
   const tagDropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -119,6 +121,31 @@ export default function ChallengeBankPage() {
       .order('created_at', { ascending: false })
 
     setChallenges(challengesData || [])
+
+    // Load publish history: daily_challenges with source_bank_id + their class assignments
+    if (challengesData && challengesData.length > 0) {
+      const bankIds = challengesData.map((c: any) => c.id)
+      const { data: published } = await supabase
+        .from('daily_challenges')
+        .select('id, challenge_date, source_bank_id, challenge_assignments(class_id, classes(name))')
+        .in('source_bank_id', bankIds)
+        .order('challenge_date', { ascending: false })
+
+      const historyMap: Record<string, Array<{ date: string; classNames: string[]; challengeId: string }>> = {}
+      for (const p of published || []) {
+        if (!p.source_bank_id) continue
+        const classNames = (p.challenge_assignments || [])
+          .map((a: any) => a.classes?.name)
+          .filter(Boolean)
+        if (!historyMap[p.source_bank_id]) historyMap[p.source_bank_id] = []
+        historyMap[p.source_bank_id].push({
+          date: p.challenge_date,
+          classNames,
+          challengeId: p.id,
+        })
+      }
+      setPublishHistory(historyMap)
+    }
 
     // Load tags
     const { data: tagsData } = await supabase
@@ -229,6 +256,7 @@ export default function ChallengeBankPage() {
           max_points: source.max_points || 100,
           image_url: source.image_url || null,
           created_by: user.id,
+          source_bank_id: source.id,
         })
         .select()
         .single()
@@ -499,6 +527,25 @@ export default function ChallengeBankPage() {
                               Added {new Date(challenge.created_at + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
                           </div>
+                          {/* Publish history */}
+                          {publishHistory[challenge.id]?.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Published to</p>
+                              <div className="space-y-1">
+                                {publishHistory[challenge.id].map((h, i) => (
+                                  <div key={i} className="flex items-center gap-2 text-xs text-gray-600">
+                                    <span className="text-gray-400">📅</span>
+                                    <span className="font-medium">{new Date(h.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                    {h.classNames.length > 0 ? (
+                                      <span className="text-gray-500">→ {h.classNames.join(', ')}</span>
+                                    ) : (
+                                      <span className="text-gray-400 italic">no class assigned</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                         <div className="flex flex-col gap-2 shrink-0">
                           <Button size="sm" onClick={() => openPublish(challenge)}>
