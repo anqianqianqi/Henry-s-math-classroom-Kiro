@@ -60,25 +60,33 @@ export default function StudentsPage() {
     )
     if (!isTeacher) { router.push('/dashboard'); return }
 
-    // Get all student user IDs (exclude teachers/admins)
-    const { data: teacherRoles } = await supabase
+    // Get only users with explicit 'student' role
+    const { data: studentRoles } = await supabase
       .from('user_roles')
       .select('user_id, roles!inner(name)')
       .is('class_id', null)
 
-    const teacherIds = new Set(
-      (teacherRoles || [])
-        .filter((r: any) => r.roles?.name === 'teacher' || r.roles?.name === 'administrator')
+    const studentUserIds = new Set(
+      (studentRoles || [])
+        .filter((r: any) => r.roles?.name === 'student')
         .map((r: any) => r.user_id)
     )
 
-    // Get all profiles that are not teachers
+    if (studentUserIds.size === 0) {
+      setStudents([])
+      setFiltered([])
+      setLoading(false)
+      return
+    }
+
+    // Get profiles for those student user IDs only
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, full_name, first_name, last_name, nickname, email')
+      .in('id', Array.from(studentUserIds))
       .order('full_name')
 
-    const studentProfiles = (profiles || []).filter(p => !teacherIds.has(p.id))
+    const studentProfiles = profiles || []
 
     // Get submission counts per student
     const studentIds = studentProfiles.map(p => p.id)
