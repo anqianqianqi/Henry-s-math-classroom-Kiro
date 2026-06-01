@@ -561,7 +561,10 @@ export default function ChallengeBankPage() {
                           </div>
                           {/* Publish history — collapsible */}
                           {publishHistory[challenge.id]?.length > 0 && (
-                            <details className="mt-3 pt-3 border-t border-gray-100">
+                            <details
+                              className="mt-3 pt-3 border-t border-gray-100"
+                              onClick={e => e.stopPropagation()}
+                            >
                               <summary className="text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer select-none hover:text-gray-700 list-none flex items-center gap-1">
                                 <span>📅 Published {publishHistory[challenge.id].length} time{publishHistory[challenge.id].length !== 1 ? 's' : ''}</span>
                                 <span className="text-gray-400 text-xs">▼</span>
