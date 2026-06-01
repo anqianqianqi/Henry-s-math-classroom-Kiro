@@ -96,7 +96,7 @@ export default function StudentHistoryPage() {
       return
     }
 
-    setSubmissions((subs || []) as ChallengeSubmission[])
+    setSubmissions((subs || []) as unknown as ChallengeSubmission[])
     setLoading(false)
   }
 
