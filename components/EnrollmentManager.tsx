@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { useRouter } from 'next/navigation'
+import { Input } from '@/components/ui/Input'
 
 interface Member {
   id: string
