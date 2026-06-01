@@ -662,11 +662,34 @@ export default function ChallengeBankPage() {
       {/* Publish Modal */}
       {publishModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-gray-900 mb-1">Publish Challenge</h2>
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-sm text-gray-600 mb-3">
               <span className="font-medium">{publishModal.challenge.title}</span>
             </p>
+
+            {/* Publish history inside modal */}
+            {publishHistory[publishModal.challenge.id]?.length > 0 && (
+              <details className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <summary className="text-xs font-semibold text-amber-700 cursor-pointer select-none list-none flex items-center justify-between">
+                  <span>📋 Previously published {publishHistory[publishModal.challenge.id].length} time{publishHistory[publishModal.challenge.id].length !== 1 ? 's' : ''}</span>
+                  <span className="text-amber-400">▼</span>
+                </summary>
+                <div className="mt-2 space-y-1.5">
+                  {publishHistory[publishModal.challenge.id].map((h, i) => (
+                    <div key={i} className="text-xs text-amber-800 flex items-start gap-2">
+                      <span className="text-amber-400 mt-0.5">•</span>
+                      <div>
+                        <span className="font-medium">{new Date(h.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        {h.classNames.length > 0 && (
+                          <span className="text-amber-600"> → {h.classNames.join(', ')}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
 
             <div className="space-y-4">
               {/* Date picker */}
