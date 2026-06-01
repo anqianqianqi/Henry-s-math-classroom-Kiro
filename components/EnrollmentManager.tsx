@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
+import { useRouter } from 'next/navigation'
 
 interface Member {
   id: string
@@ -24,6 +24,7 @@ interface EnrollmentManagerProps {
 }
 
 export default function EnrollmentManager({ classId, members, onMembersUpdate }: EnrollmentManagerProps) {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [enrollEmail, setEnrollEmail] = useState('')
   const [enrolling, setEnrolling] = useState(false)
@@ -526,14 +527,23 @@ export default function EnrollmentManager({ classId, members, onMembersUpdate }:
                         </div>
                       )}
                     </div>
-                    <Button
-                      onClick={() => handleRemoveStudent(member.user_id, member.profiles.full_name)}
-                      disabled={removing === member.user_id}
-                      variant="danger"
-                      size="sm"
-                    >
-                      {removing === member.user_id ? 'Removing...' : 'Remove'}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => router.push(`/students/${member.user_id}`)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        📊 History
+                      </Button>
+                      <Button
+                        onClick={() => handleRemoveStudent(member.user_id, member.profiles.full_name)}
+                        disabled={removing === member.user_id}
+                        variant="danger"
+                        size="sm"
+                      >
+                        {removing === member.user_id ? 'Removing...' : 'Remove'}
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>

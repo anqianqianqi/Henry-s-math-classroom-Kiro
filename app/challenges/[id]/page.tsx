@@ -1331,11 +1331,19 @@ export default function ChallengePage() {
                             {student.name}
                           </span>
                         </div>
-                        {student.submitted && student.submittedAt && (
-                          <span className="text-xs text-gray-500">
-                            {formatTimeAgo(student.submittedAt)}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {student.submitted && student.submittedAt && (
+                            <span className="text-xs text-gray-500">
+                              {formatTimeAgo(student.submittedAt)}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => router.push(`/students/${student.id}`)}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                          >
+                            📊 History
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
