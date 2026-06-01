@@ -527,14 +527,17 @@ export default function ChallengeBankPage() {
                               Added {new Date(challenge.created_at + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
                           </div>
-                          {/* Publish history */}
+                          {/* Publish history — collapsible */}
                           {publishHistory[challenge.id]?.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-gray-100">
-                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Published to</p>
-                              <div className="space-y-1">
+                            <details className="mt-3 pt-3 border-t border-gray-100">
+                              <summary className="text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer select-none hover:text-gray-700 list-none flex items-center gap-1">
+                                <span>📅 Published {publishHistory[challenge.id].length} time{publishHistory[challenge.id].length !== 1 ? 's' : ''}</span>
+                                <span className="text-gray-400 text-xs">▼</span>
+                              </summary>
+                              <div className="mt-2 space-y-1">
                                 {publishHistory[challenge.id].map((h, i) => (
                                   <div key={i} className="flex items-center gap-2 text-xs text-gray-600">
-                                    <span className="text-gray-400">📅</span>
+                                    <span className="text-gray-400">•</span>
                                     <span className="font-medium">{new Date(h.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                                     {h.classNames.length > 0 ? (
                                       <span className="text-gray-500">→ {h.classNames.join(', ')}</span>
@@ -544,7 +547,7 @@ export default function ChallengeBankPage() {
                                   </div>
                                 ))}
                               </div>
-                            </div>
+                            </details>
                           )}
                         </div>
                         <div className="flex flex-col gap-2 shrink-0">
