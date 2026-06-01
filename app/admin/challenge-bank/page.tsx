@@ -555,9 +555,6 @@ export default function ChallengeBankPage() {
                                 </span>
                               ) : null
                             })}
-                            <span className="text-xs text-gray-400">
-                              Added {new Date(challenge.created_at + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </span>
                           </div>
                           {/* Publish history — collapsible */}
                           {publishHistory[challenge.id]?.length > 0 && (
