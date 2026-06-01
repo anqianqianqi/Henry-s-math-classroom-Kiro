@@ -122,26 +122,36 @@ export default function ChallengeBankPage() {
 
     setChallenges(challengesData || [])
 
-    // Load publish history: daily_challenges with source_bank_id + their class assignments
+    // Load publish history: match by source_bank_id OR by title (for older publishes)
     if (challengesData && challengesData.length > 0) {
       const bankIds = challengesData.map((c: any) => c.id)
-      const { data: published } = await supabase
+      const bankTitles = challengesData.map((c: any) => c.title)
+
+      // Fetch daily_challenges that either have source_bank_id set OR match a bank title
+      const { data: byBankId } = await supabase
         .from('daily_challenges')
-        .select('id, challenge_date, source_bank_id')
+        .select('id, challenge_date, source_bank_id, title')
         .in('source_bank_id', bankIds)
         .order('challenge_date', { ascending: false })
 
+      const { data: byTitle } = await supabase
+        .from('daily_challenges')
+        .select('id, challenge_date, source_bank_id, title')
+        .in('title', bankTitles)
+        .is('source_bank_id', null)  // only those not already captured by source_bank_id
+        .order('challenge_date', { ascending: false })
+
+      const published = [...(byBankId || []), ...(byTitle || [])]
+
       const historyMap: Record<string, Array<{ date: string; classNames: string[]; challengeId: string }>> = {}
 
-      if (published && published.length > 0) {
-        // Fetch class assignments for these published challenges
+      if (published.length > 0) {
         const publishedIds = published.map((p: any) => p.id)
         const { data: assignments } = await supabase
           .from('challenge_assignments')
           .select('challenge_id, class_id, classes(name)')
           .in('challenge_id', publishedIds)
 
-        // Build a map: challenge_id → class names
         const assignmentMap: Record<string, string[]> = {}
         for (const a of assignments || []) {
           if (!assignmentMap[a.challenge_id]) assignmentMap[a.challenge_id] = []
@@ -149,10 +159,17 @@ export default function ChallengeBankPage() {
           if (name) assignmentMap[a.challenge_id].push(name)
         }
 
+        // Build a title → bank id map for matching by title
+        const titleToBankId: Record<string, string> = {}
+        for (const c of challengesData) {
+          titleToBankId[c.title] = c.id
+        }
+
         for (const p of published) {
-          if (!p.source_bank_id) continue
-          if (!historyMap[p.source_bank_id]) historyMap[p.source_bank_id] = []
-          historyMap[p.source_bank_id].push({
+          const bankId = p.source_bank_id || titleToBankId[p.title]
+          if (!bankId) continue
+          if (!historyMap[bankId]) historyMap[bankId] = []
+          historyMap[bankId].push({
             date: p.challenge_date,
             classNames: assignmentMap[p.id] || [],
             challengeId: p.id,
