@@ -189,6 +189,7 @@ export default function DesktopPet({
   streak,
   xp,
   xpGainToast,
+  milestoneToast,
   isEgg = false,
   onHatch,
   cracking = false,
@@ -202,6 +203,7 @@ export default function DesktopPet({
   streak?: number
   xp?: number
   xpGainToast?: number
+  milestoneToast?: string
   isEgg?: boolean
   onHatch?: () => void
   cracking?: boolean
@@ -257,6 +259,14 @@ export default function DesktopPet({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [xpGainToast])
+
+  // ── Show milestone unlock message ─────────────────────────────────────────
+  useEffect(() => {
+    if (milestoneToast) {
+      setTimeout(() => say(`${milestoneToast} unlocked! ✦`), 1000)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [milestoneToast])
 
   // ── Advance behavior ─────────────────────────────────────────────────────
   const advance = useCallback((cur: Behavior) => {
@@ -627,21 +637,22 @@ export default function DesktopPet({
                     }} />
                   )}
 
-                  {/* Tier 2 — corner ribbon accent (top-right diagonal stripe) */}
+                  {/* Tier 2 — top accent strip (replaces ugly triangle ribbon) */}
                   {hasRibbon && (
                     <div style={{
                       position: 'absolute',
                       top: 0,
-                      right: 0,
-                      width: 0,
-                      height: 0,
-                      borderTop: `${Math.round(catSize * 0.32)}px solid ${hasAura ? '#f59e0b' : '#6366f1'}`,
-                      borderLeft: `${Math.round(catSize * 0.32)}px solid transparent`,
-                      borderTopRightRadius: 12,
-                      opacity: 0.75,
+                      left: '10%',
+                      right: '10%',
+                      height: 3,
+                      borderRadius: '0 0 3px 3px',
+                      background: hasAura
+                        ? 'linear-gradient(90deg, #f59e0b, #ec4899, #6366f1)'
+                        : 'linear-gradient(90deg, #6366f1, #8b5cf6)',
                       animation: 'didi-ribbon-shine 2s ease-in-out infinite',
                       pointerEvents: 'none',
                       zIndex: 11,
+                      boxShadow: hasAura ? '0 0 6px #f59e0b88' : '0 0 6px #6366f188',
                     }} />
                   )}
 
@@ -814,14 +825,15 @@ export default function DesktopPet({
                     </div>
                     {/* Mini milestone indicator */}
                     {(xp ?? 0) > 0 && (() => {
-                      const nextMilestone = (Math.floor((xp ?? 0) / 20) + 1) * 20
-                      const progressInMilestone = ((xp ?? 0) % 20)
-                      const milestoneLabels = ['Sparkles', 'Ribbon', 'Glow', 'Orbs', 'Aura']
-                      const nextLabel = milestoneLabels[Math.floor(nextMilestone / 20 - 1) % 5] || '✨ Unlock'
+                      const currentMilestone = Math.floor((xp ?? 0) / 20)
+                      const nextMilestoneXp = (currentMilestone + 1) * 20
+                      const progressInMilestone = (xp ?? 0) % 20
+                      const milestoneNames = ['Sparkles', 'Accent', 'Glow', 'Orbs', 'Aura']
+                      const nextName = milestoneNames[currentMilestone % 5] || 'Sparkles'
                       return (
                         <div style={{ marginTop: 3 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#c4956a', marginBottom: 1 }}>
-                            <span>{progressInMilestone}/20 → {nextLabel}</span>
+                            <span>{progressInMilestone}/20 XP → {nextName} at {nextMilestoneXp} XP</span>
                           </div>
                           <div style={{ height: 3, background: '#f0e6d3', borderRadius: 2, overflow: 'hidden' }}>
                             <div style={{

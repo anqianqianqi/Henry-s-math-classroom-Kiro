@@ -28,6 +28,7 @@ export default function DesktopPetWrapper() {
   const [cracking, setCracking] = useState(false)
   const [crackError, setCrackError] = useState<string | null>(null)
   const [xpGainToast, setXpGainToast] = useState<number | null>(null)
+  const [milestoneToast, setMilestoneToast] = useState<string | null>(null)
   const xpGranted = useRef(false)
   const initialFetchDone = useRef(false)
   const prevXp = useRef<number | null>(null)
@@ -118,6 +119,17 @@ export default function DesktopPetWrapper() {
     if (gained > 0) {
       setXpGainToast(gained)
       setTimeout(() => setXpGainToast(null), 3500)
+
+      // Check if a new milestone was crossed (every 20 XP)
+      const oldMilestone = Math.floor(prevXp.current / 20)
+      const newMilestone = Math.floor(currentXp / 20)
+      if (newMilestone > oldMilestone) {
+        const milestoneNames = ['Sparkles', 'Accent', 'Glow', 'Orbs', 'Aura']
+        const unlockedName = milestoneNames[(newMilestone - 1) % 5] || 'Upgrade'
+        // Store milestone unlock message for Didi to say
+        setMilestoneToast(unlockedName)
+        setTimeout(() => setMilestoneToast(null), 4000)
+      }
     }
     prevXp.current = currentXp
   }, [status?.xp])
@@ -200,6 +212,7 @@ export default function DesktopPetWrapper() {
         isEgg
         xp={status.xp ?? undefined}
         xpGainToast={xpGainToast ?? undefined}
+        milestoneToast={milestoneToast ?? undefined}
         onHatch={hatchEgg}
         cracking={cracking}
         crackError={crackError ?? undefined}
@@ -217,6 +230,7 @@ export default function DesktopPetWrapper() {
       streak={status.streak ?? undefined}
       xp={status.xp ?? undefined}
       xpGainToast={xpGainToast ?? undefined}
+      milestoneToast={milestoneToast ?? undefined}
     />
   )
 }
