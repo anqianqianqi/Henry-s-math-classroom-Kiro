@@ -396,7 +396,8 @@ export default function ShopPage() {
 
     const remainingMap: Record<string, number> = {}
 
-    // Digital blindbox: per-student remaining — check blindbox_sets table directly
+    // Digital blindbox: per-student remaining = total sets - student's own redemptions
+    // null quantity = unlimited globally, but each student can only draw each set once
     const digitalBlindboxIds = (shopItems ?? [])
       .filter((i: any) => i.commodity_type === 'blindbox')
       .map((i: any) => i.id)
@@ -404,34 +405,35 @@ export default function ShopPage() {
     if (digitalBlindboxIds.length > 0) {
       const { data: sets } = await supabase
         .from('blindbox_sets')
-        .select('item_id, quantity')
+        .select('item_id')
         .in('item_id', digitalBlindboxIds)
 
-      // Count how many the student has already claimed
+      // Count total sets per item (each set = one draw for a student)
+      const totalSetsMap: Record<string, number> = {}
+      for (const s of sets ?? []) {
+        totalSetsMap[s.item_id] = (totalSetsMap[s.item_id] ?? 0) + 1
+      }
+
+      // Count how many times THIS student has already redeemed each item
       const { data: myRedemptions } = await supabase
         .from('redemptions')
         .select('item_id')
         .eq('user_id', userId)
         .in('item_id', digitalBlindboxIds)
 
-      const claimedMap: Record<string, number> = {}
+      const myClaimedMap: Record<string, number> = {}
       for (const r of myRedemptions ?? []) {
-        claimedMap[r.item_id] = (claimedMap[r.item_id] ?? 0) + 1
-      }
-
-      const totalSetsMap: Record<string, number> = {}
-      for (const s of sets ?? []) {
-        totalSetsMap[s.item_id] = (totalSetsMap[s.item_id] ?? 0) + (s.quantity ?? 0)
+        myClaimedMap[r.item_id] = (myClaimedMap[r.item_id] ?? 0) + 1
       }
 
       for (const itemId of digitalBlindboxIds) {
-        const total = totalSetsMap[itemId] ?? 0
-        const claimed = claimedMap[itemId] ?? 0
-        remainingMap[itemId] = Math.max(0, total - claimed)
+        const totalSets = totalSetsMap[itemId] ?? 0
+        const claimed = myClaimedMap[itemId] ?? 0
+        remainingMap[itemId] = Math.max(0, totalSets - claimed)
       }
     }
 
-    // Physical blindbox: check blindbox_sets table directly
+    // Physical blindbox: read inventory directly from blindbox_sets (same as admin)
     const physicalBlindboxIds = (shopItems ?? [])
       .filter((i: any) => i.commodity_type === 'physical_blindbox')
       .map((i: any) => i.id)
@@ -442,26 +444,10 @@ export default function ShopPage() {
         .select('item_id, quantity')
         .in('item_id', physicalBlindboxIds)
 
-      const totalMap: Record<string, number> = {}
-      for (const s of sets ?? []) {
-        totalMap[s.item_id] = (totalMap[s.item_id] ?? 0) + (s.quantity ?? 0)
-      }
-
-      // Subtract already redeemed
-      const { data: allRedemptions } = await supabase
-        .from('redemptions')
-        .select('item_id')
-        .in('item_id', physicalBlindboxIds)
-
-      const redeemedMap: Record<string, number> = {}
-      for (const r of allRedemptions ?? []) {
-        redeemedMap[r.item_id] = (redeemedMap[r.item_id] ?? 0) + 1
-      }
-
       for (const itemId of physicalBlindboxIds) {
-        const total = totalMap[itemId] ?? 0
-        const redeemed = redeemedMap[itemId] ?? 0
-        remainingMap[itemId] = Math.max(0, total - redeemed)
+        const itemSets = (sets ?? []).filter((s: any) => s.item_id === itemId)
+        const total = itemSets.reduce((sum: number, s: any) => sum + (s.quantity ?? 0), 0)
+        remainingMap[itemId] = total
       }
     }
 
