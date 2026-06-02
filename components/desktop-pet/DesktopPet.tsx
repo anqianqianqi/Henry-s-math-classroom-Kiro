@@ -86,12 +86,33 @@ const STYLES = `
   75%  { transform: rotate(-4deg) scale(1.01); }
   100% { transform: rotate(0deg) scale(1); }
 }
+
+/* ── XP milestone CSS effects ─────────────────────────────────────── */
+@keyframes didi-twinkle {
+  0%,100% { opacity: 0; transform: scale(0.4); }
+  50%      { opacity: 1; transform: scale(1); }
+}
+@keyframes didi-glow-pulse {
+  0%,100% { opacity: 0.18; transform: translateX(-50%) scale(0.95); }
+  50%     { opacity: 0.38; transform: translateX(-50%) scale(1.08); }
+}
+@keyframes didi-orbit {
+  0%   { transform: rotate(0deg)   translateX(var(--r)) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(var(--r)) rotate(-360deg); }
+}
+@keyframes didi-gradient-border {
+  0%   { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+@keyframes didi-ribbon-shine {
+  0%,100% { opacity: 0.55; }
+  50%     { opacity: 0.9; }
+}
   0%   { opacity: 0; transform: translateX(-50%) scale(0) translateY(0px); }
   30%  { opacity: 1; transform: translateX(-50%) scale(1.2) translateY(-4px); }
   70%  { opacity: 1; transform: translateX(-50%) scale(1) translateY(-12px); }
   100% { opacity: 0; transform: translateX(-50%) scale(0.8) translateY(-20px); }
-}
-`
+}`
 
 // ─── Speech messages ──────────────────────────────────────────────────────────
 
@@ -563,107 +584,122 @@ export default function DesktopPet({
             {/* XP milestone visual perks — every 20 XP unlocks a new visual */}
             {(() => {
               if (!xp || isEgg) return null
-              const milestone = Math.floor(xp / 20)  // 0=none, 1=sparkles, 2=bow, 3=glow, 4=stars, 5=rainbow...
+              const milestone = Math.floor(xp / 20)
               if (milestone === 0) return null
-              const tier = milestone % 5  // cycle through 5 tiers
-              const hasSparkles = milestone >= 1
-              const hasBow     = milestone >= 2
-              const hasGlow    = milestone >= 3
-              const hasStars   = milestone >= 4
-              const hasRainbow = tier === 0 && milestone >= 5
+
+              const hasSparkles = milestone >= 1   // 20 XP: twinkling dots
+              const hasRibbon   = milestone >= 2   // 40 XP: corner ribbon stripe
+              const hasGlow     = milestone >= 3   // 60 XP: radial pulse glow
+              const hasOrbs     = milestone >= 4   // 80 XP: orbiting light orbs
+              const hasAura     = milestone >= 5   // 100 XP: rotating gradient border
 
               return (
                 <>
-                  {/* Glow ring behind Didi */}
-                  {hasGlow && (
+                  {/* Tier 5 — rotating gradient border aura */}
+                  {hasAura && (
                     <div style={{
                       position: 'absolute',
-                      bottom: 4,
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      width: catSize * 0.9,
-                      height: catSize * 0.9,
-                      borderRadius: '50%',
-                      background: hasRainbow
-                        ? 'radial-gradient(circle, rgba(255,200,50,0.25) 0%, rgba(255,100,200,0.15) 50%, transparent 70%)'
-                        : 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%)',
-                      animation: 'didi-breathe 3s ease-in-out infinite',
+                      inset: -4,
+                      borderRadius: 18,
+                      background: 'conic-gradient(from 0deg, #f59e0b, #6366f1, #ec4899, #22d3ee, #f59e0b)',
+                      opacity: 0.5,
+                      animation: 'didi-gradient-border 3s linear infinite',
                       pointerEvents: 'none',
                       zIndex: -1,
                     }} />
                   )}
 
-                  {/* Floating background stars */}
-                  {hasStars && (
+                  {/* Tier 3 — radial glow ring behind Didi */}
+                  {hasGlow && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: '50%',
+                      width: catSize * 1.1,
+                      height: catSize * 0.6,
+                      borderRadius: '50%',
+                      background: hasAura
+                        ? 'radial-gradient(ellipse, rgba(245,158,11,0.3) 0%, rgba(99,102,241,0.15) 50%, transparent 70%)'
+                        : 'radial-gradient(ellipse, rgba(99,102,241,0.22) 0%, transparent 65%)',
+                      animation: 'didi-glow-pulse 2.4s ease-in-out infinite',
+                      pointerEvents: 'none',
+                      zIndex: -1,
+                    }} />
+                  )}
+
+                  {/* Tier 2 — corner ribbon accent (top-right diagonal stripe) */}
+                  {hasRibbon && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      right: 0,
+                      width: 0,
+                      height: 0,
+                      borderTop: `${Math.round(catSize * 0.32)}px solid ${hasAura ? '#f59e0b' : '#6366f1'}`,
+                      borderLeft: `${Math.round(catSize * 0.32)}px solid transparent`,
+                      borderTopRightRadius: 12,
+                      opacity: 0.75,
+                      animation: 'didi-ribbon-shine 2s ease-in-out infinite',
+                      pointerEvents: 'none',
+                      zIndex: 11,
+                    }} />
+                  )}
+
+                  {/* Tier 1 — twinkling dots (4 small circles) */}
+                  {hasSparkles && (
                     <>
-                      {['⭐','✨','💫'].map((s, i) => (
+                      {[
+                        { top: -8, left: '20%', delay: '0s', size: 5, color: '#f59e0b' },
+                        { top: -6, left: '75%', delay: '0.6s', size: 4, color: '#6366f1' },
+                        { top: 12, left: '-8px', delay: '0.3s', size: 4, color: '#ec4899' },
+                        { top: 12, right: '-8px', delay: '0.9s', size: 5, color: '#22d3ee' },
+                      ].map((dot, i) => (
                         <div key={i} style={{
                           position: 'absolute',
-                          fontSize: 10 + i * 2,
+                          top: dot.top,
+                          left: 'left' in dot ? dot.left : undefined,
+                          right: 'right' in dot ? (dot as any).right : undefined,
+                          width: dot.size,
+                          height: dot.size,
+                          borderRadius: '50%',
+                          background: dot.color,
+                          boxShadow: `0 0 4px 2px ${dot.color}88`,
+                          animation: `didi-twinkle ${1.4 + i * 0.25}s ease-in-out ${dot.delay} infinite`,
                           pointerEvents: 'none',
-                          animation: `didi-zzz ${1.8 + i * 0.6}s ease-in-out ${i * 0.4}s infinite`,
-                          top: 10 + i * 20,
-                          left: i % 2 === 0 ? -18 : catSize - 4,
-                          opacity: 0.8,
-                          zIndex: -1,
-                        }}>{s}</div>
+                          zIndex: 12,
+                        }} />
                       ))}
                     </>
                   )}
 
-                  {/* Bow accessory on Didi's head */}
-                  {hasBow && (
-                    <div style={{
-                      position: 'absolute',
-                      top: 2,
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      fontSize: 16,
-                      pointerEvents: 'none',
-                      zIndex: 10,
-                      filter: hasRainbow ? 'hue-rotate(30deg)' : undefined,
-                    }}>🎀</div>
-                  )}
-
-                  {/* Sparkle particles */}
-                  {hasSparkles && (
+                  {/* Tier 4 — orbiting light orbs */}
+                  {hasOrbs && (
                     <>
-                      <div style={{
-                        position: 'absolute',
-                        top: -4,
-                        right: -4,
-                        fontSize: 12,
-                        animation: 'didi-zzz 1.4s ease-in-out infinite',
-                        pointerEvents: 'none',
-                        zIndex: 10,
-                      }}>✨</div>
-                      {milestone >= 6 && (
-                        <div style={{
+                      {[
+                        { r: catSize * 0.48, delay: '0s',    dur: '3.2s', color: '#f59e0b', size: 6 },
+                        { r: catSize * 0.52, delay: '-1.6s', dur: '3.2s', color: '#6366f1', size: 5 },
+                        { r: catSize * 0.44, delay: '-0.8s', dur: '2.8s', color: '#ec4899', size: 4 },
+                      ].map((orb, i) => (
+                        <div key={i} style={{
                           position: 'absolute',
-                          top: -4,
-                          left: -4,
-                          fontSize: 10,
-                          animation: 'didi-zzz2 1.8s ease-in-out 0.3s infinite',
+                          top: '50%',
+                          left: '50%',
+                          width: orb.size,
+                          height: orb.size,
+                          marginTop: -orb.size / 2,
+                          marginLeft: -orb.size / 2,
+                          borderRadius: '50%',
+                          background: orb.color,
+                          boxShadow: `0 0 6px 3px ${orb.color}88`,
+                          // @ts-ignore
+                          '--r': `${orb.r}px`,
+                          animation: `didi-orbit ${orb.dur} linear ${orb.delay} infinite`,
                           pointerEvents: 'none',
                           zIndex: 10,
-                        }}>✨</div>
-                      )}
+                          opacity: 0.85,
+                        } as React.CSSProperties} />
+                      ))}
                     </>
-                  )}
-
-                  {/* Rainbow aura border for max tier */}
-                  {hasRainbow && (
-                    <div style={{
-                      position: 'absolute',
-                      inset: -3,
-                      borderRadius: 16,
-                      background: 'linear-gradient(135deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #c77dff)',
-                      backgroundSize: '300% 300%',
-                      animation: 'didi-float 2s ease-in-out infinite',
-                      opacity: 0.4,
-                      pointerEvents: 'none',
-                      zIndex: -1,
-                    }} />
                   )}
                 </>
               )
@@ -780,7 +816,7 @@ export default function DesktopPet({
                     {(xp ?? 0) > 0 && (() => {
                       const nextMilestone = (Math.floor((xp ?? 0) / 20) + 1) * 20
                       const progressInMilestone = ((xp ?? 0) % 20)
-                      const milestoneLabels = ['✨ Sparkles', '🎀 Bow', '💫 Glow', '🌟 Stars', '🌈 Aura']
+                      const milestoneLabels = ['Sparkles', 'Ribbon', 'Glow', 'Orbs', 'Aura']
                       const nextLabel = milestoneLabels[Math.floor(nextMilestone / 20 - 1) % 5] || '✨ Unlock'
                       return (
                         <div style={{ marginTop: 3 }}>
