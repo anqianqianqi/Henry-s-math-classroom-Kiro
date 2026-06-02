@@ -455,7 +455,10 @@ export default function ShopPage() {
       (shopItems ?? []).map((item: ShopItem) => ({
         ...item,
         redemption_count: countMap[item.id] ?? 0,
-        blindbox_remaining: (item.commodity_type === 'blindbox' || item.commodity_type === 'physical_blindbox') ? (remainingMap[item.id] ?? 0) : undefined,
+        // For blindbox items: use remaining from map, default to 999 if not set (shows as available)
+        blindbox_remaining: (item.commodity_type === 'blindbox' || item.commodity_type === 'physical_blindbox')
+          ? (remainingMap[item.id] ?? 999)
+          : undefined,
       }))
     )
 
