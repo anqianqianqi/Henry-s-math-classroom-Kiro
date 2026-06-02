@@ -642,24 +642,8 @@ export default function DesktopPet({
                     }} />
                   )}
 
-                  {/* Tier 2 — top accent strip (replaces ugly triangle ribbon) */}
-                  {hasRibbon && (
-                    <div style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: '10%',
-                      right: '10%',
-                      height: 3,
-                      borderRadius: '0 0 3px 3px',
-                      background: hasAura
-                        ? 'linear-gradient(90deg, #f59e0b, #ec4899, #6366f1)'
-                        : 'linear-gradient(90deg, #6366f1, #8b5cf6)',
-                      animation: 'didi-ribbon-shine 2s ease-in-out infinite',
-                      pointerEvents: 'none',
-                      zIndex: 11,
-                      boxShadow: hasAura ? '0 0 6px #f59e0b88' : '0 0 6px #6366f188',
-                    }} />
-                  )}
+                  {/* Tier 2 — removed (accent strip was unwanted) */}
+                  {/* Tier 2 (40 XP) handled via drop-shadow on Didi's image below */}
 
                   {/* Tier 1 — diagonal shimmer sweep across Didi */}
                   {hasSparkles && (
@@ -716,7 +700,11 @@ export default function DesktopPet({
 
             <div style={{
               ...catAnim,
-              filter: isDragging ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))' : undefined,
+              filter: isDragging
+                ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))'
+                : (xp && !isEgg && Math.floor(xp / 20) >= 2)
+                  ? `drop-shadow(0 4px 12px ${Math.floor(xp / 20) >= 5 ? '#f59e0b' : '#6366f1'}66)`
+                  : undefined,
               transform: isDragging ? 'scale(1.08)' : undefined,
             }}>
               <DidiSvg
@@ -826,7 +814,7 @@ export default function DesktopPet({
                       const currentMilestone = Math.floor((xp ?? 0) / 20)
                       const nextMilestoneXp = (currentMilestone + 1) * 20
                       const progressInMilestone = (xp ?? 0) % 20
-                      const milestoneNames = ['Shimmer', 'Accent', 'Glow', 'Bubbles', 'Aura']
+                      const milestoneNames = ['Shimmer', 'Glow Shadow', 'Glow', 'Bubbles', 'Aura']
                       const nextName = milestoneNames[currentMilestone % 5] || 'Sparkles'
                       return (
                         <div style={{ marginTop: 3 }}>
