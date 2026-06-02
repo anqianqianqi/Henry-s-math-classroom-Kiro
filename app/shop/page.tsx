@@ -402,11 +402,13 @@ export default function ShopPage() {
       .map((i: any) => i.id)
 
     for (const itemId of digitalBlindboxIds) {
-      const { data: remaining } = await supabase.rpc('get_blindbox_remaining_for_student', {
-        p_item_id: itemId,
-        p_user_id: userId,
-      })
-      remainingMap[itemId] = remaining ?? 0
+      try {
+        const { data: remaining } = await supabase.rpc('get_blindbox_remaining_for_student', {
+          p_item_id: itemId,
+          p_user_id: userId,
+        })
+        remainingMap[itemId] = remaining ?? 0
+      } catch { remainingMap[itemId] = 99 }  // RPC missing — treat as in-stock
     }
 
     // Physical blindbox: global remaining stock (total copies across all sets)
@@ -415,10 +417,12 @@ export default function ShopPage() {
       .map((i: any) => i.id)
 
     for (const itemId of physicalBlindboxIds) {
-      const { data: remaining } = await supabase.rpc('get_physical_blindbox_total_remaining', {
-        p_item_id: itemId,
-      })
-      remainingMap[itemId] = remaining ?? 0
+      try {
+        const { data: remaining } = await supabase.rpc('get_physical_blindbox_total_remaining', {
+          p_item_id: itemId,
+        })
+        remainingMap[itemId] = remaining ?? 0
+      } catch { remainingMap[itemId] = 99 }  // RPC missing — treat as in-stock
     }
 
     setItems(
