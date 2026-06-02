@@ -396,33 +396,73 @@ export default function ShopPage() {
 
     const remainingMap: Record<string, number> = {}
 
-    // Digital blindbox: per-student remaining via RPC
+    // Digital blindbox: per-student remaining — check blindbox_sets table directly
     const digitalBlindboxIds = (shopItems ?? [])
       .filter((i: any) => i.commodity_type === 'blindbox')
       .map((i: any) => i.id)
 
-    for (const itemId of digitalBlindboxIds) {
-      try {
-        const { data: remaining } = await supabase.rpc('get_blindbox_remaining_for_student', {
-          p_item_id: itemId,
-          p_user_id: userId,
-        })
-        remainingMap[itemId] = remaining ?? 0
-      } catch { remainingMap[itemId] = 99 }  // RPC missing — treat as in-stock
+    if (digitalBlindboxIds.length > 0) {
+      const { data: sets } = await supabase
+        .from('blindbox_sets')
+        .select('item_id, quantity')
+        .in('item_id', digitalBlindboxIds)
+
+      // Count how many the student has already claimed
+      const { data: myRedemptions } = await supabase
+        .from('redemptions')
+        .select('item_id')
+        .eq('user_id', userId)
+        .in('item_id', digitalBlindboxIds)
+
+      const claimedMap: Record<string, number> = {}
+      for (const r of myRedemptions ?? []) {
+        claimedMap[r.item_id] = (claimedMap[r.item_id] ?? 0) + 1
+      }
+
+      const totalSetsMap: Record<string, number> = {}
+      for (const s of sets ?? []) {
+        totalSetsMap[s.item_id] = (totalSetsMap[s.item_id] ?? 0) + (s.quantity ?? 0)
+      }
+
+      for (const itemId of digitalBlindboxIds) {
+        const total = totalSetsMap[itemId] ?? 0
+        const claimed = claimedMap[itemId] ?? 0
+        remainingMap[itemId] = Math.max(0, total - claimed)
+      }
     }
 
-    // Physical blindbox: global remaining stock (total copies across all sets)
+    // Physical blindbox: check blindbox_sets table directly
     const physicalBlindboxIds = (shopItems ?? [])
       .filter((i: any) => i.commodity_type === 'physical_blindbox')
       .map((i: any) => i.id)
 
-    for (const itemId of physicalBlindboxIds) {
-      try {
-        const { data: remaining } = await supabase.rpc('get_physical_blindbox_total_remaining', {
-          p_item_id: itemId,
-        })
-        remainingMap[itemId] = remaining ?? 0
-      } catch { remainingMap[itemId] = 99 }  // RPC missing — treat as in-stock
+    if (physicalBlindboxIds.length > 0) {
+      const { data: sets } = await supabase
+        .from('blindbox_sets')
+        .select('item_id, quantity')
+        .in('item_id', physicalBlindboxIds)
+
+      const totalMap: Record<string, number> = {}
+      for (const s of sets ?? []) {
+        totalMap[s.item_id] = (totalMap[s.item_id] ?? 0) + (s.quantity ?? 0)
+      }
+
+      // Subtract already redeemed
+      const { data: allRedemptions } = await supabase
+        .from('redemptions')
+        .select('item_id')
+        .in('item_id', physicalBlindboxIds)
+
+      const redeemedMap: Record<string, number> = {}
+      for (const r of allRedemptions ?? []) {
+        redeemedMap[r.item_id] = (redeemedMap[r.item_id] ?? 0) + 1
+      }
+
+      for (const itemId of physicalBlindboxIds) {
+        const total = totalMap[itemId] ?? 0
+        const redeemed = redeemedMap[itemId] ?? 0
+        remainingMap[itemId] = Math.max(0, total - redeemed)
+      }
     }
 
     setItems(
