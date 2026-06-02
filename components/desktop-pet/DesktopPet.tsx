@@ -560,6 +560,115 @@ export default function DesktopPet({
             )}
 
             {/* Cat image with animation */}
+            {/* XP milestone visual perks — every 20 XP unlocks a new visual */}
+            {(() => {
+              if (!xp || isEgg) return null
+              const milestone = Math.floor(xp / 20)  // 0=none, 1=sparkles, 2=bow, 3=glow, 4=stars, 5=rainbow...
+              if (milestone === 0) return null
+              const tier = milestone % 5  // cycle through 5 tiers
+              const hasSparkles = milestone >= 1
+              const hasBow     = milestone >= 2
+              const hasGlow    = milestone >= 3
+              const hasStars   = milestone >= 4
+              const hasRainbow = tier === 0 && milestone >= 5
+
+              return (
+                <>
+                  {/* Glow ring behind Didi */}
+                  {hasGlow && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 4,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: catSize * 0.9,
+                      height: catSize * 0.9,
+                      borderRadius: '50%',
+                      background: hasRainbow
+                        ? 'radial-gradient(circle, rgba(255,200,50,0.25) 0%, rgba(255,100,200,0.15) 50%, transparent 70%)'
+                        : 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%)',
+                      animation: 'didi-breathe 3s ease-in-out infinite',
+                      pointerEvents: 'none',
+                      zIndex: -1,
+                    }} />
+                  )}
+
+                  {/* Floating background stars */}
+                  {hasStars && (
+                    <>
+                      {['⭐','✨','💫'].map((s, i) => (
+                        <div key={i} style={{
+                          position: 'absolute',
+                          fontSize: 10 + i * 2,
+                          pointerEvents: 'none',
+                          animation: `didi-zzz ${1.8 + i * 0.6}s ease-in-out ${i * 0.4}s infinite`,
+                          top: 10 + i * 20,
+                          left: i % 2 === 0 ? -18 : catSize - 4,
+                          opacity: 0.8,
+                          zIndex: -1,
+                        }}>{s}</div>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Bow accessory on Didi's head */}
+                  {hasBow && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 2,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      fontSize: 16,
+                      pointerEvents: 'none',
+                      zIndex: 10,
+                      filter: hasRainbow ? 'hue-rotate(30deg)' : undefined,
+                    }}>🎀</div>
+                  )}
+
+                  {/* Sparkle particles */}
+                  {hasSparkles && (
+                    <>
+                      <div style={{
+                        position: 'absolute',
+                        top: -4,
+                        right: -4,
+                        fontSize: 12,
+                        animation: 'didi-zzz 1.4s ease-in-out infinite',
+                        pointerEvents: 'none',
+                        zIndex: 10,
+                      }}>✨</div>
+                      {milestone >= 6 && (
+                        <div style={{
+                          position: 'absolute',
+                          top: -4,
+                          left: -4,
+                          fontSize: 10,
+                          animation: 'didi-zzz2 1.8s ease-in-out 0.3s infinite',
+                          pointerEvents: 'none',
+                          zIndex: 10,
+                        }}>✨</div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Rainbow aura border for max tier */}
+                  {hasRainbow && (
+                    <div style={{
+                      position: 'absolute',
+                      inset: -3,
+                      borderRadius: 16,
+                      background: 'linear-gradient(135deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #c77dff)',
+                      backgroundSize: '300% 300%',
+                      animation: 'didi-float 2s ease-in-out infinite',
+                      opacity: 0.4,
+                      pointerEvents: 'none',
+                      zIndex: -1,
+                    }} />
+                  )}
+                </>
+              )
+            })()}
+
             <div style={{
               ...catAnim,
               filter: isDragging ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))' : undefined,
@@ -652,7 +761,11 @@ export default function DesktopPet({
                   <div style={{ marginBottom: 4 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#a07060', marginBottom: 2 }}>
                       <span>⭐ XP</span>
-                      <span>{petStage === 'baby' ? `${xp ?? 0}/100 → teen` : petStage === 'teen' ? `${xp ?? 0}/300 → adult` : petStage === 'adult' ? `${xp ?? 0} XP` : `${xp ?? 0} XP`}</span>
+                      <span>
+                        {petStage === 'baby' ? `${xp ?? 0}/100 → teen` :
+                         petStage === 'teen' ? `${xp ?? 0}/300 → adult` :
+                         `${xp ?? 0} XP`}
+                      </span>
                     </div>
                     <div style={{ height: 6, background: '#f0e6d3', borderRadius: 3, overflow: 'hidden' }}>
                       <div style={{
@@ -663,6 +776,29 @@ export default function DesktopPet({
                         transition: 'width 0.3s',
                       }} />
                     </div>
+                    {/* Mini milestone indicator */}
+                    {(xp ?? 0) > 0 && (() => {
+                      const nextMilestone = (Math.floor((xp ?? 0) / 20) + 1) * 20
+                      const progressInMilestone = ((xp ?? 0) % 20)
+                      const milestoneLabels = ['✨ Sparkles', '🎀 Bow', '💫 Glow', '🌟 Stars', '🌈 Aura']
+                      const nextLabel = milestoneLabels[Math.floor(nextMilestone / 20 - 1) % 5] || '✨ Unlock'
+                      return (
+                        <div style={{ marginTop: 3 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#c4956a', marginBottom: 1 }}>
+                            <span>{progressInMilestone}/20 → {nextLabel}</span>
+                          </div>
+                          <div style={{ height: 3, background: '#f0e6d3', borderRadius: 2, overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%',
+                              width: `${(progressInMilestone / 20) * 100}%`,
+                              background: 'linear-gradient(90deg, #f59e0b, #f97316)',
+                              borderRadius: 2,
+                              transition: 'width 0.3s',
+                            }} />
+                          </div>
+                        </div>
+                      )
+                    })()}
                   </div>
                 )}
 
