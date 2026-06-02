@@ -372,12 +372,11 @@ export default function ShopPage() {
     newBalance = walletData?.spendable_balance ?? 0
     setBalance(newBalance)
 
-    // Shop items — hide pet-related categories (food/accessory/pet) until pet feature launches
+    // Shop items — show all active items (food/accessory/pet shown to students too now)
     const { data: shopItems, error: itemsError } = await supabase
       .from('shop_items')
       .select('*')
       .eq('is_active', true)
-      .not('category', 'in', '("food","accessory","pet")')
       .order('created_at', { ascending: false })
 
     if (itemsError) { setError('Failed to load shop items'); return }
