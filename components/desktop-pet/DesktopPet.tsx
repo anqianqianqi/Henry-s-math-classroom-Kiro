@@ -88,9 +88,12 @@ const STYLES = `
 }
 
 /* ── XP milestone CSS effects ─────────────────────────────────────── */
-@keyframes didi-twinkle {
-  0%,100% { opacity: 0; transform: scale(0.4); }
-  50%      { opacity: 1; transform: scale(1); }
+@keyframes didi-shimmer {
+  0%   { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
+  10%  { opacity: 0.6; }
+  40%  { opacity: 0.5; }
+  60%  { opacity: 0; transform: translateX(120%) skewX(-20deg); }
+  100% { opacity: 0; transform: translateX(120%) skewX(-20deg); }
 }
 @keyframes didi-glow-pulse {
   0%,100% { opacity: 0.18; transform: translateX(-50%) scale(0.95); }
@@ -656,31 +659,27 @@ export default function DesktopPet({
                     }} />
                   )}
 
-                  {/* Tier 1 — twinkling dots (4 small circles) */}
+                  {/* Tier 1 — diagonal shimmer sweep across Didi */}
                   {hasSparkles && (
-                    <>
-                      {[
-                        { top: -8, left: '20%', delay: '0s', size: 5, color: '#f59e0b' },
-                        { top: -6, left: '75%', delay: '0.6s', size: 4, color: '#6366f1' },
-                        { top: 12, left: '-8px', delay: '0.3s', size: 4, color: '#ec4899' },
-                        { top: 12, right: '-8px', delay: '0.9s', size: 5, color: '#22d3ee' },
-                      ].map((dot, i) => (
-                        <div key={i} style={{
-                          position: 'absolute',
-                          top: dot.top,
-                          left: 'left' in dot ? dot.left : undefined,
-                          right: 'right' in dot ? (dot as any).right : undefined,
-                          width: dot.size,
-                          height: dot.size,
-                          borderRadius: '50%',
-                          background: dot.color,
-                          boxShadow: `0 0 4px 2px ${dot.color}88`,
-                          animation: `didi-twinkle ${1.4 + i * 0.25}s ease-in-out ${dot.delay} infinite`,
-                          pointerEvents: 'none',
-                          zIndex: 12,
-                        }} />
-                      ))}
-                    </>
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      pointerEvents: 'none',
+                      zIndex: 13,
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '40%',
+                        height: '100%',
+                        background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%)',
+                        animation: 'didi-shimmer 3.5s ease-in-out infinite',
+                        pointerEvents: 'none',
+                      }} />
+                    </div>
                   )}
 
                   {/* Tier 4 — orbiting light orbs */}
@@ -828,7 +827,7 @@ export default function DesktopPet({
                       const currentMilestone = Math.floor((xp ?? 0) / 20)
                       const nextMilestoneXp = (currentMilestone + 1) * 20
                       const progressInMilestone = (xp ?? 0) % 20
-                      const milestoneNames = ['Sparkles', 'Accent', 'Glow', 'Orbs', 'Aura']
+                      const milestoneNames = ['Shimmer', 'Accent', 'Glow', 'Orbs', 'Aura']
                       const nextName = milestoneNames[currentMilestone % 5] || 'Sparkles'
                       return (
                         <div style={{ marginTop: 3 }}>
