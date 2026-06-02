@@ -99,9 +99,11 @@ const STYLES = `
   0%,100% { opacity: 0.18; transform: translateX(-50%) scale(0.95); }
   50%     { opacity: 0.38; transform: translateX(-50%) scale(1.08); }
 }
-@keyframes didi-orbit {
-  0%   { transform: rotate(0deg)   translateX(var(--r)) rotate(0deg); }
-  100% { transform: rotate(360deg) translateX(var(--r)) rotate(-360deg); }
+@keyframes didi-bubble-rise {
+  0%   { transform: translateY(0px) scale(1);   opacity: 0; }
+  15%  { opacity: 0.7; }
+  85%  { opacity: 0.4; }
+  100% { transform: translateY(-70px) scale(0.4); opacity: 0; }
 }
 @keyframes didi-gradient-border {
   0%   { filter: hue-rotate(0deg); }
@@ -682,32 +684,29 @@ export default function DesktopPet({
                     </div>
                   )}
 
-                  {/* Tier 4 — orbiting light orbs */}
+                  {/* Tier 4 — rising bubbles from Didi's feet */}
                   {hasOrbs && (
                     <>
                       {[
-                        { r: catSize * 0.48, delay: '0s',    dur: '3.2s', color: '#f59e0b', size: 6 },
-                        { r: catSize * 0.52, delay: '-1.6s', dur: '3.2s', color: '#6366f1', size: 5 },
-                        { r: catSize * 0.44, delay: '-0.8s', dur: '2.8s', color: '#ec4899', size: 4 },
-                      ].map((orb, i) => (
+                        { left: '18%', delay: '0s',    dur: '2.8s', color: '#f59e0b', size: 6 },
+                        { left: '45%', delay: '-1.1s', dur: '3.2s', color: '#6366f1', size: 5 },
+                        { left: '70%', delay: '-0.6s', dur: '2.5s', color: '#ec4899', size: 7 },
+                        { left: '30%', delay: '-1.8s', dur: '3.0s', color: '#22d3ee', size: 4 },
+                        { left: '58%', delay: '-0.3s', dur: '2.7s', color: '#a78bfa', size: 5 },
+                      ].map((b, i) => (
                         <div key={i} style={{
                           position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          width: orb.size,
-                          height: orb.size,
-                          marginTop: -orb.size / 2,
-                          marginLeft: -orb.size / 2,
+                          bottom: 4,
+                          left: b.left,
+                          width: b.size,
+                          height: b.size,
                           borderRadius: '50%',
-                          background: orb.color,
-                          boxShadow: `0 0 6px 3px ${orb.color}88`,
-                          // @ts-ignore
-                          '--r': `${orb.r}px`,
-                          animation: `didi-orbit ${orb.dur} linear ${orb.delay} infinite`,
+                          background: b.color,
+                          boxShadow: `0 0 5px 2px ${b.color}66`,
+                          animation: `didi-bubble-rise ${b.dur} ease-in ${b.delay} infinite`,
                           pointerEvents: 'none',
                           zIndex: 10,
-                          opacity: 0.85,
-                        } as React.CSSProperties} />
+                        }} />
                       ))}
                     </>
                   )}
@@ -827,7 +826,7 @@ export default function DesktopPet({
                       const currentMilestone = Math.floor((xp ?? 0) / 20)
                       const nextMilestoneXp = (currentMilestone + 1) * 20
                       const progressInMilestone = (xp ?? 0) % 20
-                      const milestoneNames = ['Shimmer', 'Accent', 'Glow', 'Orbs', 'Aura']
+                      const milestoneNames = ['Shimmer', 'Accent', 'Glow', 'Bubbles', 'Aura']
                       const nextName = milestoneNames[currentMilestone % 5] || 'Sparkles'
                       return (
                         <div style={{ marginTop: 3 }}>

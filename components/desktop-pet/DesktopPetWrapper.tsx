@@ -124,7 +124,7 @@ export default function DesktopPetWrapper() {
       const oldMilestone = Math.floor(prevXp.current / 20)
       const newMilestone = Math.floor(currentXp / 20)
       if (newMilestone > oldMilestone) {
-        const milestoneNames = ['Shimmer', 'Accent', 'Glow', 'Orbs', 'Aura']
+        const milestoneNames = ['Shimmer', 'Accent', 'Glow', 'Bubbles', 'Aura']
         const unlockedName = milestoneNames[(newMilestone - 1) % 5] || 'Upgrade'
         // Store milestone unlock message for Didi to say
         setMilestoneToast(unlockedName)
