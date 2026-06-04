@@ -258,7 +258,6 @@ function TemplateListView({
     <>
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-4">
-          <HomeButton />
           <Button
             variant="ghost"
             size="sm"
@@ -266,6 +265,7 @@ function TemplateListView({
           >
             ← Back
           </Button>
+          <HomeButton />
         </div>
         <div className="flex items-center justify-between">
           <div>

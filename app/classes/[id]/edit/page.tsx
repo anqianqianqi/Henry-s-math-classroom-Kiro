@@ -277,13 +277,13 @@ export default function EditClassPage() {
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
-            <HomeButton />
             <Button
               variant="ghost"
               onClick={() => router.push(`/classes/${classId}`)}
             >
               ← Back to Class
             </Button>
+            <HomeButton />
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Edit Class</h1>
         </div>

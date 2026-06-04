@@ -153,25 +153,24 @@ BEGIN
 END;
 $$;
 
--- ── Helper: remaining draws for a student on a physical_blindbox ─────────────
--- Returns number of sets still available to this student:
---   - set has stock (quantity IS NULL OR quantity > 0)
---   - student has not already claimed it
-CREATE OR REPLACE FUNCTION get_physical_blindbox_remaining_for_student(
-  p_item_id  UUID,
-  p_user_id  UUID
+-- ── Helper: GLOBAL remaining stock for a physical_blindbox ───────────────────
+-- Returns total physical copies still in stock across ALL sets.
+-- This is what the shop badge should display.
+CREATE OR REPLACE FUNCTION get_physical_blindbox_total_remaining(
+  p_item_id UUID
 )
 RETURNS INTEGER
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 AS $$
-  SELECT COUNT(*)::INTEGER
+  SELECT COALESCE(SUM(
+    CASE
+      WHEN bs.quantity IS NULL THEN 999  -- unlimited set
+      ELSE bs.quantity
+    END
+  ), 0)::INTEGER
     FROM blindbox_sets bs
    WHERE bs.item_id = p_item_id
-     AND (bs.quantity IS NULL OR bs.quantity > 0)
-     AND NOT EXISTS (
-       SELECT 1 FROM blindbox_claims bc
-        WHERE bc.set_id = bs.id AND bc.student_id = p_user_id
-     );
+     AND (bs.quantity IS NULL OR bs.quantity > 0);
 $$;

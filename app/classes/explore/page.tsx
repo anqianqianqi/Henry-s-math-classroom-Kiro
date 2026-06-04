@@ -245,7 +245,6 @@ export default function ExploreClassesPage() {
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 py-10">
           <div className="flex items-center gap-2 mb-4">
-            <HomeButton />
             <Button
               variant="ghost"
               size="sm"
@@ -253,6 +252,7 @@ export default function ExploreClassesPage() {
             >
               ← Back
             </Button>
+            <HomeButton />
           </div>
           
           <div className="max-w-3xl mx-auto text-center mb-10">

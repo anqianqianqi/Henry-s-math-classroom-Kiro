@@ -139,8 +139,8 @@ export default function StudentHistoryPage() {
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 sm:py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <HomeButton />
             <Button variant="ghost" size="sm" onClick={() => router.back()}>← Back</Button>
+            <HomeButton />
             <div>
               <h1 className="text-lg sm:text-xl font-bold text-gray-900">
                 {studentName}'s Challenge History

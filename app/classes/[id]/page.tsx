@@ -339,7 +339,6 @@ export default function ClassDetailPage() {
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-2 mb-4">
-          <HomeButton />
           <Button
             variant="ghost"
             size="sm"
@@ -347,6 +346,7 @@ export default function ClassDetailPage() {
           >
             ← Back
           </Button>
+          <HomeButton />
         </div>
 
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6 sm:mb-8">

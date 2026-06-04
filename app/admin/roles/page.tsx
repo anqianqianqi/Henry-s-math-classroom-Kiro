@@ -125,7 +125,6 @@ export default function AdminRolesPage() {
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
-            <HomeButton />
             <Button
               variant="ghost"
               size="sm"
@@ -133,6 +132,7 @@ export default function AdminRolesPage() {
             >
               ← Back
             </Button>
+            <HomeButton />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">User Roles</h1>
           <p className="text-gray-600">Assign teacher or student roles to users</p>

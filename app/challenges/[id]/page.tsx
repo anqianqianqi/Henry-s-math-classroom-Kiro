@@ -1013,7 +1013,6 @@ export default function ChallengePage() {
         <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-4">
-              <HomeButton />
               <Button
                 variant="ghost"
                 size="sm"
@@ -1021,6 +1020,7 @@ export default function ChallengePage() {
               >
                 ← Back
               </Button>
+              <HomeButton />
               <div className="flex items-center gap-2">
                 <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Challenge</h1>
                 <select

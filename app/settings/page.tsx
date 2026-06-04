@@ -150,10 +150,10 @@ export default function SettingsPage() {
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 sm:gap-4">
-            <HomeButton />
             <Button onClick={() => router.push('/dashboard')} variant="ghost" size="sm">
               ←
             </Button>
+            <HomeButton />
             <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Settings</h1>
           </div>
         </div>
