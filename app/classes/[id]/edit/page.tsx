@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { FormField } from '@/components/ui/FormField'
+import { HomeButton } from '@/components/ui/HomeButton'
 
 interface ScheduleSlot {
   id: string
@@ -275,13 +276,15 @@ export default function EditClassPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => router.push(`/classes/${classId}`)}
-            className="mb-4"
-          >
-            ← Back to Class
-          </Button>
+          <div className="flex items-center gap-2 mb-4">
+            <HomeButton />
+            <Button
+              variant="ghost"
+              onClick={() => router.push(`/classes/${classId}`)}
+            >
+              ← Back to Class
+            </Button>
+          </div>
           <h1 className="text-3xl font-bold text-gray-900">Edit Class</h1>
         </div>
 

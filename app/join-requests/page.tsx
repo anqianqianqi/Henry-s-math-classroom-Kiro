@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { HomeButton } from '@/components/ui/HomeButton'
 
 interface JoinRequest {
   id: string
@@ -126,6 +127,7 @@ export default function JoinRequestsDashboard() {
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 sm:gap-4">
+            <HomeButton />
             <Button onClick={() => router.push('/dashboard')} variant="ghost" size="sm">
               ←
             </Button>

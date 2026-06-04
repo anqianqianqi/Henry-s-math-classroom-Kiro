@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
+import { HomeButton } from '@/components/ui/HomeButton'
 
 interface ClassData {
   id: string
@@ -243,14 +244,16 @@ export default function ExploreClassesPage() {
       {/* Hero Section - Modern with subtle accent */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 py-10">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push('/dashboard')}
-            className="mb-4"
-          >
-            ← Back
-          </Button>
+          <div className="flex items-center gap-2 mb-4">
+            <HomeButton />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/dashboard')}
+            >
+              ← Back
+            </Button>
+          </div>
           
           <div className="max-w-3xl mx-auto text-center mb-10">
             <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 bg-clip-text text-transparent">

@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { runSchedulerForClass } from '@/lib/scheduler'
 import { Button } from '@/components/ui/Button'
+import { HomeButton } from '@/components/ui/HomeButton'
 import { localDateString, localDateOffset } from '@/lib/utils/date'
 
 interface Challenge {
@@ -473,6 +474,7 @@ export default function ChallengesPage() {
         <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-4">
+              <HomeButton />
               <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
                 ← Back
               </Button>

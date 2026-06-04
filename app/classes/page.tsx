@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { HomeButton } from '@/components/ui/HomeButton'
 
 interface Class {
   id: string
@@ -117,6 +118,7 @@ export default function ClassesPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6 sm:mb-8">
           <div className="flex items-center gap-2 sm:gap-4">
+            <HomeButton />
             <Button
               variant="ghost"
               size="sm"

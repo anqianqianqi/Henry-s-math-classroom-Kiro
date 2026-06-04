@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { HomeButton } from '@/components/ui/HomeButton'
 
 interface UserEntry {
   id: string
@@ -136,6 +137,7 @@ export default function StudentsPage() {
         <div className="max-w-4xl mx-auto px-4 py-3 sm:py-4 sm:px-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
+              <HomeButton />
               <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>← Dashboard</Button>
               <div>
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900">Student History</h1>

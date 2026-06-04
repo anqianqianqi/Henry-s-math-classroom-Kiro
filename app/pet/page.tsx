@@ -15,6 +15,7 @@ import XpBar from '@/components/pet/XpBar'
 import AccessoryInventory from '@/components/pet/AccessoryInventory'
 import SpeciesSelector from '@/components/pet/SpeciesSelector'
 import EvolutionSparkle from '@/components/pet/EvolutionSparkle'
+import { HomeButton } from '@/components/ui/HomeButton'
 
 interface PendingFeeding {
   id: string
@@ -467,6 +468,7 @@ export default function PetPage() {
       <main className="max-w-2xl mx-auto px-4 py-8 sm:px-6">
         {/* Header row: back button + title */}
         <div className="flex items-center gap-3 mb-4">
+          <HomeButton />
           <button
             onClick={() => router.push('/dashboard')}
             className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"

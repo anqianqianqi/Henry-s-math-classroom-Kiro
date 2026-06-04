@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { CommentThread } from '@/components/CommentThread'
 import { localDateString, localDateOffset } from '@/lib/utils/date'
+import { HomeButton } from '@/components/ui/HomeButton'
 
 interface Challenge {
   id: string
@@ -1012,6 +1013,7 @@ export default function ChallengePage() {
         <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-4">
+              <HomeButton />
               <Button
                 variant="ghost"
                 size="sm"

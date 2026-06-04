@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import TagInput, { TagOption } from '@/components/TagInput'
 import { generateChallenge, GenerativeTemplate } from '@/lib/challenge-generator'
+import { HomeButton } from '@/components/ui/HomeButton'
 import { localDateString } from '@/lib/utils/date'
 
 interface Class {
@@ -463,6 +464,7 @@ export default function NewChallengePage() {
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 sm:gap-4">
+            <HomeButton />
             <Button variant="ghost" size="sm" onClick={() => router.push(fromBank ? '/admin/challenge-bank' : '/dashboard')}>
               ← Back
             </Button>

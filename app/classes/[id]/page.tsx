@@ -9,6 +9,7 @@ import SessionDetail from '@/components/SessionDetail'
 import EnrollmentManager from '@/components/EnrollmentManager'
 import JoinRequestManager from '@/components/JoinRequestManager'
 import { generateOccurrences } from '@/lib/utils/occurrences'
+import { HomeButton } from '@/components/ui/HomeButton'
 
 interface Class {
   id: string
@@ -337,14 +338,16 @@ export default function ClassDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="max-w-4xl mx-auto">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push('/classes')}
-          className="mb-4"
-        >
-          ← Back
-        </Button>
+        <div className="flex items-center gap-2 mb-4">
+          <HomeButton />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push('/classes')}
+          >
+            ← Back
+          </Button>
+        </div>
 
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6 sm:mb-8">
           <div>

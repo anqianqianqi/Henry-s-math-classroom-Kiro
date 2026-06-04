@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { localDateString } from '@/lib/utils/date'
+import { HomeButton } from '@/components/ui/HomeButton'
 
 type Tab = 'challenges' | 'templates'
 
@@ -387,6 +388,7 @@ export default function ChallengeBankPage() {
         <div className="max-w-5xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 sm:gap-4">
+              <HomeButton />
               <Button onClick={() => router.push('/dashboard')} variant="ghost" size="sm">←</Button>
               <div>
                 <h1 className="text-lg sm:text-2xl font-bold text-gray-900">🏦 Challenge Bank</h1>

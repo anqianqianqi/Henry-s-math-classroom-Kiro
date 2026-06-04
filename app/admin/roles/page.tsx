@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { HomeButton } from '@/components/ui/HomeButton'
 
 interface User {
   id: string
@@ -123,14 +124,16 @@ export default function AdminRolesPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 p-4 sm:p-8">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => window.history.back()}
-            className="mb-4"
-          >
-            ← Back
-          </Button>
+          <div className="flex items-center gap-2 mb-4">
+            <HomeButton />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.history.back()}
+            >
+              ← Back
+            </Button>
+          </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">User Roles</h1>
           <p className="text-gray-600">Assign teacher or student roles to users</p>
         </div>
