@@ -693,7 +693,7 @@ export default function AdminShopPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-3">
-          <HomeButton />
+          <HomeButton noSlash />
           <h1 className="text-xl font-bold text-gray-900">Shop Admin 🛍️</h1>
         </div>
       </header>

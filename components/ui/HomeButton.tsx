@@ -3,29 +3,30 @@
 import Link from 'next/link'
 
 /**
- * Small home icon button — links to /dashboard.
- * Drop it anywhere in a page header for a quick shortcut home.
+ * Dashboard text link for page headers.
+ * Without noSlash: renders "/ Dashboard" — sits after a back button as a breadcrumb.
+ * With noSlash: renders just "Dashboard" — used when it's the only nav link.
  */
-export function HomeButton() {
-  return (
-    <Link
-      href="/dashboard"
-      aria-label="Go to Dashboard"
-      className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-primary-600 hover:bg-primary-50 transition-colors"
-      title="Dashboard"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 20 20"
-        fill="currentColor"
-        className="w-4 h-4"
+export function HomeButton({ noSlash = false }: { noSlash?: boolean }) {
+  if (noSlash) {
+    return (
+      <Link
+        href="/dashboard"
+        className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
       >
-        <path
-          fillRule="evenodd"
-          d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 11h-1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-6H3a1 1 0 01-.707-1.707l7-7z"
-          clipRule="evenodd"
-        />
-      </svg>
-    </Link>
+        ← Dashboard
+      </Link>
+    )
+  }
+  return (
+    <span className="flex items-center gap-2 text-sm text-gray-400">
+      <span>/</span>
+      <Link
+        href="/dashboard"
+        className="text-gray-500 hover:text-gray-800 transition-colors"
+      >
+        Dashboard
+      </Link>
+    </span>
   )
 }
