@@ -36,6 +36,8 @@ export default function GradingPage() {
   const [tab, setTab] = useState<Tab>('ungraded')
   const [grading, setGrading] = useState<Record<string, { points: string; saving: boolean }>>({})
   const [error, setError] = useState<string | null>(null)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -99,6 +101,26 @@ export default function GradingPage() {
 
   useEffect(() => { load() }, [load])
 
+  // Apply date filter client-side
+  function applyDateFilter(list: Submission[]) {
+    return list.filter(s => {
+      const d = s.submitted_at.slice(0, 10)
+      if (dateFrom && d < dateFrom) return false
+      if (dateTo && d > dateTo) return false
+      return true
+    })
+  }
+
+  async function handleMarkReviewed(submissionId: string) {
+    const { error: updateErr } = await supabase
+      .from('challenge_submissions')
+      .update({ points: 0 })
+      .eq('id', submissionId)
+
+    if (updateErr) { setError('Failed to mark as reviewed'); return }
+    await load()
+  }
+
   async function handleGrade(submissionId: string, maxPts: number | null) {
     const entry = grading[submissionId]
     if (!entry) return
@@ -136,7 +158,7 @@ export default function GradingPage() {
     )
   }
 
-  const currentList = tab === 'ungraded' ? ungraded : graded
+  const currentList = applyDateFilter(tab === 'ungraded' ? ungraded : graded)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
@@ -156,6 +178,34 @@ export default function GradingPage() {
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{error}</div>
         )}
+
+        {/* Date filter */}
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-gray-600">Filter by date:</span>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+            />
+            <span className="text-gray-400 text-sm">to</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+            />
+          </div>
+          {(dateFrom || dateTo) && (
+            <button
+              onClick={() => { setDateFrom(''); setDateTo('') }}
+              className="text-sm text-gray-400 hover:text-gray-700 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-gray-200">
@@ -281,15 +331,24 @@ export default function GradingPage() {
                               </Button>
                             </>
                           ) : (
-                            <Button
-                              size="sm"
-                              onClick={() => setGrading(prev => ({
-                                ...prev,
-                                [s.id]: { points: '', saving: false }
-                              }))}
-                            >
-                              Grade
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => setGrading(prev => ({
+                                  ...prev,
+                                  [s.id]: { points: '', saving: false }
+                                }))}
+                              >
+                                Grade
+                              </Button>
+                              <button
+                                onClick={() => handleMarkReviewed(s.id)}
+                                className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                title="Mark as reviewed without assigning points"
+                              >
+                                Mark reviewed (0 pts)
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}
