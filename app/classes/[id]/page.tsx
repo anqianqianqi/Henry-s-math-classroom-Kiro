@@ -374,6 +374,14 @@ export default function ClassDetailPage() {
                   <span className="hidden sm:inline">✏️ </span>Edit
                 </Button>
                 <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleGenerateSessions}
+                  disabled={generatingSessions}
+                >
+                  {generatingSessions ? 'Generating...' : '+ Sessions'}
+                </Button>
+                <Button
                   variant="danger"
                   size="sm"
                   onClick={handleDelete}

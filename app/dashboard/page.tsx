@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [isTeacher, setIsTeacher] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [ungradedCount, setUngradedCount] = useState(0)
   const [stats, setStats] = useState({
     classesCount: 0,
     challengesCount: 0,
@@ -105,6 +106,33 @@ export default function DashboardPage() {
           .from('class_join_requests')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'pending')
+
+        // Count ungraded homework submissions for teacher's assignments
+        try {
+          const { data: teacherAssignments } = await supabase
+            .from('homework_assignments')
+            .select('id')
+            .eq('created_by', userId)
+
+          if (teacherAssignments && teacherAssignments.length > 0) {
+            const assignmentIds = teacherAssignments.map((a: any) => a.id)
+            const { data: submissions } = await supabase
+              .from('homework_submissions')
+              .select('id')
+              .in('assignment_id', assignmentIds)
+
+            if (submissions && submissions.length > 0) {
+              const subIds = submissions.map((s: any) => s.id)
+              const { data: gradedIds } = await supabase
+                .from('homework_grades')
+                .select('submission_id')
+                .in('submission_id', subIds)
+                .eq('status', 'published')
+              const gradedSet = new Set((gradedIds || []).map((g: any) => g.submission_id))
+              setUngradedCount(subIds.filter((id: string) => !gradedSet.has(id)).length)
+            }
+          }
+        } catch { /* ignore — homework tables may not exist */ }
 
         const newStats = {
           classesCount: classesCount || 0,
@@ -546,6 +574,24 @@ export default function DashboardPage() {
                 <div className="text-5xl mb-3 hidden sm:block">📊</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">Students</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">History</div>
+              </Card.Body>
+            </Card>
+          )}
+
+          {(isTeacher || isAdmin) && (
+            <Card 
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow relative"
+              onClick={() => router.push('/grading')}
+            >
+              <Card.Body>
+                <div className="text-5xl mb-3 hidden sm:block">📝</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">Grade</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Homework</div>
+                {ungradedCount > 0 && (
+                  <span className="absolute top-3 right-3 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {ungradedCount}
+                  </span>
+                )}
               </Card.Body>
             </Card>
           )}
