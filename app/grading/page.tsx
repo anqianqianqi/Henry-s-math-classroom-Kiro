@@ -7,30 +7,37 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import GradingInterface from '@/components/GradingInterface'
 import { HomeButton } from '@/components/ui/HomeButton'
 
-interface UngradedAssignment {
-  assignment_id: string
-  assignment_title: string
-  points_possible: number
-  due_date: string
-  class_name: string
-  class_id: string
-  ungraded_count: number
-  total_count: number
+interface Submission {
+  id: string
+  user_id: string
+  challenge_id: string
+  answer: string | null
+  points: number | null
+  submitted_at: string
+  updated_at: string
+  student_name: string
+  student_email: string
+  challenge_title: string
+  challenge_date: string
+  max_points: number | null
 }
+
+type Tab = 'ungraded' | 'history'
 
 export default function GradingPage() {
   const router = useRouter()
   const supabase = createClient()
 
   const [loading, setLoading] = useState(true)
-  const [assignments, setAssignments] = useState<UngradedAssignment[]>([])
-  const [selectedAssignment, setSelectedAssignment] = useState<UngradedAssignment | null>(null)
-  const [showAll, setShowAll] = useState(false)
+  const [ungraded, setUngraded] = useState<Submission[]>([])
+  const [graded, setGraded] = useState<Submission[]>([])
+  const [tab, setTab] = useState<Tab>('ungraded')
+  const [grading, setGrading] = useState<Record<string, { points: string; saving: boolean }>>({})
+  const [error, setError] = useState<string | null>(null)
 
-  const loadUngraded = useCallback(async () => {
+  const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
 
@@ -46,90 +53,80 @@ export default function GradingPage() {
     )
     if (!isTeacher) { router.push('/dashboard'); return }
 
-    // Load all assignments created by this teacher with submission counts
-    const { data: assignmentsData } = await supabase
-      .from('homework_assignments')
+    // Load all challenge submissions with student + challenge info
+    const { data, error: fetchErr } = await supabase
+      .from('challenge_submissions')
       .select(`
         id,
-        title,
-        points_possible,
-        due_date,
-        created_by,
-        class_occurrences!inner(
-          class_id,
-          classes!inner(name)
-        )
+        user_id,
+        challenge_id,
+        answer,
+        points,
+        submitted_at,
+        updated_at,
+        profiles:user_id(full_name, first_name, last_name, email),
+        daily_challenges:challenge_id(title, challenge_date, max_points)
       `)
-      .eq('created_by', user.id)
-      .order('due_date', { ascending: false })
+      .order('submitted_at', { ascending: false })
 
-    if (!assignmentsData || assignmentsData.length === 0) {
-      setAssignments([])
+    if (fetchErr) {
+      setError('Failed to load submissions')
       setLoading(false)
       return
     }
 
-    const assignmentIds = assignmentsData.map((a: any) => a.id)
+    const all: Submission[] = (data || []).map((s: any) => ({
+      id: s.id,
+      user_id: s.user_id,
+      challenge_id: s.challenge_id,
+      answer: s.answer,
+      points: s.points,
+      submitted_at: s.submitted_at,
+      updated_at: s.updated_at,
+      student_name: s.profiles?.full_name
+        || [s.profiles?.first_name, s.profiles?.last_name].filter(Boolean).join(' ')
+        || 'Unknown',
+      student_email: s.profiles?.email || '',
+      challenge_title: s.daily_challenges?.title || 'Unknown Challenge',
+      challenge_date: s.daily_challenges?.challenge_date || '',
+      max_points: s.daily_challenges?.max_points ?? null,
+    }))
 
-    // Get all submissions for these assignments
-    const { data: submissions } = await supabase
-      .from('homework_submissions')
-      .select('id, assignment_id, student_id')
-      .in('assignment_id', assignmentIds)
-
-    // Get all published grades for these submissions
-    const submissionIds = (submissions || []).map((s: any) => s.id)
-    const { data: grades } = submissionIds.length > 0
-      ? await supabase
-          .from('homework_grades')
-          .select('submission_id, status')
-          .in('submission_id', submissionIds)
-          .eq('status', 'published')
-      : { data: [] }
-
-    const gradedSubmissionIds = new Set((grades || []).map((g: any) => g.submission_id))
-
-    // Deduplicate submissions to latest version per student per assignment
-    const latestByStudentAssignment = new Map<string, string>()
-    for (const sub of (submissions || [])) {
-      const key = `${sub.assignment_id}:${sub.student_id}`
-      if (!latestByStudentAssignment.has(key)) {
-        latestByStudentAssignment.set(key, sub.id)
-      }
-    }
-    const latestIds = new Set(latestByStudentAssignment.values())
-
-    // Build per-assignment counts
-    const countMap: Record<string, { total: number; ungraded: number }> = {}
-    for (const sub of (submissions || [])) {
-      if (!latestIds.has(sub.id)) continue
-      if (!countMap[sub.assignment_id]) countMap[sub.assignment_id] = { total: 0, ungraded: 0 }
-      countMap[sub.assignment_id].total++
-      if (!gradedSubmissionIds.has(sub.id)) countMap[sub.assignment_id].ungraded++
-    }
-
-    const result: UngradedAssignment[] = assignmentsData
-      .map((a: any) => ({
-        assignment_id: a.id,
-        assignment_title: a.title,
-        points_possible: a.points_possible,
-        due_date: a.due_date,
-        class_name: (a.class_occurrences as any)?.classes?.name ?? 'Unknown Class',
-        class_id: (a.class_occurrences as any)?.class_id ?? '',
-        ungraded_count: countMap[a.id]?.ungraded ?? 0,
-        total_count: countMap[a.id]?.total ?? 0,
-      }))
-      // Show those with submissions first, sorted by most ungraded
-      .sort((a, b) => b.ungraded_count - a.ungraded_count || b.total_count - a.total_count)
-
-    setAssignments(result)
+    setUngraded(all.filter(s => s.points === null))
+    setGraded(all.filter(s => s.points !== null))
     setLoading(false)
   }, [router, supabase])
 
-  useEffect(() => { loadUngraded() }, [loadUngraded])
+  useEffect(() => { load() }, [load])
 
-  const displayed = showAll ? assignments : assignments.filter(a => a.total_count > 0)
-  const totalUngraded = assignments.reduce((sum, a) => sum + a.ungraded_count, 0)
+  async function handleGrade(submissionId: string, maxPts: number | null) {
+    const entry = grading[submissionId]
+    if (!entry) return
+    const pts = parseFloat(entry.points)
+    if (isNaN(pts) || pts < 0) { setError('Enter a valid point value'); return }
+    if (maxPts !== null && pts > maxPts) { setError(`Max points is ${maxPts}`); return }
+
+    setGrading(g => ({ ...g, [submissionId]: { ...g[submissionId], saving: true } }))
+    setError(null)
+
+    const { error: updateErr } = await supabase
+      .from('challenge_submissions')
+      .update({ points: pts })
+      .eq('id', submissionId)
+
+    if (updateErr) {
+      setError('Failed to save grade')
+      setGrading(g => ({ ...g, [submissionId]: { ...g[submissionId], saving: false } }))
+      return
+    }
+
+    // Remove from grading state and reload
+    setGrading(g => { const n = { ...g }; delete n[submissionId]; return n })
+    await load()
+  }
+
+  const formatDate = (d: string) =>
+    d ? new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 
   if (loading) {
     return (
@@ -139,115 +136,224 @@ export default function GradingPage() {
     )
   }
 
+  const currentList = tab === 'ungraded' ? ungraded : graded
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
-                ← Back
-              </Button>
-              <HomeButton />
-              <div>
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900">Grade Homework</h1>
-                {totalUngraded > 0 && (
-                  <p className="text-sm text-amber-600 font-medium">{totalUngraded} ungraded submission{totalUngraded !== 1 ? 's' : ''}</p>
-                )}
-              </div>
-            </div>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
+              ← Back
+            </Button>
+            <HomeButton />
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900">Grade Submissions</h1>
           </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-6">
-        {selectedAssignment ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" onClick={() => { setSelectedAssignment(null); loadUngraded() }}>
-                ← All Assignments
-              </Button>
-              <div>
-                <p className="text-sm text-gray-500">{selectedAssignment.class_name}</p>
-                <h2 className="font-semibold text-gray-900">{selectedAssignment.assignment_title}</h2>
-              </div>
-            </div>
-            <GradingInterface
-              assignmentId={selectedAssignment.assignment_id}
-              assignmentTitle={selectedAssignment.assignment_title}
-              pointsPossible={selectedAssignment.points_possible}
-              onClose={() => { setSelectedAssignment(null); loadUngraded() }}
-            />
-          </div>
-        ) : (
-          <>
-            {displayed.length === 0 ? (
-              <Card>
-                <Card.Body>
-                  <div className="text-center py-16">
-                    <div className="text-5xl mb-3">✅</div>
-                    <p className="text-lg font-medium text-gray-700">All caught up!</p>
-                    <p className="text-sm text-gray-500 mt-1">No submissions to grade right now.</p>
-                  </div>
-                </Card.Body>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {displayed.map(a => {
-                  const allGraded = a.ungraded_count === 0
-                  return (
-                    <Card key={a.assignment_id}>
-                      <Card.Body>
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{a.class_name}</p>
-                            <h3 className="font-semibold text-gray-900 truncate">{a.assignment_title}</h3>
-                            <p className="text-sm text-gray-500 mt-1">
-                              Due {new Date(a.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                              {' · '}{a.points_possible} pts
-                            </p>
-                          </div>
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{error}</div>
+        )}
 
-                          <div className="flex items-center gap-4 shrink-0">
-                            <div className="text-right">
-                              {a.total_count === 0 ? (
-                                <p className="text-sm text-gray-400">No submissions</p>
-                              ) : (
-                                <>
-                                  <p className={`text-sm font-semibold ${allGraded ? 'text-green-600' : 'text-amber-600'}`}>
-                                    {allGraded ? '✓ All graded' : `${a.ungraded_count} ungraded`}
-                                  </p>
-                                  <p className="text-xs text-gray-400">{a.total_count} submission{a.total_count !== 1 ? 's' : ''} total</p>
-                                </>
-                              )}
-                            </div>
-                            {a.total_count > 0 && (
-                              <Button
-                                size="sm"
-                                variant={allGraded ? 'ghost' : undefined}
-                                onClick={() => setSelectedAssignment(a)}
-                              >
-                                {allGraded ? 'Review' : 'Grade'}
-                              </Button>
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-gray-200">
+          <button
+            onClick={() => setTab('ungraded')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              tab === 'ungraded'
+                ? 'border-amber-500 text-amber-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Needs Grading
+            {ungraded.length > 0 && (
+              <span className="ml-2 bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                {ungraded.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setTab('history')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              tab === 'history'
+                ? 'border-primary-500 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Grade History ({graded.length})
+          </button>
+        </div>
+
+        {currentList.length === 0 ? (
+          <Card>
+            <Card.Body>
+              <div className="text-center py-16">
+                <p className="text-lg font-medium text-gray-600">
+                  {tab === 'ungraded' ? 'No ungraded submissions — all caught up!' : 'No graded submissions yet.'}
+                </p>
+              </div>
+            </Card.Body>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {currentList.map(s => {
+              const g = grading[s.id]
+              const isEditing = !!g
+
+              return (
+                <Card key={s.id}>
+                  <Card.Body>
+                    <div className="space-y-3">
+                      {/* Header row */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-gray-900">{s.student_name}</span>
+                            {s.student_email && (
+                              <span className="text-xs text-gray-400">{s.student_email}</span>
                             )}
                           </div>
+                          <p className="text-sm font-medium text-gray-700 mt-0.5">{s.challenge_title}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            Challenge date: {formatDate(s.challenge_date)}
+                            {' · '}Submitted: {formatDate(s.submitted_at)}
+                            {s.max_points !== null && ` · Max: ${s.max_points} pts`}
+                          </p>
                         </div>
-                      </Card.Body>
-                    </Card>
-                  )
-                })}
-              </div>
-            )}
 
-            <div className="flex justify-center">
-              <button
-                onClick={() => setShowAll(v => !v)}
-                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                {showAll ? 'Show only assignments with submissions' : `Show all assignments (${assignments.length})`}
-              </button>
-            </div>
-          </>
+                        <div className="shrink-0 text-right">
+                          {tab === 'history' && s.points !== null && (
+                            <div className="text-lg font-bold text-primary-600">
+                              {s.points}{s.max_points !== null ? `/${s.max_points}` : ''} pts
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Answer */}
+                      {s.answer && (
+                        <div className="bg-gray-50 rounded-lg px-4 py-3">
+                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Answer</p>
+                          <p className="text-sm text-gray-800 whitespace-pre-wrap">{s.answer}</p>
+                        </div>
+                      )}
+
+                      {/* Grading row */}
+                      {tab === 'ungraded' && (
+                        <div className="flex items-center gap-3 pt-1">
+                          {isEditing ? (
+                            <>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={s.max_points ?? undefined}
+                                  step={1}
+                                  value={g.points}
+                                  onChange={e => setGrading(prev => ({
+                                    ...prev,
+                                    [s.id]: { ...prev[s.id], points: e.target.value }
+                                  }))}
+                                  className="w-24 px-3 py-1.5 border-2 border-primary-300 rounded-lg text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                                  placeholder="pts"
+                                  autoFocus
+                                />
+                                {s.max_points !== null && (
+                                  <span className="text-sm text-gray-400">/ {s.max_points}</span>
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                disabled={g.saving || !g.points}
+                                onClick={() => handleGrade(s.id, s.max_points)}
+                              >
+                                {g.saving ? 'Saving…' : 'Save'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={g.saving}
+                                onClick={() => setGrading(prev => { const n = { ...prev }; delete n[s.id]; return n })}
+                              >
+                                Cancel
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => setGrading(prev => ({
+                                ...prev,
+                                [s.id]: { points: '', saving: false }
+                              }))}
+                            >
+                              Grade
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* History: edit button */}
+                      {tab === 'history' && (
+                        <div className="flex items-center gap-3 pt-1">
+                          {isEditing ? (
+                            <>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={s.max_points ?? undefined}
+                                  step={1}
+                                  value={g.points}
+                                  onChange={e => setGrading(prev => ({
+                                    ...prev,
+                                    [s.id]: { ...prev[s.id], points: e.target.value }
+                                  }))}
+                                  className="w-24 px-3 py-1.5 border-2 border-primary-300 rounded-lg text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                                  placeholder="pts"
+                                  autoFocus
+                                />
+                                {s.max_points !== null && (
+                                  <span className="text-sm text-gray-400">/ {s.max_points}</span>
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                disabled={g.saving || !g.points}
+                                onClick={() => handleGrade(s.id, s.max_points)}
+                              >
+                                {g.saving ? 'Saving…' : 'Update'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={g.saving}
+                                onClick={() => setGrading(prev => { const n = { ...prev }; delete n[s.id]; return n })}
+                              >
+                                Cancel
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setGrading(prev => ({
+                                ...prev,
+                                [s.id]: { points: String(s.points ?? ''), saving: false }
+                              }))}
+                            >
+                              Edit Grade
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </Card.Body>
+                </Card>
+              )
+            })}
+          </div>
         )}
       </main>
     </div>
