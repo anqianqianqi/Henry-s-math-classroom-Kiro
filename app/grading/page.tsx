@@ -13,7 +13,7 @@ interface Submission {
   id: string
   user_id: string
   challenge_id: string
-  answer: string | null
+  answer: string | null   // maps to challenge_submissions.content
   points: number | null
   submitted_at: string
   updated_at: string
@@ -60,7 +60,7 @@ export default function GradingPage() {
         id,
         user_id,
         challenge_id,
-        answer,
+        content,
         points,
         submitted_at,
         updated_at,
@@ -79,7 +79,7 @@ export default function GradingPage() {
       id: s.id,
       user_id: s.user_id,
       challenge_id: s.challenge_id,
-      answer: s.answer,
+      answer: s.content,
       points: s.points,
       submitted_at: s.submitted_at,
       updated_at: s.updated_at,
