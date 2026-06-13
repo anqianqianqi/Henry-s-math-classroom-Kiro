@@ -122,50 +122,50 @@ export default function AdminShopPage() {
 
     // Fetch all claimed blind box images (teacher can see all via RLS)
     // For set-based blindboxes: fetch all images in each claimed set
-    const [claimedImagesResult, blindboxClaimsResult] = await Promise.all([
-      supabase
-        .from('blindbox_images')
-        .select('item_id, claimed_by, image_url')
-        .eq('is_claimed', true),
-      supabase
-        .from('blindbox_claims')
-        .select('item_id, student_id, set_id, blindbox_sets(id, blindbox_images(image_url, sort_order))')
-        .order('claimed_at', { ascending: false }),
-    ])
-
-    // Build a map: `${item_id}:${user_id}` → string[] (all image URLs for that claim)
     const claimedImageMap: Record<string, string[]> = {}
+    try {
+      const [claimedImagesResult, blindboxClaimsResult] = await Promise.all([
+        supabase
+          .from('blindbox_images')
+          .select('item_id, claimed_by, image_url')
+          .eq('is_claimed', true),
+        supabase
+          .from('blindbox_claims')
+          .select('item_id, student_id, set_id, blindbox_sets(id, blindbox_images(image_url, sort_order))')
+          .order('claimed_at', { ascending: false }),
+      ])
 
-    // From old blindbox_images.claimed_by (single image)
-    for (const img of claimedImagesResult.data ?? []) {
-      if (img.claimed_by && img.image_url) {
-        const key = `${img.item_id}:${img.claimed_by}`
+      // From old blindbox_images.claimed_by (single image)
+      for (const img of claimedImagesResult.data ?? []) {
+        if (img.claimed_by && img.image_url) {
+          const key = `${img.item_id}:${img.claimed_by}`
+          if (!claimedImageMap[key]) claimedImageMap[key] = []
+          if (!claimedImageMap[key].includes(img.image_url)) {
+            claimedImageMap[key].push(img.image_url)
+          }
+        }
+      }
+
+      // From new blindbox_claims with set images
+      for (const claim of blindboxClaimsResult.data ?? []) {
+        const key = `${claim.item_id}:${claim.student_id}`
         if (!claimedImageMap[key]) claimedImageMap[key] = []
-        if (!claimedImageMap[key].includes(img.image_url)) {
-          claimedImageMap[key].push(img.image_url)
+
+        if (claim.set_id && (claim as any).blindbox_sets?.blindbox_images) {
+          const setImages = [...((claim as any).blindbox_sets.blindbox_images)]
+            .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+            .map((img: any) => img.image_url)
+            .filter(Boolean)
+          for (const url of setImages) {
+            if (!claimedImageMap[key].includes(url)) claimedImageMap[key].push(url)
+          }
+        } else {
+          const url = (claim as any).blindbox_images?.image_url
+          if (url && !claimedImageMap[key].includes(url)) claimedImageMap[key].push(url)
         }
       }
-    }
-
-    // From new blindbox_claims with set images
-    for (const claim of blindboxClaimsResult.data ?? []) {
-      const key = `${claim.item_id}:${claim.student_id}`
-      if (!claimedImageMap[key]) claimedImageMap[key] = []
-
-      if (claim.set_id && (claim as any).blindbox_sets?.blindbox_images) {
-        // Set-based: get all images in this set, sorted by sort_order
-        const setImages = [...((claim as any).blindbox_sets.blindbox_images)]
-          .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-          .map((img: any) => img.image_url)
-          .filter(Boolean)
-        for (const url of setImages) {
-          if (!claimedImageMap[key].includes(url)) claimedImageMap[key].push(url)
-        }
-      } else {
-        // Legacy single image
-        const url = (claim as any).blindbox_images?.image_url
-        if (url && !claimedImageMap[key].includes(url)) claimedImageMap[key].push(url)
-      }
+    } catch (e) {
+      console.warn('[admin/shop] Failed to load blindbox claims:', e)
     }
 
     setRedemptions(
@@ -186,8 +186,7 @@ export default function AdminShopPage() {
         blindbox_image_urls: (r.shop_items?.commodity_type === 'blindbox' || r.shop_items?.commodity_type === 'physical_blindbox')
           ? (claimedImageMap[`${r.item_id}:${r.user_id}`] ?? [])
           : [],
-        refunded_at: r.refunded_at ?? null,
-      }))
+        refunded_at: r.refunded_at ?? null,      }))
     )
 
     // Fetch all students and their balances from student_wallets (single query)
