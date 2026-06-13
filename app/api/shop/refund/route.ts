@@ -45,10 +45,10 @@ export async function POST(request: Request) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // Read redemption — include set_id so we can delete only the specific blindbox claim
+    // Read redemption — include set_id and redeemed_at for claim matching fallback
     const { data: redemption, error: readErr } = await admin
       .from('redemptions')
-      .select('user_id, item_id, points_spent, set_id')
+      .select('user_id, item_id, points_spent, set_id, redeemed_at')
       .eq('id', redemption_id)
       .single()
 
