@@ -121,51 +121,34 @@ export default function AdminShopPage() {
       .order('redeemed_at', { ascending: false })
 
     // Fetch all claimed blind box images (teacher can see all via RLS)
-    // For set-based blindboxes: fetch all images in each claimed set
-    const claimedImageMap: Record<string, string[]> = {}
-    try {
-      const [claimedImagesResult, blindboxClaimsResult] = await Promise.all([
-        supabase
-          .from('blindbox_images')
-          .select('item_id, claimed_by, image_url')
-          .eq('is_claimed', true),
-        supabase
-          .from('blindbox_claims')
-          .select('item_id, student_id, set_id, blindbox_sets(id, blindbox_images(image_url, sort_order))')
-          .order('claimed_at', { ascending: false }),
-      ])
+    // Check both old blindbox_images.claimed_by AND new blindbox_claims table
+    const [claimedImagesResult, blindboxClaimsResult] = await Promise.all([
+      supabase
+        .from('blindbox_images')
+        .select('item_id, claimed_by, image_url')
+        .eq('is_claimed', true),
+      supabase
+        .from('blindbox_claims')
+        .select('item_id, student_id, blindbox_images(image_url)')
+        .order('claimed_at', { ascending: false }),
+    ])
 
-      // From old blindbox_images.claimed_by (single image)
-      for (const img of claimedImagesResult.data ?? []) {
-        if (img.claimed_by && img.image_url) {
-          const key = `${img.item_id}:${img.claimed_by}`
-          if (!claimedImageMap[key]) claimedImageMap[key] = []
-          if (!claimedImageMap[key].includes(img.image_url)) {
-            claimedImageMap[key].push(img.image_url)
-          }
-        }
+    // Build a map: `${item_id}:${user_id}` → image_url (most recent claim per user+item)
+    const claimedImageMap: Record<string, string> = {}
+    // From old blindbox_images.claimed_by
+    for (const img of claimedImagesResult.data ?? []) {
+      if (img.claimed_by && img.image_url) {
+        const key = `${img.item_id}:${img.claimed_by}`
+        if (!claimedImageMap[key]) claimedImageMap[key] = img.image_url
       }
-
-      // From new blindbox_claims with set images
-      for (const claim of blindboxClaimsResult.data ?? []) {
+    }
+    // From new blindbox_claims (overrides if present, as it's more recent)
+    for (const claim of blindboxClaimsResult.data ?? []) {
+      const url = (claim as any).blindbox_images?.image_url
+      if (url) {
         const key = `${claim.item_id}:${claim.student_id}`
-        if (!claimedImageMap[key]) claimedImageMap[key] = []
-
-        if (claim.set_id && (claim as any).blindbox_sets?.blindbox_images) {
-          const setImages = [...((claim as any).blindbox_sets.blindbox_images)]
-            .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-            .map((img: any) => img.image_url)
-            .filter(Boolean)
-          for (const url of setImages) {
-            if (!claimedImageMap[key].includes(url)) claimedImageMap[key].push(url)
-          }
-        } else {
-          const url = (claim as any).blindbox_images?.image_url
-          if (url && !claimedImageMap[key].includes(url)) claimedImageMap[key].push(url)
-        }
+        if (!claimedImageMap[key]) claimedImageMap[key] = url
       }
-    } catch (e) {
-      console.warn('[admin/shop] Failed to load blindbox claims:', e)
     }
 
     setRedemptions(
@@ -181,12 +164,8 @@ export default function AdminShopPage() {
         item_title: r.shop_items?.title ?? 'Unknown item',
         item_commodity_type: r.shop_items?.commodity_type ?? 'standard',
         blindbox_image_url: (r.shop_items?.commodity_type === 'blindbox' || r.shop_items?.commodity_type === 'physical_blindbox')
-          ? (claimedImageMap[`${r.item_id}:${r.user_id}`]?.[0] ?? null)
+          ? (claimedImageMap[`${r.item_id}:${r.user_id}`] ?? null)
           : null,
-        blindbox_image_urls: (r.shop_items?.commodity_type === 'blindbox' || r.shop_items?.commodity_type === 'physical_blindbox')
-          ? (claimedImageMap[`${r.item_id}:${r.user_id}`] ?? [])
-          : [],
-        refunded_at: r.refunded_at ?? null,
       }))
     )
 
@@ -1311,47 +1290,32 @@ export default function AdminShopPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {redemptions.map((r) => (
-                        <tr key={r.id} className={r.refunded_at ? 'opacity-50' : ''}>
+                        <tr key={r.id}>
                           <td className="py-2 pr-4 font-medium text-gray-900">
                             {r.student_name}
                           </td>
                           <td className="py-2 pr-4 text-gray-700">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className={r.refunded_at ? 'line-through text-gray-400' : ''}>{r.item_title}</span>
-                              {r.refunded_at && (
-                                <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">Refunded</span>
-                              )}
-                              {!r.refunded_at && r.item_commodity_type === 'blindbox' && (
+                              <span>{r.item_title}</span>
+                              {r.item_commodity_type === 'blindbox' && (
                                 <span className="text-[10px] font-semibold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">🎁 Blind Box</span>
                               )}
-                              {!r.refunded_at && r.item_commodity_type === 'physical_blindbox' && (
+                              {r.item_commodity_type === 'physical_blindbox' && (
                                 <span className="text-[10px] font-semibold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full">📦🎲 Physical Box</span>
                               )}
-                              {!r.refunded_at && r.item_commodity_type === 'physical' && (
+                              {r.item_commodity_type === 'physical' && (
                                 <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">📦 Physical</span>
                               )}
                             </div>
                           </td>
                           <td className="py-2 pr-4">
-                            {r.blindbox_image_urls && r.blindbox_image_urls.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {r.blindbox_image_urls.map((url, i) => (
-                                  <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                                    <img
-                                      src={url}
-                                      alt={`Prize ${i + 1}`}
-                                      className="w-10 h-10 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity"
-                                      title={`Prize ${i + 1} — click to view`}
-                                    />
-                                  </a>
-                                ))}
-                              </div>
-                            ) : r.blindbox_image_url ? (
+                            {r.blindbox_image_url ? (
                               <a href={r.blindbox_image_url} target="_blank" rel="noopener noreferrer">
                                 <img
                                   src={r.blindbox_image_url}
                                   alt="Prize"
                                   className="w-10 h-10 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity"
+                                  title="Click to view full size"
                                 />
                               </a>
                             ) : (
@@ -1369,20 +1333,14 @@ export default function AdminShopPage() {
                             })}
                           </td>
                           <td className="py-2">
-                            {r.refunded_at ? (
-                              <span className="text-xs text-gray-400">
-                                {new Date(r.refunded_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                              </span>
-                            ) : (
-                              <button
-                                disabled={refunding === r.id}
-                                onClick={() => handleRefund(r.id, r.points_spent, r.student_name)}
-                                className="text-xs font-semibold px-2 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                title={`Refund ${r.points_spent} pts to ${r.student_name}`}
-                              >
-                                {refunding === r.id ? '…' : 'Refund'}
-                              </button>
-                            )}
+                            <button
+                              disabled={refunding === r.id}
+                              onClick={() => handleRefund(r.id, r.points_spent, r.student_name)}
+                              className="text-xs font-semibold px-2 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={`Refund ${r.points_spent} pts to ${r.student_name}`}
+                            >
+                              {refunding === r.id ? '…' : 'Refund'}
+                            </button>
                           </td>
                         </tr>
                       ))}
