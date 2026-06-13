@@ -186,7 +186,8 @@ export default function AdminShopPage() {
         blindbox_image_urls: (r.shop_items?.commodity_type === 'blindbox' || r.shop_items?.commodity_type === 'physical_blindbox')
           ? (claimedImageMap[`${r.item_id}:${r.user_id}`] ?? [])
           : [],
-        refunded_at: r.refunded_at ?? null,      }))
+        refunded_at: r.refunded_at ?? null,
+      }))
     )
 
     // Fetch all students and their balances from student_wallets (single query)
