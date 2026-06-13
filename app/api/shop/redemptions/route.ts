@@ -142,9 +142,9 @@ export async function GET() {
       }
     }
 
-    // Match each redemption to its corresponding draw by chronological order
-    // redemptions are sorted desc (newest first), claims are sorted asc (oldest first)
-    // We reverse-match: nth redemption for an item → nth claim for that item (both sorted by time)
+    // Match each redemption to its corresponding draw by chronological order.
+    // IMPORTANT: skip refunded redemptions when assigning claim indexes — their
+    // blindbox_claims row has been deleted, so only active draws have a claim entry.
     const redemptionCountByItem: Record<string, number> = {}
 
     // Sort redemptions oldest-first for matching, then we'll reverse the result
@@ -152,14 +152,19 @@ export async function GET() {
       (a, b) => new Date(a.redeemed_at).getTime() - new Date(b.redeemed_at).getTime()
     )
 
-    // Assign claim index to each redemption
+    // Assign claim index only to non-refunded redemptions
     const redemptionClaimIndex: Record<string, number> = {}
     for (const r of redemptionsSortedAsc) {
       const commodityType = itemMap[r.item_id]?.commodity_type ?? 'standard'
       if (commodityType === 'blindbox' || commodityType === 'physical_blindbox') {
-        const idx = redemptionCountByItem[r.item_id] ?? 0
-        redemptionClaimIndex[r.id] = idx
-        redemptionCountByItem[r.item_id] = idx + 1
+        if (r.refunded_at) {
+          // Refunded: no claim row exists, don't consume an index slot
+          redemptionClaimIndex[r.id] = -1
+        } else {
+          const idx = redemptionCountByItem[r.item_id] ?? 0
+          redemptionClaimIndex[r.id] = idx
+          redemptionCountByItem[r.item_id] = idx + 1
+        }
       }
     }
 
@@ -171,12 +176,12 @@ export async function GET() {
       let imageUrls: string[] = []
       if (isBlindbox) {
         const claimIdx = redemptionClaimIndex[r.id]
-        const draws = claimsByItem[r.item_id] ?? []
-        if (claimIdx !== undefined && draws[claimIdx]) {
-          imageUrls = draws[claimIdx].urls
-        } else if (draws.length > 0) {
-          // Fallback: show all images if matching fails
-          imageUrls = [...new Set(draws.flatMap(d => d.urls))]
+        // claimIdx === -1 means refunded (claim row deleted), skip image lookup
+        if (claimIdx !== undefined && claimIdx >= 0) {
+          const draws = claimsByItem[r.item_id] ?? []
+          if (draws[claimIdx]) {
+            imageUrls = draws[claimIdx].urls
+          }
         }
       }
 
