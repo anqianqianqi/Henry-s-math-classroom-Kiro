@@ -24,6 +24,7 @@ interface RedemptionWithTitle extends Redemption {
   item_commodity_type?: string
   blindbox_image_url?: string | null
   blindbox_image_urls?: string[]
+  refunded_at?: string | null
 }
 
 // ── Blind Box Reveal Modal ────────────────────────────────────────────────────
@@ -821,17 +822,20 @@ export default function ShopPage() {
             <Card.Body>
               <div className="divide-y divide-gray-100">
                 {sortedRedemptions.map((r) => (
-                  <div key={r.id} className="py-3 flex items-center justify-between gap-3">
+                  <div key={r.id} className={`py-3 flex items-center justify-between gap-3 ${r.refunded_at ? 'opacity-50' : ''}`}>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-gray-900">{r.item_title}</p>
-                        {r.item_commodity_type === 'blindbox' && (
+                        <p className={`font-medium text-gray-900 ${r.refunded_at ? 'line-through text-gray-400' : ''}`}>{r.item_title}</p>
+                        {r.refunded_at && (
+                          <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">Refunded</span>
+                        )}
+                        {!r.refunded_at && r.item_commodity_type === 'blindbox' && (
                           <span className="text-[10px] font-semibold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">🎁 Blind Box</span>
                         )}
-                        {r.item_commodity_type === 'physical_blindbox' && (
+                        {!r.refunded_at && r.item_commodity_type === 'physical_blindbox' && (
                           <span className="text-[10px] font-semibold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full">📦🎲 Physical Box</span>
                         )}
-                        {r.item_commodity_type === 'physical' && (
+                        {!r.refunded_at && r.item_commodity_type === 'physical' && (
                           <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">📦 Physical</span>
                         )}
                       </div>
@@ -843,7 +847,7 @@ export default function ShopPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {(r.item_commodity_type === 'blindbox' || r.item_commodity_type === 'physical_blindbox') && r.blindbox_image_url && (
+                      {!r.refunded_at && (r.item_commodity_type === 'blindbox' || r.item_commodity_type === 'physical_blindbox') && r.blindbox_image_url && (
                         <button
                           onClick={() => setBlindboxView({ imageUrls: r.blindbox_image_urls?.length ? r.blindbox_image_urls : [r.blindbox_image_url!], itemTitle: r.item_title, isPhysical: r.item_commodity_type === 'physical_blindbox' })}
                           className="text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg transition-colors"
@@ -851,7 +855,7 @@ export default function ShopPage() {
                           View Prize
                         </button>
                       )}
-                      <span className="text-primary-600 font-bold">-{r.points_spent} pts</span>
+                      <span className={`font-bold ${r.refunded_at ? 'text-gray-400 line-through' : 'text-primary-600'}`}>-{r.points_spent} pts</span>
                     </div>
                   </div>
                 ))}

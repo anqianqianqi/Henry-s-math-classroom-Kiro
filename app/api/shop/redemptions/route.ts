@@ -27,10 +27,10 @@ export async function GET() {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Fetch this user's redemptions
+    // Fetch this user's redemptions (including soft-deleted/refunded for history display)
     const { data: redemptions, error: redemptionsError } = await serviceClient
       .from('redemptions')
-      .select('id, item_id, points_spent, redeemed_at')
+      .select('id, item_id, points_spent, redeemed_at, refunded_at')
       .eq('user_id', userId)
       .order('redeemed_at', { ascending: false })
 
@@ -186,6 +186,7 @@ export async function GET() {
         item_id: r.item_id,
         points_spent: r.points_spent,
         redeemed_at: r.redeemed_at,
+        refunded_at: r.refunded_at ?? null,
         item_title: item?.title ?? 'Deleted item',
         item_commodity_type: commodityType,
         blindbox_image_url: isBlindbox ? (imageUrls[0] ?? null) : null,
