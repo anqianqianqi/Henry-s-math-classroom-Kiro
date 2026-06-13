@@ -45,6 +45,10 @@ export default function ClassDetailPage() {
   const [joinRequestStatus, setJoinRequestStatus] = useState<'none' | 'pending' | 'approved' | 'denied'>('none')
   const [requestingJoin, setRequestingJoin] = useState(false)
   const [generatingSessions, setGeneratingSessions] = useState(false)
+  const [publishedChallenges, setPublishedChallenges] = useState<Array<{
+    id: string; title: string; challenge_date: string; max_points: number | null
+  }>>([])
+  const [showChallenges, setShowChallenges] = useState(true)
   const router = useRouter()
   const params = useParams()
   const supabase = createClient()
@@ -55,7 +59,30 @@ export default function ClassDetailPage() {
     loadMembers()
     loadUserRole()
     checkEnrollmentStatus()
+    loadPublishedChallenges()
   }, [classId])
+
+  async function loadPublishedChallenges() {
+    try {
+      // Get challenge IDs assigned to this class
+      const { data: assignments } = await supabase
+        .from('challenge_assignments')
+        .select('challenge_id')
+        .eq('class_id', classId)
+
+      if (!assignments || assignments.length === 0) return
+
+      const challengeIds = assignments.map((a: any) => a.challenge_id)
+
+      const { data: challenges } = await supabase
+        .from('daily_challenges')
+        .select('id, title, challenge_date, max_points')
+        .in('id', challengeIds)
+        .order('challenge_date', { ascending: false })
+
+      setPublishedChallenges(challenges || [])
+    } catch { /* ignore */ }
+  }
 
   async function loadClassData() {
     try {
@@ -518,6 +545,55 @@ export default function ClassDetailPage() {
                   </div>
                 )}
               </Card.Body>
+            </Card>
+          )}
+
+          {/* Published Challenges — Teachers only */}
+          {userRole === 'teacher' && (
+            <Card>
+              <Card.Header>
+                <div className="flex items-center justify-between">
+                  <Card.Title>Published Challenges ({publishedChallenges.length})</Card.Title>
+                  <button
+                    onClick={() => setShowChallenges(v => !v)}
+                    className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showChallenges ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </Card.Header>
+              {showChallenges && (
+                <Card.Body>
+                  {publishedChallenges.length === 0 ? (
+                    <p className="text-gray-400 text-sm text-center py-4">No challenges published to this class yet.</p>
+                  ) : (
+                    <div className="divide-y divide-gray-100">
+                      {publishedChallenges.map(c => (
+                        <div
+                          key={c.id}
+                          className="py-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-gray-50 -mx-4 px-4 rounded transition-colors"
+                          onClick={() => router.push(`/challenges/${c.id}`)}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{c.title}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {new Date(c.challenge_date + 'T12:00:00').toLocaleDateString(undefined, {
+                                weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+                              })}
+                            </p>
+                          </div>
+                          <div className="shrink-0 flex items-center gap-3">
+                            {c.max_points !== null && (
+                              <span className="text-xs font-medium text-gray-500">{c.max_points} pts</span>
+                            )}
+                            <span className="text-gray-300 text-sm">→</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card.Body>
+              )}
             </Card>
           )}
 
