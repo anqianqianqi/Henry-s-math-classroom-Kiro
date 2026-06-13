@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { CommentThread } from '@/components/CommentThread'
 import { localDateString, localDateOffset } from '@/lib/utils/date'
-import { PageHeader } from '@/components/ui/PageHeader'
+import { HomeButton } from '@/components/ui/HomeButton'
 
 interface Challenge {
   id: string

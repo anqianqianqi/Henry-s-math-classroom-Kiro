@@ -15,7 +15,7 @@ import XpBar from '@/components/pet/XpBar'
 import AccessoryInventory from '@/components/pet/AccessoryInventory'
 import SpeciesSelector from '@/components/pet/SpeciesSelector'
 import EvolutionSparkle from '@/components/pet/EvolutionSparkle'
-import { PageHeader } from '@/components/ui/PageHeader'
+import { HomeButton } from '@/components/ui/HomeButton'
 
 interface PendingFeeding {
   id: string

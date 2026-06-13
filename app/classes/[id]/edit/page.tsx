@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { FormField } from '@/components/ui/FormField'
-import { PageHeader } from '@/components/ui/PageHeader'
+import { HomeButton } from '@/components/ui/HomeButton'
 
 interface ScheduleSlot {
   id: string

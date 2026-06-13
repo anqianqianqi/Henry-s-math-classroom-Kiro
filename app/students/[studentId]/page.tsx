@@ -7,7 +7,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { PageHeader } from '@/components/ui/PageHeader'
+import { HomeButton } from '@/components/ui/HomeButton'
 
 interface StudentProfile {
   id: string
