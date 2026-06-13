@@ -176,10 +176,13 @@ export async function GET() {
       const isBlindbox = commodityType === 'blindbox' || commodityType === 'physical_blindbox'
 
       let blindboxImageUrl: string | null = null
-      if (isBlindbox && !r.refunded_at) {
+      if (isBlindbox) {
+        // Show prize image for both active AND refunded draws — set_id gives a direct link
+        // to the images even after the blindbox_claim row has been deleted on refund.
         if (r.set_id && directSetImageMap[r.set_id]) {
           blindboxImageUrl = directSetImageMap[r.set_id]
-        } else if (legacyImageUrl[r.id]) {
+        } else if (!r.refunded_at && legacyImageUrl[r.id]) {
+          // Legacy fallback only works for active draws (needs a live claim row)
           blindboxImageUrl = legacyImageUrl[r.id]
         }
       }

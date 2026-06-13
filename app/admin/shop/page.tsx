@@ -1283,11 +1283,11 @@ export default function AdminShopPage() {
                           </td>
                           <td className="py-2 pr-4">
                             {r.blindbox_image_url ? (
-                              <a href={r.blindbox_image_url} target="_blank" rel="noopener noreferrer">
+                              <a href={r.blindbox_image_url} target="_blank" rel="noopener noreferrer" className="relative block w-10 h-10">
                                 <img
                                   src={r.blindbox_image_url}
                                   alt="Prize"
-                                  className="w-10 h-10 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity"
+                                  className={`w-10 h-10 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity ${r.refunded_at ? 'opacity-40 grayscale' : ''}`}
                                   title="Click to view full size"
                                 />
                               </a>
