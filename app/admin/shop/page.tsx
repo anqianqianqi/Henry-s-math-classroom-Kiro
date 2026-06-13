@@ -115,78 +115,24 @@ export default function AdminShopPage() {
       setPhysicalBlindboxInventory(inv)
     }
 
-    // Fetch all redemptions with student name, item title, and commodity type
-    const { data: redemptionData, error: redemptionError } = await supabase
-      .from('redemptions')
-      .select('*, profiles(first_name, last_name), shop_items(title, commodity_type)')
-      .order('redeemed_at', { ascending: false })
-
-    if (redemptionError) {
-      console.error('[admin/shop] redemptions fetch error:', redemptionError)
-    }
-    console.log('[admin/shop] redemptions count:', redemptionData?.length ?? 0)
-
-    // Fetch all claimed blind box images (teacher can see all via RLS)
-    // Check both old blindbox_images.claimed_by AND new blindbox_claims table
-    const [claimedImagesResult, blindboxClaimsResult] = await Promise.all([
-      supabase
-        .from('blindbox_images')
-        .select('item_id, claimed_by, image_url')
-        .eq('is_claimed', true),
-      supabase
-        .from('blindbox_claims')
-        .select('item_id, student_id, image_id')
-        .order('claimed_at', { ascending: false }),
-    ])
-
-    // Build a map: `${item_id}:${user_id}` → image_url (most recent claim per user+item)
-    const claimedImageMap: Record<string, string> = {}
-    // From old blindbox_images.claimed_by
-    for (const img of claimedImagesResult.data ?? []) {
-      if (img.claimed_by && img.image_url) {
-        const key = `${img.item_id}:${img.claimed_by}`
-        if (!claimedImageMap[key]) claimedImageMap[key] = img.image_url
-      }
-    }
-    // From new blindbox_claims — fetch image URLs separately to avoid join RLS issues
-    const claimImageIds = [...new Set(
-      (blindboxClaimsResult.data ?? []).map((c: any) => c.image_id).filter(Boolean)
-    )]
-    if (claimImageIds.length > 0) {
-      const { data: claimImages } = await supabase
-        .from('blindbox_images')
-        .select('id, item_id, image_url')
-        .in('id', claimImageIds)
-      const imageUrlById: Record<string, string> = {}
-      for (const img of claimImages ?? []) {
-        if (img.image_url) imageUrlById[img.id] = img.image_url
-      }
-      for (const claim of blindboxClaimsResult.data ?? []) {
-        const url = imageUrlById[claim.image_id]
-        if (url) {
-          const key = `${claim.item_id}:${claim.student_id}`
-          if (!claimedImageMap[key]) claimedImageMap[key] = url
-        }
-      }
-    }
-
-    setRedemptions(
-      (redemptionData ?? []).map((r: any) => ({
+    // Fetch all redemptions via server route (service role bypasses RLS)
+    const redemptionsRes = await fetch('/api/shop/admin-redemptions')
+    if (redemptionsRes.ok) {
+      const { redemptions: redemptionData } = await redemptionsRes.json()
+      setRedemptions((redemptionData ?? []).map((r: any) => ({
         id: r.id,
         user_id: r.user_id,
         item_id: r.item_id,
         points_spent: r.points_spent,
         redeemed_at: r.redeemed_at,
-        student_name:
-          [r.profiles?.first_name, r.profiles?.last_name].filter(Boolean).join(' ') ||
-          'Unknown student',
-        item_title: r.shop_items?.title ?? 'Unknown item',
-        item_commodity_type: r.shop_items?.commodity_type ?? 'standard',
-        blindbox_image_url: (r.shop_items?.commodity_type === 'blindbox' || r.shop_items?.commodity_type === 'physical_blindbox')
-          ? (claimedImageMap[`${r.item_id}:${r.user_id}`] ?? null)
-          : null,
-      }))
-    )
+        student_name: r.student_name,
+        item_title: r.item_title,
+        item_commodity_type: r.item_commodity_type,
+        blindbox_image_url: r.blindbox_image_url ?? null,
+      })))
+    } else {
+      console.error('[admin/shop] admin-redemptions error:', await redemptionsRes.text())
+    }
 
     // Fetch all students and their balances from student_wallets (single query)
     // NOTE: do NOT filter by class_id — students may only have class-scoped roles
