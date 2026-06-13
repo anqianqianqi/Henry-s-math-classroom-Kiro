@@ -166,9 +166,9 @@ BEGIN
     END IF;
   END IF;
 
-  -- Deduct points — one redemption record per draw
-  INSERT INTO redemptions (user_id, item_id, points_spent)
-  VALUES (auth.uid(), p_item_id, v_cost)
+  -- Deduct points — one redemption record per draw, store the set_id for direct image lookup
+  INSERT INTO redemptions (user_id, item_id, points_spent, set_id)
+  VALUES (auth.uid(), p_item_id, v_cost, v_set_id)
   RETURNING id INTO v_redemption_id;
 
   RETURN jsonb_build_object(
