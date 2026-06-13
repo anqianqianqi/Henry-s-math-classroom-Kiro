@@ -45,10 +45,10 @@ export async function POST(request: Request) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // Read redemption — include item_id so we can clean up blindbox_claims
+    // Read redemption — include set_id so we can delete only the specific blindbox claim
     const { data: redemption, error: readErr } = await admin
       .from('redemptions')
-      .select('user_id, item_id, points_spent')
+      .select('user_id, item_id, points_spent, set_id')
       .eq('id', redemption_id)
       .single()
 
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     const isBlindbox = commodityType === 'blindbox' || commodityType === 'physical_blindbox'
 
     // Soft-delete: mark as refunded (keeps audit trail)
-    // Requires refunded_at and refunded_by columns (run add-refund-to-redemptions.sql in Supabase)
+    // Requires refunded_at and refunded_by columns (run add-set-id-to-redemptions.sql in Supabase)
     const { error: updateErr } = await admin
       .from('redemptions')
       .update({
@@ -88,19 +88,23 @@ export async function POST(request: Request) {
       }
     }
 
-    // If this was a blindbox redemption, delete the blindbox_claims row so the student can redraw
-    if (isBlindbox) {
+    // Delete the SPECIFIC blindbox claim for this draw so the student can redraw that set.
+    // We MUST use set_id to target only this draw — deleting by item_id alone would
+    // wipe all of the student's draws for this item, including other active ones.
+    if (isBlindbox && redemption.set_id) {
       const { error: claimDeleteErr } = await admin
         .from('blindbox_claims')
         .delete()
         .eq('student_id', redemption.user_id)
         .eq('item_id', redemption.item_id)
+        .eq('set_id', redemption.set_id)
 
       if (claimDeleteErr) {
-        // Non-fatal — log but don't fail the whole refund
         console.warn('[shop/refund] Failed to delete blindbox_claims:', claimDeleteErr.message)
       }
     }
+    // If set_id is null (legacy redemption without set_id stored), we can't safely
+    // identify which claim to delete, so we leave claims intact.
 
     // Restore wallet — read current values then update
     const { data: wallet } = await admin
