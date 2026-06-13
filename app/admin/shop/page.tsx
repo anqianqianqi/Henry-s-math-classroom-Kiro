@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { PageHeader } from '@/components/ui/PageHeader'
+import { HomeButton } from '@/components/ui/HomeButton'
 import {
   validateShopItemForm,
   buildShopItemInsert,
@@ -714,7 +714,11 @@ export default function AdminShopPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
-      <PageHeader breadcrumbs={[{ label: 'Admin' }, { label: 'Shop' }]} />
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-3">
+          <HomeButton noSlash />
+          <h1 className="text-xl font-bold text-gray-900">Shop Admin 🛍️</h1>
+        </div>
+      </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-10">
         {error && (
