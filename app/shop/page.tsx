@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
-import { PageHeader } from '@/components/ui/PageHeader'
+import { HomeButton } from '@/components/ui/HomeButton'
 import {
   computeSpendableBalance,
   isRedeemDisabled,
@@ -589,7 +589,11 @@ export default function ShopPage() {
 
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
-      <PageHeader breadcrumbs={[{ label: 'Shop' }]} />
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-3">
+          <HomeButton noSlash />
+          <h1 className="text-xl font-bold text-gray-900">Points Shop</h1>
+        </div>
+      </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {error && (
