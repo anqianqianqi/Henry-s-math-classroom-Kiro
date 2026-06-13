@@ -397,8 +397,9 @@ export default function ShopPage() {
 
     const remainingMap: Record<string, number> = {}
 
-    // Digital blindbox: per-student remaining = total sets - student's own redemptions
-    // null quantity = unlimited globally, but each student can only draw each set once
+    // Digital blindbox: per-student remaining = total sets - student's own active (non-refunded) draws
+    // Use redemptions.set_id as the source of truth (requires add-set-id-to-redemptions.sql migration).
+    // Falls back to blindbox_claims if set_id column doesn't exist yet.
     const digitalBlindboxIds = (shopItems ?? [])
       .filter((i: any) => i.commodity_type === 'blindbox')
       .map((i: any) => i.id)
@@ -409,23 +410,42 @@ export default function ShopPage() {
         .select('item_id')
         .in('item_id', digitalBlindboxIds)
 
-      // Count total sets per item (each set = one draw for a student)
+      // Count total sets per item
       const totalSetsMap: Record<string, number> = {}
       for (const s of sets ?? []) {
         totalSetsMap[s.item_id] = (totalSetsMap[s.item_id] ?? 0) + 1
       }
 
-      // Count how many SETS this student has already drawn (via blindbox_claims)
-      const { data: myClaims } = await supabase
-        .from('blindbox_claims')
-        .select('item_id')
-        .eq('student_id', userId)
+      // Count active (non-refunded) draws from redemptions where set_id IS NOT NULL
+      // This is the single source of truth — matches exactly what the student's history shows.
+      const { data: myRedemptions, error: redemptionsErr } = await supabase
+        .from('redemptions')
+        .select('item_id, set_id, refunded_at')
+        .eq('user_id', userId)
         .in('item_id', digitalBlindboxIds)
         .filter('set_id', 'not.is', null)
 
       const myClaimedMap: Record<string, number> = {}
-      for (const r of myClaims ?? []) {
-        myClaimedMap[r.item_id] = (myClaimedMap[r.item_id] ?? 0) + 1
+
+      if (!redemptionsErr && myRedemptions) {
+        // Use redemptions: count only non-refunded rows
+        for (const r of myRedemptions) {
+          if (!r.refunded_at) {
+            myClaimedMap[r.item_id] = (myClaimedMap[r.item_id] ?? 0) + 1
+          }
+        }
+      } else {
+        // Fallback: set_id column not yet added — count blindbox_claims instead
+        const { data: myClaims } = await supabase
+          .from('blindbox_claims')
+          .select('item_id')
+          .eq('student_id', userId)
+          .in('item_id', digitalBlindboxIds)
+          .filter('set_id', 'not.is', null)
+
+        for (const r of myClaims ?? []) {
+          myClaimedMap[r.item_id] = (myClaimedMap[r.item_id] ?? 0) + 1
+        }
       }
 
       for (const itemId of digitalBlindboxIds) {

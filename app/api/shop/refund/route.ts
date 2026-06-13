@@ -89,22 +89,50 @@ export async function POST(request: Request) {
     }
 
     // Delete the SPECIFIC blindbox claim for this draw so the student can redraw that set.
-    // We MUST use set_id to target only this draw — deleting by item_id alone would
-    // wipe all of the student's draws for this item, including other active ones.
-    if (isBlindbox && redemption.set_id) {
-      const { error: claimDeleteErr } = await admin
-        .from('blindbox_claims')
-        .delete()
-        .eq('student_id', redemption.user_id)
-        .eq('item_id', redemption.item_id)
-        .eq('set_id', redemption.set_id)
+    // We MUST target only this draw — deleting by item_id alone would wipe all of the
+    // student's draws for this item, including other active ones.
+    if (isBlindbox) {
+      if (redemption.set_id) {
+        // Best case: set_id is stored on the redemption — delete by exact set match
+        const { error: claimDeleteErr } = await admin
+          .from('blindbox_claims')
+          .delete()
+          .eq('student_id', redemption.user_id)
+          .eq('item_id', redemption.item_id)
+          .eq('set_id', redemption.set_id)
 
-      if (claimDeleteErr) {
-        console.warn('[shop/refund] Failed to delete blindbox_claims:', claimDeleteErr.message)
+        if (claimDeleteErr) {
+          console.warn('[shop/refund] Failed to delete blindbox_claims by set_id:', claimDeleteErr.message)
+        }
+      } else {
+        // Fallback: set_id not stored yet (migration not run).
+        // Find the claim whose claimed_at is closest to this redemption's redeemed_at,
+        // then delete only that one row.
+        const { data: claims } = await admin
+          .from('blindbox_claims')
+          .select('student_id, item_id, set_id, claimed_at')
+          .eq('student_id', redemption.user_id)
+          .eq('item_id', redemption.item_id)
+          .not('set_id', 'is', null)
+          .order('claimed_at', { ascending: true })
+
+        if (claims && claims.length > 0) {
+          const redeemTime = new Date(redemption.redeemed_at).getTime()
+          let bestClaim = claims[0]
+          let bestDiff = Math.abs(new Date(bestClaim.claimed_at).getTime() - redeemTime)
+          for (const c of claims.slice(1)) {
+            const diff = Math.abs(new Date(c.claimed_at).getTime() - redeemTime)
+            if (diff < bestDiff) { bestDiff = diff; bestClaim = c }
+          }
+          await admin
+            .from('blindbox_claims')
+            .delete()
+            .eq('student_id', redemption.user_id)
+            .eq('item_id', redemption.item_id)
+            .eq('set_id', bestClaim.set_id)
+        }
       }
     }
-    // If set_id is null (legacy redemption without set_id stored), we can't safely
-    // identify which claim to delete, so we leave claims intact.
 
     // Restore wallet — read current values then update
     const { data: wallet } = await admin
