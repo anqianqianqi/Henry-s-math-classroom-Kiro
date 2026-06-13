@@ -80,6 +80,7 @@ export default function AdminShopPage() {
   const [physicalBlindboxInventory, setPhysicalBlindboxInventory] = useState<Record<string, { total: number; remaining: number }>>({})
 
   const loadData = useCallback(async () => {
+    try {
     // Fetch all shop items (active + inactive) — hide pet categories on main
     const { data: shopItems, error: itemsError } = await supabase
       .from('shop_items')
@@ -115,10 +116,15 @@ export default function AdminShopPage() {
     }
 
     // Fetch all redemptions with student name, item title, and commodity type
-    const { data: redemptionData } = await supabase
+    const { data: redemptionData, error: redemptionError } = await supabase
       .from('redemptions')
       .select('*, profiles(first_name, last_name), shop_items(title, commodity_type)')
       .order('redeemed_at', { ascending: false })
+
+    if (redemptionError) {
+      console.error('[admin/shop] redemptions fetch error:', redemptionError)
+    }
+    console.log('[admin/shop] redemptions count:', redemptionData?.length ?? 0)
 
     // Fetch all claimed blind box images (teacher can see all via RLS)
     // Check both old blindbox_images.claimed_by AND new blindbox_claims table
@@ -208,6 +214,10 @@ export default function AdminShopPage() {
       })
 
       setStudentBalances(balances.sort((a, b) => b.spendable_balance - a.spendable_balance))
+    }
+    } catch (err) {
+      console.error('[admin/shop] loadData error:', err)
+      setError('Failed to load data: ' + String(err))
     }
   }, [supabase])
 
