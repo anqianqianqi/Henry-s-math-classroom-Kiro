@@ -55,7 +55,13 @@ export async function GET() {
       itemMap[item.id] = { title: item.title, commodity_type: item.commodity_type }
     }
 
-    // Fetch all blindbox_claims rows for this student, ordered by claim time
+    // ── Blindbox image resolution ─────────────────────────────────────────────
+    // Strategy: match each active redemption to its claim by timestamp proximity.
+    // The claim INSERT happens inside the same DB transaction as the redemption
+    // INSERT, so claimed_at ≈ redeemed_at (within a few ms). This is robust
+    // against refunds, schema migrations, and ordering edge cases.
+
+    // Fetch all blindbox_claims for this student
     const { data: blindboxClaims } = await serviceClient
       .from('blindbox_claims')
       .select('item_id, image_id, set_id, claimed_at')
@@ -99,72 +105,80 @@ export async function GET() {
       .eq('is_claimed', true)
       .order('claimed_at', { ascending: true })
 
-    // Build lookup maps
-    // set_id → image URLs (all images in that set)
+    // set_id → image URLs (all images in that set, ordered)
     const setImageMap: Record<string, string[]> = {}
     for (const img of setImagesResult.data ?? []) {
       if (!setImageMap[img.set_id]) setImageMap[img.set_id] = []
       if (img.image_url) setImageMap[img.set_id].push(img.image_url)
     }
 
-    // image_id → image URL (legacy)
+    // image_id → image URL (legacy single-image claims)
     const legacyImageUrlMap: Record<string, string> = {}
     for (const img of legacyImagesResult.data ?? []) {
       if (img.image_url) legacyImageUrlMap[img.id] = img.image_url
     }
 
-    // Group claims by item_id, in chronological order — one entry per draw
-    // Each draw = one set claim (set-based) or one image claim (legacy)
-    const claimsByItem: Record<string, Array<{ urls: string[]; claimed_at: string }>> = {}
+    // Build a flat list of draw entries per item — each entry has a timestamp
+    // and the resolved image URLs for that draw.
+    type DrawEntry = { urls: string[]; claimed_at: string; used: boolean }
+    const drawsByItem: Record<string, DrawEntry[]> = {}
 
     for (const claim of blindboxClaims ?? []) {
-      if (!claimsByItem[claim.item_id]) claimsByItem[claim.item_id] = []
+      if (!drawsByItem[claim.item_id]) drawsByItem[claim.item_id] = []
       if (claim.set_id) {
-        // Set-based draw: all images in the set
         const urls = setImageMap[claim.set_id] ?? []
         if (urls.length > 0) {
-          claimsByItem[claim.item_id].push({ urls, claimed_at: claim.claimed_at })
+          drawsByItem[claim.item_id].push({ urls, claimed_at: claim.claimed_at, used: false })
         }
       } else if (claim.image_id) {
-        // Legacy: single image
         const url = legacyImageUrlMap[claim.image_id]
         if (url) {
-          claimsByItem[claim.item_id].push({ urls: [url], claimed_at: claim.claimed_at })
+          drawsByItem[claim.item_id].push({ urls: [url], claimed_at: claim.claimed_at, used: false })
         }
       }
     }
 
-    // Old legacy (claimed_by): group by item, one entry per image
+    // Old legacy (claimed_by)
     for (const img of oldLegacyResult.data ?? []) {
-      if (!claimsByItem[img.item_id]) claimsByItem[img.item_id] = []
+      if (!drawsByItem[img.item_id]) drawsByItem[img.item_id] = []
       if (img.image_url) {
-        claimsByItem[img.item_id].push({ urls: [img.image_url], claimed_at: img.claimed_at })
+        drawsByItem[img.item_id].push({ urls: [img.image_url], claimed_at: img.claimed_at, used: false })
       }
     }
 
-    // Match each redemption to its corresponding draw by chronological order.
-    // IMPORTANT: skip refunded redemptions when assigning claim indexes — their
-    // blindbox_claims row has been deleted, so only active draws have a claim entry.
-    const redemptionCountByItem: Record<string, number> = {}
-
-    // Sort redemptions oldest-first for matching, then we'll reverse the result
+    // Match each non-refunded redemption to the closest unmatched draw by timestamp.
+    // Sort redemptions oldest-first so we consume draws in chronological order.
     const redemptionsSortedAsc = [...redemptions].sort(
       (a, b) => new Date(a.redeemed_at).getTime() - new Date(b.redeemed_at).getTime()
     )
 
-    // Assign claim index only to non-refunded redemptions
-    const redemptionClaimIndex: Record<string, number> = {}
+    const redemptionImageUrls: Record<string, string[]> = {}
+
     for (const r of redemptionsSortedAsc) {
       const commodityType = itemMap[r.item_id]?.commodity_type ?? 'standard'
-      if (commodityType === 'blindbox' || commodityType === 'physical_blindbox') {
-        if (r.refunded_at) {
-          // Refunded: no claim row exists, don't consume an index slot
-          redemptionClaimIndex[r.id] = -1
-        } else {
-          const idx = redemptionCountByItem[r.item_id] ?? 0
-          redemptionClaimIndex[r.id] = idx
-          redemptionCountByItem[r.item_id] = idx + 1
+      if (commodityType !== 'blindbox' && commodityType !== 'physical_blindbox') continue
+
+      // Refunded redemptions have no claim — skip image assignment
+      if (r.refunded_at) continue
+
+      const draws = drawsByItem[r.item_id] ?? []
+      const redeemTime = new Date(r.redeemed_at).getTime()
+
+      // Find the closest unused draw by absolute time difference
+      let bestIdx = -1
+      let bestDiff = Infinity
+      for (let i = 0; i < draws.length; i++) {
+        if (draws[i].used) continue
+        const diff = Math.abs(new Date(draws[i].claimed_at).getTime() - redeemTime)
+        if (diff < bestDiff) {
+          bestDiff = diff
+          bestIdx = i
         }
+      }
+
+      if (bestIdx >= 0) {
+        draws[bestIdx].used = true
+        redemptionImageUrls[r.id] = draws[bestIdx].urls
       }
     }
 
@@ -172,18 +186,7 @@ export async function GET() {
       const item = itemMap[r.item_id]
       const commodityType = item?.commodity_type ?? 'standard'
       const isBlindbox = commodityType === 'blindbox' || commodityType === 'physical_blindbox'
-
-      let imageUrls: string[] = []
-      if (isBlindbox) {
-        const claimIdx = redemptionClaimIndex[r.id]
-        // claimIdx === -1 means refunded (claim row deleted), skip image lookup
-        if (claimIdx !== undefined && claimIdx >= 0) {
-          const draws = claimsByItem[r.item_id] ?? []
-          if (draws[claimIdx]) {
-            imageUrls = draws[claimIdx].urls
-          }
-        }
-      }
+      const imageUrls = isBlindbox ? (redemptionImageUrls[r.id] ?? []) : []
 
       return {
         id: r.id,
