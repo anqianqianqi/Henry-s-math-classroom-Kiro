@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import TagInput, { TagOption } from '@/components/TagInput'
-import { HomeButton } from '@/components/ui/HomeButton'
+import { PageHeader } from '@/components/ui/PageHeader'
 import {
   previewChallenge,
   generateChallenge,

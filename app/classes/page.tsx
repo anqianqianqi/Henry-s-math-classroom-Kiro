@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { HomeButton } from '@/components/ui/HomeButton'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 interface Class {
   id: string
@@ -114,27 +114,18 @@ export default function ClassesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6 sm:mb-8">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push('/dashboard')}
-            >
-              ← Back
-            </Button>
-            <HomeButton />
-            <h1 className="text-lg sm:text-3xl font-bold text-gray-900">My Classes</h1>
-          </div>
-          {isTeacher && (
-            <Button size="sm" onClick={() => router.push('/classes/new')}>
-              <span className="sm:hidden">+ New</span>
-              <span className="hidden sm:inline">Create New Class</span>
-            </Button>
-          )}
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <PageHeader
+        breadcrumbs={[{ label: 'Classes' }]}
+        actions={isTeacher ? (
+          <Button size="sm" onClick={() => router.push('/classes/new')}>
+            <span className="sm:hidden">+ New</span>
+            <span className="hidden sm:inline">Create New Class</span>
+          </Button>
+        ) : undefined}
+        maxWidth="max-w-6xl"
+      />
+      <div className="max-w-6xl mx-auto p-4 sm:p-8">
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">

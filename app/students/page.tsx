@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { HomeButton } from '@/components/ui/HomeButton'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 interface UserEntry {
   id: string
@@ -133,31 +133,22 @@ export default function StudentsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
-      <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 sm:py-4 sm:px-6">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>← Dashboard</Button>
-              <HomeButton />
-              <div>
-                <h1 className="text-lg sm:text-xl font-bold text-gray-900">Student History</h1>
-                <p className="text-sm text-gray-500">{displayCount} {showAll ? 'users' : 'students'}</p>
-              </div>
-            </div>
-            {/* Toggle */}
-            <button
-              onClick={() => setShowAll(v => !v)}
-              className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
-                showAll
-                  ? 'bg-gray-800 text-white border-gray-800'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500'
-              }`}
-            >
-              {showAll ? '👥 All users' : '🎓 Students only'}
-            </button>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        breadcrumbs={[{ label: 'Students' }]}
+        actions={
+          <button
+            onClick={() => setShowAll(v => !v)}
+            className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+              showAll
+                ? 'bg-gray-800 text-white border-gray-800'
+                : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500'
+            }`}
+          >
+            {showAll ? 'All users' : 'Students only'}
+          </button>
+        }
+        maxWidth="max-w-4xl"
+      />
 
       <main className="max-w-4xl mx-auto px-4 py-6 sm:px-6">
         {/* Search */}

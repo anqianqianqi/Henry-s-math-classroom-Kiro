@@ -58,7 +58,7 @@ export async function POST(request: Request) {
         const mapped = mapRpcError(error.message ?? '')
         if (mapped) return NextResponse.json({ error: mapped.error }, { status: mapped.status })
         console.error('[shop/redeem] blindbox RPC error:', error)
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+        return NextResponse.json({ error: 'Internal server error', detail: error.message }, { status: 500 })
       }
       // data contains { success, image_ids, image_urls, image_id, image_url }
       return NextResponse.json({

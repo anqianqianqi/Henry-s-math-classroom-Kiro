@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import TagInput, { TagOption } from '@/components/TagInput'
 import { generateChallenge, GenerativeTemplate } from '@/lib/challenge-generator'
-import { HomeButton } from '@/components/ui/HomeButton'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { localDateString } from '@/lib/utils/date'
 
 interface Class {
@@ -460,20 +460,14 @@ export default function NewChallengePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Button variant="ghost" size="sm" onClick={() => router.push(fromBank ? '/admin/challenge-bank' : '/dashboard')}>
-              ← Back
-            </Button>
-            <HomeButton />
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">New Challenge</h1>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        breadcrumbs={
+          fromBank
+            ? [{ label: 'Challenge Bank', href: '/admin/challenge-bank' }, { label: 'New Challenge' }]
+            : [{ label: 'Challenges', href: '/challenges' }, { label: 'New Challenge' }]
+        }
+        maxWidth="max-w-3xl"
+      />
 
       <main className="max-w-3xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Generate from Template Section */}

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { localDateString } from '@/lib/utils/date'
-import { HomeButton } from '@/components/ui/HomeButton'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 type Tab = 'challenges' | 'templates'
 
@@ -384,26 +384,18 @@ export default function ChallengeBankPage() {
         </div>
       )}
 
-      <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <Button onClick={() => router.push('/dashboard')} variant="ghost" size="sm">←</Button>
-              <HomeButton />
-              <div>
-                <h1 className="text-lg sm:text-2xl font-bold text-gray-900">🏦 Challenge Bank</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">Create in advance, publish when ready</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <select
-                value={tagLang}
-                onChange={e => setTagLang(e.target.value as 'en' | 'zh')}
-                className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white"
-              >
-                <option value="en">EN</option>
-                <option value="zh">CN</option>
-              </select>
+      <PageHeader
+        breadcrumbs={[{ label: 'Admin' }, { label: 'Challenge Bank' }]}
+        actions={
+          <div className="flex items-center gap-2">
+            <select
+              value={tagLang}
+              onChange={e => setTagLang(e.target.value as 'en' | 'zh')}
+              className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white"
+            >
+              <option value="en">EN</option>
+              <option value="zh">CN</option>
+            </select>
             {activeTab === 'challenges' ? (
               <Button onClick={() => router.push('/challenges/new?source=bank')} size="sm">
                 + Write Challenge
@@ -413,33 +405,37 @@ export default function ChallengeBankPage() {
                 + Create Template
               </Button>
             )}
-            </div>
           </div>
-          {/* Tabs */}
-          <div className="flex gap-1 mt-3 border-b border-gray-200">
+        }
+        maxWidth="max-w-5xl"
+      />
+      {/* Tabs sub-bar */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-14 z-10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex gap-1">
             <button
               onClick={() => setActiveTab('challenges')}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'challenges'
                   ? 'border-primary-600 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              📝 Challenges ({challenges.length})
+              Challenges ({challenges.length})
             </button>
             <button
               onClick={() => setActiveTab('templates')}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'templates'
                   ? 'border-primary-600 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              🤖 Templates ({templates.length})
+              Templates ({templates.length})
             </button>
           </div>
         </div>
-      </header>
+      </div>
 
       <main className="max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-6">
         {activeTab === 'challenges' ? (

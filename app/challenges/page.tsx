@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { runSchedulerForClass } from '@/lib/scheduler'
 import { Button } from '@/components/ui/Button'
-import { HomeButton } from '@/components/ui/HomeButton'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { localDateString, localDateOffset } from '@/lib/utils/date'
 
 interface Challenge {
@@ -469,29 +469,20 @@ export default function ChallengesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
-                ← Back
-              </Button>
-              <HomeButton />
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Challenges</h1>
-                <select
-                  value={tagLang}
-                  onChange={e => setTagLang(e.target.value as 'en' | 'zh')}
-                  className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white"
-                >
-                  <option value="en">EN</option>
-                  <option value="zh">CN</option>
-                </select>
-              </div>
-            </div>
+      <PageHeader
+        breadcrumbs={[{ label: 'Challenges' }]}
+        actions={
+          <div className="flex items-center gap-2">
+            <select
+              value={tagLang}
+              onChange={e => setTagLang(e.target.value as 'en' | 'zh')}
+              className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white"
+            >
+              <option value="en">EN</option>
+              <option value="zh">CN</option>
+            </select>
             {isTeacher && (
-              <div className="flex gap-1 sm:gap-2">
+              <>
                 <Button size="sm" onClick={() => router.push('/challenges/new')}>
                   + New
                 </Button>
@@ -501,11 +492,11 @@ export default function ChallengesPage() {
                 <Button size="sm" onClick={() => router.push('/admin/schedules')} variant="secondary">
                   Scheduler
                 </Button>
-              </div>
+              </>
             )}
           </div>
-        </div>
-      </header>
+        }
+      />
 
       <main className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Filters and Search */}
