@@ -48,7 +48,7 @@ export default function ClassDetailPage() {
   const [publishedChallenges, setPublishedChallenges] = useState<Array<{
     id: string; title: string; challenge_date: string; max_points: number | null
   }>>([])
-  const [showChallenges, setShowChallenges] = useState(true)
+  const [showAllChallenges, setShowAllChallenges] = useState(false)
   const router = useRouter()
   const params = useParams()
   const supabase = createClient()
@@ -552,23 +552,15 @@ export default function ClassDetailPage() {
           {userRole === 'teacher' && (
             <Card>
               <Card.Header>
-                <div className="flex items-center justify-between">
-                  <Card.Title>Published Challenges ({publishedChallenges.length})</Card.Title>
-                  <button
-                    onClick={() => setShowChallenges(v => !v)}
-                    className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    {showChallenges ? 'Hide' : 'Show'}
-                  </button>
-                </div>
+                <Card.Title>Published Challenges ({publishedChallenges.length})</Card.Title>
               </Card.Header>
-              {showChallenges && (
-                <Card.Body>
-                  {publishedChallenges.length === 0 ? (
-                    <p className="text-gray-400 text-sm text-center py-4">No challenges published to this class yet.</p>
-                  ) : (
+              <Card.Body>
+                {publishedChallenges.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-4">No challenges published to this class yet.</p>
+                ) : (
+                  <>
                     <div className="divide-y divide-gray-100">
-                      {publishedChallenges.map(c => (
+                      {(showAllChallenges ? publishedChallenges : publishedChallenges.slice(0, 10)).map(c => (
                         <div
                           key={c.id}
                           className="py-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-gray-50 -mx-4 px-4 rounded transition-colors"
@@ -591,9 +583,19 @@ export default function ClassDetailPage() {
                         </div>
                       ))}
                     </div>
-                  )}
-                </Card.Body>
-              )}
+                    {publishedChallenges.length > 10 && (
+                      <button
+                        onClick={() => setShowAllChallenges(v => !v)}
+                        className="mt-3 w-full py-2 text-sm text-primary-600 hover:text-primary-700 font-medium border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors"
+                      >
+                        {showAllChallenges
+                          ? 'Show less'
+                          : `Show all ${publishedChallenges.length} challenges`}
+                      </button>
+                    )}
+                  </>
+                )}
+              </Card.Body>
             </Card>
           )}
 
