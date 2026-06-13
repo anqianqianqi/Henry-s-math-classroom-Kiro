@@ -135,7 +135,7 @@ export default function AdminShopPage() {
         .eq('is_claimed', true),
       supabase
         .from('blindbox_claims')
-        .select('item_id, student_id, blindbox_images(image_url)')
+        .select('item_id, student_id, image_id')
         .order('claimed_at', { ascending: false }),
     ])
 
@@ -148,12 +148,25 @@ export default function AdminShopPage() {
         if (!claimedImageMap[key]) claimedImageMap[key] = img.image_url
       }
     }
-    // From new blindbox_claims (overrides if present, as it's more recent)
-    for (const claim of blindboxClaimsResult.data ?? []) {
-      const url = (claim as any).blindbox_images?.image_url
-      if (url) {
-        const key = `${claim.item_id}:${claim.student_id}`
-        if (!claimedImageMap[key]) claimedImageMap[key] = url
+    // From new blindbox_claims — fetch image URLs separately to avoid join RLS issues
+    const claimImageIds = [...new Set(
+      (blindboxClaimsResult.data ?? []).map((c: any) => c.image_id).filter(Boolean)
+    )]
+    if (claimImageIds.length > 0) {
+      const { data: claimImages } = await supabase
+        .from('blindbox_images')
+        .select('id, item_id, image_url')
+        .in('id', claimImageIds)
+      const imageUrlById: Record<string, string> = {}
+      for (const img of claimImages ?? []) {
+        if (img.image_url) imageUrlById[img.id] = img.image_url
+      }
+      for (const claim of blindboxClaimsResult.data ?? []) {
+        const url = imageUrlById[claim.image_id]
+        if (url) {
+          const key = `${claim.item_id}:${claim.student_id}`
+          if (!claimedImageMap[key]) claimedImageMap[key] = url
+        }
       }
     }
 
