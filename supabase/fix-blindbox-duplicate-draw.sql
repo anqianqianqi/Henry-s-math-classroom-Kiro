@@ -103,14 +103,14 @@ BEGIN
     END IF;
 
     -- Atomic claim: ON CONFLICT DO NOTHING prevents duplicates
-    -- The unique index on (set_id, student_id) is the guard
+    -- Must match the partial index predicate: WHERE set_id IS NOT NULL
     WITH ins AS (
       INSERT INTO blindbox_claims (item_id, image_id, student_id, set_id)
       VALUES (p_item_id,
               (SELECT id FROM blindbox_images WHERE set_id = v_set_id LIMIT 1),
               auth.uid(),
               v_set_id)
-      ON CONFLICT (set_id, student_id) DO NOTHING
+      ON CONFLICT (set_id, student_id) WHERE set_id IS NOT NULL DO NOTHING
       RETURNING 1
     )
     SELECT COUNT(*) INTO v_claim_inserted FROM ins;
