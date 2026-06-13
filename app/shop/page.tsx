@@ -420,7 +420,7 @@ export default function ShopPage() {
         .select('item_id')
         .eq('student_id', userId)
         .in('item_id', digitalBlindboxIds)
-        .not('set_id', 'is', null)
+        .filter('set_id', 'not.is', null)
 
       const myClaimedMap: Record<string, number> = {}
       for (const r of myClaims ?? []) {
@@ -859,4 +859,3 @@ export default function ShopPage() {
     </div>
   )
 }
-// force rebuild Sat Jun 13 21:41:16 UTC 2026
