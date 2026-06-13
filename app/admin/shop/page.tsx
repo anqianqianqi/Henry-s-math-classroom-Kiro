@@ -121,7 +121,7 @@ export default function AdminShopPage() {
       .order('redeemed_at', { ascending: false })
 
     // Fetch all claimed blind box images (teacher can see all via RLS)
-    // Check both old blindbox_images.claimed_by AND new blindbox_claims table
+    // For set-based blindboxes: fetch all images in each claimed set
     const [claimedImagesResult, blindboxClaimsResult] = await Promise.all([
       supabase
         .from('blindbox_images')
@@ -129,25 +129,42 @@ export default function AdminShopPage() {
         .eq('is_claimed', true),
       supabase
         .from('blindbox_claims')
-        .select('item_id, student_id, blindbox_images(image_url)')
+        .select('item_id, student_id, set_id, blindbox_sets(id, blindbox_images(image_url, sort_order))')
         .order('claimed_at', { ascending: false }),
     ])
 
-    // Build a map: `${item_id}:${user_id}` → image_url (most recent claim per user+item)
-    const claimedImageMap: Record<string, string> = {}
-    // From old blindbox_images.claimed_by
+    // Build a map: `${item_id}:${user_id}` → string[] (all image URLs for that claim)
+    const claimedImageMap: Record<string, string[]> = {}
+
+    // From old blindbox_images.claimed_by (single image)
     for (const img of claimedImagesResult.data ?? []) {
       if (img.claimed_by && img.image_url) {
         const key = `${img.item_id}:${img.claimed_by}`
-        if (!claimedImageMap[key]) claimedImageMap[key] = img.image_url
+        if (!claimedImageMap[key]) claimedImageMap[key] = []
+        if (!claimedImageMap[key].includes(img.image_url)) {
+          claimedImageMap[key].push(img.image_url)
+        }
       }
     }
-    // From new blindbox_claims (overrides if present, as it's more recent)
+
+    // From new blindbox_claims with set images
     for (const claim of blindboxClaimsResult.data ?? []) {
-      const url = (claim as any).blindbox_images?.image_url
-      if (url) {
-        const key = `${claim.item_id}:${claim.student_id}`
-        if (!claimedImageMap[key]) claimedImageMap[key] = url
+      const key = `${claim.item_id}:${claim.student_id}`
+      if (!claimedImageMap[key]) claimedImageMap[key] = []
+
+      if (claim.set_id && (claim as any).blindbox_sets?.blindbox_images) {
+        // Set-based: get all images in this set, sorted by sort_order
+        const setImages = [...((claim as any).blindbox_sets.blindbox_images)]
+          .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+          .map((img: any) => img.image_url)
+          .filter(Boolean)
+        for (const url of setImages) {
+          if (!claimedImageMap[key].includes(url)) claimedImageMap[key].push(url)
+        }
+      } else {
+        // Legacy single image
+        const url = (claim as any).blindbox_images?.image_url
+        if (url && !claimedImageMap[key].includes(url)) claimedImageMap[key].push(url)
       }
     }
 
@@ -164,8 +181,11 @@ export default function AdminShopPage() {
         item_title: r.shop_items?.title ?? 'Unknown item',
         item_commodity_type: r.shop_items?.commodity_type ?? 'standard',
         blindbox_image_url: (r.shop_items?.commodity_type === 'blindbox' || r.shop_items?.commodity_type === 'physical_blindbox')
-          ? (claimedImageMap[`${r.item_id}:${r.user_id}`] ?? null)
+          ? (claimedImageMap[`${r.item_id}:${r.user_id}`]?.[0] ?? null)
           : null,
+        blindbox_image_urls: (r.shop_items?.commodity_type === 'blindbox' || r.shop_items?.commodity_type === 'physical_blindbox')
+          ? (claimedImageMap[`${r.item_id}:${r.user_id}`] ?? [])
+          : [],
         refunded_at: r.refunded_at ?? null,
       }))
     )
@@ -1313,13 +1333,25 @@ export default function AdminShopPage() {
                             </div>
                           </td>
                           <td className="py-2 pr-4">
-                            {r.blindbox_image_url ? (
+                            {r.blindbox_image_urls && r.blindbox_image_urls.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {r.blindbox_image_urls.map((url, i) => (
+                                  <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                                    <img
+                                      src={url}
+                                      alt={`Prize ${i + 1}`}
+                                      className="w-10 h-10 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity"
+                                      title={`Prize ${i + 1} — click to view`}
+                                    />
+                                  </a>
+                                ))}
+                              </div>
+                            ) : r.blindbox_image_url ? (
                               <a href={r.blindbox_image_url} target="_blank" rel="noopener noreferrer">
                                 <img
                                   src={r.blindbox_image_url}
                                   alt="Prize"
                                   className="w-10 h-10 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity"
-                                  title="Click to view full size"
                                 />
                               </a>
                             ) : (
