@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { HomeButton } from '@/components/ui/HomeButton'
+import { PageHeader } from '@/components/ui/PageHeader'
 import {
   validateShopItemForm,
   buildShopItemInsert,
@@ -57,6 +57,7 @@ export default function AdminShopPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [refunding, setRefunding] = useState<string | null>(null)
   // Image upload state
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -678,6 +679,27 @@ export default function AdminShopPage() {
     await loadData()
   }
 
+  async function handleRefund(redemptionId: string, pointsSpent: number, studentName: string) {
+    if (!confirm(`Refund ${pointsSpent} pts to ${studentName}? This will delete the redemption record and restore their points.`)) return
+    setRefunding(redemptionId)
+    setError(null)
+    try {
+      const res = await fetch('/api/shop/refund', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ redemption_id: redemptionId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError('Refund failed: ' + (data.error || 'Unknown error'))
+        return
+      }
+      await loadData()
+    } finally {
+      setRefunding(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
@@ -692,11 +714,7 @@ export default function AdminShopPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-3">
-          <HomeButton noSlash />
-          <h1 className="text-xl font-bold text-gray-900">Shop Admin 🛍️</h1>
-        </div>
-      </header>
+      <PageHeader breadcrumbs={[{ label: 'Admin' }, { label: 'Shop' }]} />
 
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-10">
         {error && (
@@ -1262,7 +1280,8 @@ export default function AdminShopPage() {
                         <th className="pb-2 pr-4 font-medium">Item</th>
                         <th className="pb-2 pr-4 font-medium">Prize</th>
                         <th className="pb-2 pr-4 font-medium">Points</th>
-                        <th className="pb-2 font-medium">Date</th>
+                        <th className="pb-2 pr-4 font-medium">Date</th>
+                        <th className="pb-2 font-medium"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -1302,12 +1321,22 @@ export default function AdminShopPage() {
                           <td className="py-2 pr-4 text-primary-600 font-semibold">
                             -{r.points_spent}
                           </td>
-                          <td className="py-2 text-gray-500">
+                          <td className="py-2 pr-4 text-gray-500">
                             {new Date(r.redeemed_at).toLocaleDateString(undefined, {
                               month: 'short',
                               day: 'numeric',
                               year: 'numeric',
                             })}
+                          </td>
+                          <td className="py-2">
+                            <button
+                              disabled={refunding === r.id}
+                              onClick={() => handleRefund(r.id, r.points_spent, r.student_name)}
+                              className="text-xs font-semibold px-2 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={`Refund ${r.points_spent} pts to ${r.student_name}`}
+                            >
+                              {refunding === r.id ? '…' : 'Refund'}
+                            </button>
                           </td>
                         </tr>
                       ))}
