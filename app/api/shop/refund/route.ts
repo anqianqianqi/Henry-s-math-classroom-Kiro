@@ -55,18 +55,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Redemption not found' }, { status: 404 })
     }
 
-    // Mark as refunded (soft delete) instead of hard delete
-    const { error: updateErr } = await admin
+    // Mark as refunded: hard delete the redemption (soft-delete columns not yet migrated)
+    // and manually restore the wallet balance
+    const { error: deleteErr } = await admin
       .from('redemptions')
-      .update({
-        refunded_at: new Date().toISOString(),
-        refunded_by: session.user.id,
-        points_spent: 0,  // zero out so wallet recalculations exclude it
-      })
+      .delete()
       .eq('id', redemption_id)
 
-    if (updateErr) {
-      return NextResponse.json({ error: 'Failed to refund: ' + updateErr.message }, { status: 500 })
+    if (deleteErr) {
+      return NextResponse.json({ error: 'Failed to refund: ' + deleteErr.message }, { status: 500 })
     }
 
     // Restore wallet — read current values then update
