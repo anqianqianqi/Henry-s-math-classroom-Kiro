@@ -129,6 +129,7 @@ export default function AdminShopPage() {
         item_title: r.item_title,
         item_commodity_type: r.item_commodity_type,
         blindbox_image_url: r.blindbox_image_url ?? null,
+        refunded_at: r.refunded_at ?? null,
       })))
     } else {
       console.error('[admin/shop] admin-redemptions error:', await redemptionsRes.text())
@@ -649,7 +650,7 @@ export default function AdminShopPage() {
   }
 
   async function handleRefund(redemptionId: string, pointsSpent: number, studentName: string) {
-    if (!confirm(`Refund ${pointsSpent} pts to ${studentName}? This will delete the redemption record and restore their points.`)) return
+    if (!confirm(`Refund ${pointsSpent} pts to ${studentName}? This will restore their points. For blindbox items, their draw will also be cleared so they can redraw.`)) return
     setRefunding(redemptionId)
     setError(null)
     try {
@@ -1259,20 +1260,23 @@ export default function AdminShopPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {redemptions.map((r) => (
-                        <tr key={r.id}>
+                        <tr key={r.id} className={r.refunded_at ? 'opacity-50' : ''}>
                           <td className="py-2 pr-4 font-medium text-gray-900">
                             {r.student_name}
                           </td>
                           <td className="py-2 pr-4 text-gray-700">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span>{r.item_title}</span>
-                              {r.item_commodity_type === 'blindbox' && (
+                              <span className={r.refunded_at ? 'line-through text-gray-400' : ''}>{r.item_title}</span>
+                              {r.refunded_at && (
+                                <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">Refunded</span>
+                              )}
+                              {!r.refunded_at && r.item_commodity_type === 'blindbox' && (
                                 <span className="text-[10px] font-semibold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">🎁 Blind Box</span>
                               )}
-                              {r.item_commodity_type === 'physical_blindbox' && (
+                              {!r.refunded_at && r.item_commodity_type === 'physical_blindbox' && (
                                 <span className="text-[10px] font-semibold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full">📦🎲 Physical Box</span>
                               )}
-                              {r.item_commodity_type === 'physical' && (
+                              {!r.refunded_at && r.item_commodity_type === 'physical' && (
                                 <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">📦 Physical</span>
                               )}
                             </div>
@@ -1302,14 +1306,18 @@ export default function AdminShopPage() {
                             })}
                           </td>
                           <td className="py-2">
-                            <button
-                              disabled={refunding === r.id}
-                              onClick={() => handleRefund(r.id, r.points_spent, r.student_name)}
-                              className="text-xs font-semibold px-2 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title={`Refund ${r.points_spent} pts to ${r.student_name}`}
-                            >
-                              {refunding === r.id ? '…' : 'Refund'}
-                            </button>
+                            {r.refunded_at ? (
+                              <span className="text-xs text-gray-400 italic">—</span>
+                            ) : (
+                              <button
+                                disabled={refunding === r.id}
+                                onClick={() => handleRefund(r.id, r.points_spent, r.student_name)}
+                                className="text-xs font-semibold px-2 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={`Refund ${r.points_spent} pts to ${r.student_name}`}
+                              >
+                                {refunding === r.id ? '…' : 'Refund'}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}

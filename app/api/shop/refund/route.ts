@@ -1,6 +1,7 @@
 // app/api/shop/refund/route.ts
 // Teacher-only: refund a redemption.
-// Deletes the redemption row and restores points to student wallet.
+// Soft-deletes the redemption (marks refunded_at/refunded_by) and restores points.
+// For blindbox items, also deletes the blindbox_claims row so the student can redraw.
 // Requires teacher or administrator role.
 
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
@@ -37,17 +38,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Use service role client to bypass RLS on wallet update
+    // Use service role client to bypass RLS
     const admin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // Read redemption before deleting
+    // Read redemption — include item_id so we can clean up blindbox_claims
     const { data: redemption, error: readErr } = await admin
       .from('redemptions')
-      .select('user_id, points_spent')
+      .select('user_id, item_id, points_spent')
       .eq('id', redemption_id)
       .single()
 
@@ -55,15 +56,50 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Redemption not found' }, { status: 404 })
     }
 
-    // Mark as refunded: hard delete the redemption (soft-delete columns not yet migrated)
-    // and manually restore the wallet balance
-    const { error: deleteErr } = await admin
+    // Look up the item's commodity_type so we know whether to clean up blindbox_claims
+    const { data: item } = await admin
+      .from('shop_items')
+      .select('commodity_type')
+      .eq('id', redemption.item_id)
+      .single()
+
+    const commodityType = item?.commodity_type ?? 'standard'
+    const isBlindbox = commodityType === 'blindbox' || commodityType === 'physical_blindbox'
+
+    // Soft-delete: mark as refunded (keeps audit trail)
+    // Requires refunded_at and refunded_by columns (run add-refund-to-redemptions.sql in Supabase)
+    const { error: updateErr } = await admin
       .from('redemptions')
-      .delete()
+      .update({
+        refunded_at: new Date().toISOString(),
+        refunded_by: session.user.id,
+      })
       .eq('id', redemption_id)
 
-    if (deleteErr) {
-      return NextResponse.json({ error: 'Failed to refund: ' + deleteErr.message }, { status: 500 })
+    if (updateErr) {
+      // Columns don't exist yet — fall back to hard delete until migration is run
+      console.warn('[shop/refund] soft-delete failed (columns missing?), falling back to hard delete:', updateErr.message)
+      const { error: deleteErr } = await admin
+        .from('redemptions')
+        .delete()
+        .eq('id', redemption_id)
+      if (deleteErr) {
+        return NextResponse.json({ error: 'Failed to refund: ' + deleteErr.message }, { status: 500 })
+      }
+    }
+
+    // If this was a blindbox redemption, delete the blindbox_claims row so the student can redraw
+    if (isBlindbox) {
+      const { error: claimDeleteErr } = await admin
+        .from('blindbox_claims')
+        .delete()
+        .eq('student_id', redemption.user_id)
+        .eq('item_id', redemption.item_id)
+
+      if (claimDeleteErr) {
+        // Non-fatal — log but don't fail the whole refund
+        console.warn('[shop/refund] Failed to delete blindbox_claims:', claimDeleteErr.message)
+      }
     }
 
     // Restore wallet — read current values then update
@@ -83,7 +119,11 @@ export async function POST(request: Request) {
         .eq('user_id', redemption.user_id)
     }
 
-    return NextResponse.json({ success: true, points_refunded: redemption.points_spent })
+    return NextResponse.json({
+      success: true,
+      points_refunded: redemption.points_spent,
+      blindbox_claim_cleared: isBlindbox,
+    })
   } catch (err) {
     console.error('[shop/refund] Error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

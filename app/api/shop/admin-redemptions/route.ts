@@ -33,10 +33,10 @@ export async function GET() {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // Fetch all redemptions
+    // Fetch all redemptions (including soft-deleted/refunded rows for audit trail)
     const { data: redemptions, error: rErr } = await admin
       .from('redemptions')
-      .select('id, user_id, item_id, points_spent, redeemed_at')
+      .select('id, user_id, item_id, points_spent, redeemed_at, refunded_at, refunded_by')
       .order('redeemed_at', { ascending: false })
 
     if (rErr) return NextResponse.json({ error: rErr.message }, { status: 500 })
@@ -106,6 +106,7 @@ export async function GET() {
         item_id: r.item_id,
         points_spent: r.points_spent,
         redeemed_at: r.redeemed_at,
+        refunded_at: r.refunded_at ?? null,
         student_name: profileMap[r.user_id] ?? 'Unknown',
         item_title: item?.title ?? 'Deleted item',
         item_commodity_type: commodityType,
