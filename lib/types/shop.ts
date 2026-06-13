@@ -43,6 +43,7 @@ export interface RedemptionWithDetails extends Redemption {
   item_title: string
   item_commodity_type?: string
   blindbox_image_url?: string | null
+  refunded_at?: string | null
 }
 
 export interface StudentBalance {
