@@ -151,8 +151,15 @@ export default function StudentsPage() {
       />
 
       <main className="max-w-4xl mx-auto px-4 py-6 sm:px-6">
-        {/* Search */}
+        {/* Search + count */}
         <div className="mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-500">
+              {search
+                ? `${filtered.length} of ${displayCount} shown`
+                : `${displayCount} ${showAll ? 'user' : 'student'}${displayCount !== 1 ? 's' : ''} total`}
+            </span>
+          </div>
           <input
             type="text"
             placeholder="Search by name or email..."
