@@ -265,7 +265,12 @@ export default function GradingPage() {
                               <span className="text-xs text-gray-400">{s.student_email}</span>
                             )}
                           </div>
-                          <p className="text-sm font-medium text-gray-700 mt-0.5">{s.challenge_title}</p>
+                          <button
+                            onClick={() => router.push(`/challenges/${s.challenge_id}`)}
+                            className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline mt-0.5 text-left"
+                          >
+                            {s.challenge_title} →
+                          </button>
                           <p className="text-xs text-gray-400 mt-0.5">
                             Challenge date: {formatDate(s.challenge_date)}
                             {' · '}Submitted: {formatDate(s.submitted_at)}
