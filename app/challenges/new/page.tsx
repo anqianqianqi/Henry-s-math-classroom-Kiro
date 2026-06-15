@@ -684,6 +684,7 @@ export default function NewChallengePage() {
                         <span className="font-semibold">Click to upload</span> or drag and drop
                       </p>
                       <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                      <p className="text-xs text-purple-600 font-medium mt-2">🪄 Upload your notes to auto-fill the form</p>
                     </div>
                     <input
                       type="file"
@@ -694,7 +695,7 @@ export default function NewChallengePage() {
                   </label>
                 )}
                 <p className="mt-2 text-sm text-gray-500">
-                  Upload your challenge notes or diagram — you can also use the 🪄 button to auto-fill the form from the image
+                  Upload your challenge notes or diagram — once uploaded, click <span className="text-purple-600 font-medium">🪄 Fill form from this image</span> to auto-fill the title, description, and points
                 </p>
               </div>
 
