@@ -37,25 +37,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'OpenAI API key not configured' }, { status: 500 })
     }
 
-    const { imageBase64, mimeType = 'image/jpeg' } = await request.json()
+    const { imageBase64, mimeType = 'image/jpeg', availableTags = [] } = await request.json()
     if (!imageBase64) {
       return NextResponse.json({ error: 'imageBase64 is required' }, { status: 400 })
     }
+
+    // Build tag list context for the prompt
+    const tagContext = availableTags.length > 0
+      ? `\n\nExisting tags:\n${availableTags.map((t: { id: string; name: string }) => `- ${t.name}`).join('\n')}\n\nFor suggestedTagNames: use exact names from the list above when they fit. If the topic isn't covered by any existing tag, you may suggest a NEW short tag name (in English, max 3 words). Mark new ones with a "NEW:" prefix, e.g. "NEW:Quadratic Equations".`
+      : `\n\nFor suggestedTagNames: suggest short English math topic tag names (max 3 words each), e.g. ["Algebra", "Linear Equations"].`
 
     const prompt = `You are helping a math teacher enter a challenge into an online classroom portal.
 
 Look at this image of the teacher's challenge notes and extract the following fields.
 
-CRITICAL: Preserve the EXACT language used in the image. If the text is in Chinese, keep it in Chinese. If it is in English, keep it in English. If it is mixed, keep it mixed. Do NOT translate anything.
+CRITICAL: Preserve the EXACT language used in the image for title, description, and hint. If the text is in Chinese, keep it in Chinese. If it is in English, keep it in English. If it is mixed, keep it mixed. Do NOT translate anything.
 
 Extract:
 - title: A concise challenge title (1 line, no trailing punctuation). Use the exact language from the image.
 - description: The full problem statement exactly as written, preserving the original language and wording. Include all parts of the problem. For math notation use plain text (e.g. "x^2 + 3x - 4 = 0").
 - maxPoints: The point value as an integer (look for numbers like "10 pts", "/10", "10分", etc.). Default to 100 if not found.
 - hint: Any hint text written for students (preserve original language), or null if none.
+- suggestedTagNames: An array of tag names describing the math topic(s). See tag instructions below.${tagContext}
 
 Return ONLY valid JSON in this exact format, no markdown, no explanation:
-{"title":"...","description":"...","maxPoints":100,"hint":null}`
+{"title":"...","description":"...","maxPoints":100,"hint":null,"suggestedTagNames":[]}`
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -116,6 +122,7 @@ Return ONLY valid JSON in this exact format, no markdown, no explanation:
       description: String(parsed.description || '').trim(),
       maxPoints: Number.isFinite(parsed.maxPoints) ? Math.max(1, Math.round(parsed.maxPoints)) : 100,
       hint: parsed.hint ? String(parsed.hint).trim() : null,
+      suggestedTagNames: Array.isArray(parsed.suggestedTagNames) ? parsed.suggestedTagNames : [],
     })
   } catch (err) {
     console.error('[parse-challenge-image] Error:', err)

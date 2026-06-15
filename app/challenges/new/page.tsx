@@ -57,6 +57,9 @@ export default function NewChallengePage() {
   const [parseImagePreview, setParseImagePreview] = useState<string | null>(null)
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
+  // Pending new tags suggested by GPT — shown for confirmation before creating
+  const [pendingNewTags, setPendingNewTags] = useState<string[]>([])
+  const [creatingTags, setCreatingTags] = useState(false)
   useEffect(() => {
     if (fromBank) {
       setSaveToPool(true)
@@ -648,10 +651,17 @@ export default function NewChallengePage() {
                         try {
                           const arrayBuffer = await imageFile.arrayBuffer()
                           const base64 = Buffer.from(arrayBuffer).toString('base64')
+                          // Build a flat list of tag names to send to the API for matching
+                          const tagList = availableTags.map((t: any) => {
+                            const localName = t._names?.find((n: any) => n.language === tagLang)?.name
+                              || t._names?.find((n: any) => n.language === 'en')?.name
+                              || t._names?.[0]?.name
+                            return { id: t.id, name: localName || t.id.slice(0, 8) }
+                          })
                           const res = await fetch('/api/parse-challenge-image', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ imageBase64: base64, mimeType: imageFile.type }),
+                            body: JSON.stringify({ imageBase64: base64, mimeType: imageFile.type, availableTags: tagList }),
                           })
                           const data = await res.json()
                           if (!res.ok) { setParseError(data.error || 'Failed to parse'); return }
@@ -659,6 +669,29 @@ export default function NewChallengePage() {
                           if (data.description) setDescription(data.description)
                           if (data.maxPoints) setMaxPoints(data.maxPoints)
                           if (data.hint) setDescription(prev => prev + (prev ? '\n\n[Hint: ' + data.hint + ']' : '[Hint: ' + data.hint + ']'))
+                          // Match suggested tag names back to IDs and auto-select them.
+                          // For "NEW:TagName" suggestions, queue them for confirmation — don't create yet.
+                          if (data.suggestedTagNames?.length > 0) {
+                            const newTagNames: string[] = []
+                            const matchedIds: string[] = []
+
+                            for (const suggestedName of data.suggestedTagNames as string[]) {
+                              if (suggestedName.startsWith('NEW:')) {
+                                const tagName = suggestedName.replace(/^NEW:/, '').trim()
+                                if (tagName) newTagNames.push(tagName)
+                              } else {
+                                const match = tagList.find((t: any) => t.name.toLowerCase() === suggestedName.toLowerCase())
+                                if (match) matchedIds.push(match.id)
+                              }
+                            }
+
+                            if (matchedIds.length > 0) {
+                              setTags(prev => [...new Set([...prev, ...matchedIds])])
+                            }
+                            if (newTagNames.length > 0) {
+                              setPendingNewTags(newTagNames)
+                            }
+                          }
                         } catch { setParseError('Something went wrong') }
                         finally { setParsing(false) }
                       }}
@@ -671,6 +704,67 @@ export default function NewChallengePage() {
                     </button>
                     {parseError && (
                       <p className="mt-2 text-sm text-red-600">{parseError}</p>
+                    )}
+                    {/* Pending new tag confirmation */}
+                    {pendingNewTags.length > 0 && (
+                      <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                        <p className="text-xs font-semibold text-amber-800 mb-2">
+                          GPT suggests creating {pendingNewTags.length} new tag{pendingNewTags.length > 1 ? 's' : ''}:
+                        </p>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {pendingNewTags.map(name => (
+                            <div key={name} className="flex items-center gap-1 bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-1 rounded-full">
+                              <span>{name}</span>
+                              <button
+                                type="button"
+                                onClick={() => setPendingNewTags(prev => prev.filter(t => t !== name))}
+                                className="ml-0.5 text-amber-500 hover:text-amber-900"
+                                title="Dismiss this tag"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            disabled={creatingTags}
+                            onClick={async () => {
+                              setCreatingTags(true)
+                              try {
+                                const { data: { user } } = await supabase.auth.getUser()
+                                for (const tagName of pendingNewTags) {
+                                  const slug = tagName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+                                  const { data: newTag } = await supabase
+                                    .from('challenge_tags')
+                                    .insert({ name: slug, created_by: user?.id })
+                                    .select('id')
+                                    .single()
+                                  if (newTag?.id) {
+                                    await supabase.from('challenge_tag_names').insert({ tag_id: newTag.id, language: 'en', name: tagName })
+                                    setAvailableTags(prev => [...prev, { id: newTag.id, name: tagName, _names: [{ language: 'en', name: tagName }] } as any])
+                                    setTags(prev => [...new Set([...prev, newTag.id])])
+                                  }
+                                }
+                                setPendingNewTags([])
+                              } finally {
+                                setCreatingTags(false)
+                              }
+                            }}
+                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                          >
+                            {creatingTags ? 'Creating...' : `Create ${pendingNewTags.length > 1 ? 'all' : 'it'}`}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPendingNewTags([])}
+                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                          >
+                            Dismiss all
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 ) : (
