@@ -107,7 +107,7 @@ Return ONLY valid JSON in this exact format, no markdown, no explanation:
     }
 
     // Parse the JSON response from GPT
-    let parsed: { title: string; description: string; maxPoints: number; hint: string | null }
+    let parsed: any
     try {
       // Strip markdown code fences if GPT wrapped it anyway
       const clean = content.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim()
