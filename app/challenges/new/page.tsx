@@ -289,6 +289,26 @@ export default function NewChallengePage() {
 
     setSubmitting(true)
 
+    // Resolve final tag IDs — create any pending new tags first
+    let finalTagIds = [...tags]
+    if (pendingNewTags.length > 0) {
+      for (const tagName of pendingNewTags) {
+        const slug = tagName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+        try {
+          const { data: newTag } = await supabase
+            .from('challenge_tags')
+            .insert({ name: slug, created_by: userId })
+            .select('id')
+            .single()
+          if (newTag?.id) {
+            await supabase.from('challenge_tag_names').insert({ tag_id: newTag.id, language: 'en', name: tagName })
+            finalTagIds.push(newTag.id)
+          }
+        } catch { /* skip on error */ }
+      }
+      setPendingNewTags([])
+    }
+
     try {
       let challenge: any = null
       let challengeError: any = null
@@ -301,7 +321,7 @@ export default function NewChallengePage() {
             created_by: userId,
             title: title.trim(),
             description: description.trim(),
-            tag_ids: tags,
+            tag_ids: finalTagIds,
             max_points: maxPoints,
           })
           .select()
@@ -317,7 +337,7 @@ export default function NewChallengePage() {
             title: title.trim(),
             description: description.trim(),
             challenge_date: challengeDate,
-            tag_ids: tags,
+            tag_ids: finalTagIds,
             max_points: maxPoints,
           })
           .select()
@@ -670,33 +690,31 @@ export default function NewChallengePage() {
                           if (data.maxPoints) setMaxPoints(data.maxPoints)
                           if (data.hint) setDescription(prev => prev + (prev ? '\n\n[Hint: ' + data.hint + ']' : '[Hint: ' + data.hint + ']'))
                           // Match suggested tag names back to IDs and auto-select them.
-                          // For "NEW:TagName" suggestions, queue them for confirmation — don't create yet.
+                          // Process suggested tags: match existing ones by name, store new ones as pending
                           if (data.suggestedTagNames?.length > 0) {
-                            const newTagNames: string[] = []
+                            const pendingNames: string[] = []
                             const matchedIds: string[] = []
 
                             for (const suggestedName of data.suggestedTagNames as string[]) {
-                              // Strip any "NEW:" prefix GPT may have added, then clean up
                               const cleanName = String(suggestedName).replace(/^NEW:/i, '').trim()
                               if (!cleanName) continue
 
-                              // Try to match against existing tags (case-insensitive)
-                              const match = tagList.find((t: any) =>
+                              const existing = tagList.find((t: any) =>
                                 t.name.toLowerCase() === cleanName.toLowerCase()
                               )
-                              if (match) {
-                                matchedIds.push(match.id)
+                              if (existing) {
+                                matchedIds.push(existing.id)
                               } else {
-                                // Doesn't exist in DB — queue for teacher confirmation
-                                newTagNames.push(cleanName)
+                                pendingNames.push(cleanName)
                               }
                             }
 
                             if (matchedIds.length > 0) {
                               setTags(prev => [...new Set([...prev, ...matchedIds])])
                             }
-                            if (newTagNames.length > 0) {
-                              setPendingNewTags(newTagNames)
+                            // Store new tag names to be created when the challenge is saved
+                            if (pendingNames.length > 0) {
+                              setPendingNewTags(pendingNames)
                             }
                           }
                         } catch { setParseError('Something went wrong') }
@@ -866,6 +884,26 @@ export default function NewChallengePage() {
                     return { ...g, name }
                   })}
                 />
+                {/* Pending new tags — will be created when challenge is saved */}
+                {pendingNewTags.length > 0 && (
+                  <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p className="text-xs text-amber-700 font-medium mb-1.5">
+                      New tags (will be created on save):
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {pendingNewTags.map(name => (
+                        <span key={name} className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                          {name}
+                          <button
+                            type="button"
+                            onClick={() => setPendingNewTags(prev => prev.filter(t => t !== name))}
+                            className="text-amber-500 hover:text-amber-900 leading-none"
+                          >×</button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
