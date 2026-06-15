@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -50,6 +50,8 @@ interface Comment {
 export default function ChallengePage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const targetSubmissionId = searchParams.get('submission')
   const supabase = createClient()
   
   const [challenge, setChallenge] = useState<Challenge | null>(null)
@@ -388,6 +390,18 @@ export default function ChallengePage() {
     setTotalSubmissionCount(totalCount || 0)
 
     setLoading(false)
+
+    // Scroll to targeted submission if ?submission= param is present
+    if (targetSubmissionId) {
+      setTimeout(() => {
+        const el = document.getElementById(`submission-${targetSubmissionId}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          el.classList.add('ring-2', 'ring-primary-400', 'ring-offset-2')
+          setTimeout(() => el.classList.remove('ring-2', 'ring-primary-400', 'ring-offset-2'), 3000)
+        }
+      }, 400)
+    }
   }
 
   async function loadOtherSubmissions(currentUserId: string, isTeacher: boolean = false) {
@@ -1529,7 +1543,8 @@ export default function ChallengePage() {
                   {otherSubmissions.map(submission => (
                     <div
                       key={submission.id}
-                      className="p-4 bg-gray-50 rounded-2xl"
+                      id={`submission-${submission.id}`}
+                      className="p-4 bg-gray-50 rounded-2xl transition-shadow duration-700"
                     >
                       <div className="flex items-start gap-3">
                         <div className="text-2xl">👤</div>

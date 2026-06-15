@@ -183,7 +183,6 @@ export default function StudentHistoryPage() {
           <div className="space-y-3">
             {submissions.map(sub => {
               const challenge = sub.daily_challenges
-              const isExpanded = expandedId === sub.id
               const maxPts = challenge?.max_points ?? 100
               const scored = sub.points != null
 
@@ -191,12 +190,12 @@ export default function StudentHistoryPage() {
                 <Card key={sub.id} className="overflow-hidden">
                   <div
                     className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                    onClick={() => setExpandedId(isExpanded ? null : sub.id)}
+                    onClick={() => router.push(`/challenges/${challenge?.id}?submission=${sub.id}`)}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-gray-900 truncate">
+                          <h3 className="font-semibold text-gray-900 truncate hover:text-primary-600 transition-colors">
                             {challenge?.title ?? 'Unknown Challenge'}
                           </h3>
                           {sub.is_locked && (
@@ -220,56 +219,12 @@ export default function StudentHistoryPage() {
                         ) : (
                           <div className="text-sm text-gray-400 font-medium">Not graded</div>
                         )}
-                        <div className="text-xs text-gray-400 mt-0.5">
-                          {isExpanded ? '▲ collapse' : '▼ expand'}
+                        <div className="text-xs text-primary-500 mt-0.5">
+                          View →
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Expanded content */}
-                  {isExpanded && (
-                    <div className="border-t border-gray-100 p-4 bg-gray-50 space-y-3">
-                      {/* Challenge description */}
-                      {challenge?.description && (
-                        <div>
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Challenge</p>
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{challenge.description}</p>
-                        </div>
-                      )}
-
-                      {/* Student answer */}
-                      <div>
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Student's Answer</p>
-                        <p className="text-sm text-gray-800 whitespace-pre-wrap bg-white rounded-lg p-3 border border-gray-200">
-                          {sub.content}
-                        </p>
-                      </div>
-
-                      {/* Submission image */}
-                      {sub.image_url && (
-                        <div>
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Attached Image</p>
-                          <img
-                            src={sub.image_url}
-                            alt="Submission"
-                            className="max-w-sm rounded-lg border border-gray-200"
-                          />
-                        </div>
-                      )}
-
-                      {/* View full challenge link */}
-                      <div className="flex gap-2 pt-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => router.push(`/challenges/${challenge?.id}`)}
-                        >
-                          View Full Challenge →
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </Card>
               )
             })}

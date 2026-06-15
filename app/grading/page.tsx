@@ -266,7 +266,7 @@ export default function GradingPage() {
                             )}
                           </div>
                           <button
-                            onClick={() => router.push(`/challenges/${s.challenge_id}`)}
+                            onClick={() => router.push(`/challenges/${s.challenge_id}?submission=${s.id}`)}
                             className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline mt-0.5 text-left"
                           >
                             {s.challenge_title} →
