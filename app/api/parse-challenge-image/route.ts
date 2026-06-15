@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
     // Build tag list context for the prompt
     const tagContext = availableTags.length > 0
-      ? `\n\nExisting tags:\n${availableTags.map((t: { id: string; name: string }) => `- ${t.name}`).join('\n')}\n\nFor suggestedTagNames: use exact names from the list above when they fit. If the topic isn't covered by any existing tag, you may suggest a NEW short tag name (in English, max 3 words). Mark new ones with a "NEW:" prefix, e.g. "NEW:Quadratic Equations".`
+      ? `\n\nExisting tags:\n${availableTags.map((t: { id: string; name: string }) => `- ${t.name}`).join('\n')}\n\nFor suggestedTagNames: use exact names from the list above when they fit. If the topic isn't covered well by existing tags, suggest a new short English tag name (max 3 words). Just return the tag name — no prefix needed.`
       : `\n\nFor suggestedTagNames: suggest short English math topic tag names (max 3 words each), e.g. ["Algebra", "Linear Equations"].`
 
     const prompt = `You are helping a math teacher enter a challenge into an online classroom portal.

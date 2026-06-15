@@ -676,12 +676,19 @@ export default function NewChallengePage() {
                             const matchedIds: string[] = []
 
                             for (const suggestedName of data.suggestedTagNames as string[]) {
-                              if (suggestedName.startsWith('NEW:')) {
-                                const tagName = suggestedName.replace(/^NEW:/, '').trim()
-                                if (tagName) newTagNames.push(tagName)
+                              // Strip any "NEW:" prefix GPT may have added, then clean up
+                              const cleanName = String(suggestedName).replace(/^NEW:/i, '').trim()
+                              if (!cleanName) continue
+
+                              // Try to match against existing tags (case-insensitive)
+                              const match = tagList.find((t: any) =>
+                                t.name.toLowerCase() === cleanName.toLowerCase()
+                              )
+                              if (match) {
+                                matchedIds.push(match.id)
                               } else {
-                                const match = tagList.find((t: any) => t.name.toLowerCase() === suggestedName.toLowerCase())
-                                if (match) matchedIds.push(match.id)
+                                // Doesn't exist in DB — queue for teacher confirmation
+                                newTagNames.push(cleanName)
                               }
                             }
 
