@@ -575,73 +575,6 @@ export default function NewChallengePage() {
           </Card>
         )}
 
-        {/* Import from Image */}
-        <Card className="border-2 border-dashed border-purple-200 bg-purple-50/30">
-          <Card.Header>
-            <Card.Title className="flex items-center gap-2 text-purple-700">
-              <span>🪄</span>
-              Import from Image
-            </Card.Title>
-          </Card.Header>
-          <Card.Body>
-            <p className="text-sm text-gray-600 mb-4">
-              Upload a photo of your handwritten or printed challenge notes. GPT-4o will read it and fill in the title, description, and point value for you.
-            </p>
-
-            {parseError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-                {parseError}
-              </div>
-            )}
-
-            {parseImagePreview ? (
-              <div className="relative mb-4">
-                <img
-                  src={parseImagePreview}
-                  alt="Notes to parse"
-                  className="w-full max-h-64 object-contain bg-white rounded-xl border border-purple-200"
-                />
-                <button
-                  type="button"
-                  onClick={() => { setParseImageFile(null); setParseImagePreview(null); setParseError(null) }}
-                  className="absolute top-2 right-2 bg-red-500 text-white w-7 h-7 rounded-full text-sm hover:bg-red-600 transition-colors"
-                >
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-purple-300 rounded-xl hover:border-purple-500 hover:bg-purple-50 cursor-pointer transition-all mb-4">
-                <span className="text-3xl mb-1">📷</span>
-                <span className="text-sm font-medium text-purple-700">Click to upload notes image</span>
-                <span className="text-xs text-gray-400 mt-0.5">PNG, JPG up to 10MB</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={e => {
-                    const file = e.target.files?.[0]
-                    if (!file) return
-                    setParseImageFile(file)
-                    setParseImagePreview(URL.createObjectURL(file))
-                    setParseError(null)
-                  }}
-                />
-              </label>
-            )}
-
-            <button
-              type="button"
-              disabled={!parseImageFile || parsing}
-              onClick={handleParseImage}
-              className="w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all
-                bg-purple-600 text-white hover:bg-purple-700 active:scale-95
-                disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-            >
-              {parsing ? '🔍 Reading image...' : '🪄 Fill form from image'}
-            </button>
-          </Card.Body>
-        </Card>
-
         <Card>
           <Card.Header>
             <Card.Title className="flex items-center gap-2">
@@ -704,6 +637,41 @@ export default function NewChallengePage() {
                     >
                       🗑️
                     </button>
+                    {/* Parse button — only shown when image is selected */}
+                    <button
+                      type="button"
+                      disabled={parsing}
+                      onClick={async () => {
+                        if (!imageFile) return
+                        setParsing(true)
+                        setParseError(null)
+                        try {
+                          const arrayBuffer = await imageFile.arrayBuffer()
+                          const base64 = Buffer.from(arrayBuffer).toString('base64')
+                          const res = await fetch('/api/parse-challenge-image', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ imageBase64: base64, mimeType: imageFile.type }),
+                          })
+                          const data = await res.json()
+                          if (!res.ok) { setParseError(data.error || 'Failed to parse'); return }
+                          if (data.title) setTitle(data.title)
+                          if (data.description) setDescription(data.description)
+                          if (data.maxPoints) setMaxPoints(data.maxPoints)
+                          if (data.hint) setDescription(prev => prev + (prev ? '\n\n[Hint: ' + data.hint + ']' : '[Hint: ' + data.hint + ']'))
+                        } catch { setParseError('Something went wrong') }
+                        finally { setParsing(false) }
+                      }}
+                      className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl
+                                 font-semibold text-sm transition-all
+                                 bg-purple-600 text-white hover:bg-purple-700 active:scale-95
+                                 disabled:bg-purple-300 disabled:cursor-not-allowed"
+                    >
+                      {parsing ? '🔍 Reading image...' : '🪄 Fill form from this image'}
+                    </button>
+                    {parseError && (
+                      <p className="mt-2 text-sm text-red-600">{parseError}</p>
+                    )}
                   </div>
                 ) : (
                   <label className="flex flex-col items-center justify-center w-full h-64 
@@ -726,7 +694,7 @@ export default function NewChallengePage() {
                   </label>
                 )}
                 <p className="mt-2 text-sm text-gray-500">
-                  Add a diagram, graph, or visual aid to help students understand the problem
+                  Upload your challenge notes or diagram — you can also use the 🪄 button to auto-fill the form from the image
                 </p>
               </div>
 
