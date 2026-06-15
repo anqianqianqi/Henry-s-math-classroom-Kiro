@@ -124,7 +124,7 @@ export default function AdminRolesPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 p-4 sm:p-8">
       <PageHeader breadcrumbs={[{ label: 'Admin' }, { label: 'User Roles' }]} />
       <div className="max-w-6xl mx-auto">
-
+        <p className="text-sm text-gray-500 mb-4">{users.length} user{users.length !== 1 ? 's' : ''} total</p>
         <Card>
           <Card.Body>
             <div className="space-y-4">
