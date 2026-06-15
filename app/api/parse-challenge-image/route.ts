@@ -44,11 +44,15 @@ export async function POST(request: Request) {
 
     const prompt = `You are helping a math teacher enter a challenge into an online classroom portal.
 
-Look at this image of the teacher's challenge notes and extract the following fields:
-- title: A concise challenge title (1 line, no trailing punctuation)
-- description: The full problem statement as it should appear to students. Preserve math notation using plain text (e.g. "x^2 + 3x - 4 = 0"). Include all parts of the problem.
-- maxPoints: The point value as an integer (look for numbers like "10 pts", "/10", "points: 5", etc.). Default to 100 if not found.
-- hint: Any hint text written for students, or null if none is present.
+Look at this image of the teacher's challenge notes and extract the following fields.
+
+CRITICAL: Preserve the EXACT language used in the image. If the text is in Chinese, keep it in Chinese. If it is in English, keep it in English. If it is mixed, keep it mixed. Do NOT translate anything.
+
+Extract:
+- title: A concise challenge title (1 line, no trailing punctuation). Use the exact language from the image.
+- description: The full problem statement exactly as written, preserving the original language and wording. Include all parts of the problem. For math notation use plain text (e.g. "x^2 + 3x - 4 = 0").
+- maxPoints: The point value as an integer (look for numbers like "10 pts", "/10", "10分", etc.). Default to 100 if not found.
+- hint: Any hint text written for students (preserve original language), or null if none.
 
 Return ONLY valid JSON in this exact format, no markdown, no explanation:
 {"title":"...","description":"...","maxPoints":100,"hint":null}`
