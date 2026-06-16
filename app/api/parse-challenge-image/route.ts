@@ -72,6 +72,8 @@ Return ONLY valid JSON in this exact format, no markdown, no explanation:
       body: JSON.stringify({
         model: 'gpt-4o',
         max_tokens: 1000,
+        temperature: 0,                            // deterministic output
+        response_format: { type: 'json_object' },  // always valid JSON, no markdown wrapping
         messages: [
           {
             role: 'user',
