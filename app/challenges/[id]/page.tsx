@@ -96,6 +96,9 @@ export default function ChallengePage() {
   const [hintImageFile, setHintImageFile] = useState<File | null>(null)
   const [hintImagePreview, setHintImagePreview] = useState<string | null>(null)
   const [savingHint, setSavingHint] = useState(false)
+  // Book skin state — fetched from book_skins table (default skins set by admin)
+  const [defaultCoverUrl, setDefaultCoverUrl] = useState<string | undefined>(undefined)
+  const [defaultPageUrl, setDefaultPageUrl] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     loadChallenge()
@@ -267,6 +270,19 @@ export default function ChallengePage() {
     }
 
     setChallenge(challengeData)
+
+    // Fetch default book skins set by admin (covers all users unless they own a personal skin)
+    const { data: skinData } = await supabase
+      .from('book_skins')
+      .select('skin_type, image_url')
+      .eq('is_default', true)
+      .eq('is_active', true)
+    if (skinData) {
+      const cover = skinData.find((s: any) => s.skin_type === 'cover')
+      const page  = skinData.find((s: any) => s.skin_type === 'page')
+      if (cover) setDefaultCoverUrl(cover.image_url)
+      if (page)  setDefaultPageUrl(page.image_url)
+    }
 
     // Load tag names for this challenge
     if (challengeData?.tag_ids && challengeData.tag_ids.length > 0) {
@@ -1118,6 +1134,8 @@ export default function ChallengePage() {
             day: 'numeric',
             year: 'numeric',
           })}
+          coverImageUrl={defaultCoverUrl}
+          pageImageUrl={defaultPageUrl}
           solutionSlot={
             <>{hasSubmitted && !isEditing ? (
               <>
