@@ -308,34 +308,42 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
             tabIndex={0}
             aria-label="Open the challenge book"
             onClick={openBook}
-            className="relative w-full cursor-pointer select-none"
+            className="cursor-pointer select-none flex justify-center"
             style={{ transformStyle: 'preserve-3d' }}
           >
-            {/* Spine — worn, darker at edges */}
+            {/* Book wrapper — fixed portrait size, centered */}
             <div
-              className="absolute inset-y-0 left-0 w-8 rounded-l-sm z-10"
+              className="relative flex"
               style={{
-                background: 'linear-gradient(to right, #2c1e0a, #4a3218, #5c4020)',
-                boxShadow: 'inset -3px 0 8px rgba(0,0,0,0.6), 2px 0 6px rgba(0,0,0,0.4)',
-              }}
-            />
-
-            {/* Front cover — portrait aspect ratio, image fills cleanly */}
-            <div
-              className="relative overflow-hidden rounded-r-lg rounded-l-none"
-              style={{
-                ...coverStyle,
-                boxShadow:
-                  phase === 'opening'
-                    ? '8px 10px 32px rgba(0,0,0,0.75), inset 0 0 50px rgba(0,0,0,0.35)'
-                    : '5px 7px 22px rgba(0,0,0,0.6), inset 0 0 35px rgba(0,0,0,0.25)',
-                /* Portrait: 2:3 ratio — 600px wide → 900px tall */
+                width: 'min(480px, 90vw)',
                 aspectRatio: '2 / 3',
                 maxHeight: '85vh',
-                transformOrigin: 'left center',
                 animation: phase === 'opening'
                   ? 'page-turn 1s cubic-bezier(0.4,0,0.2,1) forwards'
                   : undefined,
+                transformOrigin: 'left center',
+                boxShadow:
+                  phase === 'opening'
+                    ? '8px 10px 32px rgba(0,0,0,0.75)'
+                    : '5px 7px 22px rgba(0,0,0,0.6)',
+              }}
+            >
+            {/* Spine */}
+            <div
+              className="flex-shrink-0 rounded-l-sm"
+              style={{
+                width: '28px',
+                background: 'linear-gradient(to right, #2c1e0a, #4a3218, #5c4020)',
+                boxShadow: 'inset -3px 0 8px rgba(0,0,0,0.6)',
+              }}
+            />
+
+            {/* Front cover — fills remaining width */}
+            <div
+              className="relative overflow-hidden rounded-r-lg flex-1"
+              style={{
+                ...coverStyle,
+                boxShadow: 'inset 0 0 35px rgba(0,0,0,0.25)',
               }}
             >
               {/* ── Wear & tear layers — only shown when using the default CSS skin, not a custom image ── */}
@@ -506,6 +514,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                 </div>
               </div>
             </div>
+            </div>{/* close book-wrapper */}
           </div>
         )}
 
