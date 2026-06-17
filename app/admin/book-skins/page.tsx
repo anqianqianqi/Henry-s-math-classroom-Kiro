@@ -14,8 +14,8 @@ import { HomeButton } from '@/components/ui/HomeButton'
 // ─────────────────────────────────────────────────────────────────────────────
 const COVER_W = 400
 const COVER_H = 620
-const PAGE_W = 800
-const PAGE_H = 620
+const PAGE_W  = 400   // single page width — applied to each page independently
+const PAGE_H  = 620
 
 type SkinType = 'cover' | 'page'
 
@@ -317,7 +317,7 @@ export default function BookSkinsAdminPage() {
                     ))}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Images will be auto-resized to fit. Recommended: <strong>800×1200px</strong> for cover (2:3 portrait), <strong>1600×1200px</strong> for page (4:3 landscape). Any size is accepted — will be cropped to fill.
+                    Images will be auto-resized to fit. Both cover and page use <strong>400×620px</strong> (2:3 portrait). The page image is applied to each page individually — upload one page design and it shows on both left and right.
                   </p>
                 </div>
 
@@ -368,7 +368,7 @@ export default function BookSkinsAdminPage() {
                         <p className="text-xs text-gray-500">
                           {uploadType === 'cover'
                             ? 'Recommended: 800×1200px (2:3 portrait) · Max 20 MB'
-                            : 'Recommended: 1600×1200px (4:3 landscape) · Max 20 MB'}
+                            : 'Recommended: 800×1200px (2:3 portrait) · Applied to each page · Max 20 MB'}
                         </p>
                       </>
                     )}
@@ -441,7 +441,7 @@ export default function BookSkinsAdminPage() {
             />
             <SkinGrid
               title="📄 Page Skins"
-              subtitle={`${PAGE_W}×${PAGE_H}px — used as the open-page background`}
+              subtitle={`${PAGE_W}×${PAGE_H}px — applied to each open page (left and right use the same image)`}
               skins={pageSkins}
               onSetDefault={setDefault}
               onToggleActive={toggleActive}

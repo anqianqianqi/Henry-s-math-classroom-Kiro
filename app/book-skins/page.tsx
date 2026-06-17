@@ -162,7 +162,7 @@ export default function BookSkinsUserPage() {
               skins={pageSkins}
               selectedId={effectivePage}
               onSelect={(id) => setPrefs(p => ({ ...p, page_skin_id: id }))}
-              previewAspect={800 / 620}
+              previewAspect={400 / 620}
               skinType="page"
             />
 
