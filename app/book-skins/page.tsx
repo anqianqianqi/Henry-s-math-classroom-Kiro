@@ -49,11 +49,12 @@ export default function BookSkinsUserPage() {
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
 
-      // Fetch all active skins
+      // Fetch all active PUBLIC skins (admin_only skins are not shown to users)
       const { data: skins } = await supabase
         .from('book_skins')
         .select('id, name, description, skin_type, image_url, is_default')
         .eq('is_active', true)
+        .eq('visibility', 'public')
         .order('is_default', { ascending: false })  // default first
       setAllSkins((skins ?? []) as BookSkin[])
 

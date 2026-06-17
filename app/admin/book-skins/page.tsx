@@ -31,6 +31,7 @@ interface BookSkin {
   is_default: boolean
   is_active: boolean
   shop_item_id: string | null
+  visibility: 'admin_only' | 'public'
   created_at: string
 }
 
@@ -101,6 +102,10 @@ export default function BookSkinsAdminPage() {
   // Cover layout editor state — only relevant when uploadType === 'cover'
   const [showLayoutEditor, setShowLayoutEditor] = useState(false)
   const [coverLayout, setCoverLayout] = useState<CoverLayout>(DEFAULT_LAYOUT)
+  // Visibility control
+  const [skinVisibility, setSkinVisibility] = useState<'public' | 'admin_only'>('public')
+  // Visibility — new skins default to admin_only until explicitly made public
+  const [skinVisibility, setSkinVisibility] = useState<'admin_only' | 'public'>('admin_only')
 
   const targetW = uploadType === 'cover' ? COVER_W : PAGE_W
   const targetH = uploadType === 'cover' ? COVER_H : PAGE_H
@@ -196,6 +201,7 @@ export default function BookSkinsAdminPage() {
           width: targetW,
           height: targetH,
           created_by: user.id,
+          visibility: skinVisibility,
           ...(uploadType === 'cover' ? { cover_layout: coverLayout } : {}),
         })
       if (insertErr) throw new Error('DB insert failed: ' + insertErr.message)
@@ -207,6 +213,7 @@ export default function BookSkinsAdminPage() {
       setPreview(null)
       setShowLayoutEditor(false)
       setCoverLayout(DEFAULT_LAYOUT)
+      setSkinVisibility('public')
       if (fileInputRef.current) fileInputRef.current.value = ''
       await loadSkins()
     } catch (err: any) {
@@ -235,13 +242,34 @@ export default function BookSkinsAdminPage() {
     await loadSkins()
   }
 
-  // ── Toggle active ──────────────────────────────────────────────────────────
+  // ── Toggle visibility ──────────────────────────────────────────────────────
+  async function toggleVisibility(skin: BookSkin) {
+    const next = skin.visibility === 'public' ? 'admin_only' : 'public'
+    const { error } = await supabase
+      .from('book_skins')
+      .update({ visibility: next })
+      .eq('id', skin.id)
+    if (error) { setError('Failed to update: ' + error.message); return }
+    await loadSkins()
+  }
   async function toggleActive(skin: BookSkin) {
     const { error } = await supabase
       .from('book_skins')
       .update({ is_active: !skin.is_active })
       .eq('id', skin.id)
     if (error) { setError('Failed to update: ' + error.message); return }
+    await loadSkins()
+  }
+
+  // ── Toggle visibility ──────────────────────────────────────────────────────
+  async function toggleVisibility(skin: BookSkin) {
+    const next = skin.visibility === 'public' ? 'admin_only' : 'public'
+    const { error } = await supabase
+      .from('book_skins')
+      .update({ visibility: next })
+      .eq('id', skin.id)
+    if (error) { setError('Failed to update visibility: ' + error.message); return }
+    setSuccess(`"${skin.name}" is now ${next === 'public' ? 'visible to users' : 'admin only'}`)
     await loadSkins()
   }
 
@@ -352,6 +380,37 @@ export default function BookSkinsAdminPage() {
                   />
                 </div>
 
+                {/* Visibility */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Visibility</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSkinVisibility('public')}
+                      className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold border-2 transition-colors ${
+                        skinVisibility === 'public'
+                          ? 'bg-green-600 text-white border-green-600'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-green-300'
+                      }`}
+                    >
+                      🌍 Public
+                      <span className="block text-xs font-normal opacity-80">All users can see &amp; select</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSkinVisibility('admin_only')}
+                      className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold border-2 transition-colors ${
+                        skinVisibility === 'admin_only'
+                          ? 'bg-gray-700 text-white border-gray-700'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      🔒 Admin Only
+                      <span className="block text-xs font-normal opacity-80">Hidden from users</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* File picker */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Image *</label>
@@ -380,6 +439,34 @@ export default function BookSkinsAdminPage() {
                       </>
                     )}
                   </div>
+                </div>
+
+                {/* Visibility */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
+                  <div className="flex gap-2">
+                    {(['admin_only', 'public'] as const).map(v => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setSkinVisibility(v)}
+                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold border-2 transition-colors ${
+                          skinVisibility === v
+                            ? v === 'public'
+                              ? 'bg-green-600 text-white border-green-600'
+                              : 'bg-gray-700 text-white border-gray-700'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                        }`}
+                      >
+                        {v === 'public' ? '👥 Public (users can see)' : '🔒 Admin only'}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {skinVisibility === 'admin_only'
+                      ? 'Only usable as sitewide default. Not visible in user picker.'
+                      : 'Visible in user Book & Cover picker (and sellable in shop).'}
+                  </p>
                 </div>
 
                 <Button
@@ -479,6 +566,7 @@ export default function BookSkinsAdminPage() {
               skins={coverSkins}
               onSetDefault={setDefault}
               onToggleActive={toggleActive}
+              onToggleVisibility={toggleVisibility}
               onDelete={deleteSkin}
               previewW={160}
               previewH={248}
@@ -489,6 +577,7 @@ export default function BookSkinsAdminPage() {
               skins={pageSkins}
               onSetDefault={setDefault}
               onToggleActive={toggleActive}
+              onToggleVisibility={toggleVisibility}
               onDelete={deleteSkin}
               previewW={280}
               previewH={217}
@@ -524,6 +613,7 @@ function SkinGrid({
   skins,
   onSetDefault,
   onToggleActive,
+  onToggleVisibility,
   onDelete,
   previewW,
   previewH,
@@ -533,6 +623,7 @@ function SkinGrid({
   skins: BookSkin[]
   onSetDefault: (s: BookSkin) => void
   onToggleActive: (s: BookSkin) => void
+  onToggleVisibility: (s: BookSkin) => void
   onDelete: (s: BookSkin) => void
   previewW: number
   previewH: number
@@ -588,6 +679,12 @@ function SkinGrid({
                   {skin.description && (
                     <p className="text-xs text-gray-500 line-clamp-2">{skin.description}</p>
                   )}
+                  {/* Visibility badge */}
+                  <span className={`text-xs font-medium inline-flex items-center gap-1 ${
+                    skin.visibility === 'public' ? 'text-green-600' : 'text-gray-400'
+                  }`}>
+                    {skin.visibility === 'public' ? '👥 Public' : '🔒 Admin only'}
+                  </span>
                   {skin.shop_item_id && (
                     <span className="text-xs text-blue-600 font-medium">🛒 In shop</span>
                   )}
@@ -600,6 +697,16 @@ function SkinGrid({
                         Set default
                       </button>
                     )}
+                    <button
+                      onClick={() => onToggleVisibility(skin)}
+                      className={`text-xs px-2 py-1 border rounded-lg transition-colors ${
+                        skin.visibility === 'public'
+                          ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                      }`}
+                    >
+                      {skin.visibility === 'public' ? '🔒 Make private' : '👥 Make public'}
+                    </button>
                     <button
                       onClick={() => onToggleActive(skin)}
                       className={`text-xs px-2 py-1 border rounded-lg transition-colors ${
