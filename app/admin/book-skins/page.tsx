@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { HomeButton } from '@/components/ui/HomeButton'
+import { CoverLayoutEditor, DEFAULT_LAYOUT, type CoverLayout } from '@/components/CoverLayoutEditor'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Target dimensions (must match MagicBookReveal proportions)
@@ -97,6 +98,9 @@ export default function BookSkinsAdminPage() {
   const [preview, setPreview] = useState<string | null>(null)  // resized preview
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Cover layout editor state — only relevant when uploadType === 'cover'
+  const [showLayoutEditor, setShowLayoutEditor] = useState(false)
+  const [coverLayout, setCoverLayout] = useState<CoverLayout>(DEFAULT_LAYOUT)
 
   const targetW = uploadType === 'cover' ? COVER_W : PAGE_W
   const targetH = uploadType === 'cover' ? COVER_H : PAGE_H
@@ -192,6 +196,7 @@ export default function BookSkinsAdminPage() {
           width: targetW,
           height: targetH,
           created_by: user.id,
+          ...(uploadType === 'cover' ? { cover_layout: coverLayout } : {}),
         })
       if (insertErr) throw new Error('DB insert failed: ' + insertErr.message)
 
@@ -200,6 +205,8 @@ export default function BookSkinsAdminPage() {
       setSkinDesc('')
       setFile(null)
       setPreview(null)
+      setShowLayoutEditor(false)
+      setCoverLayout(DEFAULT_LAYOUT)
       if (fileInputRef.current) fileInputRef.current.value = ''
       await loadSkins()
     } catch (err: any) {
@@ -383,6 +390,19 @@ export default function BookSkinsAdminPage() {
                 >
                   {uploading ? 'Uploading & resizing…' : '⬆️ Upload Skin'}
                 </Button>
+
+                {/* Layout editor — cover only, shown after image is selected */}
+                {uploadType === 'cover' && preview && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowLayoutEditor(v => !v)}
+                      className="w-full py-2 px-4 text-sm font-medium rounded-xl border-2 border-dashed border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
+                    >
+                      🎨 {showLayoutEditor ? 'Hide' : 'Customise'} Title &amp; Prompt Layout
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Right: live preview at correct aspect ratio */}
@@ -423,6 +443,30 @@ export default function BookSkinsAdminPage() {
             </div>
           </Card.Body>
         </Card>
+
+        {/* ── Cover layout editor (shown when cover image is selected and toggle is on) ── */}
+        {uploadType === 'cover' && preview && showLayoutEditor && (
+          <Card>
+            <Card.Header>
+              <Card.Title className="flex items-center gap-2">
+                <span>🎨</span> Customise Title &amp; Prompt Layout
+              </Card.Title>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Drag the labels to reposition. These settings are saved with the skin and applied automatically.
+              </p>
+            </Card.Header>
+            <Card.Body>
+              <CoverLayoutEditor
+                imageUrl={preview}
+                layout={coverLayout}
+                onChange={setCoverLayout}
+              />
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-700">
+                ✅ Layout will be saved with the skin. When uploaded, both title position and "Open the Book" position are bundled together.
+              </div>
+            </Card.Body>
+          </Card>
+        )}
 
         {/* ── Existing skins ── */}
         {loading ? (

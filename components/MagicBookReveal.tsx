@@ -20,9 +20,16 @@ interface MagicBookRevealProps {
    */
   coverImageUrl?: string
   /**
-   * URL for the open-page background image (tiled or stretched).
+   * Optional layout for text overlays on the cover (from DB).
+   * Only used when coverImageUrl is set. Falls back to built-in defaults.
+   */
+  coverLayout?: {
+    title?: { x: number; y: number; fontSize: number; color: string; shadow: boolean }
+    prompt?: { x: number; y: number; fontSize: number; color: string; shadow: boolean }
+  }
+  /**
+   * URL for the open-page background image.
    * Defaults to the built-in aged parchment gradient.
-   * Override with a shop-purchased page skin URL.
    */
   pageImageUrl?: string
 }
@@ -39,7 +46,7 @@ interface MagicBookRevealProps {
  * Mobile (< 768 px):
  *   Same cover/animation, single parchment page for the problem, solution slot below.
  */
-export function MagicBookReveal({ title, date, children, solutionSlot, coverImageUrl, pageImageUrl }: MagicBookRevealProps) {
+export function MagicBookReveal({ title, date, children, solutionSlot, coverImageUrl, pageImageUrl, coverLayout }: MagicBookRevealProps) {
   const [phase, setPhase] = useState<'closed' | 'opening' | 'open'>('closed')
   const [particles, setParticles] = useState<
     { id: number; x: number; y: number; angle: number; delay: number }[]
@@ -326,15 +333,23 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                 />
                 {/* Title — center over the image, moved down */}
                 <div
-                  className="absolute top-20 left-1/2 -translate-x-1/2 text-center px-4 w-full"
-                  style={{ pointerEvents: 'none' }}
+                  className="absolute text-center px-4 w-full"
+                  style={{
+                    left: `${coverLayout?.title?.x ?? 50}%`,
+                    top: `${coverLayout?.title?.y ?? 22}%`,
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                  }}
                 >
                   <h2
-                    className="text-xl font-bold leading-snug"
+                    className="font-bold leading-snug"
                     style={{
-                      color: '#f0dea0',
+                      fontSize: coverLayout?.title?.fontSize ?? 20,
+                      color: coverLayout?.title?.color ?? '#f0dea0',
                       fontFamily: '"Georgia", "Times New Roman", serif',
-                      textShadow: '0 1px 8px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.8)',
+                      textShadow: (coverLayout?.title?.shadow ?? true)
+                        ? '0 1px 8px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.8)'
+                        : undefined,
                       letterSpacing: '0.04em',
                     }}
                   >
@@ -343,13 +358,20 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                 </div>
                 {/* Open prompt — moved up */}
                 <div
-                  className="absolute bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap"
+                  className="absolute flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap"
                   style={{
+                    left: `${coverLayout?.prompt?.x ?? 50}%`,
+                    top: `${coverLayout?.prompt?.y ?? 82}%`,
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: coverLayout?.prompt?.fontSize ?? 14,
+                    color: coverLayout?.prompt?.color ?? 'rgba(240,215,140,0.97)',
+                    textShadow: (coverLayout?.prompt?.shadow ?? true)
+                      ? '0 1px 4px rgba(0,0,0,0.8)'
+                      : undefined,
                     background: 'rgba(40,25,5,0.72)',
                     border: '1px solid rgba(200,160,60,0.55)',
-                    color: 'rgba(240,215,140,0.97)',
-                    animation: 'pulse-glow 2.5s ease-in-out infinite',
                     backdropFilter: 'blur(6px)',
+                    animation: 'pulse-glow 2.5s ease-in-out infinite',
                   }}
                 >
                   <span style={{ animation: 'wiggle 2s ease-in-out infinite', display: 'inline-block' }}>📜</span>

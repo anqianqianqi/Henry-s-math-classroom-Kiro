@@ -99,6 +99,7 @@ export default function ChallengePage() {
   // Book skin state — fetched from book_skins table (default skins set by admin)
   const [defaultCoverUrl, setDefaultCoverUrl] = useState<string | undefined>(undefined)
   const [defaultPageUrl, setDefaultPageUrl] = useState<string | undefined>(undefined)
+  const [defaultCoverLayout, setDefaultCoverLayout] = useState<any>(undefined)
 
   useEffect(() => {
     loadChallenge()
@@ -282,14 +283,14 @@ export default function ChallengePage() {
     try {
       const { data: skinData } = await supabase
         .from('book_skins')
-        .select('skin_type, image_url')
+        .select('skin_type, image_url, cover_layout')
         .eq('is_default', true)
         .eq('is_active', true)
 
       if (skinData && skinData.length > 0) {
         const defCover = (skinData as any[]).find(s => s.skin_type === 'cover')
         const defPage  = (skinData as any[]).find(s => s.skin_type === 'page')
-        if (defCover) { resolvedCoverUrl = defCover.image_url }
+        if (defCover) { resolvedCoverUrl = defCover.image_url; setDefaultCoverLayout(defCover.cover_layout) }
         if (defPage)  { resolvedPageUrl  = defPage.image_url  }
       }
     } catch (e) {
@@ -1180,6 +1181,7 @@ export default function ChallengePage() {
           })}
           coverImageUrl={defaultCoverUrl}
           pageImageUrl={defaultPageUrl}
+          coverLayout={defaultCoverLayout}
           solutionSlot={
             <>{hasSubmitted && !isEditing ? (
               <>
