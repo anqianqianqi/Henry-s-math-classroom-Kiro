@@ -13,6 +13,18 @@ interface MagicBookRevealProps {
    * On mobile it renders below the problem page as a normal flow section.
    */
   solutionSlot?: React.ReactNode
+  /**
+   * URL for the book cover background image.
+   * Defaults to the built-in treasure-map image at /book-cover-default.jpg.
+   * Override with a shop-purchased skin URL to personalise the cover.
+   */
+  coverImageUrl?: string
+  /**
+   * URL for the open-page background image (tiled or stretched).
+   * Defaults to the built-in aged parchment gradient.
+   * Override with a shop-purchased page skin URL.
+   */
+  pageImageUrl?: string
 }
 
 /**
@@ -27,7 +39,7 @@ interface MagicBookRevealProps {
  * Mobile (< 768 px):
  *   Same cover/animation, single parchment page for the problem, solution slot below.
  */
-export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBookRevealProps) {
+export function MagicBookReveal({ title, date, children, solutionSlot, coverImageUrl, pageImageUrl }: MagicBookRevealProps) {
   const [phase, setPhase] = useState<'closed' | 'opening' | 'open'>('closed')
   const [particles, setParticles] = useState<
     { id: number; x: number; y: number; angle: number; delay: number }[]
@@ -102,7 +114,13 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
     </>
   )
 
-  const parchmentBg = 'linear-gradient(to bottom, #faf6ee 0%, #f2e8d5 50%, #ede0c4 100%)'
+  const DEFAULT_COVER_IMAGE = '/book-cover-default.jpg'
+  const DEFAULT_PAGE_BG = 'linear-gradient(to bottom, #faf6ee 0%, #f2e8d5 50%, #ede0c4 100%)'
+
+  const activeCoverImage = coverImageUrl ?? DEFAULT_COVER_IMAGE
+  const parchmentBg = pageImageUrl
+    ? `url(${pageImageUrl}) center/cover no-repeat`
+    : DEFAULT_PAGE_BG
 
   return (
     <>
@@ -149,15 +167,14 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
             <div
               className="relative overflow-hidden rounded-r-lg rounded-l-none"
               style={{
-                /* Uneven base — darker in corners like real aged leather */
-                background: `
-                  radial-gradient(ellipse at 10% 10%,  rgba(30,15,0,0.55)  0%, transparent 45%),
-                  radial-gradient(ellipse at 90% 8%,   rgba(20,10,0,0.45)  0%, transparent 40%),
-                  radial-gradient(ellipse at 85% 92%,  rgba(35,18,0,0.60)  0%, transparent 45%),
-                  radial-gradient(ellipse at 12% 90%,  rgba(25,12,0,0.50)  0%, transparent 42%),
-                  radial-gradient(ellipse at 50% 50%,  rgba(180,140,80,0.15) 0%, transparent 70%),
-                  linear-gradient(145deg, #b8966a 0%, #a07a48 20%, #c8a870 38%, #8a6030 55%, #b09060 72%, #7a5530 100%)
-                `,
+                /*
+                 * Cover skin: custom image (or default treasure map) as base layer.
+                 * All the wear-and-tear overlays sit on top via child divs.
+                 */
+                backgroundImage: `url(${activeCoverImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
                 boxShadow:
                   phase === 'opening'
                     ? '8px 10px 32px rgba(0,0,0,0.75), inset 0 0 50px rgba(0,0,0,0.35)'
