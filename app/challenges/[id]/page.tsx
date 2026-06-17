@@ -275,47 +275,54 @@ export default function ChallengePage() {
     // 1. Get sitewide defaults (admin-set)
     // 2. Get this user's personal preference (overrides default if set)
     // Priority: user's personal pick > sitewide default > component fallback SVG
-    const [{ data: skinData }, { data: userPrefData }] = await Promise.all([
-      supabase
+    // Each query is independent — a missing table won't block the other.
+    let resolvedCoverUrl: string | undefined
+    let resolvedPageUrl: string | undefined
+
+    try {
+      const { data: skinData } = await supabase
         .from('book_skins')
         .select('skin_type, image_url')
         .eq('is_default', true)
-        .eq('is_active', true),
-      supabase
+        .eq('is_active', true)
+
+      if (skinData && skinData.length > 0) {
+        const defCover = (skinData as any[]).find(s => s.skin_type === 'cover')
+        const defPage  = (skinData as any[]).find(s => s.skin_type === 'page')
+        if (defCover) resolvedCoverUrl = defCover.image_url
+        if (defPage)  resolvedPageUrl  = defPage.image_url
+      }
+    } catch (_) {
+      // book_skins table may not exist yet — use SVG fallback
+    }
+
+    try {
+      const { data: userPrefData } = await supabase
         .from('user_book_skin_preferences')
         .select('cover_skin_id, page_skin_id')
         .eq('user_id', user.id)
-        .maybeSingle(),
-    ])
-
-    // Start with sitewide defaults
-    let resolvedCoverUrl: string | undefined
-    let resolvedPageUrl: string | undefined
-    if (skinData) {
-      const defCover = (skinData as any[]).find(s => s.skin_type === 'cover')
-      const defPage  = (skinData as any[]).find(s => s.skin_type === 'page')
-      if (defCover) resolvedCoverUrl = defCover.image_url
-      if (defPage)  resolvedPageUrl  = defPage.image_url
-    }
-
-    // User personal preference overrides the default
-    if (userPrefData?.cover_skin_id) {
-      const { data: uc } = await supabase
-        .from('book_skins')
-        .select('image_url')
-        .eq('id', userPrefData.cover_skin_id)
-        .eq('is_active', true)
         .maybeSingle()
-      if (uc) resolvedCoverUrl = uc.image_url
-    }
-    if (userPrefData?.page_skin_id) {
-      const { data: up } = await supabase
-        .from('book_skins')
-        .select('image_url')
-        .eq('id', userPrefData.page_skin_id)
-        .eq('is_active', true)
-        .maybeSingle()
-      if (up) resolvedPageUrl = up.image_url
+
+      if (userPrefData?.cover_skin_id) {
+        const { data: uc } = await supabase
+          .from('book_skins')
+          .select('image_url')
+          .eq('id', userPrefData.cover_skin_id)
+          .eq('is_active', true)
+          .maybeSingle()
+        if (uc) resolvedCoverUrl = (uc as any).image_url
+      }
+      if (userPrefData?.page_skin_id) {
+        const { data: up } = await supabase
+          .from('book_skins')
+          .select('image_url')
+          .eq('id', userPrefData.page_skin_id)
+          .eq('is_active', true)
+          .maybeSingle()
+        if (up) resolvedPageUrl = (up as any).image_url
+      }
+    } catch (_) {
+      // user_book_skin_preferences table may not exist yet
     }
 
     if (resolvedCoverUrl) setDefaultCoverUrl(resolvedCoverUrl)
