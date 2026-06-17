@@ -136,24 +136,32 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
             className="relative w-full cursor-pointer select-none"
             style={{ transformStyle: 'preserve-3d' }}
           >
-            {/* Spine */}
+            {/* Spine — worn, darker at edges */}
             <div
               className="absolute inset-y-0 left-0 w-8 rounded-l-sm z-10"
               style={{
-                background: 'linear-gradient(to right, #6b5a3e, #8c7550, #a08860)',
-                boxShadow: 'inset -4px 0 10px rgba(0,0,0,0.4)',
+                background: 'linear-gradient(to right, #2c1e0a, #4a3218, #5c4020)',
+                boxShadow: 'inset -3px 0 8px rgba(0,0,0,0.6), 2px 0 6px rgba(0,0,0,0.4)',
               }}
             />
 
-            {/* Front cover — tall, full-width, portrait proportions */}
+            {/* Front cover — aged, uneven, treasure-map worn */}
             <div
-              className="relative overflow-hidden rounded-r-xl rounded-l-sm"
+              className="relative overflow-hidden rounded-r-lg rounded-l-none"
               style={{
-                background: 'linear-gradient(160deg, #c8b08a 0%, #b09060 35%, #9a7a48 70%, #7a5e30 100%)',
+                /* Uneven base — darker in corners like real aged leather */
+                background: `
+                  radial-gradient(ellipse at 10% 10%,  rgba(30,15,0,0.55)  0%, transparent 45%),
+                  radial-gradient(ellipse at 90% 8%,   rgba(20,10,0,0.45)  0%, transparent 40%),
+                  radial-gradient(ellipse at 85% 92%,  rgba(35,18,0,0.60)  0%, transparent 45%),
+                  radial-gradient(ellipse at 12% 90%,  rgba(25,12,0,0.50)  0%, transparent 42%),
+                  radial-gradient(ellipse at 50% 50%,  rgba(180,140,80,0.15) 0%, transparent 70%),
+                  linear-gradient(145deg, #b8966a 0%, #a07a48 20%, #c8a870 38%, #8a6030 55%, #b09060 72%, #7a5530 100%)
+                `,
                 boxShadow:
                   phase === 'opening'
-                    ? '8px 10px 32px rgba(0,0,0,0.7), inset 0 0 40px rgba(0,0,0,0.4)'
-                    : '6px 8px 24px rgba(0,0,0,0.55), inset 0 0 28px rgba(0,0,0,0.3)',
+                    ? '8px 10px 32px rgba(0,0,0,0.75), inset 0 0 50px rgba(0,0,0,0.35)'
+                    : '5px 7px 22px rgba(0,0,0,0.6), inset 0 0 35px rgba(0,0,0,0.25)',
                 minHeight: '480px',
                 transformOrigin: 'left center',
                 animation: phase === 'opening'
@@ -161,125 +169,171 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
                   : undefined,
               }}
             >
-              {/* Leather grain texture */}
+              {/* ── Wear & tear layers ── */}
+
+              {/* Coarse leather grain */}
               <div
-                className="absolute inset-0 opacity-15 pointer-events-none"
+                className="absolute inset-0 pointer-events-none"
                 style={{
+                  opacity: 0.18,
                   backgroundImage:
-                    'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 3px), ' +
-                    'repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(0,0,0,0.04) 4px, rgba(0,0,0,0.04) 5px)',
+                    'repeating-linear-gradient(17deg, transparent, transparent 1px, rgba(0,0,0,0.08) 1px, rgba(0,0,0,0.08) 2px), ' +
+                    'repeating-linear-gradient(107deg, transparent, transparent 3px, rgba(255,255,255,0.04) 3px, rgba(255,255,255,0.04) 4px)',
                 }}
               />
 
-              {/* Outer gold border */}
+              {/* Horizontal crease lines — like folded old leather */}
+              <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.22 }}>
+                <div style={{ position: 'absolute', top: '28%', left: 0, right: 0, height: '1px', background: 'linear-gradient(to right, transparent 5%, rgba(30,10,0,0.6) 20%, rgba(60,30,0,0.3) 50%, rgba(30,10,0,0.5) 80%, transparent 95%)' }} />
+                <div style={{ position: 'absolute', top: '29%', left: '10%', right: '8%', height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,220,140,0.25) 40%, transparent)' }} />
+                <div style={{ position: 'absolute', top: '68%', left: 0, right: 0, height: '1px', background: 'linear-gradient(to right, transparent 8%, rgba(30,10,0,0.5) 25%, rgba(60,30,0,0.25) 60%, rgba(20,8,0,0.45) 85%, transparent 96%)' }} />
+                <div style={{ position: 'absolute', top: '69%', left: '6%', right: '12%', height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,220,140,0.2) 50%, transparent)' }} />
+                {/* Faint diagonal scratch */}
+                <div style={{ position: 'absolute', top: '40%', left: '60%', width: '28%', height: '1px', background: 'rgba(20,8,0,0.3)', transform: 'rotate(8deg)', transformOrigin: 'left center' }} />
+              </div>
+
+              {/* Water stain blotches */}
+              <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.13 }}>
+                <div style={{ position: 'absolute', top: '15%', left: '55%', width: '22%', height: '14%', borderRadius: '60% 40% 55% 45%', background: 'radial-gradient(ellipse, rgba(60,30,5,0.7) 0%, transparent 70%)' }} />
+                <div style={{ position: 'absolute', top: '55%', left: '8%',  width: '18%', height: '12%', borderRadius: '45% 55% 50% 50%', background: 'radial-gradient(ellipse, rgba(50,25,5,0.6) 0%, transparent 70%)' }} />
+                <div style={{ position: 'absolute', top: '72%', left: '65%', width: '14%', height: '10%', borderRadius: '50% 50% 40% 60%', background: 'radial-gradient(ellipse, rgba(40,20,5,0.5) 0%, transparent 70%)' }} />
+              </div>
+
+              {/* Edge darkening — worn away from handling */}
               <div
-                className="absolute inset-4 rounded-lg pointer-events-none"
-                style={{ border: '2px solid rgba(212,175,55,0.65)', boxShadow: 'inset 0 0 20px rgba(212,175,55,0.12)' }}
-              />
-              {/* Inner gold border */}
-              <div
-                className="absolute inset-7 rounded pointer-events-none"
-                style={{ border: '1px solid rgba(212,175,55,0.35)' }}
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: `
+                    linear-gradient(to right,  rgba(0,0,0,0.0) 4%, transparent 18%),
+                    linear-gradient(to left,   rgba(0,0,0,0.18) 0%, transparent 15%),
+                    linear-gradient(to bottom, rgba(0,0,0,0.22) 0%, transparent 12%),
+                    linear-gradient(to top,    rgba(0,0,0,0.25) 0%, transparent 14%)
+                  `,
+                }}
               />
 
-              {/* Corner ornaments */}
-              {['top-4 left-4', 'top-4 right-4', 'bottom-4 left-4', 'bottom-4 right-4'].map(pos => (
+              {/* Faded / chipped gold border — gaps simulated by low opacity */}
+              <div
+                className="absolute pointer-events-none"
+                style={{
+                  inset: '14px',
+                  border: '2px solid rgba(180,140,50,0.38)',
+                  borderRadius: '4px',
+                  boxShadow: 'inset 0 0 16px rgba(160,120,30,0.08)',
+                  /* Chip effect: mask parts of the border using box-shadow hack */
+                  outline: '1px solid rgba(80,50,10,0.15)',
+                  outlineOffset: '3px',
+                }}
+              />
+              <div
+                className="absolute pointer-events-none"
+                style={{
+                  inset: '20px',
+                  border: '1px solid rgba(160,120,40,0.22)',
+                  borderRadius: '2px',
+                }}
+              />
+
+              {/* Corner wear marks — scuffed, not crisp ornaments */}
+              {[
+                { pos: 'top-3 left-3',     rot: '0deg'   },
+                { pos: 'top-3 right-3',    rot: '90deg'  },
+                { pos: 'bottom-3 right-3', rot: '180deg' },
+                { pos: 'bottom-3 left-3',  rot: '270deg' },
+              ].map(({ pos, rot }) => (
                 <div
                   key={pos}
-                  className={`absolute ${pos} text-yellow-500 opacity-75 text-xl leading-none pointer-events-none`}
-                  style={{ textShadow: '0 0 8px rgba(212,175,55,0.7)' }}
+                  className={`absolute ${pos} pointer-events-none`}
+                  style={{
+                    width: '28px', height: '28px',
+                    transform: `rotate(${rot})`,
+                    opacity: 0.5,
+                  }}
                 >
-                  ✦
+                  {/* L-shaped corner bracket, faded */}
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '2px', background: 'linear-gradient(to right, rgba(180,140,50,0.7), transparent)' }} />
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: '2px', height: '100%', background: 'linear-gradient(to bottom, rgba(180,140,50,0.7), transparent)' }} />
                 </div>
               ))}
 
-              {/* Horizontal decorative rule top */}
+              {/* Torn / rough top edge illusion */}
               <div
-                className="absolute pointer-events-none"
+                className="absolute top-0 inset-x-0 pointer-events-none"
                 style={{
-                  top: '22%',
-                  left: '12%',
-                  right: '12%',
-                  height: '1px',
-                  background: 'linear-gradient(to right, transparent, rgba(212,175,55,0.5), transparent)',
-                }}
-              />
-              {/* Horizontal decorative rule bottom */}
-              <div
-                className="absolute pointer-events-none"
-                style={{
-                  bottom: '22%',
-                  left: '12%',
-                  right: '12%',
-                  height: '1px',
-                  background: 'linear-gradient(to right, transparent, rgba(212,175,55,0.5), transparent)',
+                  height: '6px',
+                  background: 'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 100%)',
+                  borderTopLeftRadius: '0',
+                  borderTopRightRadius: '4px',
                 }}
               />
 
               {/* Cover content */}
               <div className="relative z-10 flex flex-col items-center justify-center min-h-[480px] px-12 py-16 text-center">
-                {/* Large book icon */}
+                {/* Faded compass-rose / seal icon */}
                 <div
-                  className="text-7xl mb-6"
-                  style={{ filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.7))' }}
+                  className="mb-5 text-5xl"
+                  style={{
+                    filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.8)) sepia(0.6) brightness(0.85)',
+                    opacity: 0.9,
+                  }}
                 >
-                  📖
+                  🧭
                 </div>
 
-                {/* Decorative top flourish */}
-                <div
-                  className="text-sm mb-4"
-                  style={{ color: 'rgba(212,175,55,0.6)', letterSpacing: '0.3em' }}
-                >
-                  ✦ ✦ ✦
+                {/* Worn top rule */}
+                <div className="flex items-center gap-2 mb-4 w-4/5" style={{ opacity: 0.55 }}>
+                  <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, transparent, rgba(200,160,60,0.8))' }} />
+                  <span style={{ color: 'rgba(200,160,60,0.8)', fontSize: '10px' }}>✦</span>
+                  <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, rgba(200,160,60,0.8))' }} />
                 </div>
 
                 <h2
                   className="text-2xl font-bold mb-3 leading-snug"
                   style={{
-                    color: '#f5e6b0',
+                    color: '#f0dea0',
                     fontFamily: '"Georgia", "Times New Roman", serif',
-                    textShadow: '0 2px 8px rgba(0,0,0,0.9), 0 0 30px rgba(212,175,55,0.25)',
-                    letterSpacing: '0.05em',
+                    textShadow: '0 1px 8px rgba(0,0,0,0.9), 0 0 24px rgba(180,140,40,0.2)',
+                    letterSpacing: '0.06em',
                     maxWidth: '80%',
+                    /* Slight fade to simulate age-bleached ink */
+                    opacity: 0.92,
                   }}
                 >
                   {title}
                 </h2>
 
                 <p
-                  className="text-base mb-8"
+                  className="text-sm mb-5"
                   style={{
-                    color: 'rgba(245,230,176,0.65)',
+                    color: 'rgba(230,200,130,0.55)',
                     fontFamily: '"Georgia", serif',
                     fontStyle: 'italic',
-                    letterSpacing: '0.08em',
+                    letterSpacing: '0.1em',
                   }}
                 >
                   {date}
                 </p>
 
-                {/* Decorative bottom flourish */}
-                <div
-                  className="text-sm mb-6"
-                  style={{ color: 'rgba(212,175,55,0.6)', letterSpacing: '0.3em' }}
-                >
-                  ✦ ✦ ✦
+                {/* Worn bottom rule */}
+                <div className="flex items-center gap-2 mb-6 w-4/5" style={{ opacity: 0.45 }}>
+                  <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, transparent, rgba(200,160,60,0.7))' }} />
+                  <span style={{ color: 'rgba(200,160,60,0.7)', fontSize: '10px' }}>✦</span>
+                  <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, rgba(200,160,60,0.7))' }} />
                 </div>
 
-                {/* Open prompt pill */}
+                {/* Open prompt — looks like a wax-seal button */}
                 <div
-                  className="flex items-center gap-3 px-7 py-3 rounded-full text-base font-semibold"
+                  className="flex items-center gap-3 px-6 py-3 rounded-full text-sm font-semibold"
                   style={{
-                    background: 'rgba(212,175,55,0.15)',
-                    border: '1px solid rgba(212,175,55,0.55)',
-                    color: '#f5e6b0',
-                    animation: 'pulse-glow 2s ease-in-out infinite',
-                    backdropFilter: 'blur(4px)',
+                    background: 'rgba(100,70,20,0.55)',
+                    border: '1px solid rgba(200,160,60,0.4)',
+                    color: 'rgba(240,215,140,0.9)',
+                    animation: 'pulse-glow 2.5s ease-in-out infinite',
+                    boxShadow: 'inset 0 1px 0 rgba(255,220,100,0.1)',
                   }}
                 >
-                  <span style={{ animation: 'wiggle 1.5s ease-in-out infinite', display: 'inline-block' }}>📜</span>
-                  <span>Open the Book</span>
+                  <span style={{ animation: 'wiggle 2s ease-in-out infinite', display: 'inline-block' }}>📜</span>
+                  <span style={{ letterSpacing: '0.08em' }}>Open the Book</span>
                 </div>
               </div>
             </div>
