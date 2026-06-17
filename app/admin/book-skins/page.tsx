@@ -318,7 +318,7 @@ export default function BookSkinsAdminPage() {
                     ))}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Images will be auto-resized to exactly {targetW}×{targetH}px (cover behaviour — cropped to fill).
+                    Images will be auto-resized to fit. Recommended: <strong>800×1200px</strong> for cover (2:3 portrait), <strong>1600×1200px</strong> for page (4:3 landscape). Any size is accepted — will be cropped to fill.
                   </p>
                 </div>
 
@@ -366,7 +366,11 @@ export default function BookSkinsAdminPage() {
                       <>
                         <p className="text-2xl mb-1">📸</p>
                         <p className="text-sm text-amber-700 font-medium">Click to choose image</p>
-                        <p className="text-xs text-gray-500">Any size/ratio — will be resized to fit. Max 20 MB.</p>
+                        <p className="text-xs text-gray-500">
+                          {uploadType === 'cover'
+                            ? 'Recommended: 800×1200px (2:3 portrait) · Max 20 MB'
+                            : 'Recommended: 1600×1200px (4:3 landscape) · Max 20 MB'}
+                        </p>
                       </>
                     )}
                   </div>
