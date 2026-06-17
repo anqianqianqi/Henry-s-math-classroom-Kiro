@@ -151,7 +151,8 @@ export default function BookSkinsUserPage() {
               skins={coverSkins}
               selectedId={effectiveCover}
               onSelect={(id) => setPrefs(p => ({ ...p, cover_skin_id: id }))}
-              previewAspect={400 / 620}  // portrait
+              previewAspect={400 / 620}
+              skinType="cover"
             />
 
             {/* ── Page skin picker ── */}
@@ -161,7 +162,8 @@ export default function BookSkinsUserPage() {
               skins={pageSkins}
               selectedId={effectivePage}
               onSelect={(id) => setPrefs(p => ({ ...p, page_skin_id: id }))}
-              previewAspect={800 / 620}  // landscape spread
+              previewAspect={800 / 620}
+              skinType="page"
             />
 
             {/* Save button */}
@@ -202,6 +204,7 @@ function SkinPicker({
   selectedId,
   onSelect,
   previewAspect,
+  skinType,
 }: {
   title: string
   description: string
@@ -209,6 +212,7 @@ function SkinPicker({
   selectedId: string | null
   onSelect: (id: string | null) => void
   previewAspect: number  // width / height
+  skinType: 'cover' | 'page'
 }) {
   // Find the default skin for this type (may be null if none set)
   const defaultSkin = skins.find(s => s.is_default) ?? null
@@ -225,12 +229,13 @@ function SkinPicker({
           {/* Always show the "Default" option first */}
           <SkinOption
             label="Default"
-            sublabel={defaultSkin ? defaultSkin.name : 'Set by admin'}
+            sublabel={defaultSkin ? defaultSkin.name : 'Built-in parchment'}
             imageUrl={defaultSkin?.image_url ?? null}
             isSelected={selectedId === null}
             onClick={() => onSelect(null)}
             aspect={previewAspect}
             badge="⭐"
+            skinType={skinType}
           />
 
           {/* User's owned skins — for now only defaults are available */}
@@ -243,6 +248,7 @@ function SkinPicker({
               isSelected={selectedId === skin.id}
               onClick={() => onSelect(skin.id)}
               aspect={previewAspect}
+              skinType={skinType}
             />
           ))}
 
@@ -272,6 +278,7 @@ function SkinOption({
   onClick,
   aspect,
   badge,
+  skinType,
 }: {
   label: string
   sublabel?: string
@@ -280,6 +287,7 @@ function SkinOption({
   onClick: () => void
   aspect: number
   badge?: string
+  skinType: 'cover' | 'page'
 }) {
   return (
     <button
@@ -303,11 +311,13 @@ function SkinOption({
             className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
-          /* Fallback — checkerboard placeholder */
+          /* Fallback — show the built-in default skin preview */
           <div
             className="absolute inset-0"
             style={{
-              background: 'repeating-conic-gradient(#f3f4f6 0% 25%, #e5e7eb 0% 50%) 0 0 / 16px 16px',
+              background: skinType === 'page'
+                ? 'linear-gradient(to bottom, #faf6ee 0%, #f2e8d5 50%, #ede0c4 100%)'
+                : 'linear-gradient(160deg, #c8b08a 0%, #b09060 35%, #9a7a48 70%, #7a5e30 100%)',
             }}
           />
         )}

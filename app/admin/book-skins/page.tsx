@@ -393,7 +393,11 @@ export default function BookSkinsAdminPage() {
                   style={{
                     width: uploadType === 'cover' ? 160 : 280,
                     height: uploadType === 'cover' ? 248 : 217,
-                    background: preview ? undefined : 'repeating-conic-gradient(#f3f4f6 0% 25%, #e5e7eb 0% 50%) 0 0 / 16px 16px',
+                    background: preview
+                      ? undefined
+                      : uploadType === 'page'
+                      ? 'linear-gradient(to bottom, #faf6ee 0%, #f2e8d5 50%, #ede0c4 100%)'
+                      : 'linear-gradient(160deg, #c8b08a 0%, #b09060 35%, #9a7a48 70%, #7a5e30 100%)',
                   }}
                 >
                   {preview && (
