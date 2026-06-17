@@ -312,7 +312,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
             style={{ transformStyle: 'preserve-3d' }}
           >
             {coverImageUrl ? (
-              /* ── Custom image mode: book-opening animation pivots from left spine ── */
+              /* ── Custom image mode: flip animation, no backing layer ── */
               <div
                 className="relative"
                 style={{
@@ -321,28 +321,10 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                   perspective: '1200px',
                 }}
               >
-                {/* Book pages backing — visible while cover swings open */}
-                <div
-                  className="absolute inset-0 rounded-r-lg"
-                  style={{
-                    background: 'linear-gradient(to right, #c8a87a 0%, #e8d5a8 8%, #f5ead0 100%)',
-                    boxShadow: 'inset -4px 0 12px rgba(0,0,0,0.15)',
-                    zIndex: 0,
-                    borderRadius: '4px',
-                  }}
-                >
-                  {/* Page lines suggestion */}
-                  <div className="absolute inset-0 opacity-20" style={{
-                    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 18px, rgba(100,60,10,0.3) 18px, rgba(100,60,10,0.3) 19px)',
-                    backgroundPositionY: '32px',
-                  }} />
-                </div>
-
                 {/* Cover — pivots from left edge like a real book cover */}
                 <div
                   style={{
                     position: 'relative',
-                    zIndex: 1,
                     transformOrigin: 'left center',
                     transformStyle: 'preserve-3d',
                     animation: phase === 'opening'
