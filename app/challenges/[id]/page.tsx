@@ -280,20 +280,24 @@ export default function ChallengePage() {
     let resolvedPageUrl: string | undefined
 
     try {
-      const { data: skinData } = await supabase
+      const { data: skinData, error: skinErr } = await supabase
         .from('book_skins')
         .select('skin_type, image_url')
         .eq('is_default', true)
         .eq('is_active', true)
 
+      console.log('[BookSkins] query result:', skinData, 'error:', skinErr)
+
       if (skinData && skinData.length > 0) {
         const defCover = (skinData as any[]).find(s => s.skin_type === 'cover')
         const defPage  = (skinData as any[]).find(s => s.skin_type === 'page')
-        if (defCover) resolvedCoverUrl = defCover.image_url
-        if (defPage)  resolvedPageUrl  = defPage.image_url
+        if (defCover) { resolvedCoverUrl = defCover.image_url; console.log('[BookSkins] cover URL:', resolvedCoverUrl) }
+        if (defPage)  { resolvedPageUrl  = defPage.image_url;  console.log('[BookSkins] page URL:', resolvedPageUrl) }
+      } else {
+        console.log('[BookSkins] no default skins found in DB')
       }
-    } catch (_) {
-      // book_skins table may not exist yet — use SVG fallback
+    } catch (e) {
+      console.error('[BookSkins] fetch error:', e)
     }
 
     try {

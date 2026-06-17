@@ -251,6 +251,12 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
     ? `url(${pageImageUrl}) center/cover no-repeat`
     : DEFAULT_PAGE_BG
 
+  // Debug: log what image is being used
+  if (typeof window !== 'undefined') {
+    console.log('[MagicBookReveal] coverImageUrl prop:', coverImageUrl)
+    console.log('[MagicBookReveal] activeCoverImage:', activeCoverImage)
+  }
+
   /**
    * Cover style: tries the real jpg first, falls back to the inline SVG.
    * When a shop skin is purchased, coverImageUrl overrides both.
