@@ -108,6 +108,11 @@ export default function BookSkinsAdminPage() {
   const [coverLayout, setCoverLayout] = useState<CoverLayout>(DEFAULT_LAYOUT)
   // Visibility — new skins default to admin_only until explicitly made public
   const [skinVisibility, setSkinVisibility] = useState<'admin_only' | 'public'>('admin_only')
+  // Animated frames mode
+  const [isAnimated, setIsAnimated] = useState(false)
+  const [frameFiles, setFrameFiles] = useState<File[]>([])
+  const [framePreviews, setFramePreviews] = useState<string[]>([])
+  const framesInputRef = useRef<HTMLInputElement>(null)
 
   const targetW = uploadType === 'cover' ? COVER_W : PAGE_W
   const targetH = uploadType === 'cover' ? COVER_H : PAGE_H
@@ -164,11 +169,49 @@ export default function BookSkinsAdminPage() {
     } catch (_) {}
   }
 
+  // ── Frame file picker ──────────────────────────────────────────────────────
+  async function handleFramesPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files ?? []).filter(f => f.type.startsWith('image/') && f.size <= 20 * 1024 * 1024)
+    if (picked.length === 0) return
+    setError(null)
+    // Resize all frames and generate previews
+    const resizedPreviews: string[] = []
+    for (const f of picked) {
+      try {
+        const blob = await resizeImageToBlob(f, COVER_W, COVER_H)
+        resizedPreviews.push(URL.createObjectURL(blob))
+      } catch (_) {
+        resizedPreviews.push(URL.createObjectURL(f))
+      }
+    }
+    setFrameFiles(prev => [...prev, ...picked])
+    setFramePreviews(prev => [...prev, ...resizedPreviews])
+  }
+
+  function removeFrame(idx: number) {
+    setFrameFiles(prev => prev.filter((_, i) => i !== idx))
+    setFramePreviews(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  function moveFrame(idx: number, dir: -1 | 1) {
+    const newFiles = [...frameFiles]
+    const newPreviews = [...framePreviews]
+    const swap = idx + dir
+    if (swap < 0 || swap >= newFiles.length) return
+    ;[newFiles[idx], newFiles[swap]] = [newFiles[swap], newFiles[idx]]
+    ;[newPreviews[idx], newPreviews[swap]] = [newPreviews[swap], newPreviews[idx]]
+    setFrameFiles(newFiles)
+    setFramePreviews(newPreviews)
+  }
+
   // ── Upload ─────────────────────────────────────────────────────────────────
   async function handleUpload() {
-    if (!file || !skinName.trim()) {
-      setError('Please choose an image and enter a name')
-      return
+    // Validate
+    if (isAnimated && uploadType === 'cover') {
+      if (frameFiles.length < 2) { setError('Please add at least 2 frames for animated mode'); return }
+      if (!skinName.trim()) { setError('Please enter a name'); return }
+    } else {
+      if (!file || !skinName.trim()) { setError('Please choose an image and enter a name'); return }
     }
     setError(null)
     setSuccess(null)
@@ -178,21 +221,57 @@ export default function BookSkinsAdminPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Resize to exact target dimensions
-      const resizedBlob = await resizeImageToBlob(file, targetW, targetH)
+      // ── Animated frames mode ──
+      if (isAnimated && uploadType === 'cover') {
+        // Use frame 0 as the cover image_url
+        const frame0 = await resizeImageToBlob(frameFiles[0], COVER_W, COVER_H)
+        const f0Name = `cover/${user.id}/${Date.now()}-f0.png`
+        const { error: f0Err } = await supabase.storage.from('book-skins').upload(f0Name, frame0, { contentType: 'image/png' })
+        if (f0Err) throw new Error('Frame 0 upload failed: ' + f0Err.message)
+        const { data: { publicUrl: f0Url } } = supabase.storage.from('book-skins').getPublicUrl(f0Name)
 
-      // Upload to Supabase storage
+        const { data: newSkin, error: insertErr } = await supabase
+          .from('book_skins')
+          .insert({
+            name: skinName.trim(),
+            description: skinDesc.trim() || null,
+            skin_type: 'cover',
+            image_url: f0Url,
+            width: COVER_W,
+            height: COVER_H,
+            created_by: user.id,
+            visibility: skinVisibility,
+            cover_layout: coverLayout,
+            is_animated: true,
+          })
+          .select('id')
+          .single()
+        if (insertErr || !newSkin) throw new Error('DB insert failed: ' + insertErr?.message)
+
+        // Upload remaining frames and insert book_skin_frames rows
+        for (let i = 0; i < frameFiles.length; i++) {
+          const blob = await resizeImageToBlob(frameFiles[i], COVER_W, COVER_H)
+          const fName = `cover/${user.id}/${Date.now()}-frame${i}.png`
+          await supabase.storage.from('book-skins').upload(fName, blob, { contentType: 'image/png' })
+          const { data: { publicUrl: fUrl } } = supabase.storage.from('book-skins').getPublicUrl(fName)
+          await supabase.from('book_skin_frames').insert({ skin_id: newSkin.id, sort_order: i, image_url: fUrl })
+        }
+
+        setSuccess(`✅ Animated skin "${skinName.trim()}" uploaded with ${frameFiles.length} frames!`)
+        setSkinName(''); setSkinDesc(''); setFrameFiles([]); setFramePreviews([])
+        setShowLayoutEditor(false); setCoverLayout(DEFAULT_LAYOUT); setSkinVisibility('admin_only')
+        if (framesInputRef.current) framesInputRef.current.value = ''
+        await loadSkins()
+        return
+      }
+
+      // ── Single image mode (original) ──
+      const resizedBlob = await resizeImageToBlob(file!, targetW, targetH)
       const fileName = `${uploadType}/${user.id}/${Date.now()}.png`
-      const { error: uploadErr } = await supabase.storage
-        .from('book-skins')
-        .upload(fileName, resizedBlob, { contentType: 'image/png', upsert: false })
+      const { error: uploadErr } = await supabase.storage.from('book-skins').upload(fileName, resizedBlob, { contentType: 'image/png', upsert: false })
       if (uploadErr) throw new Error('Storage upload failed: ' + uploadErr.message)
+      const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(fileName)
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('book-skins')
-        .getPublicUrl(fileName)
-
-      // Insert into book_skins table
       const { error: insertErr } = await supabase
         .from('book_skins')
         .insert({
@@ -209,13 +288,8 @@ export default function BookSkinsAdminPage() {
       if (insertErr) throw new Error('DB insert failed: ' + insertErr.message)
 
       setSuccess(`✅ "${skinName.trim()}" uploaded successfully!`)
-      setSkinName('')
-      setSkinDesc('')
-      setFile(null)
-      setPreview(null)
-      setShowLayoutEditor(false)
-      setCoverLayout(DEFAULT_LAYOUT)
-      setSkinVisibility('public')
+      setSkinName(''); setSkinDesc(''); setFile(null); setPreview(null)
+      setShowLayoutEditor(false); setCoverLayout(DEFAULT_LAYOUT); setSkinVisibility('admin_only')
       if (fileInputRef.current) fileInputRef.current.value = ''
       await loadSkins()
     } catch (err: any) {
@@ -528,13 +602,74 @@ export default function BookSkinsAdminPage() {
                   </p>
                 </div>
 
+                {/* Animated mode toggle — cover only */}
+                {uploadType === 'cover' && (
+                  <div>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <div
+                        className={`relative w-11 h-6 rounded-full transition-colors ${isAnimated ? 'bg-amber-500' : 'bg-gray-200'}`}
+                        onClick={() => { setIsAnimated(v => !v); setFrameFiles([]); setFramePreviews([]) }}
+                      >
+                        <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isAnimated ? 'translate-x-5' : ''}`}/>
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">🎞️ Animated cover (frame sequence)</span>
+                    </label>
+                    {isAnimated && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Upload frames in order. Frame 1 = closed cover. Last frame = fully opened. Played at ~10fps when user clicks.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Frame uploader */}
+                {isAnimated && uploadType === 'cover' ? (
+                  <div className="space-y-3">
+                    <div
+                      className="border-2 border-dashed border-amber-300 rounded-xl p-4 text-center bg-amber-50 cursor-pointer hover:bg-amber-100 transition-colors"
+                      onClick={() => framesInputRef.current?.click()}
+                    >
+                      <input
+                        ref={framesInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={handleFramesPick}
+                      />
+                      <p className="text-2xl mb-1">🎞️</p>
+                      <p className="text-sm text-amber-700 font-medium">Click to add frames</p>
+                      <p className="text-xs text-gray-500">Select multiple images — drag to reorder below</p>
+                    </div>
+                    {framePreviews.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-gray-600">{framePreviews.length} frames — first frame is the static cover:</p>
+                        <div className="grid grid-cols-4 gap-2">
+                          {framePreviews.map((src, idx) => (
+                            <div key={idx} className="relative rounded-lg overflow-hidden border border-amber-200 bg-gray-50">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={src} alt={`Frame ${idx + 1}`} className="w-full h-auto object-contain" />
+                              <div className="absolute top-0 left-0 bg-amber-600 text-white text-xs px-1 rounded-br">{idx + 1}</div>
+                              <div className="flex justify-between px-1 py-0.5 bg-white/80">
+                                <button onClick={() => moveFrame(idx, -1)} disabled={idx === 0} className="text-gray-500 hover:text-gray-700 disabled:opacity-30 text-xs">◀</button>
+                                <button onClick={() => removeFrame(idx)} className="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                <button onClick={() => moveFrame(idx, 1)} disabled={idx === framePreviews.length - 1} className="text-gray-500 hover:text-gray-700 disabled:opacity-30 text-xs">▶</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
                 <Button
                   onClick={handleUpload}
-                  disabled={uploading || !file || !skinName.trim()}
+                  disabled={uploading || (isAnimated ? frameFiles.length < 2 : !file) || !skinName.trim()}
                   isLoading={uploading}
                   className="w-full"
                 >
-                  {uploading ? 'Uploading & resizing…' : '⬆️ Upload Skin'}
+                  {uploading ? 'Uploading & resizing…' : isAnimated ? `⬆️ Upload ${frameFiles.length} Frames` : '⬆️ Upload Skin'}
                 </Button>
 
                 {/* Layout editor — cover only, shown after image is selected */}

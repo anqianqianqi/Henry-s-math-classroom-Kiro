@@ -100,6 +100,7 @@ export default function ChallengePage() {
   const [defaultCoverUrl, setDefaultCoverUrl] = useState<string | undefined>(undefined)
   const [defaultPageUrl, setDefaultPageUrl] = useState<string | undefined>(undefined)
   const [defaultCoverLayout, setDefaultCoverLayout] = useState<any>(undefined)
+  const [defaultCoverFrameUrls, setDefaultCoverFrameUrls] = useState<string[] | undefined>(undefined)
 
   useEffect(() => {
     loadChallenge()
@@ -283,15 +284,29 @@ export default function ChallengePage() {
     try {
       const { data: skinData } = await supabase
         .from('book_skins')
-        .select('skin_type, image_url, cover_layout')
+        .select('skin_type, image_url, cover_layout, is_animated, id')
         .eq('is_default', true)
         .eq('is_active', true)
 
       if (skinData && skinData.length > 0) {
         const defCover = (skinData as any[]).find(s => s.skin_type === 'cover')
         const defPage  = (skinData as any[]).find(s => s.skin_type === 'page')
-        if (defCover) { resolvedCoverUrl = defCover.image_url; setDefaultCoverLayout(defCover.cover_layout) }
-        if (defPage)  { resolvedPageUrl  = defPage.image_url  }
+        if (defCover) {
+          resolvedCoverUrl = defCover.image_url
+          setDefaultCoverLayout(defCover.cover_layout)
+          // If animated, fetch frame URLs
+          if (defCover.is_animated) {
+            const { data: frames } = await supabase
+              .from('book_skin_frames')
+              .select('image_url')
+              .eq('skin_id', defCover.id)
+              .order('sort_order', { ascending: true })
+            if (frames && frames.length >= 2) {
+              setDefaultCoverFrameUrls(frames.map((f: any) => f.image_url))
+            }
+          }
+        }
+        if (defPage)  { resolvedPageUrl = defPage.image_url }
       }
     } catch (e) {
       console.error('[BookSkins] fetch error:', e)
@@ -1182,6 +1197,7 @@ export default function ChallengePage() {
           coverImageUrl={defaultCoverUrl}
           pageImageUrl={defaultPageUrl}
           coverLayout={defaultCoverLayout}
+          coverFrameUrls={defaultCoverFrameUrls}
           solutionSlot={
             <>{hasSubmitted && !isEditing ? (
               <>

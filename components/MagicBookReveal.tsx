@@ -32,6 +32,12 @@ interface MagicBookRevealProps {
    * Defaults to the built-in aged parchment gradient.
    */
   pageImageUrl?: string
+  /**
+   * Frame URLs for animated opening sequence (cover skins with is_animated=true).
+   * When provided, clicking the cover plays through these frames at ~10fps
+   * instead of the CSS flip animation. Last frame = transition complete → open.
+   */
+  coverFrameUrls?: string[]
 }
 
 /**
@@ -46,16 +52,39 @@ interface MagicBookRevealProps {
  * Mobile (< 768 px):
  *   Same cover/animation, single parchment page for the problem, solution slot below.
  */
-export function MagicBookReveal({ title, date, children, solutionSlot, coverImageUrl, pageImageUrl, coverLayout }: MagicBookRevealProps) {
+export function MagicBookReveal({ title, date, children, solutionSlot, coverImageUrl, pageImageUrl, coverLayout, coverFrameUrls }: MagicBookRevealProps) {
   const [phase, setPhase] = useState<'closed' | 'opening' | 'open'>('closed')
   const [particles, setParticles] = useState<
     { id: number; x: number; y: number; angle: number; delay: number }[]
   >([])
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const bookRef = useRef<HTMLDivElement>(null)
+  // Frame animation state
+  const [currentFrame, setCurrentFrame] = useState(0)
+  const frameTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   function openBook() {
     if (phase !== 'closed') return
+
+    // If frame sequence provided, play frames instead of CSS flip
+    if (coverFrameUrls && coverFrameUrls.length >= 2) {
+      setPhase('opening')
+      setCurrentFrame(0)
+      let idx = 0
+      const fps = 10
+      frameTimerRef.current = setInterval(() => {
+        idx++
+        setCurrentFrame(idx)
+        if (idx >= coverFrameUrls.length - 1) {
+          clearInterval(frameTimerRef.current!)
+          frameTimerRef.current = null
+          setTimeout(() => setPhase('open'), 80)
+        }
+      }, 1000 / fps)
+      return
+    }
+
+    // Default: sparkles + CSS flip
     const newParticles = Array.from({ length: 18 }, (_, i) => ({
       id: i,
       x: 30 + Math.random() * 40,
@@ -321,20 +350,26 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                   perspective: '1200px',
                 }}
               >
-                {/* Cover — pivots from left edge like a real book cover */}
+                {/* Cover — frame player or CSS flip */}
                 <div
                   style={{
                     position: 'relative',
                     transformOrigin: 'left center',
                     transformStyle: 'preserve-3d',
-                    animation: phase === 'opening'
+                    // Only apply CSS animation when NOT using frame sequence
+                    animation: phase === 'opening' && (!coverFrameUrls || coverFrameUrls.length < 2)
                       ? 'book-cover-open 1.1s cubic-bezier(0.4,0,0.2,1) forwards'
                       : undefined,
+                    // During frame playback, fade out on last frame
+                    opacity: (phase === 'opening' && coverFrameUrls && coverFrameUrls.length >= 2 && currentFrame >= coverFrameUrls.length - 1) ? 0 : 1,
+                    transition: (phase === 'opening' && coverFrameUrls && coverFrameUrls.length >= 2) ? 'opacity 0.1s' : undefined,
                   }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={coverImageUrl}
+                    src={(coverFrameUrls && coverFrameUrls.length >= 2 && phase !== 'closed')
+                      ? coverFrameUrls[Math.min(currentFrame, coverFrameUrls.length - 1)]
+                      : coverImageUrl}
                     alt="Book cover"
                     className="w-full h-auto object-contain"
                     style={{ display: 'block', maxHeight: '85vh' }}
