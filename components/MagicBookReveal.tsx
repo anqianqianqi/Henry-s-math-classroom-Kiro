@@ -320,7 +320,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
               }}
             />
 
-            {/* Front cover — aged, uneven, treasure-map worn */}
+            {/* Front cover — portrait aspect ratio, image fills cleanly */}
             <div
               className="relative overflow-hidden rounded-r-lg rounded-l-none"
               style={{
@@ -329,7 +329,9 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                   phase === 'opening'
                     ? '8px 10px 32px rgba(0,0,0,0.75), inset 0 0 50px rgba(0,0,0,0.35)'
                     : '5px 7px 22px rgba(0,0,0,0.6), inset 0 0 35px rgba(0,0,0,0.25)',
-                minHeight: '75vh',
+                /* Portrait: 2:3 ratio — 600px wide → 900px tall */
+                aspectRatio: '2 / 3',
+                maxHeight: '85vh',
                 transformOrigin: 'left center',
                 animation: phase === 'opening'
                   ? 'page-turn 1s cubic-bezier(0.4,0,0.2,1) forwards'
@@ -435,7 +437,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
               </>)}
 
               {/* Cover content */}
-              <div className="relative z-10 flex flex-col items-center justify-center min-h-[75vh] px-12 py-16 text-center">
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center px-12 py-16 text-center">
                 {/* Faded compass-rose / seal icon */}
                 <div
                   className="mb-5 text-5xl"
