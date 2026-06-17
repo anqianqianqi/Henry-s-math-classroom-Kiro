@@ -281,6 +281,72 @@ export default function BookSkinsAdminPage() {
     await loadSkins()
   }
 
+  // ── Sell in shop ───────────────────────────────────────────────────────────
+  const [sellingSkin, setSellingSkin] = useState<BookSkin | null>(null)
+  const [sellPrice, setSellPrice] = useState('')
+  const [sellSubmitting, setSellSubmitting] = useState(false)
+
+  async function handleSellInShop() {
+    if (!sellingSkin || !sellPrice.trim()) return
+    const price = parseInt(sellPrice.trim(), 10)
+    if (isNaN(price) || price < 1) { setError('Price must be at least 1 point'); return }
+
+    setSellSubmitting(true)
+    setError(null)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      // Create a shop_items row for this skin
+      const { data: newItem, error: itemErr } = await supabase
+        .from('shop_items')
+        .insert({
+          title: sellingSkin.name,
+          description: sellingSkin.description || `Book ${sellingSkin.skin_type} skin`,
+          cost: price,
+          image_url: sellingSkin.image_url,
+          is_active: true,
+          created_by: user.id,
+          category: 'other',
+          commodity_type: 'standard',
+          draws_per_redemption: 1,
+        })
+        .select('id')
+        .single()
+
+      if (itemErr || !newItem) throw new Error('Failed to create shop item: ' + itemErr?.message)
+
+      // Link the skin to the shop item
+      const { error: linkErr } = await supabase
+        .from('book_skins')
+        .update({ shop_item_id: newItem.id, visibility: 'shop_only' })
+        .eq('id', sellingSkin.id)
+
+      if (linkErr) throw new Error('Failed to link skin to shop: ' + linkErr.message)
+
+      setSuccess(`"${sellingSkin.name}" is now listed in the shop for ${price} points!`)
+      setSellingSkin(null)
+      setSellPrice('')
+      await loadSkins()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setSellSubmitting(false)
+    }
+  }
+
+  async function handleRemoveFromShop(skin: BookSkin) {
+    if (!skin.shop_item_id) return
+    if (!confirm(`Remove "${skin.name}" from the shop? The shop item will be deactivated.`)) return
+
+    // Deactivate the shop item
+    await supabase.from('shop_items').update({ is_active: false }).eq('id', skin.shop_item_id)
+    // Unlink from skin, revert to admin_only
+    await supabase.from('book_skins').update({ shop_item_id: null, visibility: 'admin_only' }).eq('id', skin.id)
+    setSuccess(`"${skin.name}" removed from shop`)
+    await loadSkins()
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
   const coverSkins = skins.filter(s => s.skin_type === 'cover')
   const pageSkins  = skins.filter(s => s.skin_type === 'page')
@@ -560,6 +626,8 @@ export default function BookSkinsAdminPage() {
               onSetDefault={setDefault}
               onToggleActive={toggleActive}
               onToggleVisibility={toggleVisibility}
+              onSellInShop={(skin) => { setSellingSkin(skin); setSellPrice('') }}
+              onRemoveFromShop={handleRemoveFromShop}
               onDelete={deleteSkin}
               previewW={160}
               previewH={248}
@@ -571,6 +639,8 @@ export default function BookSkinsAdminPage() {
               onSetDefault={setDefault}
               onToggleActive={toggleActive}
               onToggleVisibility={toggleVisibility}
+              onSellInShop={(skin) => { setSellingSkin(skin); setSellPrice('') }}
+              onRemoveFromShop={handleRemoveFromShop}
               onDelete={deleteSkin}
               previewW={280}
               previewH={217}
@@ -593,6 +663,53 @@ export default function BookSkinsAdminPage() {
         </Card>
 
       </main>
+
+      {/* ── Price modal ── */}
+      {sellingSkin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
+            <h2 className="text-lg font-bold text-gray-900">🛍️ Sell in Shop</h2>
+            <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: '2/3' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={sellingSkin.image_url} alt={sellingSkin.name}
+                className="w-full h-full object-cover" />
+            </div>
+            <p className="text-sm text-gray-700">
+              List <strong>{sellingSkin.name}</strong> in the shop. Students can buy it with their points.
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Price (points) *
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={sellPrice}
+                onChange={e => setSellPrice(e.target.value)}
+                placeholder="e.g. 100"
+                className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-colors"
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') handleSellInShop() }}
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleSellInShop}
+                disabled={sellSubmitting || !sellPrice.trim()}
+                className="flex-1 py-2.5 bg-amber-600 text-white rounded-xl font-semibold hover:bg-amber-700 disabled:opacity-50 transition-colors"
+              >
+                {sellSubmitting ? 'Listing…' : '✅ List in Shop'}
+              </button>
+              <button
+                onClick={() => { setSellingSkin(null); setSellPrice('') }}
+                className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -607,6 +724,8 @@ function SkinGrid({
   onSetDefault,
   onToggleActive,
   onToggleVisibility,
+  onSellInShop,
+  onRemoveFromShop,
   onDelete,
   previewW,
   previewH,
@@ -617,6 +736,8 @@ function SkinGrid({
   onSetDefault: (s: BookSkin) => void
   onToggleActive: (s: BookSkin) => void
   onToggleVisibility: (s: BookSkin) => void
+  onSellInShop: (s: BookSkin) => void
+  onRemoveFromShop: (s: BookSkin) => void
   onDelete: (s: BookSkin) => void
   previewW: number
   previewH: number
@@ -765,6 +886,22 @@ function SkinGrid({
                     >
                       {skin.is_active ? 'Deactivate' : 'Activate'}
                     </button>
+                    {/* Shop listing */}
+                    {skin.shop_item_id ? (
+                      <button
+                        onClick={() => onRemoveFromShop(skin)}
+                        className="text-xs px-2 py-1 bg-orange-50 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
+                      >
+                        🛒 Remove from shop
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onSellInShop(skin)}
+                        className="text-xs px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
+                      >
+                        🛍️ Sell in shop
+                      </button>
+                    )}
                     <button
                       onClick={() => onDelete(skin)}
                       className="text-xs px-2 py-1 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"

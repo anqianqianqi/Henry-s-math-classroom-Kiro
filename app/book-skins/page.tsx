@@ -56,7 +56,22 @@ export default function BookSkinsUserPage() {
         .eq('is_active', true)
         .eq('visibility', 'public')
         .order('is_default', { ascending: false })  // default first
-      setAllSkins((skins ?? []) as BookSkin[])
+
+      // Also fetch skins the user has purchased via redemptions
+      const { data: purchasedSkins } = await supabase
+        .from('redemptions')
+        .select('book_skin_id, book_skins:book_skin_id(id, name, description, skin_type, image_url, is_default)')
+        .eq('user_id', user.id)
+        .is('refunded_at', null)
+        .not('book_skin_id', 'is', null)
+
+      // Merge: public skins + purchased ones not already in the list
+      const publicIds = new Set((skins ?? []).map((s: any) => s.id))
+      const purchasedRows = (purchasedSkins ?? [])
+        .map((r: any) => r.book_skins)
+        .filter((s: any) => s && !publicIds.has(s.id))
+
+      setAllSkins([...(skins ?? []), ...purchasedRows] as BookSkin[])
 
       // Fetch user's current preference (may not exist yet)
       const { data: prefRow } = await supabase
@@ -257,8 +272,9 @@ function SkinPicker({
           <div
             className="rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center p-4 cursor-pointer hover:border-amber-300 hover:bg-amber-50 transition-colors"
             style={{ aspectRatio: String(previewAspect) }}
+            onClick={() => window.location.href = '/shop'}
           >
-            <div className="text-2xl mb-1">🔒</div>
+            <div className="text-2xl mb-1">🛍️</div>
             <p className="text-xs font-medium text-gray-500">More in Shop</p>
           </div>
 
