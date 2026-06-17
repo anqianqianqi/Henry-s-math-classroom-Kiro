@@ -240,16 +240,7 @@ export default function BookSkinsAdminPage() {
     await loadSkins()
   }
 
-  // ── Toggle visibility ──────────────────────────────────────────────────────
-  async function toggleVisibility(skin: BookSkin) {
-    const next = skin.visibility === 'public' ? 'admin_only' : 'public'
-    const { error } = await supabase
-      .from('book_skins')
-      .update({ visibility: next })
-      .eq('id', skin.id)
-    if (error) { setError('Failed to update: ' + error.message); return }
-    await loadSkins()
-  }
+  // ── Toggle active ──────────────────────────────────────────────────────────
   async function toggleActive(skin: BookSkin) {
     const { error } = await supabase
       .from('book_skins')
