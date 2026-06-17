@@ -83,26 +83,26 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
         className="absolute inset-x-0 top-0 bottom-0 pointer-events-none opacity-10"
         style={{
           backgroundImage:
-            'repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(30,80,40,0.5) 27px, rgba(30,80,40,0.5) 28px)',
+            'repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(100,60,10,0.5) 27px, rgba(100,60,10,0.5) 28px)',
           backgroundPositionY: '56px',
         }}
       />
       <div
         className="absolute inset-0 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at center, transparent 50%, rgba(20,60,30,0.10) 100%)' }}
+        style={{ background: 'radial-gradient(ellipse at center, transparent 50%, rgba(80,40,5,0.10) 100%)' }}
       />
       <div
         className="absolute top-0 inset-x-0 h-1 pointer-events-none opacity-60"
-        style={{ background: 'linear-gradient(to right, #7ab87a, #5da85d, #7ab87a, #5da85d, #7ab87a)' }}
+        style={{ background: 'linear-gradient(to right, #c8a05a, #d4a842, #c8a05a, #d4a842, #c8a05a)' }}
       />
       <div
         className="absolute bottom-0 inset-x-0 h-1 pointer-events-none opacity-60"
-        style={{ background: 'linear-gradient(to right, #7ab87a, #5da85d, #7ab87a, #5da85d, #7ab87a)' }}
+        style={{ background: 'linear-gradient(to right, #c8a05a, #d4a842, #c8a05a, #d4a842, #c8a05a)' }}
       />
     </>
   )
 
-  const parchmentBg = 'linear-gradient(to bottom, #f0f7f0 0%, #dff0e0 100%)'
+  const parchmentBg = 'linear-gradient(to bottom, #faf6ee 0%, #f2e8d5 50%, #ede0c4 100%)'
 
   return (
     <>
@@ -140,7 +140,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
             <div
               className="absolute inset-y-0 left-0 w-8 rounded-l-sm z-10"
               style={{
-                background: 'linear-gradient(to right, #1a3a20, #2d6035, #3d7a45)',
+                background: 'linear-gradient(to right, #6b5a3e, #8c7550, #a08860)',
                 boxShadow: 'inset -4px 0 10px rgba(0,0,0,0.4)',
               }}
             />
@@ -149,7 +149,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
             <div
               className="relative overflow-hidden rounded-r-xl rounded-l-sm"
               style={{
-                background: 'linear-gradient(160deg, #4a8a58 0%, #3a7048 35%, #2d5c3a 70%, #1e4028 100%)',
+                background: 'linear-gradient(160deg, #c8b08a 0%, #b09060 35%, #9a7a48 70%, #7a5e30 100%)',
                 boxShadow:
                   phase === 'opening'
                     ? '8px 10px 32px rgba(0,0,0,0.7), inset 0 0 40px rgba(0,0,0,0.4)'
@@ -312,7 +312,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
                 <ParchmentDecor />
                 <div
                   className="absolute inset-y-0 left-8 w-px pointer-events-none opacity-25"
-                  style={{ background: 'rgba(60,140,80,0.7)' }}
+                  style={{ background: 'rgba(180,100,40,0.6)' }}
                 />
                 <div
                   className="relative z-10 px-10 py-8"
@@ -321,7 +321,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
                   <div className="text-center mb-5">
                     <div
                       className="inline-flex items-center gap-3 text-sm"
-                      style={{ color: 'rgba(30,80,40,0.6)', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}
+                      style={{ color: 'rgba(100,60,10,0.6)', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}
                     >
                       <span>— ✦ —</span>
                       <span>{date}</span>
@@ -329,13 +329,13 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
                     </div>
                   </div>
                   <div
-                    style={{ fontFamily: '"Georgia", "Times New Roman", serif', color: '#1a3520', lineHeight: '1.8' }}
+                    style={{ fontFamily: '"Georgia", "Times New Roman", serif', color: '#2d1a00', lineHeight: '1.8' }}
                   >
                     {children}
                   </div>
                   <div
                     className="text-center mt-6 text-xs"
-                    style={{ color: 'rgba(30,80,40,0.4)', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}
+                    style={{ color: 'rgba(100,60,10,0.4)', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}
                   >
                     i
                   </div>
@@ -362,7 +362,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
                 <ParchmentDecor />
                 <div
                   className="absolute inset-y-0 left-8 w-px pointer-events-none opacity-25"
-                  style={{ background: 'rgba(60,140,80,0.7)' }}
+                  style={{ background: 'rgba(180,100,40,0.6)' }}
                 />
                 <div
                   className="relative z-10 px-10 py-8"
@@ -371,26 +371,26 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
                   <div className="text-center mb-5">
                     <p
                       className="text-sm font-semibold tracking-widest uppercase"
-                      style={{ color: 'rgba(30,80,40,0.55)', fontFamily: 'Georgia, serif', letterSpacing: '0.15em' }}
+                      style={{ color: 'rgba(100,60,10,0.55)', fontFamily: 'Georgia, serif', letterSpacing: '0.15em' }}
                     >
                       ✍ Your Answer
                     </p>
                   </div>
                   {solutionSlot ? (
-                    <div style={{ fontFamily: '"Georgia", "Times New Roman", serif', color: '#1a3520' }}>
+                    <div style={{ fontFamily: '"Georgia", "Times New Roman", serif', color: '#2d1a00' }}>
                       {solutionSlot}
                     </div>
                   ) : (
                     <p
                       className="text-center text-sm italic"
-                      style={{ color: 'rgba(30,80,40,0.4)', fontFamily: 'Georgia, serif' }}
+                      style={{ color: 'rgba(100,60,10,0.4)', fontFamily: 'Georgia, serif' }}
                     >
                       — this page is blank —
                     </p>
                   )}
                   <div
                     className="text-center mt-6 text-xs"
-                    style={{ color: 'rgba(30,80,40,0.4)', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}
+                    style={{ color: 'rgba(100,60,10,0.4)', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}
                   >
                     ii
                   </div>
@@ -411,7 +411,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
               <ParchmentDecor />
               <div
                 className="absolute inset-y-0 left-6 w-px pointer-events-none opacity-25"
-                style={{ background: 'rgba(60,140,80,0.7)' }}
+                style={{ background: 'rgba(180,100,40,0.6)' }}
               />
               <div
                 className="relative z-10 px-6 py-6"
@@ -420,7 +420,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
                 <div className="text-center mb-4">
                   <div
                     className="inline-flex items-center gap-2 text-xs"
-                    style={{ color: 'rgba(30,80,40,0.6)', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}
+                    style={{ color: 'rgba(100,60,10,0.6)', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}
                   >
                     <span>— ✦ —</span>
                     <span>{date}</span>
@@ -428,7 +428,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot }: MagicBo
                   </div>
                 </div>
                 <div
-                  style={{ fontFamily: '"Georgia", "Times New Roman", serif', color: '#1a3520', lineHeight: '1.8' }}
+                  style={{ fontFamily: '"Georgia", "Times New Roman", serif', color: '#2d1a00', lineHeight: '1.8' }}
                 >
                   {children}
                 </div>
