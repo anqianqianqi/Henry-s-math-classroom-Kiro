@@ -102,8 +102,6 @@ export default function BookSkinsAdminPage() {
   // Cover layout editor state — only relevant when uploadType === 'cover'
   const [showLayoutEditor, setShowLayoutEditor] = useState(false)
   const [coverLayout, setCoverLayout] = useState<CoverLayout>(DEFAULT_LAYOUT)
-  // Visibility control
-  const [skinVisibility, setSkinVisibility] = useState<'public' | 'admin_only'>('public')
   // Visibility — new skins default to admin_only until explicitly made public
   const [skinVisibility, setSkinVisibility] = useState<'admin_only' | 'public'>('admin_only')
 
