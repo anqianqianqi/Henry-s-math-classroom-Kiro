@@ -262,7 +262,6 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
         backgroundSize: 'cover',
         backgroundPosition: 'center center',
         backgroundRepeat: 'no-repeat',
-        backgroundColor: '#1a1008',
       }
     : {
         // No custom skin — use the inline SVG treasure map
@@ -325,19 +324,36 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                   className="w-full h-auto object-contain"
                   style={{ display: 'block', maxHeight: '85vh' }}
                 />
-                {/* Open prompt — overlaid on top of the image */}
+                {/* Title — top-center over the image */}
                 <div
-                  className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 px-6 py-3 rounded-full text-sm font-semibold whitespace-nowrap"
+                  className="absolute top-12 left-1/2 -translate-x-1/2 text-center px-4 w-full"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  <h2
+                    className="text-xl font-bold leading-snug"
+                    style={{
+                      color: '#f0dea0',
+                      fontFamily: '"Georgia", "Times New Roman", serif',
+                      textShadow: '0 1px 8px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.8)',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    {title}
+                  </h2>
+                </div>
+                {/* Open prompt — bottom-center over the image */}
+                <div
+                  className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap"
                   style={{
-                    background: 'rgba(60,40,10,0.65)',
-                    border: '1px solid rgba(200,160,60,0.5)',
-                    color: 'rgba(240,215,140,0.95)',
+                    background: 'rgba(40,25,5,0.72)',
+                    border: '1px solid rgba(200,160,60,0.55)',
+                    color: 'rgba(240,215,140,0.97)',
                     animation: 'pulse-glow 2.5s ease-in-out infinite',
-                    backdropFilter: 'blur(4px)',
+                    backdropFilter: 'blur(6px)',
                   }}
                 >
                   <span style={{ animation: 'wiggle 2s ease-in-out infinite', display: 'inline-block' }}>📜</span>
-                  <span style={{ letterSpacing: '0.08em' }}>{title}</span>
+                  <span style={{ letterSpacing: '0.06em' }}>Open the Book</span>
                 </div>
               </div>
             ) : (
