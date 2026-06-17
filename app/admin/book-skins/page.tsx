@@ -398,6 +398,7 @@ export default function BookSkinsAdminPage() {
                   }}
                 >
                   {preview && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={preview}
                       alt="Preview"
@@ -516,6 +517,7 @@ function SkinGrid({
                   className="relative overflow-hidden bg-gray-100 flex-shrink-0"
                   style={{ width: '100%', paddingBottom: `${(previewH / previewW) * 100}%` }}
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={skin.image_url}
                     alt={skin.name}

@@ -251,12 +251,6 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
     ? `url(${pageImageUrl}) center/cover no-repeat`
     : DEFAULT_PAGE_BG
 
-  // Debug: log what image is being used
-  if (typeof window !== 'undefined') {
-    console.log('[MagicBookReveal] coverImageUrl prop:', coverImageUrl)
-    console.log('[MagicBookReveal] activeCoverImage:', activeCoverImage)
-  }
-
   /**
    * Cover style: uses the custom image if provided, otherwise the inline SVG treasure map.
    * The two-layer fallback was causing the SVG to win over slow-loading images.

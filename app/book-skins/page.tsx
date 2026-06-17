@@ -296,6 +296,7 @@ function SkinOption({
         style={{ paddingBottom: `${(1 / aspect) * 100}%` }}
       >
         {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={imageUrl}
             alt={label}
