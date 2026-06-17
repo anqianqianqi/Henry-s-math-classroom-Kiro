@@ -32,6 +32,10 @@ interface BookSkin {
   is_active: boolean
   shop_item_id: string | null
   visibility: 'admin_only' | 'public'
+  cover_layout?: {
+    title?: { x: number; y: number; fontSize: number; color: string; shadow: boolean }
+    prompt?: { x: number; y: number; fontSize: number; color: string; shadow: boolean }
+  } | null
   created_at: string
 }
 
@@ -650,6 +654,61 @@ function SkinGrid({
                     alt={skin.name}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
+
+                  {/* Title overlay — shown for cover skins that have layout data */}
+                  {skin.skin_type === 'cover' && (
+                    <>
+                      <div
+                        className="absolute pointer-events-none"
+                        style={{
+                          left: `${skin.cover_layout?.title?.x ?? 50}%`,
+                          top: `${skin.cover_layout?.title?.y ?? 22}%`,
+                          transform: 'translate(-50%, -50%)',
+                          textAlign: 'center',
+                          width: '90%',
+                          maxWidth: '90%',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: Math.max(7, Math.round((skin.cover_layout?.title?.fontSize ?? 20) * previewW / 400)),
+                            color: skin.cover_layout?.title?.color ?? '#2d1a00',
+                            fontFamily: '"Georgia", serif',
+                            fontWeight: 'bold',
+                            textShadow: skin.cover_layout?.title?.shadow !== false
+                              ? '0 1px 3px rgba(255,255,255,0.5), 0 0 8px rgba(0,0,0,0.4)'
+                              : undefined,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Title
+                        </span>
+                      </div>
+                      <div
+                        className="absolute pointer-events-none"
+                        style={{
+                          left: `${skin.cover_layout?.prompt?.x ?? 50}%`,
+                          top: `${skin.cover_layout?.prompt?.y ?? 82}%`,
+                          transform: 'translate(-50%, -50%)',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: Math.max(6, Math.round((skin.cover_layout?.prompt?.fontSize ?? 14) * previewW / 400)),
+                            color: skin.cover_layout?.prompt?.color ?? 'rgba(240,215,140,0.95)',
+                            fontFamily: '"Georgia", serif',
+                            fontWeight: 'bold',
+                            background: 'rgba(40,25,5,0.65)',
+                            padding: '1px 5px',
+                            borderRadius: '999px',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Open the Book
+                        </span>
+                      </div>
+                    </>
+                  )}
                   {skin.is_default && (
                     <div className="absolute top-1 right-1 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full font-semibold">
                       Default
