@@ -62,6 +62,22 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
   // Frame animation state
   const [currentFrame, setCurrentFrame] = useState(0)
   const frameTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [framesLoaded, setFramesLoaded] = useState(false)
+
+  // Preload all frames as soon as URLs are available
+  useEffect(() => {
+    if (!coverFrameUrls || coverFrameUrls.length < 2) return
+    setFramesLoaded(false)
+    let loaded = 0
+    coverFrameUrls.forEach(url => {
+      const img = new window.Image()
+      img.onload = img.onerror = () => {
+        loaded++
+        if (loaded === coverFrameUrls.length) setFramesLoaded(true)
+      }
+      img.src = url
+    })
+  }, [coverFrameUrls?.join(',')])
 
   function openBook() {
     if (phase !== 'closed') return
@@ -71,16 +87,22 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
       setPhase('opening')
       setCurrentFrame(0)
       let idx = 0
-      const fps = 10
-      frameTimerRef.current = setInterval(() => {
+      // 8fps gives each frame ~125ms — enough time for the img to paint
+      const fps = 8
+      const delay = 1000 / fps
+      const totalFrames = coverFrameUrls.length
+
+      function nextFrame() {
         idx++
         setCurrentFrame(idx)
-        if (idx >= coverFrameUrls.length - 1) {
-          clearInterval(frameTimerRef.current!)
-          frameTimerRef.current = null
-          setTimeout(() => setPhase('open'), 80)
+        if (idx >= totalFrames - 1) {
+          // Hold last frame briefly then open
+          setTimeout(() => setPhase('open'), 200)
+        } else {
+          frameTimerRef.current = setTimeout(nextFrame, delay) as any
         }
-      }, 1000 / fps)
+      }
+      frameTimerRef.current = setTimeout(nextFrame, delay) as any
       return
     }
 
@@ -374,6 +396,15 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                     className="w-full h-auto object-contain"
                     style={{ display: 'block', maxHeight: '85vh' }}
                   />
+                  {/* Hidden prerender: keep all frame images decoded in memory */}
+                  {coverFrameUrls && coverFrameUrls.length >= 2 && (
+                    <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', visibility: 'hidden' }}>
+                      {coverFrameUrls.map((url, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} src={url} alt="" width={1} height={1} />
+                      ))}
+                    </div>
+                  )}
                   {/* Title overlay */}
                   <div
                     className="absolute text-center px-4 w-full"
