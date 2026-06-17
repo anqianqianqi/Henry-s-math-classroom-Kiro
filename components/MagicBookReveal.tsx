@@ -263,18 +263,18 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
    */
   const coverStyle: React.CSSProperties = activeCoverImage !== DEFAULT_COVER_IMAGE
     ? {
-        // Real skin image from DB — use it exclusively
+        // Real skin image from DB — use it exclusively, centered
         backgroundImage: `url(${activeCoverImage})`,
         backgroundSize: 'cover',
-        backgroundPosition: 'center top',
+        backgroundPosition: 'center center',
         backgroundRepeat: 'no-repeat',
-        backgroundColor: '#b8966a',
+        backgroundColor: '#1a1008',
       }
     : {
         // No custom skin — use the inline SVG treasure map
         backgroundImage: `url(${TREASURE_MAP_SVG})`,
         backgroundSize: 'cover',
-        backgroundPosition: 'center top',
+        backgroundPosition: 'center center',
         backgroundRepeat: 'no-repeat',
         backgroundColor: '#b8966a',
       }
@@ -336,8 +336,8 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                   : undefined,
               }}
             >
-              {/* ── Wear & tear layers ── */}
-
+              {/* ── Wear & tear layers — only shown when using the default CSS skin, not a custom image ── */}
+              {!coverImageUrl && (<>
               {/* Coarse leather grain */}
               <div
                 className="absolute inset-0 pointer-events-none"
@@ -379,7 +379,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                 }}
               />
 
-              {/* Faded / chipped gold border — gaps simulated by low opacity */}
+              {/* Faded / chipped gold border */}
               <div
                 className="absolute pointer-events-none"
                 style={{
@@ -387,7 +387,6 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                   border: '2px solid rgba(180,140,50,0.38)',
                   borderRadius: '4px',
                   boxShadow: 'inset 0 0 16px rgba(160,120,30,0.08)',
-                  /* Chip effect: mask parts of the border using box-shadow hack */
                   outline: '1px solid rgba(80,50,10,0.15)',
                   outlineOffset: '3px',
                 }}
@@ -433,6 +432,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                   borderTopRightRadius: '4px',
                 }}
               />
+              </>)}
 
               {/* Cover content */}
               <div className="relative z-10 flex flex-col items-center justify-center min-h-[75vh] px-12 py-16 text-center">
