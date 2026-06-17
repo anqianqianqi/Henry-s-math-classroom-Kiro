@@ -1118,6 +1118,161 @@ export default function ChallengePage() {
             day: 'numeric',
             year: 'numeric',
           })}
+          solutionSlot={
+            <>{hasSubmitted && !isEditing ? (
+              <>
+              {/* Show submitted solution */}
+              <Card className="mb-4 border-2 border-primary-500">
+                <Card.Header>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <Card.Title className="flex items-center gap-2 flex-wrap">
+                      Your Solution
+                      {userSubmission?.points != null ? (
+                        <span className="ml-2 px-2 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-bold">
+                          {userSubmission.points}/{challenge?.max_points || 100}
+                        </span>
+                      ) : (
+                        <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
+                          Pending grade
+                        </span>
+                      )}
+                      {userSubmission?.is_locked && (
+                        <span className="text-xs text-gray-500">🔒 Locked</span>
+                      )}
+                    </Card.Title>
+                    {!userSubmission?.is_locked && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsEditing(true)
+                          if (userSubmission?.image_url) {
+                            setSolutionImagePreview(userSubmission.image_url)
+                          }
+                        }}
+                      >
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                </Card.Header>
+                <Card.Body>
+                  <p className="text-gray-700 whitespace-pre-wrap mb-3">
+                    {userSubmission.content}
+                  </p>
+                  {userSubmission.image_url && (
+                    <img src={userSubmission.image_url} alt="Solution" className="max-w-full max-h-64 rounded-lg border mb-3" />
+                  )}
+                  <p className="text-sm text-gray-500 mb-3">
+                    Submitted {formatTimeAgo(userSubmission.submitted_at)}
+                  </p>
+                  <CommentThread
+                    submissionId={userSubmission.id}
+                    comments={comments[userSubmission.id] || []}
+                    visibleCount={visibleComments[userSubmission.id] || COMMENTS_INCREMENT}
+                    onShowMore={() => handleShowMoreComments(userSubmission.id)}
+                    newComment={newComment[userSubmission.id] || ''}
+                    onCommentChange={(value) => setNewComment(prev => ({ ...prev, [userSubmission.id]: value }))}
+                    onSubmitComment={(img?: File | null) => handleSubmitComment(userSubmission.id, img)}
+                    onEditComment={handleEditComment}
+                    onDeleteComment={handleDeleteComment}
+                    isSubmitting={submittingComment[userSubmission.id] || false}
+                    formatTimeAgo={formatTimeAgo}
+                    currentUserId={userId}
+                    showTitle={true}
+                    allowImage={true}
+                  />
+                </Card.Body>
+              </Card>
+
+              {!userSubmission?.is_locked && !isTeacher && (
+                <div className="mb-4 p-4 bg-blue-50 border-2 border-blue-200 rounded-2xl text-center">
+                  <p className="text-gray-700 mb-3">
+                    🔒 Want to see what other students wrote?
+                  </p>
+                  <Button onClick={handleRevealOthers} size="sm">
+                    🔓 Reveal Others&apos; Solutions
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-2">
+                    ⚠️ This will lock your submission and grade
+                  </p>
+                </div>
+              )}
+              </>
+            ) : (
+              // Show submission form
+              <Card className="mb-4">
+                <Card.Header>
+                  <Card.Title className="flex items-center gap-2">
+                    <span>✍️</span>
+                    {hasSubmitted ? 'Edit Your Solution' : 'Your Solution'}
+                  </Card.Title>
+                </Card.Header>
+                <Card.Body>
+                  <textarea
+                    value={solution}
+                    onChange={(e) => setSolution(e.target.value)}
+                    placeholder="Write your solution here... Show your work!"
+                    className="w-full h-48 p-4 border-2 border-gray-200 rounded-2xl 
+                             focus:border-primary-500 focus:ring-2 focus:ring-primary-200
+                             resize-none transition-colors"
+                  />
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      📷 Attach Image (Optional)
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null
+                        setSolutionImage(file)
+                        if (file) {
+                          setSolutionImagePreview(URL.createObjectURL(file))
+                        } else {
+                          setSolutionImagePreview(null)
+                        }
+                      }}
+                      className="text-sm text-gray-600"
+                    />
+                    {solutionImagePreview && (
+                      <div className="mt-2 relative inline-block">
+                        <img src={solutionImagePreview} alt="Preview" className="max-h-40 rounded-lg border" />
+                        <button
+                          type="button"
+                          onClick={() => { setSolutionImage(null); setSolutionImagePreview(null) }}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs"
+                        >✕</button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-3 mt-4">
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={!solution.trim() || submitting}
+                      isLoading={submitting}
+                      size="lg"
+                      className="flex-1"
+                    >
+                      {hasSubmitted ? 'Update Solution' : 'Submit Solution'}
+                    </Button>
+                    {isEditing && (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditing(false)
+                          setSolution(userSubmission?.content || '')
+                        }}
+                        size="lg"
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                </Card.Body>
+              </Card>
+            )}</>
+          }
         >
           {/* Tags */}
           {challenge.tag_ids && challenge.tag_ids.length > 0 && (
@@ -1372,164 +1527,6 @@ export default function ChallengePage() {
             </Card.Body>
           </Card>
         )}
-
-        {/* Submission Section — visible to all users (teachers can submit too) */}
-        <>
-            {hasSubmitted && !isEditing ? (
-              <>
-              {/* Show submitted solution */}
-              <Card className="mb-6 border-2 border-primary-500">
-                <Card.Header>
-                  <div className="flex items-center justify-between">
-                    <Card.Title className="flex items-center gap-2">
-                      Your Solution
-                      {userSubmission?.points != null ? (
-                        <span className="ml-2 px-2 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-bold">
-                          {userSubmission.points}/{challenge?.max_points || 100}
-                        </span>
-                      ) : (
-                        <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
-                          Pending grade
-                        </span>
-                      )}
-                      {userSubmission?.is_locked && (
-                        <span className="text-xs text-gray-500">🔒 Locked</span>
-                      )}
-                    </Card.Title>
-                    {!userSubmission?.is_locked && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setIsEditing(true)
-                          if (userSubmission?.image_url) {
-                            setSolutionImagePreview(userSubmission.image_url)
-                          }
-                        }}
-                      >
-                        Edit
-                      </Button>
-                    )}
-                  </div>
-                </Card.Header>
-                <Card.Body>
-                  <p className="text-gray-700 whitespace-pre-wrap mb-3">
-                    {userSubmission.content}
-                  </p>
-                  {userSubmission.image_url && (
-                    <img src={userSubmission.image_url} alt="Solution" className="max-w-full max-h-64 rounded-lg border mb-3" />
-                  )}
-                  <p className="text-sm text-gray-500 mb-3">
-                    Submitted {formatTimeAgo(userSubmission.submitted_at)}
-                  </p>
-                  
-                  <CommentThread
-                    submissionId={userSubmission.id}
-                    comments={comments[userSubmission.id] || []}
-                    visibleCount={visibleComments[userSubmission.id] || COMMENTS_INCREMENT}
-                    onShowMore={() => handleShowMoreComments(userSubmission.id)}
-                    newComment={newComment[userSubmission.id] || ''}
-                    onCommentChange={(value) => setNewComment(prev => ({ ...prev, [userSubmission.id]: value }))}
-                    onSubmitComment={(img?: File | null) => handleSubmitComment(userSubmission.id, img)}
-                    onEditComment={handleEditComment}
-                    onDeleteComment={handleDeleteComment}
-                    isSubmitting={submittingComment[userSubmission.id] || false}
-                    formatTimeAgo={formatTimeAgo}
-                    currentUserId={userId}
-                    showTitle={true}
-                    allowImage={true}
-                  />
-                </Card.Body>
-              </Card>
-
-              {!userSubmission?.is_locked && !isTeacher && (
-                <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-2xl text-center">
-                  <p className="text-gray-700 mb-3">
-                    🔒 Want to see what other students wrote?
-                  </p>
-                  <Button onClick={handleRevealOthers} size="sm">
-                    🔓 Reveal Others&apos; Solutions
-                  </Button>
-                  <p className="text-xs text-gray-500 mt-2">
-                    ⚠️ This will lock your submission and grade
-                  </p>
-                </div>
-              )}
-              </>
-            ) : (
-              // Show submission form
-              <Card className="mb-6">
-                <Card.Header>
-                  <Card.Title className="flex items-center gap-2">
-                    <span>✍️</span>
-                    {hasSubmitted ? 'Edit Your Solution' : 'Your Solution'}
-                  </Card.Title>
-                </Card.Header>
-                <Card.Body>
-                  <textarea
-                    value={solution}
-                    onChange={(e) => setSolution(e.target.value)}
-                    placeholder="Write your solution here... Show your work!"
-                    className="w-full h-48 p-4 border-2 border-gray-200 rounded-2xl 
-                             focus:border-primary-500 focus:ring-2 focus:ring-primary-200
-                             resize-none transition-colors"
-                  />
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      📷 Attach Image (Optional)
-                    </label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null
-                        setSolutionImage(file)
-                        if (file) {
-                          setSolutionImagePreview(URL.createObjectURL(file))
-                        } else {
-                          setSolutionImagePreview(null)
-                        }
-                      }}
-                      className="text-sm text-gray-600"
-                    />
-                    {solutionImagePreview && (
-                      <div className="mt-2 relative inline-block">
-                        <img src={solutionImagePreview} alt="Preview" className="max-h-40 rounded-lg border" />
-                        <button
-                          type="button"
-                          onClick={() => { setSolutionImage(null); setSolutionImagePreview(null) }}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs"
-                        >✕</button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-3 mt-4">
-                    <Button
-                      onClick={handleSubmit}
-                      disabled={!solution.trim() || submitting}
-                      isLoading={submitting}
-                      size="lg"
-                      className="flex-1"
-                    >
-                      {hasSubmitted ? 'Update Solution' : 'Submit Solution'}
-                    </Button>
-                    {isEditing && (
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setIsEditing(false)
-                          setSolution(userSubmission?.content || '')
-                        }}
-                        size="lg"
-                      >
-                        Cancel
-                      </Button>
-                    )}
-                  </div>
-                </Card.Body>
-              </Card>
-            )}
-          </>
 
         {/* Other Submissions Section */}
         {canSeeOthers ? (
