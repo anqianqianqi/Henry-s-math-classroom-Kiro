@@ -324,6 +324,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                   transformOrigin: 'center center',
                 }}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={coverImageUrl}
                   alt="Book cover"
@@ -761,6 +762,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
           </button>
 
           {/* Image — constrained to viewport, click stops propagation so overlay click still closes */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={lightboxSrc}
             alt="Challenge image enlarged"
