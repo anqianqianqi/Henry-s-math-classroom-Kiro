@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { CommentThread } from '@/components/CommentThread'
 import { localDateString, localDateOffset } from '@/lib/utils/date'
 import { HomeButton } from '@/components/ui/HomeButton'
+import { MagicBookReveal } from '@/components/MagicBookReveal'
 
 interface Challenge {
   id: string
@@ -1109,183 +1110,186 @@ export default function ChallengePage() {
           </div>
         )}
 
-        {/* Challenge Card */}
-        <Card className="mb-6">
-          <Card.Header>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl hidden sm:inline">📚</span>
-              <div className="flex-1">
-                <Card.Title>{challenge.title}</Card.Title>
-                <p className="text-sm text-gray-500">
-                  {new Date(challenge.challenge_date + 'T12:00:00').toLocaleDateString('en-US', {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </p>
-                {/* Tags */}
-                {challenge.tag_ids && challenge.tag_ids.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {challenge.tag_ids.map((tagId: string) => {
-                      const name = tagNames[tagId]?.[tagLang] || tagNames[tagId]?.['en'] || tagNames[tagId]?.['zh'] || tagId.slice(0, 8)
-                      return (
-                        <span
-                          key={tagId}
-                          className="inline-flex items-center px-2.5 py-0.5 bg-primary-100 text-primary-700 rounded-full text-xs font-medium"
-                        >
-                          {name}
-                        </span>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
+        {/* Challenge Card — wrapped in MagicBookReveal for the ancient book opening experience */}
+        <MagicBookReveal
+          title={challenge.title}
+          date={new Date(challenge.challenge_date + 'T12:00:00').toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          })}
+        >
+          {/* Tags */}
+          {challenge.tag_ids && challenge.tag_ids.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-5">
+              {challenge.tag_ids.map((tagId: string) => {
+                const name = tagNames[tagId]?.[tagLang] || tagNames[tagId]?.['en'] || tagNames[tagId]?.['zh'] || tagId.slice(0, 8)
+                return (
+                  <span
+                    key={tagId}
+                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    style={{
+                      background: 'rgba(180,120,40,0.15)',
+                      border: '1px solid rgba(180,120,40,0.4)',
+                      color: '#7a4a10',
+                    }}
+                  >
+                    {name}
+                  </span>
+                )
+              })}
             </div>
-          </Card.Header>
-          <Card.Body>
-            {challenge.image_url && (
-              <div className="mb-4">
-                <img
-                  src={challenge.image_url}
-                  alt="Challenge visual"
-                  className="w-full max-h-96 object-contain bg-gray-50 rounded-2xl border-2 border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => window.open(challenge.image_url!, '_blank')}
-                  title="Click to enlarge"
-                />
-                <p className="text-xs text-gray-400 text-center mt-1">Click image to enlarge</p>
-              </div>
-            )}
-            <p className="text-gray-700 whitespace-pre-wrap">
-              {challenge.description}
-            </p>
+          )}
 
-            {/* Hint Section */}
-            {(challenge.hint || (challenge as any).hint_image_url || isTeacher) && (
-              <div className="mt-4">
-                {isTeacher ? (
-                  editingHint ? (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-amber-700">💡 Hint (visible to students)</label>
-                      <textarea
-                        value={hintDraft}
-                        onChange={e => setHintDraft(e.target.value)}
-                        placeholder="Add a hint for students..."
-                        rows={3}
-                        className="w-full px-3 py-2 text-sm border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-100 resize-none"
-                      />
+          {/* Challenge image */}
+          {challenge.image_url && (
+            <div className="mb-5">
+              <img
+                src={challenge.image_url}
+                alt="Challenge visual"
+                className="w-full max-h-96 object-contain rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
+                style={{ borderColor: 'rgba(180,120,40,0.35)', background: 'rgba(255,245,220,0.6)' }}
+                onClick={() => window.open(challenge.image_url!, '_blank')}
+                title="Click to enlarge"
+              />
+              <p className="text-xs text-center mt-1" style={{ color: 'rgba(100,60,10,0.5)', fontStyle: 'italic' }}>
+                Click image to enlarge
+              </p>
+            </div>
+          )}
 
-                      {/* Hint image upload */}
-                      <div>
-                        <label className="text-xs font-medium text-amber-700 mb-1 block">Hint Image (optional)</label>
-                        {hintImagePreview || (challenge as any).hint_image_url ? (
-                          <div className="relative inline-block">
-                            <img
-                              src={hintImagePreview ?? (challenge as any).hint_image_url}
-                              alt="Hint"
-                              className="max-h-40 rounded-xl border border-amber-200 object-contain"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => { setHintImageFile(null); setHintImagePreview(null) }}
-                              className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center hover:bg-red-600"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="border-2 border-dashed border-amber-300 rounded-xl p-3 text-center bg-amber-50">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              id="hint-image-upload"
-                              className="hidden"
-                              onChange={e => {
-                                const file = e.target.files?.[0]
-                                if (file && file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024) {
-                                  setHintImageFile(file)
-                                  setHintImagePreview(URL.createObjectURL(file))
-                                }
-                              }}
-                            />
-                            <label htmlFor="hint-image-upload" className="cursor-pointer text-xs text-amber-600 hover:text-amber-700">
-                              📸 Click to upload a hint image (max 5MB)
-                            </label>
-                          </div>
-                        )}
-                      </div>
+          {/* Problem text */}
+          <p className="whitespace-pre-wrap leading-relaxed" style={{ color: '#2d1a00' }}>
+            {challenge.description}
+          </p>
 
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={saveHint} disabled={savingHint}>
-                          {savingHint ? 'Saving...' : 'Save Hint'}
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => {
-                          setEditingHint(false)
-                          setHintDraft(challenge.hint || '')
-                          setHintImageFile(null)
-                          setHintImagePreview(null)
-                        }}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-start gap-2">
-                      <div className="flex-1 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                        <p className="text-xs font-medium text-amber-600 mb-1">💡 Hint</p>
-                        {challenge.hint && (
-                          <p className="text-sm text-amber-800 whitespace-pre-wrap mb-2">{challenge.hint}</p>
-                        )}
-                        {(challenge as any).hint_image_url && (
+          {/* Hint Section */}
+          {(challenge.hint || (challenge as any).hint_image_url || isTeacher) && (
+            <div className="mt-6 pt-4" style={{ borderTop: '1px solid rgba(180,120,40,0.25)' }}>
+              {isTeacher ? (
+                editingHint ? (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-amber-700">💡 Hint (visible to students)</label>
+                    <textarea
+                      value={hintDraft}
+                      onChange={e => setHintDraft(e.target.value)}
+                      placeholder="Add a hint for students..."
+                      rows={3}
+                      className="w-full px-3 py-2 text-sm border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-100 resize-none"
+                    />
+
+                    {/* Hint image upload */}
+                    <div>
+                      <label className="text-xs font-medium text-amber-700 mb-1 block">Hint Image (optional)</label>
+                      {hintImagePreview || (challenge as any).hint_image_url ? (
+                        <div className="relative inline-block">
                           <img
-                            src={(challenge as any).hint_image_url}
+                            src={hintImagePreview ?? (challenge as any).hint_image_url}
                             alt="Hint"
-                            className="max-h-48 rounded-lg object-contain border border-amber-200"
+                            className="max-h-40 rounded-xl border border-amber-200 object-contain"
                           />
-                        )}
-                        {!challenge.hint && !(challenge as any).hint_image_url && (
-                          <span className="italic text-amber-400 text-sm">No hint added yet</span>
-                        )}
-                      </div>
+                          <button
+                            type="button"
+                            onClick={() => { setHintImageFile(null); setHintImagePreview(null) }}
+                            className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center hover:bg-red-600"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-amber-300 rounded-xl p-3 text-center bg-amber-50">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            id="hint-image-upload"
+                            className="hidden"
+                            onChange={e => {
+                              const file = e.target.files?.[0]
+                              if (file && file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024) {
+                                setHintImageFile(file)
+                                setHintImagePreview(URL.createObjectURL(file))
+                              }
+                            }}
+                          />
+                          <label htmlFor="hint-image-upload" className="cursor-pointer text-xs text-amber-600 hover:text-amber-700">
+                            📸 Click to upload a hint image (max 5MB)
+                          </label>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={saveHint} disabled={savingHint}>
+                        {savingHint ? 'Saving...' : 'Save Hint'}
+                      </Button>
                       <Button size="sm" variant="ghost" onClick={() => {
-                        setEditingHint(true)
+                        setEditingHint(false)
                         setHintDraft(challenge.hint || '')
-                        setHintImagePreview(null)
                         setHintImageFile(null)
+                        setHintImagePreview(null)
                       }}>
-                        {challenge.hint || (challenge as any).hint_image_url ? 'Edit' : '+ Add Hint'}
+                        Cancel
                       </Button>
                     </div>
-                  )
-                ) : (
-                  // Student view — collapsible
-                  <div>
-                    <button
-                      onClick={() => setShowHint(h => !h)}
-                      className="flex items-center gap-2 text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors"
-                    >
-                      <span>{showHint ? '▼' : '▶'}</span>
-                      <span>💡 {showHint ? 'Hide Hint' : 'Show Hint'}</span>
-                    </button>
-                    {showHint && (
-                      <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
-                        {challenge.hint && (
-                          <p className="text-sm text-amber-800 whitespace-pre-wrap">{challenge.hint}</p>
-                        )}
-                        {(challenge as any).hint_image_url && (
-                          <img
-                            src={(challenge as any).hint_image_url}
-                            alt="Hint"
-                            className="max-h-64 rounded-lg object-contain border border-amber-200"
-                          />
-                        )}
-                      </div>
-                    )}
                   </div>
-                )}
-              </div>
-            )}
-          </Card.Body>
-        </Card>
+                ) : (
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                      <p className="text-xs font-medium text-amber-600 mb-1">💡 Hint</p>
+                      {challenge.hint && (
+                        <p className="text-sm text-amber-800 whitespace-pre-wrap mb-2">{challenge.hint}</p>
+                      )}
+                      {(challenge as any).hint_image_url && (
+                        <img
+                          src={(challenge as any).hint_image_url}
+                          alt="Hint"
+                          className="max-h-48 rounded-lg object-contain border border-amber-200"
+                        />
+                      )}
+                      {!challenge.hint && !(challenge as any).hint_image_url && (
+                        <span className="italic text-amber-400 text-sm">No hint added yet</span>
+                      )}
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => {
+                      setEditingHint(true)
+                      setHintDraft(challenge.hint || '')
+                      setHintImagePreview(null)
+                      setHintImageFile(null)
+                    }}>
+                      {challenge.hint || (challenge as any).hint_image_url ? 'Edit' : '+ Add Hint'}
+                    </Button>
+                  </div>
+                )
+              ) : (
+                // Student view — collapsible
+                <div>
+                  <button
+                    onClick={() => setShowHint(h => !h)}
+                    className="flex items-center gap-2 text-sm font-medium text-amber-700 hover:text-amber-900 transition-colors"
+                  >
+                    <span>{showHint ? '▼' : '▶'}</span>
+                    <span>💡 {showHint ? 'Hide Hint' : 'Show Hint'}</span>
+                  </button>
+                  {showHint && (
+                    <div className="mt-2 p-3 rounded-xl space-y-2" style={{ background: 'rgba(255,200,80,0.15)', border: '1px solid rgba(180,120,40,0.3)' }}>
+                      {challenge.hint && (
+                        <p className="text-sm whitespace-pre-wrap" style={{ color: '#6b3a00' }}>{challenge.hint}</p>
+                      )}
+                      {(challenge as any).hint_image_url && (
+                        <img
+                          src={(challenge as any).hint_image_url}
+                          alt="Hint"
+                          className="max-h-64 rounded-lg object-contain"
+                          style={{ border: '1px solid rgba(180,120,40,0.35)' }}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </MagicBookReveal>
 
         {/* Teacher Stats Dashboard */}
         {isTeacher && (
