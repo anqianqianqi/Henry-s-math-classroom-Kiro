@@ -544,8 +544,8 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                 </div>
               </div>
             </div>
-            </div>{/* close book-wrapper */}
-            )}{/* close ternary: coverImageUrl ? img : default */}
+            </div>
+            )}
           </div>
         )}
 
