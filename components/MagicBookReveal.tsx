@@ -274,7 +274,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
 
   return (
     <>
-      <div ref={bookRef} className="relative w-full mb-6" style={{ perspective: '1400px' }}>
+      <div ref={bookRef} className="relative w-full mb-6" style={{ perspective: '1400px', background: 'transparent' }}>
 
         {/* ── Sparkle particles ── */}
         {particles.map(p => (
@@ -324,9 +324,9 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                   className="w-full h-auto object-contain"
                   style={{ display: 'block', maxHeight: '85vh' }}
                 />
-                {/* Title — top-center over the image */}
+                {/* Title — center over the image, moved down */}
                 <div
-                  className="absolute top-12 left-1/2 -translate-x-1/2 text-center px-4 w-full"
+                  className="absolute top-20 left-1/2 -translate-x-1/2 text-center px-4 w-full"
                   style={{ pointerEvents: 'none' }}
                 >
                   <h2
@@ -341,9 +341,9 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                     {title}
                   </h2>
                 </div>
-                {/* Open prompt — bottom-center over the image */}
+                {/* Open prompt — moved up */}
                 <div
-                  className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap"
+                  className="absolute bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap"
                   style={{
                     background: 'rgba(40,25,5,0.72)',
                     border: '1px solid rgba(200,160,60,0.55)',
