@@ -117,10 +117,151 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
   const DEFAULT_COVER_IMAGE = '/book-cover-default.jpg'
   const DEFAULT_PAGE_BG = 'linear-gradient(to bottom, #faf6ee 0%, #f2e8d5 50%, #ede0c4 100%)'
 
+  /**
+   * SVG treasure map used as CSS background when no cover image file is present.
+   * Rendered as a data URI — works with no network access or file saves.
+   * Replace DEFAULT_COVER_IMAGE with a real .jpg once uploaded to public/.
+   */
+  const TREASURE_MAP_SVG = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 620" width="400" height="620">
+  <defs>
+    <radialGradient id="pg" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#e8d5a0"/>
+      <stop offset="60%" stop-color="#c8a86a"/>
+      <stop offset="100%" stop-color="#8a6030"/>
+    </radialGradient>
+    <radialGradient id="stain1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7a5020" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#7a5020" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="stain2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#5a3810" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#5a3810" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="rough">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" result="noise"/>
+      <feColorMatrix type="saturate" values="0" in="noise" result="grayNoise"/>
+      <feBlend in="SourceGraphic" in2="grayNoise" mode="multiply" result="blend"/>
+    </filter>
+    <linearGradient id="edgeDark" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3a2000" stop-opacity="0.5"/>
+      <stop offset="8%" stop-color="#3a2000" stop-opacity="0"/>
+      <stop offset="92%" stop-color="#3a2000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#3a2000" stop-opacity="0.4"/>
+    </linearGradient>
+    <linearGradient id="edgeDarkV" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a2000" stop-opacity="0.45"/>
+      <stop offset="10%" stop-color="#3a2000" stop-opacity="0"/>
+      <stop offset="88%" stop-color="#3a2000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#3a2000" stop-opacity="0.5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Base parchment -->
+  <rect width="400" height="620" fill="url(#pg)" filter="url(#rough)"/>
+
+  <!-- Torn/ragged edge effect top -->
+  <path d="M0,0 Q20,8 40,3 Q60,-2 80,5 Q100,12 120,4 Q140,-3 160,6 Q180,14 200,3 Q220,-4 240,7 Q260,15 280,4 Q300,-2 320,8 Q340,14 360,3 Q380,-1 400,6 L400,0 Z" fill="#5a3818" opacity="0.6"/>
+  <!-- Torn edge bottom -->
+  <path d="M0,620 Q25,612 50,618 Q75,622 100,614 Q125,608 150,617 Q175,623 200,613 Q225,606 250,616 Q275,622 300,612 Q325,605 350,615 Q375,621 400,613 L400,620 Z" fill="#5a3818" opacity="0.55"/>
+  <!-- Torn edge left -->
+  <path d="M0,0 Q8,40 2,80 Q-3,120 6,160 Q13,200 3,240 Q-4,280 5,320 Q12,360 2,400 Q-3,440 7,480 Q14,520 3,560 Q-2,590 4,620 L0,620 Z" fill="#4a2e10" opacity="0.5"/>
+
+  <!-- Water stains -->
+  <ellipse cx="280" cy="140" rx="70" ry="45" fill="url(#stain1)"/>
+  <ellipse cx="80" cy="350" rx="55" ry="38" fill="url(#stain2)"/>
+  <ellipse cx="310" cy="480" rx="45" ry="30" fill="url(#stain1)" opacity="0.7"/>
+  <ellipse cx="150" cy="90" rx="30" ry="20" fill="url(#stain2)" opacity="0.6"/>
+
+  <!-- Crease lines -->
+  <line x1="0" y1="195" x2="400" y2="210" stroke="#5a3010" stroke-width="0.8" opacity="0.3"/>
+  <line x1="0" y1="197" x2="400" y2="212" stroke="#e8cc90" stroke-width="0.4" opacity="0.2"/>
+  <line x1="0" y1="430" x2="400" y2="418" stroke="#5a3010" stroke-width="0.7" opacity="0.25"/>
+  <line x1="40" y1="0" x2="55" y2="620" stroke="#5a3010" stroke-width="0.6" opacity="0.2"/>
+  <!-- Diagonal scratch -->
+  <line x1="220" y1="300" x2="380" y2="240" stroke="#4a2800" stroke-width="0.5" opacity="0.2"/>
+
+  <!-- Rough coastline map lines (right side) -->
+  <path d="M320,180 Q340,220 330,260 Q345,300 335,340 Q350,380 340,420 Q355,460 345,500" fill="none" stroke="#7a5028" stroke-width="1.2" opacity="0.5" stroke-dasharray="3,2"/>
+  <path d="M340,190 Q355,230 348,275 Q360,310 352,350" fill="none" stroke="#7a5028" stroke-width="0.8" opacity="0.35"/>
+  <!-- Bottom map text area -->
+  <text x="200" y="560" text-anchor="middle" font-family="Georgia,serif" font-size="9" fill="#5a3818" opacity="0.55" letter-spacing="3">NO PARTIN</text>
+  <text x="200" y="575" text-anchor="middle" font-family="Georgia,serif" font-size="7" fill="#5a3818" opacity="0.4" letter-spacing="2">· CALIOT · AGUDER ·</text>
+
+  <!-- Main compass rose (centre-right) -->
+  <g transform="translate(270,340)">
+    <circle cx="0" cy="0" r="36" fill="none" stroke="#7a5028" stroke-width="1" opacity="0.6"/>
+    <circle cx="0" cy="0" r="28" fill="none" stroke="#7a5028" stroke-width="0.6" opacity="0.45"/>
+    <circle cx="0" cy="0" r="6" fill="#8a6030" opacity="0.7"/>
+    <!-- 8 main points -->
+    <g stroke="#6a4020" stroke-width="0.8" opacity="0.7">
+      <line x1="0" y1="-36" x2="0" y2="36"/>
+      <line x1="-36" y1="0" x2="36" y2="0"/>
+      <line x1="-25" y1="-25" x2="25" y2="25"/>
+      <line x1="25" y1="-25" x2="-25" y2="25"/>
+    </g>
+    <!-- Arrow points -->
+    <path d="M0,-36 L-5,-20 L0,-24 L5,-20 Z" fill="#6a4020" opacity="0.75"/>
+    <path d="M0,36 L-4,22 L0,26 L4,22 Z" fill="#8a6030" opacity="0.6"/>
+    <path d="M-36,0 L-22,-4 L-26,0 L-22,4 Z" fill="#8a6030" opacity="0.6"/>
+    <path d="M36,0 L22,-4 L26,0 L22,4 Z" fill="#8a6030" opacity="0.6"/>
+    <!-- Cardinal labels -->
+    <text x="0" y="-40" text-anchor="middle" font-family="Georgia,serif" font-size="8" fill="#6a4020" opacity="0.8">N</text>
+    <text x="40" y="3" text-anchor="middle" font-family="Georgia,serif" font-size="8" fill="#6a4020" opacity="0.7">E</text>
+    <text x="-40" y="3" text-anchor="middle" font-family="Georgia,serif" font-size="8" fill="#6a4020" opacity="0.7">W</text>
+  </g>
+
+  <!-- Small compass top-left -->
+  <g transform="translate(80,95)" opacity="0.65">
+    <circle cx="0" cy="0" r="26" fill="none" stroke="#7a5028" stroke-width="1"/>
+    <circle cx="0" cy="0" r="18" fill="none" stroke="#7a5028" stroke-width="0.5"/>
+    <circle cx="0" cy="0" r="4" fill="#8a6030"/>
+    <g stroke="#6a4020" stroke-width="0.7">
+      <line x1="0" y1="-26" x2="0" y2="26"/>
+      <line x1="-26" y1="0" x2="26" y2="0"/>
+      <line x1="-18" y1="-18" x2="18" y2="18"/>
+      <line x1="18" y1="-18" x2="-18" y2="18"/>
+    </g>
+    <path d="M0,-26 L-3,-14 L0,-18 L3,-14 Z" fill="#6a4020"/>
+    <text x="0" y="-29" text-anchor="middle" font-family="Georgia,serif" font-size="7" fill="#6a4020">N</text>
+  </g>
+
+  <!-- Tiny bottom-left compass -->
+  <g transform="translate(70,480)" opacity="0.55">
+    <circle cx="0" cy="0" r="20" fill="none" stroke="#7a5028" stroke-width="0.8"/>
+    <g stroke="#6a4020" stroke-width="0.6">
+      <line x1="0" y1="-20" x2="0" y2="20"/>
+      <line x1="-20" y1="0" x2="20" y2="0"/>
+      <line x1="-14" y1="-14" x2="14" y2="14"/>
+      <line x1="14" y1="-14" x2="-14" y2="14"/>
+    </g>
+    <circle cx="0" cy="0" r="3" fill="#8a6030"/>
+  </g>
+
+  <!-- Decorative border frame -->
+  <rect x="12" y="12" width="376" height="596" fill="none" stroke="#8a6030" stroke-width="1.5" opacity="0.5" rx="3"/>
+  <rect x="18" y="18" width="364" height="584" fill="none" stroke="#a07840" stroke-width="0.7" opacity="0.35" rx="2"/>
+
+  <!-- Edge darkening overlay -->
+  <rect width="400" height="620" fill="url(#edgeDark)"/>
+  <rect width="400" height="620" fill="url(#edgeDarkV)"/>
+</svg>`)}`
+
   const activeCoverImage = coverImageUrl ?? DEFAULT_COVER_IMAGE
   const parchmentBg = pageImageUrl
     ? `url(${pageImageUrl}) center/cover no-repeat`
     : DEFAULT_PAGE_BG
+
+  /**
+   * Cover style: tries the real jpg first, falls back to the inline SVG.
+   * When a shop skin is purchased, coverImageUrl overrides both.
+   */
+  const coverStyle: React.CSSProperties = {
+    backgroundImage: `url(${activeCoverImage}), url(${TREASURE_MAP_SVG})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center top',
+    backgroundRepeat: 'no-repeat',
+    backgroundColor: '#b8966a',
+  }
 
   return (
     <>
@@ -167,19 +308,12 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
             <div
               className="relative overflow-hidden rounded-r-lg rounded-l-none"
               style={{
-                /*
-                 * Cover skin: custom image (or default treasure map) as base layer.
-                 * All the wear-and-tear overlays sit on top via child divs.
-                 */
-                backgroundImage: `url(${activeCoverImage})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
+                ...coverStyle,
                 boxShadow:
                   phase === 'opening'
                     ? '8px 10px 32px rgba(0,0,0,0.75), inset 0 0 50px rgba(0,0,0,0.35)'
                     : '5px 7px 22px rgba(0,0,0,0.6), inset 0 0 35px rgba(0,0,0,0.25)',
-                minHeight: '480px',
+                minHeight: '75vh',
                 transformOrigin: 'left center',
                 animation: phase === 'opening'
                   ? 'page-turn 1s cubic-bezier(0.4,0,0.2,1) forwards'
@@ -285,7 +419,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
               />
 
               {/* Cover content */}
-              <div className="relative z-10 flex flex-col items-center justify-center min-h-[480px] px-12 py-16 text-center">
+              <div className="relative z-10 flex flex-col items-center justify-center min-h-[75vh] px-12 py-16 text-center">
                 {/* Faded compass-rose / seal icon */}
                 <div
                   className="mb-5 text-5xl"
