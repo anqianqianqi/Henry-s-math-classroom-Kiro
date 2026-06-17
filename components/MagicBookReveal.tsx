@@ -311,7 +311,42 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
             className="cursor-pointer select-none flex justify-center"
             style={{ transformStyle: 'preserve-3d' }}
           >
-            {/* Book wrapper — fixed portrait size, centered */}
+            {coverImageUrl ? (
+              /* ── Custom image mode: just the img, no spine, no background, full transparency ── */
+              <div
+                className="relative flex flex-col items-center justify-center"
+                style={{
+                  width: 'min(480px, 90vw)',
+                  maxHeight: '85vh',
+                  animation: phase === 'opening'
+                    ? 'page-turn 1s cubic-bezier(0.4,0,0.2,1) forwards'
+                    : undefined,
+                  transformOrigin: 'center center',
+                }}
+              >
+                <img
+                  src={coverImageUrl}
+                  alt="Book cover"
+                  className="w-full h-auto object-contain"
+                  style={{ display: 'block', maxHeight: '85vh' }}
+                />
+                {/* Open prompt — overlaid on top of the image */}
+                <div
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 px-6 py-3 rounded-full text-sm font-semibold whitespace-nowrap"
+                  style={{
+                    background: 'rgba(60,40,10,0.65)',
+                    border: '1px solid rgba(200,160,60,0.5)',
+                    color: 'rgba(240,215,140,0.95)',
+                    animation: 'pulse-glow 2.5s ease-in-out infinite',
+                    backdropFilter: 'blur(4px)',
+                  }}
+                >
+                  <span style={{ animation: 'wiggle 2s ease-in-out infinite', display: 'inline-block' }}>📜</span>
+                  <span style={{ letterSpacing: '0.08em' }}>{title}</span>
+                </div>
+              </div>
+            ) : (
+              /* ── Default CSS skin mode: spine + cover with wear overlays ── */
             <div
               className="relative flex"
               style={{
@@ -515,6 +550,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
               </div>
             </div>
             </div>{/* close book-wrapper */}
+            )}{/* close ternary: coverImageUrl ? img : default */}
           </div>
         )}
 
