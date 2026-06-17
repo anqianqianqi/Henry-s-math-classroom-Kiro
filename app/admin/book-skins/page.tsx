@@ -69,8 +69,7 @@ async function resizeImageToBlob(
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH)
       canvas.toBlob(
         (blob) => blob ? resolve(blob) : reject(new Error('toBlob failed')),
-        'image/jpeg',
-        0.92
+        'image/png'   // PNG preserves transparency — JPEG would fill it with black
       )
     }
     img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Image load failed')) }
@@ -172,10 +171,10 @@ export default function BookSkinsAdminPage() {
       const resizedBlob = await resizeImageToBlob(file, targetW, targetH)
 
       // Upload to Supabase storage
-      const fileName = `${uploadType}/${user.id}/${Date.now()}.jpg`
+      const fileName = `${uploadType}/${user.id}/${Date.now()}.png`
       const { error: uploadErr } = await supabase.storage
         .from('book-skins')
-        .upload(fileName, resizedBlob, { contentType: 'image/jpeg', upsert: false })
+        .upload(fileName, resizedBlob, { contentType: 'image/png', upsert: false })
       if (uploadErr) throw new Error('Storage upload failed: ' + uploadErr.message)
 
       const { data: { publicUrl } } = supabase.storage
