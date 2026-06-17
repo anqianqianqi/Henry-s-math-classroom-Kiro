@@ -687,6 +687,15 @@ export default function AdminShopPage() {
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-3">
           <HomeButton noSlash />
           <h1 className="text-xl font-bold text-gray-900">Shop Admin 🛍️</h1>
+          <div className="ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push('/admin/book-skins')}
+            >
+              📖 Book Skins
+            </Button>
+          </div>
         </div>
       </header>
 
