@@ -271,18 +271,55 @@ export default function ChallengePage() {
 
     setChallenge(challengeData)
 
-    // Fetch default book skins set by admin (covers all users unless they own a personal skin)
-    const { data: skinData } = await supabase
-      .from('book_skins')
-      .select('skin_type, image_url')
-      .eq('is_default', true)
-      .eq('is_active', true)
+    // Fetch book skins:
+    // 1. Get sitewide defaults (admin-set)
+    // 2. Get this user's personal preference (overrides default if set)
+    // Priority: user's personal pick > sitewide default > component fallback SVG
+    const [{ data: skinData }, { data: userPrefData }] = await Promise.all([
+      supabase
+        .from('book_skins')
+        .select('skin_type, image_url')
+        .eq('is_default', true)
+        .eq('is_active', true),
+      supabase
+        .from('user_book_skin_preferences')
+        .select('cover_skin_id, page_skin_id')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+    ])
+
+    // Start with sitewide defaults
+    let resolvedCoverUrl: string | undefined
+    let resolvedPageUrl: string | undefined
     if (skinData) {
-      const cover = skinData.find((s: any) => s.skin_type === 'cover')
-      const page  = skinData.find((s: any) => s.skin_type === 'page')
-      if (cover) setDefaultCoverUrl(cover.image_url)
-      if (page)  setDefaultPageUrl(page.image_url)
+      const defCover = (skinData as any[]).find(s => s.skin_type === 'cover')
+      const defPage  = (skinData as any[]).find(s => s.skin_type === 'page')
+      if (defCover) resolvedCoverUrl = defCover.image_url
+      if (defPage)  resolvedPageUrl  = defPage.image_url
     }
+
+    // User personal preference overrides the default
+    if (userPrefData?.cover_skin_id) {
+      const { data: uc } = await supabase
+        .from('book_skins')
+        .select('image_url')
+        .eq('id', userPrefData.cover_skin_id)
+        .eq('is_active', true)
+        .maybeSingle()
+      if (uc) resolvedCoverUrl = uc.image_url
+    }
+    if (userPrefData?.page_skin_id) {
+      const { data: up } = await supabase
+        .from('book_skins')
+        .select('image_url')
+        .eq('id', userPrefData.page_skin_id)
+        .eq('is_active', true)
+        .maybeSingle()
+      if (up) resolvedPageUrl = up.image_url
+    }
+
+    if (resolvedCoverUrl) setDefaultCoverUrl(resolvedCoverUrl)
+    if (resolvedPageUrl)  setDefaultPageUrl(resolvedPageUrl)
 
     // Load tag names for this challenge
     if (challengeData?.tag_ids && challengeData.tag_ids.length > 0) {
