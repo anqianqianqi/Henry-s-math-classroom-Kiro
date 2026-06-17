@@ -312,70 +312,97 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
             style={{ transformStyle: 'preserve-3d' }}
           >
             {coverImageUrl ? (
-              /* ── Custom image mode: just the img, no spine, no background, full transparency ── */
+              /* ── Custom image mode: book-opening animation pivots from left spine ── */
               <div
-                className="relative flex flex-col items-center justify-center"
+                className="relative"
                 style={{
                   width: 'min(480px, 90vw)',
                   maxHeight: '85vh',
-                  animation: phase === 'opening'
-                    ? 'page-turn 1s cubic-bezier(0.4,0,0.2,1) forwards'
-                    : undefined,
-                  transformOrigin: 'center center',
+                  perspective: '1200px',
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={coverImageUrl}
-                  alt="Book cover"
-                  className="w-full h-auto object-contain"
-                  style={{ display: 'block', maxHeight: '85vh' }}
-                />
-                {/* Title — center over the image, moved down */}
+                {/* Book pages backing — visible while cover swings open */}
                 <div
-                  className="absolute text-center px-4 w-full"
+                  className="absolute inset-0 rounded-r-lg"
                   style={{
-                    left: `${coverLayout?.title?.x ?? 50}%`,
-                    top: `${coverLayout?.title?.y ?? 22}%`,
-                    transform: 'translate(-50%, -50%)',
-                    pointerEvents: 'none',
+                    background: 'linear-gradient(to right, #c8a87a 0%, #e8d5a8 8%, #f5ead0 100%)',
+                    boxShadow: 'inset -4px 0 12px rgba(0,0,0,0.15)',
+                    zIndex: 0,
+                    borderRadius: '4px',
                   }}
                 >
-                  <h2
-                    className="font-bold leading-snug"
+                  {/* Page lines suggestion */}
+                  <div className="absolute inset-0 opacity-20" style={{
+                    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 18px, rgba(100,60,10,0.3) 18px, rgba(100,60,10,0.3) 19px)',
+                    backgroundPositionY: '32px',
+                  }} />
+                </div>
+
+                {/* Cover — pivots from left edge like a real book cover */}
+                <div
+                  style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    transformOrigin: 'left center',
+                    transformStyle: 'preserve-3d',
+                    animation: phase === 'opening'
+                      ? 'book-cover-open 1.1s cubic-bezier(0.4,0,0.2,1) forwards'
+                      : undefined,
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={coverImageUrl}
+                    alt="Book cover"
+                    className="w-full h-auto object-contain"
+                    style={{ display: 'block', maxHeight: '85vh' }}
+                  />
+                  {/* Title overlay */}
+                  <div
+                    className="absolute text-center px-4 w-full"
                     style={{
-                      fontSize: coverLayout?.title?.fontSize ?? 20,
-                      color: coverLayout?.title?.color ?? '#f0dea0',
-                      fontFamily: '"Georgia", "Times New Roman", serif',
-                      textShadow: (coverLayout?.title?.shadow ?? true)
-                        ? '0 1px 8px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.8)'
-                        : undefined,
-                      letterSpacing: '0.04em',
+                      left: `${coverLayout?.title?.x ?? 50}%`,
+                      top: `${coverLayout?.title?.y ?? 22}%`,
+                      transform: 'translate(-50%, -50%)',
+                      pointerEvents: 'none',
                     }}
                   >
-                    {title}
-                  </h2>
-                </div>
-                {/* Open prompt — moved up */}
-                <div
-                  className="absolute flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap"
-                  style={{
-                    left: `${coverLayout?.prompt?.x ?? 50}%`,
-                    top: `${coverLayout?.prompt?.y ?? 82}%`,
-                    transform: 'translate(-50%, -50%)',
-                    fontSize: coverLayout?.prompt?.fontSize ?? 14,
-                    color: coverLayout?.prompt?.color ?? 'rgba(240,215,140,0.97)',
-                    textShadow: (coverLayout?.prompt?.shadow ?? true)
-                      ? '0 1px 4px rgba(0,0,0,0.8)'
-                      : undefined,
-                    background: 'rgba(40,25,5,0.72)',
-                    border: '1px solid rgba(200,160,60,0.55)',
-                    backdropFilter: 'blur(6px)',
-                    animation: 'pulse-glow 2.5s ease-in-out infinite',
-                  }}
-                >
-                  <span style={{ animation: 'wiggle 2s ease-in-out infinite', display: 'inline-block' }}>📜</span>
-                  <span style={{ letterSpacing: '0.06em' }}>Open the Book</span>
+                    <h2
+                      className="font-bold leading-snug"
+                      style={{
+                        fontSize: coverLayout?.title?.fontSize ?? 20,
+                        color: coverLayout?.title?.color ?? '#2d1a00',
+                        fontFamily: '"Georgia", "Times New Roman", serif',
+                        textShadow: (coverLayout?.title?.shadow ?? true)
+                          ? '0 1px 8px rgba(255,255,255,0.6), 0 0 16px rgba(0,0,0,0.4)'
+                          : undefined,
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      {title}
+                    </h2>
+                  </div>
+                  {/* Open prompt */}
+                  <div
+                    className="absolute flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap"
+                    style={{
+                      left: `${coverLayout?.prompt?.x ?? 50}%`,
+                      top: `${coverLayout?.prompt?.y ?? 82}%`,
+                      transform: 'translate(-50%, -50%)',
+                      fontSize: coverLayout?.prompt?.fontSize ?? 14,
+                      color: coverLayout?.prompt?.color ?? 'rgba(240,215,140,0.97)',
+                      textShadow: (coverLayout?.prompt?.shadow ?? true)
+                        ? '0 1px 4px rgba(0,0,0,0.8)'
+                        : undefined,
+                      background: 'rgba(40,25,5,0.72)',
+                      border: '1px solid rgba(200,160,60,0.55)',
+                      backdropFilter: 'blur(6px)',
+                      animation: 'pulse-glow 2.5s ease-in-out infinite',
+                    }}
+                  >
+                    <span style={{ animation: 'wiggle 2s ease-in-out infinite', display: 'inline-block' }}>📜</span>
+                    <span style={{ letterSpacing: '0.06em' }}>Open the Book</span>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -387,7 +414,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                 aspectRatio: '2 / 3',
                 maxHeight: '85vh',
                 animation: phase === 'opening'
-                  ? 'page-turn 1s cubic-bezier(0.4,0,0.2,1) forwards'
+                  ? 'book-cover-open 1.1s cubic-bezier(0.4,0,0.2,1) forwards'
                   : undefined,
                 transformOrigin: 'left center',
                 boxShadow:
@@ -751,6 +778,12 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
             0%   { transform: rotateY(0deg);    box-shadow: 6px 8px 24px rgba(0,0,0,0.55); }
             60%  { transform: rotateY(-90deg);  box-shadow: 0 10px 50px rgba(0,0,0,0.75); }
             100% { transform: rotateY(-175deg); opacity: 0; box-shadow: none; }
+          }
+          @keyframes book-cover-open {
+            0%   { transform: rotateY(0deg);     opacity: 1; }
+            50%  { transform: rotateY(-70deg);   opacity: 1; }
+            85%  { transform: rotateY(-108deg);  opacity: 0.6; }
+            100% { transform: rotateY(-115deg);  opacity: 0; }
           }
           @keyframes book-settle {
             from { transform: scale(0.97) translateY(8px); opacity: 0.8; }
