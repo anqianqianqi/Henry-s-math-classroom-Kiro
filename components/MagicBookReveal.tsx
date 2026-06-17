@@ -258,16 +258,26 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
   }
 
   /**
-   * Cover style: tries the real jpg first, falls back to the inline SVG.
-   * When a shop skin is purchased, coverImageUrl overrides both.
+   * Cover style: uses the custom image if provided, otherwise the inline SVG treasure map.
+   * The two-layer fallback was causing the SVG to win over slow-loading images.
    */
-  const coverStyle: React.CSSProperties = {
-    backgroundImage: `url(${activeCoverImage}), url(${TREASURE_MAP_SVG})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center top',
-    backgroundRepeat: 'no-repeat',
-    backgroundColor: '#b8966a',
-  }
+  const coverStyle: React.CSSProperties = activeCoverImage !== DEFAULT_COVER_IMAGE
+    ? {
+        // Real skin image from DB — use it exclusively
+        backgroundImage: `url(${activeCoverImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+        backgroundColor: '#b8966a',
+      }
+    : {
+        // No custom skin — use the inline SVG treasure map
+        backgroundImage: `url(${TREASURE_MAP_SVG})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+        backgroundColor: '#b8966a',
+      }
 
   return (
     <>
