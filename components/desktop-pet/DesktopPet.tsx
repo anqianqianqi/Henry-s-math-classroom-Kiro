@@ -204,6 +204,8 @@ export default function DesktopPet({
   const [showName, setShowName] = useState(() => {
     try { return localStorage.getItem('didi-show-name') !== 'false' } catch { return true }
   })
+  // Suppress position transition when teleporting to dashboard pet area
+  const [suppressTransition, setSuppressTransition] = useState(false)
 
   const prevXp = useRef<number | undefined>(undefined)
   const [walkFrame,  setWalkFrame]  = useState<'walking' | 'walking2'>('walking')
@@ -271,8 +273,12 @@ export default function DesktopPet({
       const margin = 20
       const x = Math.round(rect.left + margin + Math.random() * Math.max(0, rect.width - catSize - margin * 2))
       const y = rectToFloor(rect)
+      // Suppress transition so pet teleports instantly instead of sliding
+      setSuppressTransition(true)
       setPosX(x)
       setPosY(y)
+      // Re-enable transition after the frame
+      requestAnimationFrame(() => setSuppressTransition(false))
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
@@ -474,7 +480,7 @@ export default function DesktopPet({
           zIndex: 9999,
           cursor: isDragging ? 'grabbing' : 'grab',
           userSelect: 'none',
-          transition: isDragging || behavior.pose === 'walking' ? 'none' : 'left 0.4s cubic-bezier(0.34,1.56,0.64,1), bottom 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+          transition: (isDragging || behavior.pose === 'walking' || suppressTransition) ? 'none' : 'left 0.4s cubic-bezier(0.34,1.56,0.64,1), bottom 0.4s cubic-bezier(0.34,1.56,0.64,1)',
           animation: popIn && !isDragging ? 'didi-pop-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards' : undefined,
         }}
         onClick={handleClick}
@@ -629,6 +635,22 @@ export default function DesktopPet({
               </>
             )}
 
+            {/* Name tag — above the cat, hidden when showName is false */}
+            {showName && (
+            <div style={{
+              textAlign: 'center',
+              fontSize: 11,
+              fontWeight: 700,
+              color: '#a07060',
+              letterSpacing: '0.05em',
+              marginBottom: 2,
+              fontFamily: 'system-ui, sans-serif',
+              opacity: 0.8,
+            }}>
+              {petName ?? 'Didi'} 🐾
+            </div>
+            )}
+
             {/* Cat image with animation */}
             <div style={{
               ...catAnim,
@@ -678,8 +700,8 @@ export default function DesktopPet({
                 {/* Size slider inside popover */}
                 <div style={{ marginBottom: 8 }}>
                   <div style={{ fontSize: 10, color: '#a07060', marginBottom: 3, fontWeight: 600 }}>Size</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 9, color: '#a07060' }}>S</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', overflow: 'hidden' }}>
+                    <span style={{ fontSize: 9, color: '#a07060', flexShrink: 0 }}>S</span>
                     <input
                       type="range"
                       min={60}
@@ -687,9 +709,9 @@ export default function DesktopPet({
                       step={10}
                       value={catSize}
                       onChange={e => setCatSize(Number(e.target.value))}
-                      style={{ flex: 1, accentColor: '#a07060', cursor: 'ew-resize' }}
+                      style={{ flex: 1, minWidth: 0, maxWidth: '100%', accentColor: '#a07060', cursor: 'ew-resize' }}
                     />
-                    <span style={{ fontSize: 9, color: '#a07060' }}>L</span>
+                    <span style={{ fontSize: 9, color: '#a07060', flexShrink: 0 }}>L</span>
                   </div>
                 </div>
 
@@ -842,20 +864,6 @@ export default function DesktopPet({
               </div>
             )}
 
-            {/* Name tag — hidden when showName is false */}
-            {showName && (
-            <div style={{
-              textAlign: 'center',
-              fontSize: 11,
-              fontWeight: 700,
-              color: '#a07060',
-              letterSpacing: '0.05em',
-              marginTop: 2,
-              fontFamily: 'system-ui, sans-serif',
-              opacity: 0.8,
-            }}>
-              {petName ?? 'Didi'} 🐾            </div>
-            )}
           </div>
         )}
       </div>
