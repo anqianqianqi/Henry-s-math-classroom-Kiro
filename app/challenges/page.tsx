@@ -76,6 +76,11 @@ export default function ChallengesPage() {
   const [showAllUpcoming, setShowAllUpcoming] = useState(false)
   const [showAllPast, setShowAllPast] = useState(false)
   const ITEMS_PER_PAGE = 10
+
+  // Week grid (teacher only) — map of classId → (dateStr → {id, title})
+  const [weekGrid, setWeekGrid] = useState<Record<string, Record<string, {id: string, title: string}>>>({})
+  const [weekGridClasses, setWeekGridClasses] = useState<Array<{id: string, name: string}>>([])
+  const [weekDates, setWeekDates] = useState<string[]>([])
   
   const router = useRouter()
   const supabase = createClient()
@@ -127,6 +132,9 @@ export default function ChallengesPage() {
         .order('name')
       
       setClasses(classesData || [])
+
+      // Load week grid for the schedule overview
+      await loadWeekGrid()
 
       // Load tag names for filter
       const { data: tagsData } = await supabase
@@ -385,6 +393,62 @@ export default function ChallengesPage() {
       .eq('challenge_id', challengeId)
 
     return assignments?.map((a: any) => a.classes?.name).filter(Boolean) || []
+  }
+
+  // ── Week schedule grid (teacher only) ────────────────────────────────────
+  async function loadWeekGrid() {
+    // Build date columns: today + next 7 days
+    const dates: string[] = []
+    for (let i = 0; i <= 7; i++) {
+      dates.push(localDateOffset(i))
+    }
+    setWeekDates(dates)
+
+    // Fetch all active classes
+    const { data: allClasses } = await supabase
+      .from('classes')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name')
+    const classList = allClasses || []
+    setWeekGridClasses(classList)
+
+    if (classList.length === 0) return
+
+    // Fetch all challenge_assignments for these classes in the date range
+    const { data: assignments } = await supabase
+      .from('challenge_assignments')
+      .select('class_id, challenge_id')
+      .in('class_id', classList.map(c => c.id))
+
+    if (!assignments || assignments.length === 0) return
+
+    // Fetch challenges in the date range
+    const challengeIds = [...new Set(assignments.map(a => a.challenge_id))]
+    const { data: challengesInRange } = await supabase
+      .from('daily_challenges')
+      .select('id, title, challenge_date')
+      .in('id', challengeIds)
+      .gte('challenge_date', dates[0])
+      .lte('challenge_date', dates[dates.length - 1])
+
+    // Build lookup: challengeId → {title, challenge_date}
+    const challengeMap = new Map(
+      (challengesInRange || []).map(c => [c.id, c])
+    )
+
+    // Build grid: classId → dateStr → {id, title}
+    const grid: Record<string, Record<string, {id: string, title: string}>> = {}
+    for (const cls of classList) {
+      grid[cls.id] = {}
+    }
+    for (const a of assignments) {
+      const ch = challengeMap.get(a.challenge_id)
+      if (ch && grid[a.class_id] !== undefined) {
+        grid[a.class_id][ch.challenge_date] = { id: ch.id, title: ch.title }
+      }
+    }
+    setWeekGrid(grid)
   }
 
   function applyFiltersAndSort() {
@@ -663,6 +727,85 @@ export default function ChallengesPage() {
               </div>
             </Card.Body>
           </Card>
+        )}
+
+        {/* ── Week Schedule Grid (teacher/admin only) ── */}
+        {isTeacher && weekDates.length > 0 && weekGridClasses.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+              📅 Weekly Schedule
+            </h2>
+            <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm bg-white">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    {/* Class column header */}
+                    <th className="sticky left-0 z-10 bg-gray-50 px-4 py-3 text-left font-semibold text-gray-600 min-w-[140px] border-r border-gray-200">
+                      Class
+                    </th>
+                    {weekDates.map((d, i) => {
+                      const dateObj = new Date(d + 'T12:00:00')
+                      const isToday = d === localDateString()
+                      const dayLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short' })
+                      const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                      return (
+                        <th
+                          key={d}
+                          className={`px-3 py-3 text-center font-semibold min-w-[120px] ${
+                            isToday
+                              ? 'bg-primary-50 text-primary-700 border-b-2 border-primary-400'
+                              : 'text-gray-600'
+                          }`}
+                        >
+                          <div className="text-xs font-bold uppercase tracking-wide">{dayLabel}</div>
+                          <div className={`text-sm ${isToday ? 'font-bold' : 'font-normal'}`}>{dateLabel}</div>
+                          {isToday && <div className="text-xs text-primary-500 font-medium">Today</div>}
+                        </th>
+                      )
+                    })}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {weekGridClasses.map((cls, rowIdx) => (
+                    <tr key={cls.id} className={rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                      {/* Class name */}
+                      <td className="sticky left-0 z-10 px-4 py-3 font-semibold text-gray-800 border-r border-gray-200 bg-inherit">
+                        {cls.name}
+                      </td>
+                      {weekDates.map(d => {
+                        const isToday = d === localDateString()
+                        const entry = weekGrid[cls.id]?.[d]
+                        return (
+                          <td
+                            key={d}
+                            className={`px-2 py-2 text-center align-middle ${isToday ? 'bg-primary-50/40' : ''}`}
+                          >
+                            {entry ? (
+                              <a
+                                href={`/challenges/${entry.id}`}
+                                className="inline-block w-full px-2 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-800 text-xs font-medium hover:bg-green-100 hover:border-green-400 transition-colors leading-tight"
+                                title={entry.title}
+                              >
+                                <span className="line-clamp-2">{entry.title}</span>
+                              </a>
+                            ) : (
+                              <a
+                                href={`/admin/challenge-bank`}
+                                className="inline-flex items-center justify-center gap-1 w-full px-2 py-1.5 rounded-lg border border-dashed border-gray-300 text-gray-400 text-xs hover:border-primary-400 hover:text-primary-500 hover:bg-primary-50 transition-colors"
+                              >
+                                <span>+</span>
+                                <span>Add</span>
+                              </a>
+                            )}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
 
         {/* Today's Challenge */}
