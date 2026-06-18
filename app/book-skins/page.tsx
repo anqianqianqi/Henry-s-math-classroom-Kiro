@@ -272,7 +272,6 @@ export default function BookSkinsUserPage() {
           </>
         )}
       </main>
-    </div>
 
       {/* ── Admin Manage modal ─────────────────────────────────────────────── */}
       {actionSkin && (
@@ -344,6 +343,7 @@ export default function BookSkinsUserPage() {
           </div>
         </div>
       )}
+    </div>
   )
 }
 
