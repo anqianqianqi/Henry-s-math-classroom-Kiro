@@ -214,24 +214,34 @@ export default function DesktopPet({
 
   const pathname = usePathname()
 
+  // On /dashboard the pet area has a virtual "floor" at the bottom of the pet zone.
+  // Header ~60px + page top padding ~32px + pet area height ~160px = ~252px from top.
+  // posY is distance from the viewport bottom, so floor = innerHeight - 252.
+  // On all other pages the real floor is posY = 0 (bottom of viewport).
+  function getFloor() {
+    if (pathname === '/dashboard') {
+      return Math.max(0, window.innerHeight - 260)
+    }
+    return 0
+  }
+
   // ── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    // On the dashboard, spawn in the right-half area (pet zone).
-    // On all other pages, use the original bottom-right corner.
+    const floor = getFloor()
     let x: number
-    let y: number
     if (pathname === '/dashboard') {
-      const rightHalfCenter = window.innerWidth * 0.75
-      x = Math.round(rightHalfCenter - catSize / 2)
-      y = Math.max(0, window.innerHeight - 220)
+      // Random X within the right half, random Y near but not below the floor
+      const rightStart = window.innerWidth * 0.5
+      const rightEnd   = window.innerWidth - 160
+      x = Math.round(rightStart + Math.random() * (rightEnd - rightStart))
     } else {
       x = window.innerWidth - 160
-      y = 0
     }
     setPosX(x)
-    setPosY(y)
+    setPosY(floor)
     setMounted(true)
     setTimeout(() => setPopIn(true), 100)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── Speech helper ────────────────────────────────────────────────────────
@@ -338,8 +348,13 @@ export default function DesktopPet({
     const onMove = (ev: MouseEvent) => {
       dragMoved.current = true
       setIsDragging(true)
+      const floor = getFloor()
       const newX = Math.max(0, Math.min(window.innerWidth - 140, ev.clientX - dragOffset.current.x))
-      const newY = Math.max(0, window.innerHeight - ev.clientY - 10)
+      const rawY = Math.max(0, window.innerHeight - ev.clientY - 10)
+      // On dashboard, clamp Y so pet stays within pet area (floor to floor+160)
+      const newY = pathname === '/dashboard'
+        ? Math.max(floor, Math.min(floor + 160, rawY))
+        : rawY
       setPosX(newX)
       setPosY(newY)
     }
@@ -354,7 +369,7 @@ export default function DesktopPet({
       }, 0)
       // Only snap to floor if the user actually dragged (not just a click)
       if (!dragMoved.current) return
-      setPosY(0)
+      setPosY(getFloor())
       setBehavior({ pose: 'playing', ms: 1200 })
       say('*thud*')
       setTimeout(() => {
