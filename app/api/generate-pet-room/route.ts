@@ -122,6 +122,7 @@ export async function POST(request: Request) {
         name: name.trim(),
         description: description?.trim() || null,
         image_url: publicUrl,
+        prompt: prompt.trim(),   // store original prompt for iterative refinement
         is_default: setDefault,
         is_active: true,
         created_by: session.user.id,
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
           { id: 'wall_frame', x: 60, y: 6, w: 20, h: 30, z_index: 2, label: 'Wall Picture', default_image_url: null }
         ],
       })
-      .select('id, name, image_url')
+      .select('id, name, image_url, prompt')
       .single()
 
     if (insertErr || !newBg) {

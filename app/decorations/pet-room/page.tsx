@@ -12,6 +12,7 @@ interface PetRoomBackground {
   name: string
   description: string | null
   image_url: string
+  prompt: string | null
   is_default: boolean
   is_active: boolean
   created_at: string
@@ -48,6 +49,16 @@ export default function PetRoomPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null)
+
+  // Admin: refine existing room
+  const [refineTarget, setRefineTarget] = useState<PetRoomBackground | null>(null)
+  const [refineChangePrompt, setRefineChangePrompt] = useState('')
+  const [refineName, setRefineName] = useState('')
+  const [refineDesc, setRefineDesc] = useState('')
+  const [refineSetDefault, setRefineSetDefault] = useState(false)
+  const [refining, setRefining] = useState(false)
+  const [refineError, setRefineError] = useState<string | null>(null)
+  const [refineSuccess, setRefineSuccess] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -170,6 +181,36 @@ export default function PetRoomPage() {
       setUploadError(err.message)
     } finally {
       setUploading(false)
+    }
+  }
+
+  async function handleRefine() {
+    if (!refineTarget) return
+    if (!refineChangePrompt.trim()) { setRefineError('Describe what to change.'); return }
+    if (!refineName.trim()) { setRefineError('Enter a name for the refined version.'); return }
+    setRefineError(null); setRefineSuccess(null); setRefining(true)
+    try {
+      const res = await fetch('/api/refine-pet-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceId: refineTarget.id,
+          changePrompt: refineChangePrompt.trim(),
+          name: refineName.trim(),
+          description: refineDesc.trim() || undefined,
+          setDefault: refineSetDefault,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`)
+      setRefineSuccess(`✅ "${data.name}" refined and added!`)
+      setRefineChangePrompt(''); setRefineName(''); setRefineDesc(''); setRefineSetDefault(false)
+      setRefineTarget(null)
+      await refreshBackgrounds()
+    } catch (err: any) {
+      setRefineError(err.message)
+    } finally {
+      setRefining(false)
     }
   }
 
@@ -398,14 +439,33 @@ export default function PetRoomPage() {
                       <p className="font-semibold text-gray-900">{bg.name}</p>
                       {bg.description && <p className="text-xs text-gray-500 mt-0.5">{bg.description}</p>}
                     </div>
-                    {isSelected && (
-                      <span className="text-xs font-bold text-primary-600 bg-primary-100 px-2 py-1 rounded-full">
-                        ✓ Active
-                      </span>
-                    )}
-                    {bg.is_default && !isSelected && (
-                      <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">Default</span>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      {isAdmin && (
+                        <button
+                          onClick={e => {
+                            e.stopPropagation()
+                            setRefineTarget(bg)
+                            setRefineName(bg.name + ' v2')
+                            setRefineDesc(bg.description || '')
+                            setRefineChangePrompt('')
+                            setRefineError(null)
+                            setRefineSuccess(null)
+                          }}
+                          className="text-xs px-2 py-1 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 font-semibold transition-colors"
+                          title="Refine this image with AI"
+                        >
+                          ✏️ Refine
+                        </button>
+                      )}
+                      {isSelected && (
+                        <span className="text-xs font-bold text-primary-600 bg-primary-100 px-2 py-1 rounded-full">
+                          ✓ Active
+                        </span>
+                      )}
+                      {bg.is_default && !isSelected && (
+                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">Default</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               )
@@ -437,6 +497,106 @@ export default function PetRoomPage() {
             className="absolute top-4 right-4 text-white/80 hover:text-white text-3xl"
             onClick={() => setLightbox(null)}
           >×</button>
+        </div>
+      )}
+
+      {/* Refine modal — shown when admin clicks ✏️ Refine on a room card */}
+      {refineTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4"
+          onClick={() => !refining && setRefineTarget(null)}
+        >
+          <div
+            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <div className="font-bold text-gray-900">✏️ Refine: {refineTarget.name}</div>
+                <div className="text-xs text-gray-500 mt-0.5">Creates a new room based on the existing image — original is preserved</div>
+              </div>
+              <button onClick={() => !refining && setRefineTarget(null)} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
+            </div>
+
+            <div className="px-5 py-4 space-y-4">
+              {refineError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex justify-between">
+                  <span>{refineError}</span>
+                  <button onClick={() => setRefineError(null)} className="font-bold ml-3">✕</button>
+                </div>
+              )}
+              {refineSuccess && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm flex justify-between">
+                  <span>{refineSuccess}</span>
+                  <button onClick={() => setRefineSuccess(null)} className="font-bold ml-3">✕</button>
+                </div>
+              )}
+
+              {/* Source image thumbnail */}
+              <div className="flex gap-3 items-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={refineTarget.image_url} alt={refineTarget.name}
+                  className="w-24 h-16 object-cover rounded-lg border border-gray-200 shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-gray-700">Source: {refineTarget.name}</p>
+                  {refineTarget.prompt && (
+                    <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">Original prompt: {refineTarget.prompt}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* What to change */}
+              <div>
+                <label className="block text-xs font-semibold text-purple-800 mb-1">
+                  What to change *
+                </label>
+                <textarea
+                  value={refineChangePrompt}
+                  onChange={e => setRefineChangePrompt(e.target.value)}
+                  placeholder="e.g. make the lighting warmer with soft candlelight, add a cat sitting on the bookshelf, change the window view to a night sky with stars"
+                  rows={3}
+                  className="w-full px-3 py-2 border-2 border-purple-200 rounded-xl text-sm focus:border-purple-400 bg-white resize-none"
+                  autoFocus
+                />
+                <p className="text-xs text-purple-400 mt-1">
+                  💡 Be specific. The model uses the existing image as context and applies only what you describe.
+                </p>
+              </div>
+
+              {/* Name for new version */}
+              <div>
+                <label className="block text-xs font-semibold text-purple-800 mb-1">Name for refined version *</label>
+                <input type="text" value={refineName} onChange={e => setRefineName(e.target.value)}
+                  placeholder='e.g. "Cozy Room — Candlelight"'
+                  className="w-full px-3 py-2 border-2 border-purple-200 rounded-xl text-sm focus:border-purple-400 bg-white" />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-semibold text-purple-800 mb-1">Description (optional)</label>
+                <input type="text" value={refineDesc} onChange={e => setRefineDesc(e.target.value)}
+                  placeholder="Short description shown to users"
+                  className="w-full px-3 py-2 border-2 border-purple-200 rounded-xl text-sm focus:border-purple-400 bg-white" />
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-purple-800">
+                <input type="checkbox" checked={refineSetDefault} onChange={e => setRefineSetDefault(e.target.checked)} className="accent-purple-600" />
+                Set refined version as default
+              </label>
+
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setRefineTarget(null)} disabled={refining}
+                  className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-700 font-semibold rounded-xl text-sm transition-colors">
+                  Cancel
+                </button>
+                <button onClick={handleRefine} disabled={refining || !refineChangePrompt.trim() || !refineName.trim()}
+                  className="flex-1 py-2.5 px-4 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-semibold rounded-xl text-sm transition-colors">
+                  {refining ? '⏳ Refining… (~15s)' : '✨ Apply Refinement'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
