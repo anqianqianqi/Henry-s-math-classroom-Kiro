@@ -932,18 +932,26 @@ export default function ChallengePage() {
     setDeleting(true)
 
     try {
-      // Delete challenge (cascade will handle assignments and submissions)
-      const { error } = await supabase
-        .from('daily_challenges')
+      // Remove class assignments so the challenge is hidden from unsubmitted students.
+      // We do NOT delete the challenge row or submissions — students who already
+      // submitted must always be able to see their work in their challenge history.
+      const { error: assignErr } = await supabase
+        .from('challenge_assignments')
         .delete()
-        .eq('id', params.id)
+        .eq('challenge_id', params.id)
 
-      if (error) {
-        console.error('Error deleting challenge:', error)
-        alert('Failed to delete challenge: ' + error.message)
+      if (assignErr) {
+        console.error('Error removing assignments:', assignErr)
+        alert('Failed to remove challenge: ' + assignErr.message)
         setDeleting(false)
         return
       }
+
+      // Also remove individual student assignments
+      await supabase
+        .from('challenge_student_assignments')
+        .delete()
+        .eq('challenge_id', params.id)
 
       // Success! Redirect to challenges list
       router.push('/challenges')
@@ -1763,12 +1771,12 @@ export default function ChallengePage() {
             </Card.Header>
             <Card.Body>
               <p className="text-gray-700 mb-4">
-                Are you sure you want to delete this challenge? This action cannot be undone.
+                Are you sure you want to remove this challenge from all class assignments? Students who haven&apos;t submitted yet will no longer see it. Students who already submitted will keep their submission in their history.
               </p>
               {submissionCount > 0 && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl mb-4">
-                  <p className="text-sm text-red-800">
-                    <strong>Warning:</strong> This challenge has {submissionCount} submission{submissionCount !== 1 ? 's' : ''} that will also be deleted.
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl mb-4">
+                  <p className="text-sm text-amber-800">
+                    <strong>Note:</strong> {submissionCount} student{submissionCount !== 1 ? 's have' : ' has'} already submitted — their work is preserved and will remain visible to them.
                   </p>
                 </div>
               )}
@@ -1780,7 +1788,7 @@ export default function ChallengePage() {
                   isLoading={deleting}
                   fullWidth
                 >
-                  Delete Challenge
+                  Remove from Classes
                 </Button>
                 <Button
                   variant="outline"

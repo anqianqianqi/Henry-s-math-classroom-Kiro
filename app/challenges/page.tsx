@@ -330,8 +330,39 @@ export default function ChallengesPage() {
 
         const subMap = new Map(mySubmissions?.map(s => [s.challenge_id, s]) || [])
 
+        // Also fetch challenges the student has submitted to but are no longer assigned
+        // (e.g. teacher deleted or retired the assignment — student's history must be preserved)
+        const assignedIds = new Set(challengesData.map(c => c.id))
+        const { data: allMySubmissions } = await supabase
+          .from('challenge_submissions')
+          .select('challenge_id, points, is_locked')
+          .eq('user_id', user.id)
+        
+        const submittedUnassignedIds = (allMySubmissions || [])
+          .map(s => s.challenge_id)
+          .filter(id => !assignedIds.has(id))
+
+        let extraChallenges: any[] = []
+        if (submittedUnassignedIds.length > 0) {
+          const { data: extraData } = await supabase
+            .from('daily_challenges')
+            .select('*')
+            .in('id', submittedUnassignedIds)
+            .order('challenge_date', { ascending: false })
+          extraChallenges = extraData || []
+          // Add their submissions to the map
+          for (const s of allMySubmissions || []) {
+            if (!subMap.has(s.challenge_id)) subMap.set(s.challenge_id, s)
+          }
+        }
+
+        const allChallenges = [
+          ...challengesData,
+          ...extraChallenges.filter(c => !assignedIds.has(c.id)),
+        ]
+
         const withExtras = await Promise.all(
-          challengesData.map(async (c) => {
+          allChallenges.map(async (c) => {
             const names = await loadChallengeClasses(c.id)
             const sub = subMap.get(c.id)
             return {
