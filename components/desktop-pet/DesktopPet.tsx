@@ -9,6 +9,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import DidiSvg, { type DidiPose, type DidiStage } from './DidiSvg'
 
 // ─── CSS keyframes ────────────────────────────────────────────────────────────
@@ -201,7 +202,6 @@ export default function DesktopPet({
   const [showSizer,  setShowSizer]  = useState(false)
   const [showPopover, setShowPopover] = useState(false)
 
-  // Track previous XP to show gain toast when XP increases
   const prevXp = useRef<number | undefined>(undefined)
   const [walkFrame,  setWalkFrame]  = useState<'walking' | 'walking2'>('walking')
 
@@ -212,14 +212,22 @@ export default function DesktopPet({
   const dragOffset   = useRef({ x: 0, y: 0 })
   const dragMoved    = useRef(false)  // distinguish drag from click
 
+  const pathname = usePathname()
+
   // ── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    // Position pet in the right half of the screen, near the top of the dashboard area
-    // (below the header ~60px, roughly centered in the right 50% of the viewport)
-    const rightHalfCenter = window.innerWidth * 0.75
-    const x = Math.round(rightHalfCenter - catSize / 2)
-    // posY is distance from bottom; place pet so it appears near top of content area
-    const y = Math.max(0, window.innerHeight - 220)
+    // On the dashboard, spawn in the right-half area (pet zone).
+    // On all other pages, use the original bottom-right corner.
+    let x: number
+    let y: number
+    if (pathname === '/dashboard') {
+      const rightHalfCenter = window.innerWidth * 0.75
+      x = Math.round(rightHalfCenter - catSize / 2)
+      y = Math.max(0, window.innerHeight - 220)
+    } else {
+      x = window.innerWidth - 160
+      y = 0
+    }
     setPosX(x)
     setPosY(y)
     setMounted(true)
