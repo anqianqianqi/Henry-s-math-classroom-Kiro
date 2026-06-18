@@ -201,6 +201,9 @@ export default function DesktopPet({
   const [catSize,    setCatSize]    = useState(130)  // px, range 60–220
   const [showSizer,  setShowSizer]  = useState(false)
   const [showPopover, setShowPopover] = useState(false)
+  const [showName, setShowName] = useState(() => {
+    try { return localStorage.getItem('didi-show-name') !== 'false' } catch { return true }
+  })
 
   const prevXp = useRef<number | undefined>(undefined)
   const [walkFrame,  setWalkFrame]  = useState<'walking' | 'walking2'>('walking')
@@ -229,11 +232,11 @@ export default function DesktopPet({
 
   // ── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
+    // Default position on mount — will be overridden by the pathname effect below
     const rect = getPetAreaRect()
     let x: number
     let y: number
     if (rect) {
-      // Random X within the pet area, Y on the floor (bottom of pet area)
       const margin = 20
       x = Math.round(rect.left + margin + Math.random() * Math.max(0, rect.width - catSize - margin * 2))
       y = rectToFloor(rect)
@@ -247,6 +250,32 @@ export default function DesktopPet({
     setTimeout(() => setPopIn(true), 100)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ── Re-position when navigating to /dashboard ───────────────────────────
+  // The pet mounts once (in layout.tsx) so the init may run on a non-dashboard page.
+  // This effect repositions the pet whenever we land on /dashboard.
+  const prevPathname = useRef<string | null>(null)
+  useEffect(() => {
+    if (pathname !== '/dashboard') {
+      prevPathname.current = pathname
+      return
+    }
+    // Only reposition if coming FROM a different page (not on first render already handled above)
+    if (prevPathname.current === '/dashboard') return
+    prevPathname.current = pathname
+
+    // Wait a tick for the DOM to paint the #pet-area element
+    requestAnimationFrame(() => {
+      const rect = getPetAreaRect()
+      if (!rect) return
+      const margin = 20
+      const x = Math.round(rect.left + margin + Math.random() * Math.max(0, rect.width - catSize - margin * 2))
+      const y = rectToFloor(rect)
+      setPosX(x)
+      setPosY(y)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
 
   // ── Speech helper ────────────────────────────────────────────────────────
   const say = useCallback((msg: string) => {
@@ -614,42 +643,7 @@ export default function DesktopPet({
               />
             </div>
 
-            {/* Size slider — floats below as absolute overlay, doesn't push Didi up */}
-            {showSizer && !isDragging && (
-              <div
-                onClick={e => e.stopPropagation()}
-                onMouseDown={e => e.stopPropagation()}
-                style={{
-                  position: 'absolute',
-                  bottom: -28,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  padding: '2px 6px',
-                  background: 'rgba(255,255,255,0.92)',
-                  borderRadius: 8,
-                  border: '1px solid #f0e6d3',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  whiteSpace: 'nowrap',
-                  zIndex: 10002,
-                }}
-              >
-                <span style={{ fontSize: 9, color: '#a07060' }}>S</span>
-                <input
-                  type="range"
-                  min={60}
-                  max={220}
-                  step={10}
-                  value={catSize}
-                  onChange={e => setCatSize(Number(e.target.value))}
-                  style={{ width: 70, accentColor: '#a07060', cursor: 'ew-resize' }}
-                  title="Resize Didi"
-                />
-                <span style={{ fontSize: 9, color: '#a07060' }}>L</span>
-              </div>
-            )}
+            {/* Size slider — moved into popover; keep showSizer for popover toggle */}
 
             {/* Quick-action popover — opens on click, closes on outside click */}
             {showPopover && !isDragging && (
@@ -680,6 +674,38 @@ export default function DesktopPet({
                     style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#a07060', padding: 0 }}
                   >×</button>
                 </div>
+
+                {/* Size slider inside popover */}
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, color: '#a07060', marginBottom: 3, fontWeight: 600 }}>Size</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 9, color: '#a07060' }}>S</span>
+                    <input
+                      type="range"
+                      min={60}
+                      max={220}
+                      step={10}
+                      value={catSize}
+                      onChange={e => setCatSize(Number(e.target.value))}
+                      style={{ flex: 1, accentColor: '#a07060', cursor: 'ew-resize' }}
+                    />
+                    <span style={{ fontSize: 9, color: '#a07060' }}>L</span>
+                  </div>
+                </div>
+
+                {/* Name toggle */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, cursor: 'pointer', fontSize: 12, color: '#5c3d2e', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={showName}
+                    onChange={e => {
+                      setShowName(e.target.checked)
+                      try { localStorage.setItem('didi-show-name', String(e.target.checked)) } catch {}
+                    }}
+                    style={{ accentColor: '#a07060' }}
+                  />
+                  Show name tag
+                </label>
 
                 {/* Streak */}
                 {streak != null && (
@@ -816,7 +842,8 @@ export default function DesktopPet({
               </div>
             )}
 
-            {/* Name tag */}
+            {/* Name tag — hidden when showName is false */}
+            {showName && (
             <div style={{
               textAlign: 'center',
               fontSize: 11,
@@ -828,6 +855,7 @@ export default function DesktopPet({
               opacity: 0.8,
             }}>
               {petName ?? 'Didi'} 🐾            </div>
+            )}
           </div>
         )}
       </div>
