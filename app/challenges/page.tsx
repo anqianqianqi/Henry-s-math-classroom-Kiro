@@ -489,7 +489,26 @@ export default function ChallengesPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Create a daily_challenge instance from the bank item
+      // ── Find previous instances of this bank item assigned to this class ──
+      // 1. All daily_challenges with same source_bank_id assigned to this class
+      const { data: prevAssignments } = await supabase
+        .from('challenge_assignments')
+        .select('challenge_id')
+        .eq('class_id', pickTarget.classId)
+
+      const prevChallengeIds = (prevAssignments || []).map((a: any) => a.challenge_id)
+
+      let oldChallengeIds: string[] = []
+      if (prevChallengeIds.length > 0) {
+        const { data: oldDcs } = await supabase
+          .from('daily_challenges')
+          .select('id')
+          .in('id', prevChallengeIds)
+          .eq('source_bank_id', bankChallenge.id)
+        oldChallengeIds = (oldDcs || []).map((r: any) => r.id)
+      }
+
+      // Create new daily_challenge instance
       const { data: newChallenge, error: insertErr } = await supabase
         .from('daily_challenges')
         .insert({
@@ -504,14 +523,63 @@ export default function ChallengesPage() {
 
       if (insertErr || !newChallenge) throw insertErr || new Error('Insert failed')
 
-      // Assign to the class
+      // Assign new challenge to the class
       await supabase.from('challenge_assignments').insert({
         challenge_id: newChallenge.id,
         class_id: pickTarget.classId,
         assigned_by: user.id,
       })
 
-      // Update the local grid immediately (no refetch needed)
+      // ── Retire old instances ──
+      if (oldChallengeIds.length > 0) {
+        // Get all submissions for old instances
+        const { data: oldSubs } = await supabase
+          .from('challenge_submissions')
+          .select('id, user_id, content, image_url, points, is_locked')
+          .in('challenge_id', oldChallengeIds)
+
+        const submittedUserIds = new Set((oldSubs || []).map((s: any) => s.user_id))
+
+        for (const oldId of oldChallengeIds) {
+          const subsForOld = (oldSubs || []).filter((s: any) => s.challenge_id === oldId)
+
+          if (subsForOld.length > 0) {
+            // Copy each submission to the new challenge instance (if not already there)
+            const { data: existingNewSubs } = await supabase
+              .from('challenge_submissions')
+              .select('user_id')
+              .eq('challenge_id', newChallenge.id)
+              .in('user_id', subsForOld.map((s: any) => s.user_id))
+
+            const alreadyCopied = new Set((existingNewSubs || []).map((s: any) => s.user_id))
+
+            const toInsert = subsForOld
+              .filter((s: any) => !alreadyCopied.has(s.user_id))
+              .map((s: any) => ({
+                challenge_id: newChallenge.id,
+                user_id: s.user_id,
+                content: s.content,
+                image_url: s.image_url ?? null,
+                points: s.points ?? null,
+                is_locked: s.is_locked ?? false,
+              }))
+
+            if (toInsert.length > 0) {
+              await supabase.from('challenge_submissions').insert(toInsert)
+            }
+          }
+
+          // Remove old class assignment so it disappears from student challenge pages
+          // (keep the challenge row itself and any submissions for record keeping)
+          await supabase
+            .from('challenge_assignments')
+            .delete()
+            .eq('challenge_id', oldId)
+            .eq('class_id', pickTarget.classId)
+        }
+      }
+
+      // Update the local grid immediately
       setWeekGrid(prev => ({
         ...prev,
         [pickTarget.classId]: {
