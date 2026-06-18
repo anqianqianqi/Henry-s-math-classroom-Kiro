@@ -587,7 +587,7 @@ export default function DashboardPage() {
             id="pet-area"
             className="flex-1 min-w-0 self-start rounded-3xl overflow-hidden relative"
             style={{
-              minHeight: '280px',
+              minHeight: '400px',
               backgroundImage: petRoomBgUrl ? `url(${petRoomBgUrl})` : undefined,
               backgroundSize: 'cover',
               backgroundPosition: 'center bottom',

@@ -178,11 +178,11 @@ export default function InlinePet() {
           <DidiSvg pose={didiPose} stage={status.isEgg ? 'egg' : stage} size={size} facingLeft={false} />
         </div>
 
-        {/* Popover */}
+        {/* Popover — rendered as fixed so it escapes overflow:hidden */}
         {showPopover && (
           <div
             onClick={e => e.stopPropagation()}
-            style={{ position: 'absolute', bottom: size + 28, left: '50%', transform: 'translateX(-50%)', width: 200, background: 'white', border: '2px solid #f0e6d3', borderRadius: 16, padding: '12px 14px', boxShadow: '0 8px 24px rgba(92,61,46,0.18)', zIndex: 30, fontFamily: 'system-ui, sans-serif' }}
+            style={{ position: 'fixed', bottom: 180, right: '26%', width: 220, background: 'white', border: '2px solid #f0e6d3', borderRadius: 16, padding: '12px 14px', boxShadow: '0 8px 24px rgba(92,61,46,0.18)', zIndex: 9999, fontFamily: 'system-ui, sans-serif' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <span style={{ fontWeight: 700, fontSize: 13, color: '#5c3d2e' }}>{status.petName ?? 'My Pet'} 🐾</span>

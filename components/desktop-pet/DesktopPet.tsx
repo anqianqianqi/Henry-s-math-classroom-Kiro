@@ -226,7 +226,6 @@ export default function DesktopPet({
     const el = document.getElementById('pet-area')
     return el ? el.getBoundingClientRect() : null
   }
-
   // posY is distance from viewport bottom. Convert DOMRect.bottom → posY.
   function rectToFloor(rect: DOMRect): number {
     return Math.max(0, window.innerHeight - rect.bottom)
