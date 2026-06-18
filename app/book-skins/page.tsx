@@ -214,8 +214,8 @@ export default function BookSkinsUserPage() {
           </div>
         )}
         {success && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
-            ✅ Saved! Your book will use this skin next time you open a challenge.
+          <div className="fixed bottom-6 right-6 bg-green-600 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium">
+            ✅ Saved!
           </div>
         )}
 
@@ -391,7 +391,7 @@ function SkinPicker({
             isSelected={selectedId === null}
             onClick={() => onSelect(null)}
             aspect={previewAspect}
-            badge="⭐"
+            badge={selectedId !== null ? '⭐' : undefined}
             skinType={skinType}
           />
           {skins.filter(s => !s.is_default).map(skin => (
@@ -485,7 +485,10 @@ function SkinOption({
         {isPrivate && !isInactive && <div className="absolute bottom-1 left-1 text-xs bg-gray-800/60 text-white px-1.5 py-0.5 rounded">🔒</div>}
       </div>
       <div className={`px-2 py-2 text-xs font-semibold truncate ${isSelected ? 'text-amber-700 bg-amber-50' : 'text-gray-700 bg-white'}`}>
-        {label}
+        <div className="flex items-center justify-between gap-1">
+          <span className="truncate">{label}</span>
+          {isSelected && <span className="shrink-0 text-[10px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full">✓ Active</span>}
+        </div>
         {sublabel && <span className="block font-normal text-gray-400 truncate">{sublabel}</span>}
       </div>
     </button>
