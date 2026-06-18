@@ -81,6 +81,13 @@ export default function ChallengesPage() {
   const [weekGrid, setWeekGrid] = useState<Record<string, Record<string, {id: string, title: string}>>>({})
   const [weekGridClasses, setWeekGridClasses] = useState<Array<{id: string, name: string}>>([])
   const [weekDates, setWeekDates] = useState<string[]>([])
+
+  // Assign-from-bank modal state
+  const [pickTarget, setPickTarget] = useState<{ classId: string, className: string, date: string } | null>(null)
+  const [bankChallenges, setBankChallenges] = useState<Array<{id: string, title: string, description: string}>>([])
+  const [bankSearch, setBankSearch] = useState('')
+  const [bankLoading, setBankLoading] = useState(false)
+  const [assigning, setAssigning] = useState(false)
   
   const router = useRouter()
   const supabase = createClient()
@@ -393,6 +400,65 @@ export default function ChallengesPage() {
       .eq('challenge_id', challengeId)
 
     return assignments?.map((a: any) => a.classes?.name).filter(Boolean) || []
+  }
+
+  // ── Assign-from-bank modal ────────────────────────────────────────────────
+  async function openPickModal(classId: string, className: string, date: string) {
+    setPickTarget({ classId, className, date })
+    setBankSearch('')
+    setBankLoading(true)
+    const { data } = await supabase
+      .from('challenge_bank')
+      .select('id, title, description')
+      .order('created_at', { ascending: false })
+    setBankChallenges(data || [])
+    setBankLoading(false)
+  }
+
+  async function handleAssignFromBank(bankChallenge: { id: string; title: string; description: string }) {
+    if (!pickTarget) return
+    setAssigning(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Create a daily_challenge instance from the bank item
+      const { data: newChallenge, error: insertErr } = await supabase
+        .from('daily_challenges')
+        .insert({
+          title: bankChallenge.title,
+          description: bankChallenge.description,
+          challenge_date: pickTarget.date,
+          created_by: user.id,
+          source_bank_id: bankChallenge.id,
+        })
+        .select('id')
+        .single()
+
+      if (insertErr || !newChallenge) throw insertErr || new Error('Insert failed')
+
+      // Assign to the class
+      await supabase.from('challenge_assignments').insert({
+        challenge_id: newChallenge.id,
+        class_id: pickTarget.classId,
+        assigned_by: user.id,
+      })
+
+      // Update the local grid immediately (no refetch needed)
+      setWeekGrid(prev => ({
+        ...prev,
+        [pickTarget.classId]: {
+          ...(prev[pickTarget.classId] || {}),
+          [pickTarget.date]: { id: newChallenge.id, title: bankChallenge.title },
+        },
+      }))
+
+      setPickTarget(null)
+    } catch (err: any) {
+      alert('Failed to assign: ' + (err?.message || err))
+    } finally {
+      setAssigning(false)
+    }
   }
 
   // ── Week schedule grid (teacher only) ────────────────────────────────────
@@ -789,13 +855,13 @@ export default function ChallengesPage() {
                                 <span className="line-clamp-2">{entry.title}</span>
                               </a>
                             ) : (
-                              <a
-                                href={`/admin/challenge-bank`}
+                              <button
+                                onClick={() => openPickModal(cls.id, cls.name, d)}
                                 className="inline-flex items-center justify-center gap-1 w-full px-2 py-1.5 rounded-lg border border-dashed border-gray-300 text-gray-400 text-xs hover:border-primary-400 hover:text-primary-500 hover:bg-primary-50 transition-colors"
                               >
                                 <span>+</span>
                                 <span>Add</span>
-                              </a>
+                              </button>
                             )}
                           </td>
                         )
@@ -1102,6 +1168,91 @@ export default function ChallengesPage() {
           </Card>
         )}
       </main>
+
+      {/* ── Assign-from-bank modal ── */}
+      {pickTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh]">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between gap-3 shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Assign from Challenge Bank</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  <span className="font-medium text-gray-700">{pickTarget.className}</span>
+                  {' · '}
+                  {new Date(pickTarget.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                </p>
+              </div>
+              <button
+                onClick={() => setPickTarget(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none mt-0.5"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="px-6 py-3 border-b border-gray-100 shrink-0">
+              <input
+                type="text"
+                value={bankSearch}
+                onChange={e => setBankSearch(e.target.value)}
+                placeholder="Search challenges..."
+                autoFocus
+                className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-colors"
+              />
+            </div>
+
+            {/* Challenge list */}
+            <div className="flex-1 overflow-y-auto px-6 py-3 space-y-2">
+              {bankLoading ? (
+                <p className="text-center text-gray-400 py-8 text-sm">Loading…</p>
+              ) : bankChallenges.filter(c =>
+                  !bankSearch.trim() ||
+                  c.title.toLowerCase().includes(bankSearch.toLowerCase()) ||
+                  c.description.toLowerCase().includes(bankSearch.toLowerCase())
+                ).length === 0 ? (
+                <p className="text-center text-gray-400 py-8 text-sm">No challenges found</p>
+              ) : (
+                bankChallenges
+                  .filter(c =>
+                    !bankSearch.trim() ||
+                    c.title.toLowerCase().includes(bankSearch.toLowerCase()) ||
+                    c.description.toLowerCase().includes(bankSearch.toLowerCase())
+                  )
+                  .map(c => (
+                    <div
+                      key={c.id}
+                      className="flex items-start gap-3 p-3 rounded-xl border border-gray-100 hover:border-primary-300 hover:bg-primary-50/30 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm">{c.title}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{c.description}</p>
+                      </div>
+                      <button
+                        onClick={() => handleAssignFromBank(c)}
+                        disabled={assigning}
+                        className="shrink-0 px-3 py-1.5 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+                      >
+                        {assigning ? '…' : 'Publish'}
+                      </button>
+                    </div>
+                  ))
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3 border-t border-gray-100 shrink-0">
+              <button
+                onClick={() => setPickTarget(null)}
+                className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
