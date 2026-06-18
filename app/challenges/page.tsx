@@ -89,6 +89,9 @@ export default function ChallengesPage() {
   const [bankSearch, setBankSearch] = useState('')
   const [bankLoading, setBankLoading] = useState(false)
   const [assigning, setAssigning] = useState(false)
+  // Set of bank IDs that have been published to the target class with ≥2 submissions
+  const [usedBankIds, setUsedBankIds] = useState<Set<string>>(new Set())
+  const [showUsed, setShowUsed] = useState(false)
   
   const router = useRouter()
   const supabase = createClient()
@@ -407,7 +410,9 @@ export default function ChallengesPage() {
   async function openPickModal(classId: string, className: string, date: string) {
     setPickTarget({ classId, className, date })
     setBankSearch('')
+    setShowUsed(false)
     setBankLoading(true)
+
     const [{ data: challenges }, { data: tagsData }] = await Promise.all([
       supabase
         .from('challenge_bank')
@@ -421,7 +426,8 @@ export default function ChallengesPage() {
     setBankChallenges(
       (challenges || []).map((c: any) => ({ ...c, tag_ids: c.tag_ids || [] }))
     )
-    // Build tag name map (prefer EN, fallback to ZH)
+
+    // Build tag name map
     const tagMap: Record<string, string> = {}
     for (const t of tagsData || []) {
       const name =
@@ -431,6 +437,48 @@ export default function ChallengesPage() {
       tagMap[(t as any).id] = name
     }
     setBankTagMap(tagMap)
+
+    // Find bank items published to this class with ≥2 submissions
+    // Step 1: daily_challenges assigned to this class that have a source_bank_id
+    const { data: assignedChallenges } = await supabase
+      .from('challenge_assignments')
+      .select('challenge_id')
+      .eq('class_id', classId)
+
+    const assignedIds = (assignedChallenges || []).map((a: any) => a.challenge_id)
+
+    const usedIds = new Set<string>()
+    if (assignedIds.length > 0) {
+      // Step 2: get source_bank_id for those challenges
+      const { data: dcRows } = await supabase
+        .from('daily_challenges')
+        .select('id, source_bank_id')
+        .in('id', assignedIds)
+        .not('source_bank_id', 'is', null)
+
+      if (dcRows && dcRows.length > 0) {
+        // Step 3: count submissions for each
+        const dcIds = dcRows.map((r: any) => r.id)
+        const { data: subCounts } = await supabase
+          .from('challenge_submissions')
+          .select('challenge_id')
+          .in('challenge_id', dcIds)
+
+        // Count per challenge
+        const countMap: Record<string, number> = {}
+        for (const s of subCounts || []) {
+          countMap[s.challenge_id] = (countMap[s.challenge_id] || 0) + 1
+        }
+
+        // Mark bank IDs whose published instance has ≥2 submissions
+        for (const row of dcRows) {
+          if ((countMap[row.id] || 0) >= 2 && row.source_bank_id) {
+            usedIds.add(row.source_bank_id)
+          }
+        }
+      }
+    }
+    setUsedBankIds(usedIds)
     setBankLoading(false)
   }
 
@@ -1220,6 +1268,19 @@ export default function ChallengesPage() {
                 autoFocus
                 className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-colors"
               />
+              {usedBankIds.size > 0 && (
+                <label className="flex items-center gap-2 mt-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showUsed}
+                    onChange={e => setShowUsed(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded text-primary-600"
+                  />
+                  <span className="text-xs text-gray-500">
+                    Show {usedBankIds.size} already-used problem{usedBankIds.size !== 1 ? 's' : ''} (≥2 submissions from this class)
+                  </span>
+                </label>
+              )}
             </div>
 
             {/* Challenge list */}
@@ -1228,20 +1289,24 @@ export default function ChallengesPage() {
                 <p className="text-center text-gray-400 py-8 text-sm">Loading…</p>
               ) : bankChallenges.filter(c => {
                   const q = bankSearch.trim().toLowerCase()
-                  return !q ||
+                  const matchesSearch = !q ||
                     c.title.toLowerCase().includes(q) ||
                     c.description.toLowerCase().includes(q) ||
                     c.tag_ids.some(tid => (bankTagMap[tid] || '').toLowerCase().includes(q))
+                  const notHidden = showUsed || !usedBankIds.has(c.id)
+                  return matchesSearch && notHidden
                 }).length === 0 ? (
                 <p className="text-center text-gray-400 py-8 text-sm">No challenges found</p>
               ) : (
                 bankChallenges
                   .filter(c => {
                     const q = bankSearch.trim().toLowerCase()
-                    return !q ||
+                    const matchesSearch = !q ||
                       c.title.toLowerCase().includes(q) ||
                       c.description.toLowerCase().includes(q) ||
                       c.tag_ids.some(tid => (bankTagMap[tid] || '').toLowerCase().includes(q))
+                    const notHidden = showUsed || !usedBankIds.has(c.id)
+                    return matchesSearch && notHidden
                   })
                   .map(c => (
                     <div
