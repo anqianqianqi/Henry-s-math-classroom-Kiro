@@ -379,34 +379,31 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Hero row: Welcome + Today's Challenges in one card, pet area placeholder on the right */}
+        {/* Hero row: Welcome + Today's Challenges on left half, pet area on right half */}
         <div className="flex gap-4 mb-8">
-          {/* Combined welcome + challenges card — takes 2/3 width on desktop */}
-          <div className="flex-1 bg-gradient-to-br from-primary-500 to-accent-blue rounded-3xl shadow-lg overflow-hidden min-h-[120px]">
-            <div className="flex h-full">
-              {/* Left strip: welcome */}
-              <div className="flex flex-col justify-center px-5 py-4 text-white shrink-0 border-r border-white/20" style={{ minWidth: 0, width: '220px' }}>
-                <div className="flex items-center gap-2">
+          {/* Left half: combined welcome + challenges card */}
+          <div className="w-1/2 bg-gradient-to-br from-primary-500 to-accent-blue rounded-3xl shadow-lg overflow-hidden">
+            <div className="flex flex-col px-6 py-5 h-full">
+              {/* Welcome text — centered at top */}
+              <div className="text-center mb-4">
+                <div className="flex items-center justify-center gap-2 mb-1">
                   <span className="text-2xl">👋</span>
-                  <div className="min-w-0">
-                    <p className="text-xs text-white/70 leading-none mb-0.5">Welcome back</p>
-                    <h2 className="text-lg font-bold leading-tight truncate">{firstName}!</h2>
-                  </div>
+                  <h2 className="text-xl font-bold text-white">Welcome back, {firstName}!</h2>
                 </div>
-                <p className="text-white/65 text-xs mt-2 leading-snug hidden sm:block">
-                  {isTeacher ? "Ready to inspire? 👨‍🏫" : "Let's do math! 🎉"}
+                <p className="text-white/75 text-sm">
+                  {isTeacher ? "Let's inspire some students today! 👨‍🏫" : "Let's have fun with math today! 🎉"}
                 </p>
               </div>
 
-              {/* Right area: today's challenges */}
-              <div className="flex-1 flex flex-col justify-center px-4 py-4 gap-2 overflow-hidden">
+              {/* Today's challenges — left-aligned with indent */}
+              <div className="flex flex-col gap-2 pl-2">
                 {todayChallenges.length > 0 ? (
                   <>
                     {todayChallenges.slice(0, 3).map(challenge => (
                       <button
                         key={challenge.id}
                         onClick={() => router.push(`/challenges/${challenge.id}`)}
-                        className="text-left bg-white/15 hover:bg-white/25 rounded-xl px-3 py-2 group flex items-center justify-between transition-all"
+                        className="text-left bg-white/15 hover:bg-white/25 rounded-xl px-4 py-2.5 group flex items-center justify-between transition-all"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 mb-0.5">
@@ -436,7 +433,7 @@ export default function DashboardPage() {
                     )}
                   </>
                 ) : (
-                  <div className="text-white/60 text-sm">
+                  <div className="text-white/60 text-sm pl-1">
                     <span className="text-2xl block mb-1">🎯</span>
                     No challenge today
                     {isTeacher && (
@@ -450,8 +447,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Right: pet area — reserved, will be populated later */}
-          <div className="hidden md:flex w-64 rounded-3xl border-2 border-dashed border-gray-200 bg-gray-50/50 items-center justify-center text-gray-300 text-sm select-none shrink-0">
+          {/* Right half: pet area — reserved, will be populated later */}
+          <div className="w-1/2 rounded-3xl border-2 border-dashed border-gray-200 bg-gray-50/50 flex items-center justify-center text-gray-300 text-sm select-none min-h-[140px]">
             🐾 Pet area
           </div>
         </div>
