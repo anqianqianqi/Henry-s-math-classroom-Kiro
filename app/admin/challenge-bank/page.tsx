@@ -73,6 +73,9 @@ export default function ChallengeBankPage() {
   const [publishing, setPublishing] = useState(false)
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  // Preview modal
+  const [previewChallenge, setPreviewChallenge] = useState<PoolChallenge | null>(null)
+  const [previewImgLightbox, setPreviewImgLightbox] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('challenges')
   const [templates, setTemplates] = useState<TemplateItem[]>([])
   const [templateSearch, setTemplateSearch] = useState('')
@@ -585,6 +588,9 @@ export default function ChallengeBankPage() {
                           <Button size="sm" onClick={() => openPublish(challenge)}>
                             📅 Publish
                           </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setPreviewChallenge(challenge)}>
+                            👁 Preview
+                          </Button>
                           <Button size="sm" variant="ghost" onClick={() => router.push(`/challenges/${challenge.id}/edit`)}>
                             Edit
                           </Button>
@@ -821,6 +827,96 @@ export default function ChallengeBankPage() {
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Preview modal ── */}
+      {previewChallenge && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between gap-3 shrink-0">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg font-bold text-gray-900 leading-snug">{previewChallenge.title}</h2>
+                {previewChallenge.tag_ids?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {previewChallenge.tag_ids.map(tid => {
+                      const tag = tags.find(t => t.id === tid)
+                      return tag ? (
+                        <span key={tid} className="px-2 py-0.5 bg-primary-50 text-primary-600 rounded-full text-xs">
+                          {tag.name}
+                        </span>
+                      ) : null
+                    })}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setPreviewChallenge(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none shrink-0 mt-0.5"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+              {/* Image */}
+              {previewChallenge.image_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={previewChallenge.image_url}
+                  alt="Challenge"
+                  onClick={() => setPreviewImgLightbox(previewChallenge.image_url!)}
+                  className="w-full rounded-xl object-contain max-h-64 bg-gray-50 border border-gray-100 cursor-zoom-in"
+                />
+              )}
+              {/* Description */}
+              <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{previewChallenge.description}</p>
+              {/* Points */}
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full font-medium">{previewChallenge.max_points} pts</span>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3 border-t border-gray-100 shrink-0 flex gap-2">
+              <button
+                onClick={() => { setPreviewChallenge(null); openPublish(previewChallenge) }}
+                className="flex-1 py-2 text-sm font-semibold text-white bg-primary-600 rounded-xl hover:bg-primary-700 transition-colors"
+              >
+                📅 Publish
+              </button>
+              <button
+                onClick={() => setPreviewChallenge(null)}
+                className="flex-1 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Image lightbox (from preview) ── */}
+      {previewImgLightbox && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 cursor-zoom-out"
+          onClick={() => setPreviewImgLightbox(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={previewImgLightbox}
+            alt="Challenge (zoomed)"
+            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl select-none"
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            className="absolute top-4 right-4 text-white/80 hover:text-white text-3xl leading-none"
+            onClick={() => setPreviewImgLightbox(null)}
+          >
+            ×
+          </button>
         </div>
       )}
     </div>
