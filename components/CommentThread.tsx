@@ -30,6 +30,8 @@ interface CommentThreadProps {
   currentUserId?: string | null
   showTitle?: boolean
   allowImage?: boolean
+  /** IDs of users who are teachers/admins — their comments get unread highlighting */
+  teacherUserIds?: string[]
 }
 
 const COMMENTS_INCREMENT = 5
@@ -48,7 +50,8 @@ export function CommentThread({
   formatTimeAgo,
   currentUserId,
   showTitle = false,
-  allowImage = false
+  allowImage = false,
+  teacherUserIds = [],
 }: CommentThreadProps) {
   const [commentImage, setCommentImage] = useState<File | null>(null)
   const [commentImagePreview, setCommentImagePreview] = useState<string | null>(null)
@@ -56,6 +59,18 @@ export function CommentThread({
   const [editDraft, setEditDraft] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
+
+  // Determine which comments are "unread" — comments from others newer than last seen timestamp
+  function isUnread(comment: Comment): boolean {
+    // Only highlight comments from other users (teacher feedback)
+    if (comment.user_id === currentUserId) return false
+    if (teacherUserIds.length > 0 && !teacherUserIds.includes(comment.user_id)) return false
+    try {
+      const seenAt = localStorage.getItem(`comment_seen_${submissionId}`)
+      if (!seenAt) return true
+      return new Date(comment.created_at) > new Date(seenAt)
+    } catch (_) { return false }
+  }
 
   const visibleComments = comments.slice(-visibleCount)
   const showingAll = visibleCount >= comments.length
@@ -101,15 +116,18 @@ export function CommentThread({
           
           {/* Comment List */}
           {visibleComments.map(comment => (
-            <div key={comment.id} className="flex items-start gap-2 text-sm bg-gray-50 p-3 rounded-xl">
+            <div key={comment.id} className={`flex items-start gap-2 text-sm p-3 rounded-xl ${isUnread(comment) ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}`}>
               <span className="text-lg flex-shrink-0">💬</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-gray-900 flex items-center gap-2">
                     {comment.profiles.nickname || comment.profiles.full_name}
-                    <span className="font-normal text-gray-500 ml-2">
+                    <span className="font-normal text-gray-500">
                       {formatTimeAgo(comment.created_at)}
                     </span>
+                    {isUnread(comment) && (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">New</span>
+                    )}
                   </p>
                   {/* Edit/Delete buttons — only for comment author */}
                   {currentUserId && comment.user_id === currentUserId && editingCommentId !== comment.id && (

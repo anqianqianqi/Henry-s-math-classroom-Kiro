@@ -407,6 +407,10 @@ export default function ChallengePage() {
     if (submissionData) {
       setUserSubmission(submissionData)
       setSolution(submissionData.content)
+      // Mark all teacher comments on this submission as seen (clears "New comment" badge on dashboard)
+      try {
+        localStorage.setItem(`comment_seen_${submissionData.id}`, new Date().toISOString())
+      } catch (_) {}
       // Load comments for user's own submission
       await loadCommentsForSubmissions([submissionData.id])
     }
