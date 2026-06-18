@@ -112,12 +112,26 @@ export async function POST(request: Request) {
 
     // ── Optionally enroll in a class ─────────────────────────────────────────
     if (classId) {
-      const { error: memberErr } = await supabaseAdmin
-        .from('class_members')
-        .insert({ class_id: classId, user_id: newUserId })
+      // class_members requires a role_id — use the user's role, defaulting to 'student'
+      const enrollRole = role && ['student', 'teacher'].includes(role) ? role : 'student'
+      const { data: enrollRoleRow } = await supabaseAdmin
+        .from('roles')
+        .select('id')
+        .eq('name', enrollRole)
+        .single()
 
-      if (memberErr && !memberErr.message?.includes('duplicate')) {
-        console.error('[admin/create-user] class_members insert error:', memberErr)
+      if (enrollRoleRow) {
+        const { error: memberErr } = await supabaseAdmin
+          .from('class_members')
+          .insert({
+            class_id: classId,
+            user_id: newUserId,
+            role_id: enrollRoleRow.id,
+          })
+
+        if (memberErr && !memberErr.message?.includes('duplicate') && !memberErr.code?.includes('23505')) {
+          console.error('[admin/create-user] class_members insert error:', memberErr)
+        }
       }
     }
 
