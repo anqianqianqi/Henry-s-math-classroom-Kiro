@@ -356,6 +356,8 @@ export default function ShopPage() {
   const [error, setError] = useState<string | null>(null)
   const [redeemErrors, setRedeemErrors] = useState<Record<string, string>>({})
   const [activeTab, setActiveTab] = useState<'all' | 'rewards'>('rewards')
+  // Set of shop_item IDs the user already owns (book skins + pet rooms) — disables re-purchase
+  const [ownedItemIds, setOwnedItemIds] = useState<Set<string>>(new Set())
 
   // Modals
   const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrls: string[]; itemTitle: string; isPhysical?: boolean } | null>(null)
@@ -483,6 +485,29 @@ export default function ShopPage() {
           : undefined,
       }))
     )
+
+    // ── Owned items (book skins + pet rooms) — disable re-purchase in shop ──
+    // Build a set of shop_item IDs this user already owns via redemptions.
+    // We check both book_skin_id and pet_room_background_id columns.
+    try {
+      const { data: ownedRedemptions } = await supabase
+        .from('redemptions')
+        .select('item_id, book_skin_id, pet_room_background_id')
+        .eq('user_id', userId)
+        .is('refunded_at', null)
+        .or('book_skin_id.not.is.null,pet_room_background_id.not.is.null')
+
+      const owned = new Set<string>()
+      for (const r of ownedRedemptions ?? []) {
+        // An item is "owned" if this redemption is for a book skin or pet room
+        if (r.book_skin_id || r.pet_room_background_id) {
+          owned.add(r.item_id)
+        }
+      }
+      setOwnedItemIds(owned)
+    } catch (_) {
+      // Non-fatal — ownership check failure just shows the buy button normally
+    }
 
     // Redemption history — fetched via server route so item titles resolve
     // even when items have been deactivated (bypasses student RLS on shop_items)
@@ -689,7 +714,8 @@ export default function ShopPage() {
                   : item.quantity !== null && (item.redemption_count ?? 0) >= item.quantity
 
               const canAfford = balance >= item.cost
-              const disabled = outOfStock || !canAfford
+              const isOwned = ownedItemIds.has(item.id)
+              const disabled = outOfStock || !canAfford || isOwned
               const redeemError = redeemErrors[item.id]
 
               return (
@@ -732,10 +758,15 @@ export default function ShopPage() {
                       )
                     )}
 
-                    {/* Sold out overlay */}
+                    {/* Sold out / Owned overlay */}
                     {outOfStock && (
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                         <span className="bg-white text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">Sold Out</span>
+                      </div>
+                    )}
+                    {isOwned && !outOfStock && (
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                        <span className="bg-green-500 text-white text-xs font-semibold px-3 py-1 rounded-full">✓ Owned</span>
                       </div>
                     )}
 
@@ -811,6 +842,7 @@ export default function ShopPage() {
                         }`}
                       >
                         {redeeming === item.id ? '…' :
+                         isOwned ? '✓ Owned' :
                          outOfStock ? 'Sold Out' :
                          isPhysicalBlindbox ? 'Open & Claim' :
                          isBlindbox ? 'Open Box' :
