@@ -234,52 +234,47 @@ export default function DesktopPet({
 
   // ── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    // Default position on mount — will be overridden by the pathname effect below
-    const rect = getPetAreaRect()
-    let x: number
-    let y: number
-    if (rect) {
-      const margin = 20
-      x = Math.round(rect.left + margin + Math.random() * Math.max(0, rect.width - catSize - margin * 2))
-      y = rectToFloor(rect)
-    } else {
-      x = window.innerWidth - 160
-      y = 0
-    }
-    setPosX(x)
-    setPosY(y)
+    // Default to bottom-right corner; the dashboard pathname effect will reposition
+    // if we're on /dashboard (it polls until #pet-area is available).
+    setPosX(window.innerWidth - 160)
+    setPosY(0)
     setMounted(true)
     setTimeout(() => setPopIn(true), 100)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── Re-position when navigating to /dashboard ───────────────────────────
-  // The pet mounts once (in layout.tsx) so the init may run on a non-dashboard page.
-  // This effect repositions the pet whenever we land on /dashboard.
-  const prevPathname = useRef<string | null>(null)
+  // ── Re-position when on /dashboard (handles both initial load and navigation) ─
+  // Poll for #pet-area since the dashboard content may not have painted yet when
+  // the pet component first mounts (it lives in layout.tsx, outside the page).
+  const dashboardPositioned = useRef(false)
+
   useEffect(() => {
     if (pathname !== '/dashboard') {
-      prevPathname.current = pathname
+      dashboardPositioned.current = false
       return
     }
-    // Only reposition if coming FROM a different page (not on first render already handled above)
-    if (prevPathname.current === '/dashboard') return
-    prevPathname.current = pathname
+    if (dashboardPositioned.current) return
 
-    // Wait a tick for the DOM to paint the #pet-area element
-    requestAnimationFrame(() => {
+    let attempts = 0
+    const MAX = 20  // up to 1s (20 × 50ms)
+
+    function tryPosition() {
       const rect = getPetAreaRect()
-      if (!rect) return
+      if (!rect || rect.width === 0) {
+        if (++attempts < MAX) { setTimeout(tryPosition, 50); return }
+        return  // give up, leave wherever it is
+      }
+      dashboardPositioned.current = true
       const margin = 20
       const x = Math.round(rect.left + margin + Math.random() * Math.max(0, rect.width - catSize - margin * 2))
       const y = rectToFloor(rect)
-      // Suppress transition so pet teleports instantly instead of sliding
       setSuppressTransition(true)
       setPosX(x)
       setPosY(y)
-      // Re-enable transition after the frame
       requestAnimationFrame(() => setSuppressTransition(false))
-    })
+    }
+
+    tryPosition()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 
