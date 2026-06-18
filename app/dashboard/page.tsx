@@ -609,15 +609,15 @@ export default function DashboardPage() {
             </Card.Body>
           </Card>
 
-          {/* Book & Cover — visible to all users */}
-          <Card 
+          {/* Decorations hub — book skins, pet room, etc. */}
+          <Card
             className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => router.push('/book-skins')}
+            onClick={() => router.push('/decorations')}
           >
             <Card.Body>
-              <div className="text-5xl mb-3 hidden sm:block">📖</div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">Book</div>
-              <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Cover &amp; Page</div>
+              <div className="text-5xl mb-3 hidden sm:block">🎨</div>
+              <div className="text-3xl font-bold text-gray-900 mb-1">Decorations</div>
+              <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Book &amp; Room</div>
             </Card.Body>
           </Card>
           {(isTeacher || isAdmin) && (
@@ -633,18 +633,7 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          {isAdmin && (
-            <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => router.push('/admin/book-skins')}
-            >
-              <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">📖</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">Book Skins</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Cover &amp; Page</div>
-              </Card.Body>
-            </Card>
-          )}
+          {/* Admin: Book Skins managed via Decorations hub */}
 
           {(isTeacher || isAdmin) && (
             <Card 
