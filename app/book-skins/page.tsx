@@ -148,9 +148,10 @@ export default function BookSkinsUserPage() {
     finally { setActionWorking(false) }
   }
 
-  // ── Save prefs ──────────────────────────────────────────────────────────────
-  async function savePrefs() {
+  // ── Save prefs — called automatically on skin selection ────────────────────
+  async function savePrefs(newPrefs?: UserPrefs) {
     if (!userId) return
+    const toSave = newPrefs ?? prefs
     setSaving(true)
     setError(null)
     setSuccess(false)
@@ -159,8 +160,8 @@ export default function BookSkinsUserPage() {
       .from('user_book_skin_preferences')
       .upsert({
         user_id: userId,
-        cover_skin_id: prefs.cover_skin_id,
-        page_skin_id: prefs.page_skin_id,
+        cover_skin_id: toSave.cover_skin_id,
+        page_skin_id: toSave.page_skin_id,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })
 
@@ -169,7 +170,7 @@ export default function BookSkinsUserPage() {
       setError('Failed to save: ' + upsertErr.message)
     } else {
       setSuccess(true)
-      setTimeout(() => setSuccess(false), 2500)
+      setTimeout(() => setSuccess(false), 1500)
     }
   }
 
@@ -214,7 +215,7 @@ export default function BookSkinsUserPage() {
         )}
         {success && (
           <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
-            ✅ Saved! Your book will use these skins next time you open a challenge.
+            ✅ Saved! Your book will use this skin next time you open a challenge.
           </div>
         )}
 
@@ -228,7 +229,11 @@ export default function BookSkinsUserPage() {
               description="The cover you see before opening a challenge."
               skins={coverSkins}
               selectedId={effectiveCover}
-              onSelect={(id) => setPrefs(p => ({ ...p, cover_skin_id: id }))}
+              onSelect={(id) => {
+                const newPrefs = { ...prefs, cover_skin_id: id }
+                setPrefs(newPrefs)
+                savePrefs(newPrefs)
+              }}
               previewAspect={400 / 620}
               skinType="cover"
               isAdmin={isAdmin}
@@ -241,25 +246,23 @@ export default function BookSkinsUserPage() {
               description="The background of the open book pages."
               skins={pageSkins}
               selectedId={effectivePage}
-              onSelect={(id) => setPrefs(p => ({ ...p, page_skin_id: id }))}
+              onSelect={(id) => {
+                const newPrefs = { ...prefs, page_skin_id: id }
+                setPrefs(newPrefs)
+                savePrefs(newPrefs)
+              }}
               previewAspect={400 / 620}
               skinType="page"
               isAdmin={isAdmin}
               onManage={(skin) => { setActionSkin(skin); setActionError(null); setShowSellInput(false); setSellPrice('') }}
             />
 
-            {/* Save button */}
-            <div className="flex justify-center pt-2">
-              <Button
-                onClick={savePrefs}
-                disabled={saving}
-                isLoading={saving}
-                size="lg"
-                className="px-10"
-              >
-                {saving ? 'Saving…' : '💾 Save My Selection'}
-              </Button>
-            </div>
+            {/* Auto-save indicator */}
+            {saving && (
+              <div className="fixed bottom-6 right-6 bg-amber-600 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium">
+                Saving…
+              </div>
+            )}
 
             {/* Coming soon note */}
             <Card className="bg-blue-50 border-blue-200">
