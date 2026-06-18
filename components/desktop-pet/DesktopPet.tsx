@@ -215,12 +215,12 @@ export default function DesktopPet({
   const pathname = usePathname()
 
   // On /dashboard the pet area has a virtual "floor" at the bottom of the pet zone.
-  // Header ~60px + page top padding ~32px + pet area height ~160px = ~252px from top.
-  // posY is distance from the viewport bottom, so floor = innerHeight - 252.
+  // Header ~60px + page top padding ~32px + pet area height ~280px = ~372px from top.
+  // posY is distance from the viewport bottom, so floor = innerHeight - 372.
   // On all other pages the real floor is posY = 0 (bottom of viewport).
   function getFloor() {
     if (pathname === '/dashboard') {
-      return Math.max(0, window.innerHeight - 260)
+      return Math.max(0, window.innerHeight - 375)
     }
     return 0
   }
@@ -351,9 +351,9 @@ export default function DesktopPet({
       const floor = getFloor()
       const newX = Math.max(0, Math.min(window.innerWidth - 140, ev.clientX - dragOffset.current.x))
       const rawY = Math.max(0, window.innerHeight - ev.clientY - 10)
-      // On dashboard, clamp Y so pet stays within pet area (floor to floor+160)
+      // On dashboard, clamp Y so pet stays within pet area (floor to floor+280)
       const newY = pathname === '/dashboard'
-        ? Math.max(floor, Math.min(floor + 160, rawY))
+        ? Math.max(floor, Math.min(floor + 280, rawY))
         : rawY
       setPosX(newX)
       setPosY(newY)

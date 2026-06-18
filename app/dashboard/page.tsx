@@ -545,8 +545,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Right half: pet area — transparent, fixed height, no border */}
-          <div className="w-1/2 self-start" style={{ minHeight: '160px' }} />
+          {/* Right half: pet area — transparent, fixed height matching collapsed banner */}
+          <div className="w-1/2 self-start" style={{ minHeight: '280px' }} />
         </div>
 
         {/* Stats Cards */}
