@@ -92,6 +92,8 @@ export default function ChallengesPage() {
   // Set of bank IDs that have been published to the target class with ≥2 submissions
   const [usedBankIds, setUsedBankIds] = useState<Set<string>>(new Set())
   const [showUsed, setShowUsed] = useState(false)
+  // Two-step confirm: null = browse, non-null = confirm stage
+  const [pendingChallenge, setPendingChallenge] = useState<{id: string, title: string, description: string, tag_ids: string[]} | null>(null)
   
   const router = useRouter()
   const supabase = createClient()
@@ -411,6 +413,7 @@ export default function ChallengesPage() {
     setPickTarget({ classId, className, date })
     setBankSearch('')
     setShowUsed(false)
+    setPendingChallenge(null)
     setBankLoading(true)
 
     const [{ data: challenges }, { data: tagsData }] = await Promise.all([
@@ -1326,7 +1329,8 @@ export default function ChallengesPage() {
               </button>
             </div>
 
-            {/* Search */}
+            {/* Search — hidden in confirm stage */}
+            {!pendingChallenge && (
             <div className="px-6 py-3 border-b border-gray-100 shrink-0">
               <input
                 type="text"
@@ -1350,10 +1354,49 @@ export default function ChallengesPage() {
                 </label>
               )}
             </div>
+            )}
 
-            {/* Challenge list */}
+            {/* Challenge list — or confirm panel */}
             <div className="flex-1 overflow-y-auto px-6 py-3 space-y-2">
-              {bankLoading ? (
+              {pendingChallenge ? (
+                /* ── Confirm stage ── */
+                <div className="space-y-4 py-2">
+                  <div className="p-4 rounded-xl bg-primary-50 border border-primary-200">
+                    <p className="text-xs font-semibold text-primary-500 uppercase tracking-wide mb-1">Selected challenge</p>
+                    <p className="font-bold text-gray-900">{pendingChallenge.title}</p>
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-4">{pendingChallenge.description}</p>
+                    {pendingChallenge.tag_ids.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {pendingChallenge.tag_ids.map(tid => bankTagMap[tid] ? (
+                          <span key={tid} className="px-2 py-0.5 bg-white text-primary-600 rounded-full text-xs border border-primary-200">
+                            {bankTagMap[tid]}
+                          </span>
+                        ) : null)}
+                      </div>
+                    )}
+                  </div>
+                  {usedBankIds.has(pendingChallenge.id) && (
+                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-700">
+                      ⚠️ This problem has been assigned to this class before with ≥2 submissions. The old assignment will be retired and prior submissions carried over.
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setPendingChallenge(null)}
+                      className="flex-1 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      onClick={() => handleAssignFromBank(pendingChallenge)}
+                      disabled={assigning}
+                      className="flex-1 py-2.5 text-sm font-semibold text-white bg-primary-600 rounded-xl hover:bg-primary-700 disabled:opacity-50 transition-colors"
+                    >
+                      {assigning ? 'Publishing…' : '✓ Confirm & Publish'}
+                    </button>
+                  </div>
+                </div>
+              ) : bankLoading ? (
                 <p className="text-center text-gray-400 py-8 text-sm">Loading…</p>
               ) : bankChallenges.filter(c => {
                   const q = bankSearch.trim().toLowerCase()
@@ -1395,11 +1438,10 @@ export default function ChallengesPage() {
                         )}
                       </div>
                       <button
-                        onClick={() => handleAssignFromBank(c)}
-                        disabled={assigning}
-                        className="shrink-0 px-3 py-1.5 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+                        onClick={() => setPendingChallenge(c)}
+                        className="shrink-0 px-3 py-1.5 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 transition-colors"
                       >
-                        {assigning ? '…' : 'Publish'}
+                        {assigning ? '…' : 'Select →'}
                       </button>
                     </div>
                   ))
