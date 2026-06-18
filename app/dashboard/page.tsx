@@ -9,9 +9,9 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import NotificationBell from '@/components/NotificationBell'
 import { localDateString } from '@/lib/utils/date'
-import dynamic from 'next/dynamic'
+import dynamicImport from 'next/dynamic'
 
-const InlinePet = dynamic(() => import('@/components/desktop-pet/InlinePet'), { ssr: false })
+const InlinePet = dynamicImport(() => import('@/components/desktop-pet/InlinePet'), { ssr: false })
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
