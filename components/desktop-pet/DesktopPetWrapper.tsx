@@ -33,9 +33,10 @@ export default function DesktopPetWrapper() {
   const prevXp = useRef<number | null>(null)
   const pathname = usePathname()
 
-  // Don't show pet on auth pages — checked in render, not before hooks
+  // Don't show pet on auth pages or dashboard (dashboard has its own inline pet)
   const isAuthPage = pathname === '/' || pathname === '/login' || pathname === '/signup' ||
     pathname === '/forgot-password' || pathname === '/reset-password'
+  const isDashboard = pathname === '/dashboard'
 
   useEffect(() => {
     // Initial fetch on mount
@@ -186,8 +187,8 @@ export default function DesktopPetWrapper() {
   // Still loading
   if (status === null) return null
 
-  // Don't show on auth pages
-  if (isAuthPage) return null
+  // Don't show on auth pages or dashboard (dashboard has inline pet in pet area)
+  if (isAuthPage || isDashboard) return null
 
   // Not logged in or no pet row
   if (!status.hasPet) return null

@@ -9,6 +9,9 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import NotificationBell from '@/components/NotificationBell'
 import { localDateString } from '@/lib/utils/date'
+import dynamic from 'next/dynamic'
+
+const InlinePet = dynamic(() => import('@/components/desktop-pet/InlinePet'), { ssr: false })
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
@@ -582,14 +585,16 @@ export default function DashboardPage() {
           {/* Right half: pet area — shows selected room background */}
           <div
             id="pet-area"
-            className="flex-1 min-w-0 self-start rounded-3xl overflow-hidden"
+            className="flex-1 min-w-0 self-start rounded-3xl overflow-hidden relative"
             style={{
               minHeight: '280px',
               backgroundImage: petRoomBgUrl ? `url(${petRoomBgUrl})` : undefined,
               backgroundSize: 'cover',
               backgroundPosition: 'center bottom',
             }}
-          />
+          >
+            <InlinePet />
+          </div>
         </div>
 
         {/* Stats Cards */}
