@@ -465,7 +465,7 @@ export default function DashboardPage() {
         {/* Hero row: Welcome + Today's Challenges on left half, pet area on right half */}
         <div className="flex gap-4 mb-8">
           {/* Left half: combined welcome + challenges card */}
-          <div className="w-1/2 bg-gradient-to-br from-primary-500 to-accent-blue rounded-3xl shadow-lg overflow-hidden">
+          <div className="flex-1 min-w-0 bg-gradient-to-br from-primary-500 to-accent-blue rounded-3xl shadow-lg overflow-hidden">
             <div className="flex flex-col px-6 py-5 h-full">
               {/* Welcome text — centered at top */}
               <div className="text-center mb-4">
@@ -546,7 +546,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Right half: pet area — transparent, fixed height matching collapsed banner */}
-          <div id="pet-area" className="w-1/2 self-start" style={{ minHeight: '280px' }} />
+          <div id="pet-area" className="flex-1 min-w-0 self-start" style={{ minHeight: '280px' }} />
         </div>
 
         {/* Stats Cards */}
