@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -143,6 +143,9 @@ export default function BookSkinsUserPage() {
             Choose how your challenge book looks. More skins available in the shop.
           </p>
         </div>
+
+        {/* Admin shortcut — only visible to admins/teachers */}
+        <AdminUploadBanner />
 
         {/* Error / success */}
         {error && (
@@ -362,5 +365,274 @@ function SkinOption({
         )}
       </div>
     </button>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AdminUploadBanner — shown only to admins/teachers; lets them upload new skins
+// with visibility control and sell-in-shop option, inline on this page.
+// ─────────────────────────────────────────────────────────────────────────────
+const COVER_W = 400
+const COVER_H = 620
+const PAGE_W  = 400
+const PAGE_H  = 620
+
+async function resizeImageToBlob(file: File, targetW: number, targetH: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      const canvas = document.createElement('canvas')
+      canvas.width = targetW
+      canvas.height = targetH
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { reject(new Error('Canvas context unavailable')); return }
+      const srcAspect = img.naturalWidth / img.naturalHeight
+      const dstAspect = targetW / targetH
+      let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight
+      if (srcAspect > dstAspect) { sw = img.naturalHeight * dstAspect; sx = (img.naturalWidth - sw) / 2 }
+      else { sh = img.naturalWidth / dstAspect; sy = (img.naturalHeight - sh) / 2 }
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH)
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('toBlob failed')), 'image/png')
+    }
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Image load failed')) }
+    img.src = objectUrl
+  })
+}
+
+function AdminUploadBanner() {
+  const supabase = createClient()
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [checked, setChecked] = useState(false)
+  const [open, setOpen] = useState(false)
+
+  const [uploadType, setUploadType] = useState<'cover' | 'page'>('cover')
+  const [skinName, setSkinName] = useState('')
+  const [skinDesc, setSkinDesc] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
+  const [visibility, setVisibility] = useState<'admin_only' | 'public'>('admin_only')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null)
+  const [sellMode, setSellMode] = useState(false)
+  const [sellPrice, setSellPrice] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    async function check() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setChecked(true); return }
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('roles!inner(name)')
+        .eq('user_id', user.id)
+        .is('class_id', null)
+      const admin = (roles as any[])?.some((r: any) => r.roles?.name === 'administrator' || r.roles?.name === 'teacher')
+      setIsAdmin(!!admin)
+      setChecked(true)
+    }
+    check()
+  }, [])
+
+  if (!checked || !isAdmin) return null
+
+  const targetW = uploadType === 'cover' ? COVER_W : PAGE_W
+  const targetH = uploadType === 'cover' ? COVER_H : PAGE_H
+
+  async function handleFilePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = e.target.files?.[0]
+    if (!picked) return
+    if (!picked.type.startsWith('image/')) { setUploadError('Please pick an image file'); return }
+    if (picked.size > 20 * 1024 * 1024) { setUploadError('Image must be under 20 MB'); return }
+    setUploadError(null)
+    setFile(picked)
+    try {
+      const resized = await resizeImageToBlob(picked, targetW, targetH)
+      setPreview(URL.createObjectURL(resized))
+    } catch (err: any) { setUploadError('Could not resize image: ' + err.message) }
+  }
+
+  async function switchType(t: 'cover' | 'page') {
+    setUploadType(t)
+    if (!file) return
+    const w = t === 'cover' ? COVER_W : PAGE_W
+    const h = t === 'cover' ? COVER_H : PAGE_H
+    try {
+      const resized = await resizeImageToBlob(file, w, h)
+      setPreview(URL.createObjectURL(resized))
+    } catch (_) {}
+  }
+
+  async function handleUpload() {
+    if (!file || !skinName.trim()) { setUploadError('Please choose an image and enter a name'); return }
+    setUploadError(null); setUploadSuccess(null); setUploading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const resizedBlob = await resizeImageToBlob(file, targetW, targetH)
+      const fileName = `${uploadType}/${user.id}/${Date.now()}.png`
+      const { error: uploadErr } = await supabase.storage.from('book-skins').upload(fileName, resizedBlob, { contentType: 'image/png', upsert: false })
+      if (uploadErr) throw new Error('Storage upload failed: ' + uploadErr.message)
+      const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(fileName)
+
+      const { data: newSkin, error: insertErr } = await supabase
+        .from('book_skins')
+        .insert({ name: skinName.trim(), description: skinDesc.trim() || null, skin_type: uploadType, image_url: publicUrl, width: targetW, height: targetH, created_by: user.id, visibility })
+        .select('id').single()
+      if (insertErr || !newSkin) throw new Error('DB insert failed: ' + insertErr?.message)
+
+      if (sellMode && sellPrice.trim()) {
+        const price = parseInt(sellPrice.trim(), 10)
+        if (!isNaN(price) && price > 0) {
+          const { data: newItem, error: itemErr } = await supabase
+            .from('shop_items')
+            .insert({ title: skinName.trim(), description: skinDesc.trim() || `Book ${uploadType} skin`, cost: price, image_url: publicUrl, is_active: true, created_by: user.id, category: 'other', commodity_type: 'standard', draws_per_redemption: 1 })
+            .select('id').single()
+          if (!itemErr && newItem) {
+            await supabase.from('book_skins').update({ shop_item_id: newItem.id, visibility: 'shop_only' }).eq('id', newSkin.id)
+          }
+        }
+      }
+
+      setUploadSuccess(`✅ "${skinName.trim()}" uploaded!`)
+      setSkinName(''); setSkinDesc(''); setFile(null); setPreview(null)
+      setSellMode(false); setSellPrice('')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    } catch (err: any) {
+      setUploadError(err.message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <Card className="border-amber-300 bg-amber-50">
+      <Card.Body>
+        <button className="w-full flex items-center justify-between text-left" onClick={() => setOpen(v => !v)}>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🔧</span>
+            <div>
+              <div className="font-bold text-amber-800 text-sm">Admin: Upload New Book Skin</div>
+              <div className="text-xs text-amber-600">Set visibility, sell in shop</div>
+            </div>
+          </div>
+          <span className="text-amber-600 font-bold text-lg">{open ? '▲' : '▼'}</span>
+        </button>
+
+        {open && (
+          <div className="mt-4 space-y-4">
+            {uploadError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex justify-between">
+                <span>{uploadError}</span>
+                <button onClick={() => setUploadError(null)} className="font-bold ml-3">✕</button>
+              </div>
+            )}
+            {uploadSuccess && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm flex justify-between">
+                <span>{uploadSuccess}</span>
+                <button onClick={() => setUploadSuccess(null)} className="font-bold ml-3">✕</button>
+              </div>
+            )}
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                {/* Type */}
+                <div>
+                  <label className="block text-xs font-semibold text-amber-800 mb-1">Skin Type</label>
+                  <div className="flex gap-2">
+                    {(['cover', 'page'] as const).map(t => (
+                      <button key={t} onClick={() => switchType(t)}
+                        className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold border-2 transition-colors ${uploadType === t ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-700 border-gray-200 hover:border-amber-300'}`}>
+                        {t === 'cover' ? '📖 Cover' : '📄 Page'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Name */}
+                <div>
+                  <label className="block text-xs font-semibold text-amber-800 mb-1">Name *</label>
+                  <input type="text" value={skinName} onChange={e => setSkinName(e.target.value)}
+                    placeholder='e.g. "Treasure Map"'
+                    className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100 bg-white" />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-xs font-semibold text-amber-800 mb-1">Description</label>
+                  <textarea value={skinDesc} onChange={e => setSkinDesc(e.target.value)}
+                    placeholder="Optional — shown in the shop" rows={2}
+                    className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl text-sm focus:border-amber-400 bg-white resize-none" />
+                </div>
+
+                {/* File picker */}
+                <div>
+                  <label className="block text-xs font-semibold text-amber-800 mb-1">Image *</label>
+                  <div className="border-2 border-dashed border-amber-300 rounded-xl p-3 text-center bg-white cursor-pointer hover:bg-amber-50 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}>
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFilePick} />
+                    {file
+                      ? <p className="text-xs text-amber-700 font-medium">{file.name}</p>
+                      : <><p className="text-xl mb-0.5">📸</p><p className="text-xs text-amber-700">Click to choose (max 20 MB)</p></>}
+                  </div>
+                </div>
+
+                {/* Visibility */}
+                <div>
+                  <label className="block text-xs font-semibold text-amber-800 mb-1">Visibility</label>
+                  <div className="flex gap-2">
+                    {(['admin_only', 'public'] as const).map(v => (
+                      <button key={v} onClick={() => setVisibility(v)}
+                        className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-semibold border-2 transition-colors ${visibility === v ? (v === 'public' ? 'bg-green-600 text-white border-green-600' : 'bg-gray-700 text-white border-gray-700') : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
+                        {v === 'public' ? '👥 Public' : '🔒 Admin only'}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-amber-600 mt-1">
+                    {visibility === 'admin_only' ? 'Only usable as sitewide default. Not visible in user picker.' : 'Visible in user Book & Cover picker and sellable in shop.'}
+                  </p>
+                </div>
+
+                {/* Sell in shop */}
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" checked={sellMode} onChange={e => setSellMode(e.target.checked)} className="accent-amber-600" />
+                  <span className="text-xs font-semibold text-amber-800">🛍️ Sell in Shop</span>
+                </label>
+                {sellMode && (
+                  <div>
+                    <label className="block text-xs font-semibold text-amber-800 mb-1">Price (points) *</label>
+                    <input type="number" min={1} value={sellPrice} onChange={e => setSellPrice(e.target.value)}
+                      placeholder="e.g. 500"
+                      className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl text-sm focus:border-amber-400 bg-white" />
+                  </div>
+                )}
+
+                <Button onClick={handleUpload} disabled={uploading || !file || !skinName.trim()} isLoading={uploading} className="w-full">
+                  {uploading ? 'Uploading…' : '⬆️ Upload Skin'}
+                </Button>
+
+                <a href="/admin/book-skins" className="block text-center text-xs text-amber-700 hover:underline mt-1">
+                  → Open full admin panel (manage all skins, animated frames, set default…)
+                </a>
+              </div>
+
+              {/* Preview */}
+              <div className="flex flex-col items-center justify-start">
+                <p className="text-xs font-medium text-amber-700 mb-2">Preview</p>
+                <div className="rounded-lg overflow-hidden border-2 border-amber-200 shadow-md bg-gray-100" style={{ width: 120, height: 186 }}>
+                  {preview
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center text-gray-300 text-3xl">📖</div>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Card.Body>
+    </Card>
   )
 }
