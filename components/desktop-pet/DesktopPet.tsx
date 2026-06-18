@@ -243,28 +243,24 @@ export default function DesktopPet({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── Re-position when on /dashboard (handles both initial load and navigation) ─
-  // Poll for #pet-area since the dashboard content may not have painted yet when
-  // the pet component first mounts (it lives in layout.tsx, outside the page).
-  const dashboardPositioned = useRef(false)
+  // Re-position when on /dashboard on every navigation to it.
+  // Polls for #pet-area since the dashboard DOM may not have rendered yet.
+  const positionPollRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    if (pathname !== '/dashboard') {
-      dashboardPositioned.current = false
-      return
-    }
-    if (dashboardPositioned.current) return
+    if (positionPollRef.current) { clearTimeout(positionPollRef.current); positionPollRef.current = null }
+    if (pathname !== '/dashboard') return
 
     let attempts = 0
-    const MAX = 20  // up to 1s (20 × 50ms)
+    const MAX = 30
 
     function tryPosition() {
       const rect = getPetAreaRect()
       if (!rect || rect.width === 0) {
-        if (++attempts < MAX) { setTimeout(tryPosition, 50); return }
-        return  // give up, leave wherever it is
+        if (++attempts < MAX) { positionPollRef.current = setTimeout(tryPosition, 50); return }
+        return
       }
-      dashboardPositioned.current = true
+      positionPollRef.current = null
       const margin = 20
       const x = Math.round(rect.left + margin + Math.random() * Math.max(0, rect.width - catSize - margin * 2))
       const y = rectToFloor(rect)
@@ -275,6 +271,7 @@ export default function DesktopPet({
     }
 
     tryPosition()
+    return () => { if (positionPollRef.current) { clearTimeout(positionPollRef.current); positionPollRef.current = null } }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 
