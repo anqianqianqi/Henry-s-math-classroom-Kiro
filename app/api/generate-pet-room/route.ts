@@ -91,8 +91,10 @@ export async function POST(request: Request) {
     }
 
     // ── Upload PNG to Supabase storage (challenge-images bucket) ────────────
+    // Path must start with the user's ID to satisfy the bucket RLS policy:
+    // (storage.foldername(name))[1] = auth.uid()::text
     const buffer = Buffer.from(b64, 'base64')
-    const fileName = `pet-room-bg-${Date.now()}.png`
+    const fileName = `${session.user.id}/pet-room-bg-${Date.now()}.png`
 
     const { error: uploadErr } = await supabase.storage
       .from('challenge-images')
