@@ -72,6 +72,9 @@ export default function PetRoomPage() {
   const [sellPrice, setSellPrice] = useState('')
   const [showSellInput, setShowSellInput] = useState(false)
 
+  // Purchased room IDs for non-admin users (shows "🛒 Owned" badge)
+  const [purchasedIds, setPurchasedIds] = useState<Set<string>>(new Set())
+
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -80,25 +83,64 @@ export default function PetRoomPage() {
       const { data: roles } = await supabase.from('user_roles').select('roles!inner(name)').eq('user_id', user.id).is('class_id', null)
       const admin = (roles as any[])?.some((r: any) => r.roles?.name === 'administrator' || r.roles?.name === 'teacher')
       setIsAdmin(!!admin)
-      await loadBgs(user.id)
+      await loadBgs(user.id, !!admin)
       setLoading(false)
     }
     load()
   }, [])
 
-  async function loadBgs(uid?: string) {
+  async function loadBgs(uid?: string, adminRole?: boolean) {
     const targetUid = uid ?? userId
-    const query = supabase.from('pet_room_backgrounds').select('*').order('created_at', { ascending: false })
-    // Admins see all (including inactive); users only see active
-    const { data: bgs } = await query
-    setBackgrounds((bgs || []) as PetRoomBackground[])
-    if (targetUid) {
-      const { data: pref } = await supabase.from('user_pet_room').select('background_id').eq('user_id', targetUid).maybeSingle()
-      if (pref?.background_id) {
-        setSelectedId(pref.background_id)
-      } else {
-        const def = (bgs || []).find((b: any) => b.is_default && b.is_active)
-        if (def) setSelectedId(def.id)
+    const effectiveAdmin = adminRole !== undefined ? adminRole : isAdmin
+    if (effectiveAdmin) {
+      const { data: bgs } = await supabase
+        .from('pet_room_backgrounds')
+        .select('*')
+        .order('created_at', { ascending: false })
+      setBackgrounds((bgs || []) as PetRoomBackground[])
+      if (targetUid) {
+        const { data: pref } = await supabase.from('user_pet_room').select('background_id').eq('user_id', targetUid).maybeSingle()
+        if (pref?.background_id) setSelectedId(pref.background_id)
+        else {
+          const def = ((bgs || []) as PetRoomBackground[]).find(b => b.is_default && b.is_active)
+          if (def) setSelectedId(def.id)
+        }
+      }
+    } else {
+      // Public active rooms
+      const { data: bgs } = await supabase
+        .from('pet_room_backgrounds')
+        .select('*')
+        .eq('is_active', true)
+        .eq('visibility', 'public')
+        .order('created_at', { ascending: false })
+
+      // Rooms this user purchased via redemptions (survives visibility changes)
+      const { data: purchased } = targetUid ? await supabase
+        .from('redemptions')
+        .select('pet_room_background_id, pet_room_backgrounds:pet_room_background_id(*)')
+        .eq('user_id', targetUid)
+        .is('refunded_at', null)
+        .not('pet_room_background_id', 'is', null)
+        : { data: [] }
+
+      const publicIds = new Set((bgs ?? []).map((b: any) => b.id))
+      const purchasedRows = (purchased ?? [])
+        .map((r: any) => r.pet_room_backgrounds)
+        .filter((b: any) => b && !publicIds.has(b.id))
+
+      const allBgs = [...(bgs ?? []), ...purchasedRows] as PetRoomBackground[]
+      setBackgrounds(allBgs)
+      setPurchasedIds(new Set(purchasedRows.map((b: any) => b.id)))
+
+      if (targetUid) {
+        const { data: pref } = await supabase.from('user_pet_room').select('background_id').eq('user_id', targetUid).maybeSingle()
+        if (pref?.background_id) {
+          setSelectedId(pref.background_id)
+        } else {
+          const def = allBgs.find(b => b.is_default && b.is_active)
+          if (def) setSelectedId(def.id)
+        }
       }
     }
   }
@@ -152,7 +194,7 @@ export default function PetRoomPage() {
       if (insertErr) throw new Error(insertErr.message)
       setSaveOpen(false); setSaveName(''); setSaveDesc(''); setSaveSetDefault(false)
       setSandbox(null); setGenPrompt(''); setGenOpen(false)
-      await loadBgs()
+      await loadBgs(userId ?? undefined, isAdmin)
     } catch (err: any) { setSaveError(err.message) }
     finally { setSavingDesign(false) }
   }
@@ -175,7 +217,7 @@ export default function PetRoomPage() {
       if (insertErr) throw new Error(insertErr.message)
       setUploadSuccess(`✅ "${uploadName.trim()}" uploaded!`)
       setUploadFile(null); setUploadName(''); setUploadDesc(''); setUploadSetDefault(false)
-      await loadBgs()
+      await loadBgs(userId ?? undefined, isAdmin)
     } catch (err: any) { setUploadError(err.message) }
     finally { setUploading(false) }
   }
@@ -217,7 +259,7 @@ export default function PetRoomPage() {
         await supabase.from('pet_room_backgrounds').update({ shop_item_id: newItem.id, visibility: 'public' }).eq('id', bg.id)
         setShowSellInput(false); setSellPrice('')
       }
-      await loadBgs()
+      await loadBgs(userId ?? undefined, isAdmin)
       // Refresh actionBg with updated data
       const updated = backgrounds.find(b => b.id === bg.id)
       if (updated && action !== 'delete') {
@@ -376,6 +418,7 @@ export default function PetRoomPage() {
               const isSelected = selectedId === bg.id
               const isPublic = bg.visibility === 'public'
               const isInactive = !bg.is_active
+              const isOwned = purchasedIds.has(bg.id)
               return (
                 <div key={bg.id}
                   onClick={() => !isInactive && handleSelect(bg.id)}
@@ -386,6 +429,7 @@ export default function PetRoomPage() {
                       onClick={e => { e.stopPropagation(); setLightbox(bg.image_url) }} />
                     {isInactive && <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center"><span className="text-white text-xs font-bold bg-gray-800/70 px-2 py-1 rounded">Inactive</span></div>}
                     {!isPublic && isAdmin && <div className="absolute top-2 left-2 text-xs bg-gray-800/70 text-white px-2 py-0.5 rounded font-semibold">🔒 Admin only</div>}
+                    {isOwned && !isAdmin && <div className="absolute top-2 left-2 text-xs bg-purple-600/80 text-white px-2 py-0.5 rounded font-semibold">🛒 Owned</div>}
                   </div>
                   <div className={`px-4 py-3 flex items-center justify-between ${isSelected ? 'bg-primary-50' : 'bg-white'}`}>
                     <div className="min-w-0">
@@ -394,7 +438,7 @@ export default function PetRoomPage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
                       {isSelected && <span className="text-xs font-bold text-primary-600 bg-primary-100 px-2 py-1 rounded-full">✓ Active</span>}
-                      {bg.is_default && !isSelected && <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">Default</span>}
+                      {bg.is_default && !isSelected && !isOwned && <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">Default</span>}
                       {isAdmin && (
                         <button onClick={e => { e.stopPropagation(); setActionBg(bg); setActionError(null); setShowSellInput(false); setSellPrice('') }}
                           className="text-xs px-2 py-1 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 font-semibold transition-colors">
@@ -520,7 +564,7 @@ export default function PetRoomPage() {
                     setActionWorking(true)
                     await supabase.from('shop_items').update({ is_active: false }).eq('id', actionBg.shop_item_id!)
                     await supabase.from('pet_room_backgrounds').update({ shop_item_id: null }).eq('id', actionBg.id)
-                    await loadBgs()
+                    await loadBgs(userId ?? undefined, isAdmin)
                     const { data: fresh } = await supabase.from('pet_room_backgrounds').select('*').eq('id', actionBg.id).single()
                     if (fresh) setActionBg(fresh as PetRoomBackground)
                     setActionWorking(false)
