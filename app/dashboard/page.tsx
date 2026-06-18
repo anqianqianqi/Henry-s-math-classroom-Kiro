@@ -25,7 +25,7 @@ export default function DashboardPage() {
     totalScore: 0,
     spendableBalance: 0,
   })
-  const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean }>>([])
+  const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean; submissionId?: string; hasNewTeacherComment?: boolean }>>([])
   const router = useRouter()
   const supabase = createClient()
 
@@ -320,12 +320,60 @@ export default function DashboardPage() {
         // Check submissions for all challenges
         const { data: submissions } = await supabase
           .from('challenge_submissions')
-          .select('challenge_id')
+          .select('id, challenge_id')
           .in('challenge_id', challenges.map((c: any) => c.id))
           .eq('user_id', userId)
 
-        const submittedIds = new Set(submissions?.map((s: any) => s.challenge_id) || [])
-        setTodayChallenges(challenges.map((c: any) => ({ ...c, submitted: submittedIds.has(c.id) })))
+        const submittedMap = new Map((submissions || []).map((s: any) => [s.challenge_id, s.id]))
+
+        // Check for teacher/admin comments on the student's submissions
+        const submissionIds = (submissions || []).map((s: any) => s.id)
+        const teacherCommentSet = new Set<string>() // submission_ids that have teacher comments
+
+        if (submissionIds.length > 0) {
+          try {
+            // Get teacher/admin role IDs so we can identify their comments
+            const { data: teacherRoleRows } = await supabase
+              .from('roles')
+              .select('id')
+              .in('name', ['teacher', 'administrator'])
+            const teacherRoleIds = (teacherRoleRows || []).map((r: any) => r.id)
+
+            if (teacherRoleIds.length > 0) {
+              // Find users with teacher/admin global roles
+              const { data: teacherUserRows } = await supabase
+                .from('user_roles')
+                .select('user_id')
+                .in('role_id', teacherRoleIds)
+                .is('class_id', null)
+              const teacherUserIds = [...new Set((teacherUserRows || []).map((r: any) => r.user_id))]
+
+              if (teacherUserIds.length > 0) {
+                const { data: teacherComments } = await supabase
+                  .from('submission_comments')
+                  .select('submission_id')
+                  .in('submission_id', submissionIds)
+                  .in('user_id', teacherUserIds)
+
+                for (const c of teacherComments || []) {
+                  teacherCommentSet.add(c.submission_id)
+                }
+              }
+            }
+          } catch (_) {
+            // submission_comments table may not exist — ignore
+          }
+        }
+
+        setTodayChallenges(challenges.map((c: any) => {
+          const submissionId = submittedMap.get(c.id)
+          return {
+            ...c,
+            submitted: submittedMap.has(c.id),
+            submissionId,
+            hasNewTeacherComment: submissionId ? teacherCommentSet.has(submissionId) : false,
+          }
+        }))
       }
     } catch (err) {
       console.error('Failed to load today challenges:', err)
@@ -413,6 +461,11 @@ export default function DashboardPage() {
                                 challenge.submitted ? 'bg-green-400/30 text-green-100' : 'bg-yellow-400/30 text-yellow-100'
                               }`}>
                                 {challenge.submitted ? '✓ Done' : '⏳'}
+                              </span>
+                            )}
+                            {!isTeacher && challenge.hasNewTeacherComment && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-blue-400/40 text-blue-100">
+                                💬 New comment
                               </span>
                             )}
                           </div>
