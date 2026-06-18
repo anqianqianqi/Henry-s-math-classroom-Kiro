@@ -26,7 +26,8 @@ export default function DashboardPage() {
     spendableBalance: 0,
   })
   const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean; submissionId?: string; hasNewTeacherComment?: boolean }>>([])
-  const [petRoomBgUrl, setPetRoomBgUrl] = useState<string | null>(null)  const router = useRouter()
+  const [petRoomBgUrl, setPetRoomBgUrl] = useState<string | null>(null)
+  const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
