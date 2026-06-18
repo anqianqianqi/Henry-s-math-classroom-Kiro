@@ -126,6 +126,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
+    // If this shop item is linked to a pet_room_background, backfill pet_room_background_id
+    // on the freshly-inserted redemption row so ownership queries work correctly.
+    try {
+      const { data: linkedBg } = await supabase
+        .from('pet_room_backgrounds')
+        .select('id')
+        .eq('shop_item_id', body.item_id)
+        .maybeSingle()
+
+      if (linkedBg?.id) {
+        // Find the newest redemption for this user + item (just inserted)
+        const { data: newRedemption } = await supabase
+          .from('redemptions')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .eq('item_id', body.item_id)
+          .is('refunded_at', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (newRedemption?.id) {
+          await supabase
+            .from('redemptions')
+            .update({ pet_room_background_id: linkedBg.id })
+            .eq('id', newRedemption.id)
+        }
+      }
+    } catch (_) {
+      // Non-fatal — ownership backfill failure shouldn't fail the purchase
+    }
+
     return NextResponse.json({
       success: true,
       commodity_type: 'standard',
