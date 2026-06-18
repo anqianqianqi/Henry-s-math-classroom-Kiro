@@ -478,8 +478,8 @@ export default function DashboardPage() {
                 </p>
               </div>
 
-              {/* Today's challenges — left-aligned with indent */}
-              <div className="flex flex-col gap-2 pl-2">
+              {/* Today's challenges — full width within outer padding */}
+              <div className="flex flex-col gap-2">
                 {todayChallenges.length > 0 ? (
                   <>
                     {(expandedChallenges ? todayChallenges : todayChallenges.slice(0, CHALLENGES_COLLAPSED)).map(challenge => (
