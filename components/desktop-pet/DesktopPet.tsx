@@ -214,9 +214,14 @@ export default function DesktopPet({
 
   // ── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const x = window.innerWidth - 160
+    // Position pet in the right half of the screen, near the top of the dashboard area
+    // (below the header ~60px, roughly centered in the right 50% of the viewport)
+    const rightHalfCenter = window.innerWidth * 0.75
+    const x = Math.round(rightHalfCenter - catSize / 2)
+    // posY is distance from bottom; place pet so it appears near top of content area
+    const y = Math.max(0, window.innerHeight - 220)
     setPosX(x)
-    setPosY(0)
+    setPosY(y)
     setMounted(true)
     setTimeout(() => setPopIn(true), 100)
   }, [])

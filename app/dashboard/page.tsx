@@ -545,10 +545,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Right half: pet area — reserved, will be populated later */}
-          <div className="w-1/2 rounded-3xl border-2 border-dashed border-gray-200 bg-gray-50/50 flex items-center justify-center text-gray-300 text-sm select-none min-h-[140px]">
-            🐾 Pet area
-          </div>
+          {/* Right half: pet area — transparent, fixed height, no border */}
+          <div className="w-1/2 self-start" style={{ minHeight: '160px' }} />
         </div>
 
         {/* Stats Cards */}
