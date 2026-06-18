@@ -271,6 +271,9 @@ export default function DashboardPage() {
     router.push('/login')
   }
 
+  const [expandedChallenges, setExpandedChallenges] = useState(false)
+  const CHALLENGES_COLLAPSED = 3
+
   async function loadTodayChallenge(userId: string, teacherRole: boolean) {
     try {
       const today = localDateString()
@@ -282,99 +285,131 @@ export default function DashboardPage() {
           .eq('challenge_date', today)
           .order('created_at', { ascending: false })
         setTodayChallenges((data || []).map((c: any) => ({ ...c, submitted: false })))
-      } else {
-        const { data: classIds } = await supabase
-          .from('class_members')
-          .select('class_id')
-          .eq('user_id', userId)
+        return
+      }
 
-        // Get class-assigned challenge IDs
-        let classAssignedIds: string[] = []
-        if (classIds && classIds.length > 0) {
-          const { data: assignments } = await supabase
-            .from('challenge_assignments')
-            .select('challenge_id')
-            .in('class_id', classIds.map((m: any) => m.class_id))
-          classAssignedIds = assignments?.map((a: any) => a.challenge_id) || []
-        }
+      // ── Student path ──
+      const { data: classIds } = await supabase
+        .from('class_members')
+        .select('class_id')
+        .eq('user_id', userId)
 
-        // Get individually assigned challenge IDs
-        const { data: individualAssignments } = await supabase
-          .from('challenge_student_assignments')
+      let classAssignedIds: string[] = []
+      if (classIds && classIds.length > 0) {
+        const { data: assignments } = await supabase
+          .from('challenge_assignments')
           .select('challenge_id')
-          .eq('student_id', userId)
-        const individualIds = individualAssignments?.map((a: any) => a.challenge_id) || []
+          .in('class_id', classIds.map((m: any) => m.class_id))
+        classAssignedIds = assignments?.map((a: any) => a.challenge_id) || []
+      }
 
-        const challengeIds = [...new Set([...classAssignedIds, ...individualIds])]
-        if (challengeIds.length === 0) return
+      const { data: individualAssignments } = await supabase
+        .from('challenge_student_assignments')
+        .select('challenge_id')
+        .eq('student_id', userId)
+      const individualIds = individualAssignments?.map((a: any) => a.challenge_id) || []
 
-        const { data: challenges } = await supabase
+      const allAssignedIds = [...new Set([...classAssignedIds, ...individualIds])]
+      if (allAssignedIds.length === 0) return
+
+      // 1. All submissions by this student for their assigned challenges
+      const { data: submissions } = await supabase
+        .from('challenge_submissions')
+        .select('id, challenge_id')
+        .in('challenge_id', allAssignedIds)
+        .eq('user_id', userId)
+      if (!submissions || submissions.length === 0) return
+
+      const submittedMap = new Map((submissions).map((s: any) => [s.challenge_id, s.id]))
+      const submissionIds = submissions.map((s: any) => s.id)
+
+      // 2. Find teacher/admin user IDs
+      let teacherUserIds: string[] = []
+      try {
+        const { data: teacherRoleRows } = await supabase
+          .from('roles').select('id').in('name', ['teacher', 'administrator'])
+        const teacherRoleIds = (teacherRoleRows || []).map((r: any) => r.id)
+        if (teacherRoleIds.length > 0) {
+          const { data: teacherUserRows } = await supabase
+            .from('user_roles').select('user_id')
+            .in('role_id', teacherRoleIds).is('class_id', null)
+          teacherUserIds = [...new Set((teacherUserRows || []).map((r: any) => r.user_id))]
+        }
+      } catch (_) {}
+
+      // 3. Get latest teacher comment per submission
+      const latestTeacherCommentAt: Record<string, string> = {} // submissionId → ISO timestamp
+      if (teacherUserIds.length > 0 && submissionIds.length > 0) {
+        try {
+          const { data: teacherComments } = await supabase
+            .from('submission_comments')
+            .select('submission_id, created_at')
+            .in('submission_id', submissionIds)
+            .in('user_id', teacherUserIds)
+            .order('created_at', { ascending: false })
+          for (const c of teacherComments || []) {
+            if (!latestTeacherCommentAt[c.submission_id]) {
+              latestTeacherCommentAt[c.submission_id] = c.created_at
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 4. Use localStorage to check if student has seen the comment
+      //    Key: `comment_seen_${submissionId}` → ISO timestamp of last visit
+      function isCommentUnread(submissionId: string): boolean {
+        const commentAt = latestTeacherCommentAt[submissionId]
+        if (!commentAt) return false
+        try {
+          const seenAt = localStorage.getItem(`comment_seen_${submissionId}`)
+          if (!seenAt) return true
+          return new Date(commentAt) > new Date(seenAt)
+        } catch (_) { return true }
+      }
+
+      // 5. Load today's challenges
+      const { data: todayChallengesData } = await supabase
+        .from('daily_challenges')
+        .select('id, title, challenge_date')
+        .in('id', allAssignedIds)
+        .eq('challenge_date', today)
+        .order('created_at', { ascending: false })
+
+      // 6. Load past challenges that have an unread teacher comment
+      //    (submitted + has comment that was posted after student last viewed)
+      const submittedChallengeIds = submissions.map((s: any) => s.challenge_id)
+      const submissionsWithUnreadComment = submissions.filter(
+        (s: any) => isCommentUnread(s.id)
+      )
+      const pastChallengeIdsWithComment = submissionsWithUnreadComment
+        .map((s: any) => s.challenge_id)
+        .filter((id: string) => !(todayChallengesData || []).find((c: any) => c.id === id))
+
+      let pastChallenges: any[] = []
+      if (pastChallengeIdsWithComment.length > 0) {
+        const { data: pastData } = await supabase
           .from('daily_challenges')
           .select('id, title, challenge_date')
-          .in('id', challengeIds)
-          .eq('challenge_date', today)
-          .order('created_at', { ascending: false })
-
-        if (!challenges || challenges.length === 0) return
-
-        // Check submissions for all challenges
-        const { data: submissions } = await supabase
-          .from('challenge_submissions')
-          .select('id, challenge_id')
-          .in('challenge_id', challenges.map((c: any) => c.id))
-          .eq('user_id', userId)
-
-        const submittedMap = new Map((submissions || []).map((s: any) => [s.challenge_id, s.id]))
-
-        // Check for teacher/admin comments on the student's submissions
-        const submissionIds = (submissions || []).map((s: any) => s.id)
-        const teacherCommentSet = new Set<string>() // submission_ids that have teacher comments
-
-        if (submissionIds.length > 0) {
-          try {
-            // Get teacher/admin role IDs so we can identify their comments
-            const { data: teacherRoleRows } = await supabase
-              .from('roles')
-              .select('id')
-              .in('name', ['teacher', 'administrator'])
-            const teacherRoleIds = (teacherRoleRows || []).map((r: any) => r.id)
-
-            if (teacherRoleIds.length > 0) {
-              // Find users with teacher/admin global roles
-              const { data: teacherUserRows } = await supabase
-                .from('user_roles')
-                .select('user_id')
-                .in('role_id', teacherRoleIds)
-                .is('class_id', null)
-              const teacherUserIds = [...new Set((teacherUserRows || []).map((r: any) => r.user_id))]
-
-              if (teacherUserIds.length > 0) {
-                const { data: teacherComments } = await supabase
-                  .from('submission_comments')
-                  .select('submission_id')
-                  .in('submission_id', submissionIds)
-                  .in('user_id', teacherUserIds)
-
-                for (const c of teacherComments || []) {
-                  teacherCommentSet.add(c.submission_id)
-                }
-              }
-            }
-          } catch (_) {
-            // submission_comments table may not exist — ignore
-          }
-        }
-
-        setTodayChallenges(challenges.map((c: any) => {
-          const submissionId = submittedMap.get(c.id)
-          return {
-            ...c,
-            submitted: submittedMap.has(c.id),
-            submissionId,
-            hasNewTeacherComment: submissionId ? teacherCommentSet.has(submissionId) : false,
-          }
-        }))
+          .in('id', pastChallengeIdsWithComment)
+          .order('challenge_date', { ascending: false })
+          .limit(10)
+        pastChallenges = pastData || []
       }
+
+      const allChallenges = [
+        ...(todayChallengesData || []),
+        ...pastChallenges,
+      ]
+
+      setTodayChallenges(allChallenges.map((c: any) => {
+        const submissionId = submittedMap.get(c.id)
+        return {
+          ...c,
+          submitted: submittedMap.has(c.id),
+          submissionId,
+          hasNewTeacherComment: submissionId ? isCommentUnread(submissionId) : false,
+        }
+      }))
     } catch (err) {
       console.error('Failed to load today challenges:', err)
     }
@@ -447,15 +482,23 @@ export default function DashboardPage() {
               <div className="flex flex-col gap-2 pl-2">
                 {todayChallenges.length > 0 ? (
                   <>
-                    {todayChallenges.slice(0, 3).map(challenge => (
+                    {(expandedChallenges ? todayChallenges : todayChallenges.slice(0, CHALLENGES_COLLAPSED)).map(challenge => (
                       <button
                         key={challenge.id}
-                        onClick={() => router.push(`/challenges/${challenge.id}`)}
+                        onClick={() => {
+                          // Mark comment as seen
+                          if (challenge.submissionId) {
+                            try { localStorage.setItem(`comment_seen_${challenge.submissionId}`, new Date().toISOString()) } catch (_) {}
+                          }
+                          router.push(`/challenges/${challenge.id}`)
+                        }}
                         className="text-left bg-white/15 hover:bg-white/25 rounded-xl px-4 py-2.5 group flex items-center justify-between transition-all"
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">🎯 Today</span>
+                          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
+                              {challenge.challenge_date === new Date().toISOString().split('T')[0] ? '🎯 Today' : `📅 ${challenge.challenge_date}`}
+                            </span>
                             {!isTeacher && (
                               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
                                 challenge.submitted ? 'bg-green-400/30 text-green-100' : 'bg-yellow-400/30 text-yellow-100'
@@ -476,12 +519,14 @@ export default function DashboardPage() {
                         <span className="text-white/50 group-hover:text-white ml-2 shrink-0 transition-colors">→</span>
                       </button>
                     ))}
-                    {todayChallenges.length > 3 && (
+                    {todayChallenges.length > CHALLENGES_COLLAPSED && (
                       <button
-                        onClick={() => router.push('/challenges')}
+                        onClick={() => setExpandedChallenges(v => !v)}
                         className="text-[11px] text-white/60 hover:text-white text-left pl-1 transition-colors"
                       >
-                        +{todayChallenges.length - 3} more → View all
+                        {expandedChallenges
+                          ? '▲ Show less'
+                          : `▼ +${todayChallenges.length - CHALLENGES_COLLAPSED} more`}
                       </button>
                     )}
                   </>
