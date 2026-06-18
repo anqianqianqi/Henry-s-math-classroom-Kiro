@@ -16,10 +16,65 @@ interface User {
   roles: string[]
 }
 
+// ─── Create User modal state ───────────────────────────────────────────────
+interface CreateUserForm {
+  firstName: string
+  lastName: string
+  email: string
+  password: string
+  role: string
+}
+
 export default function AdminRolesPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+
+  // Create user modal state
+  const [showCreate, setShowCreate] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [createSuccess, setCreateSuccess] = useState<string | null>(null)
+  const [form, setForm] = useState<CreateUserForm>({
+    firstName: '', lastName: '', email: '', password: '', role: 'student',
+  })
+
+  async function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault()
+    setCreating(true)
+    setCreateError(null)
+    setCreateSuccess(null)
+
+    try {
+      const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: form.email.trim(),
+          password: form.password,
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          role: form.role,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setCreateError(data.error ?? 'Failed to create user')
+      } else {
+        setCreateSuccess(`✅ ${data.fullName} (${data.email}) created successfully!`)
+        setForm({ firstName: '', lastName: '', email: '', password: '', role: 'student' })
+        await loadUsers()
+        setTimeout(() => {
+          setShowCreate(false)
+          setCreateSuccess(null)
+        }, 2500)
+      }
+    } catch {
+      setCreateError('Network error — please try again')
+    } finally {
+      setCreating(false)
+    }
+  }
 
   useEffect(() => {
     loadUsers()
@@ -124,7 +179,12 @@ export default function AdminRolesPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 p-4 sm:p-8">
       <PageHeader breadcrumbs={[{ label: 'Admin' }, { label: 'User Roles' }]} />
       <div className="max-w-6xl mx-auto">
-        <p className="text-sm text-gray-500 mb-4">{users.length} user{users.length !== 1 ? 's' : ''} total</p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-gray-500">{users.length} user{users.length !== 1 ? 's' : ''} total</p>
+          <Button size="sm" onClick={() => { setShowCreate(true); setCreateError(null); setCreateSuccess(null) }}>
+            + Create User
+          </Button>
+        </div>
         <Card>
           <Card.Body>
             <div className="space-y-4">
@@ -194,6 +254,111 @@ export default function AdminRolesPage() {
           </Card.Body>
         </Card>
       </div>
+
+      {/* ── Create User Modal ── */}
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">Create New User</h2>
+              <button
+                onClick={() => setShowCreate(false)}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+              >✕</button>
+            </div>
+
+            {createError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                {createError}
+              </div>
+            )}
+            {createSuccess && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
+                {createSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateUser} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">First name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.firstName}
+                    onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none"
+                    placeholder="Jane"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Last name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.lastName}
+                    onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none"
+                    placeholder="Smith"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                <input
+                  type="email"
+                  required
+                  value={form.email}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none"
+                  placeholder="jane@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={form.password}
+                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none"
+                  placeholder="At least 6 characters"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <select
+                  value={form.role}
+                  onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:border-primary-500 outline-none"
+                >
+                  <option value="student">Student</option>
+                  <option value="teacher">Teacher</option>
+                  <option value="administrator">Administrator</option>
+                  <option value="">No role</option>
+                </select>
+              </div>
+
+              <p className="text-xs text-gray-500">
+                The account will be immediately active — no email confirmation needed. The user can log in right away with these credentials.
+              </p>
+
+              <div className="flex gap-3 pt-1">
+                <Button type="submit" disabled={creating} isLoading={creating} fullWidth>
+                  {creating ? 'Creating…' : 'Create User'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowCreate(false)} fullWidth>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
