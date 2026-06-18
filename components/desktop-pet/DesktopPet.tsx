@@ -352,7 +352,8 @@ export default function DesktopPet({
         setIsDragging(false)
         dragMoved.current = false
       }, 0)
-      // Snap back to floor with a bounce, then sleep
+      // Only snap to floor if the user actually dragged (not just a click)
+      if (!dragMoved.current) return
       setPosY(0)
       setBehavior({ pose: 'playing', ms: 1200 })
       say('*thud*')
