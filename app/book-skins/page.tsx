@@ -19,6 +19,9 @@ interface BookSkin {
   skin_type: 'cover' | 'page'
   image_url: string
   is_default: boolean
+  is_active?: boolean
+  visibility?: string | null
+  shop_item_id?: string | null
 }
 
 interface UserPrefs {
@@ -41,53 +44,109 @@ export default function BookSkinsUserPage() {
   const [allSkins, setAllSkins] = useState<BookSkin[]>([])
   const [prefs, setPrefs] = useState<UserPrefs>({ cover_skin_id: null, page_skin_id: null })
   const [userId, setUserId] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // Admin: manage modal
+  const [actionSkin, setActionSkin] = useState<BookSkin | null>(null)
+  const [actionWorking, setActionWorking] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [sellPrice, setSellPrice] = useState('')
+  const [showSellInput, setShowSellInput] = useState(false)
 
   // ── Load skins + user prefs ─────────────────────────────────────────────────
+  async function loadSkins(uid: string, adminRole: boolean) {
+    if (adminRole) {
+      // Admins see ALL skins (including inactive/admin-only)
+      const { data: skins } = await supabase
+        .from('book_skins')
+        .select('*')
+        .order('created_at', { ascending: false })
+      setAllSkins((skins ?? []) as BookSkin[])
+    } else {
+      const { data: skins } = await supabase
+        .from('book_skins')
+        .select('id, name, description, skin_type, image_url, is_default, is_active, visibility, shop_item_id')
+        .eq('is_active', true)
+        .eq('visibility', 'public')
+        .order('is_default', { ascending: false })
+
+      const { data: purchasedSkins } = await supabase
+        .from('redemptions')
+        .select('book_skin_id, book_skins:book_skin_id(id, name, description, skin_type, image_url, is_default, is_active, visibility, shop_item_id)')
+        .eq('user_id', uid)
+        .is('refunded_at', null)
+        .not('book_skin_id', 'is', null)
+
+      const publicIds = new Set((skins ?? []).map((s: any) => s.id))
+      const purchasedRows = (purchasedSkins ?? [])
+        .map((r: any) => r.book_skins)
+        .filter((s: any) => s && !publicIds.has(s.id))
+      setAllSkins([...(skins ?? []), ...purchasedRows] as BookSkin[])
+    }
+  }
+
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
 
-      // Fetch all active PUBLIC skins (admin_only skins are not shown to users)
-      const { data: skins } = await supabase
-        .from('book_skins')
-        .select('id, name, description, skin_type, image_url, is_default')
-        .eq('is_active', true)
-        .eq('visibility', 'public')
-        .order('is_default', { ascending: false })  // default first
+      const { data: roles } = await supabase
+        .from('user_roles').select('roles!inner(name)').eq('user_id', user.id).is('class_id', null)
+      const admin = (roles as any[])?.some((r: any) => r.roles?.name === 'administrator' || r.roles?.name === 'teacher')
+      setIsAdmin(!!admin)
 
-      // Also fetch skins the user has purchased via redemptions
-      const { data: purchasedSkins } = await supabase
-        .from('redemptions')
-        .select('book_skin_id, book_skins:book_skin_id(id, name, description, skin_type, image_url, is_default)')
-        .eq('user_id', user.id)
-        .is('refunded_at', null)
-        .not('book_skin_id', 'is', null)
+      await loadSkins(user.id, !!admin)
 
-      // Merge: public skins + purchased ones not already in the list
-      const publicIds = new Set((skins ?? []).map((s: any) => s.id))
-      const purchasedRows = (purchasedSkins ?? [])
-        .map((r: any) => r.book_skins)
-        .filter((s: any) => s && !publicIds.has(s.id))
-
-      setAllSkins([...(skins ?? []), ...purchasedRows] as BookSkin[])
-
-      // Fetch user's current preference (may not exist yet)
       const { data: prefRow } = await supabase
         .from('user_book_skin_preferences')
         .select('cover_skin_id, page_skin_id')
         .eq('user_id', user.id)
         .maybeSingle()
-
-      if (prefRow) {
-        setPrefs({ cover_skin_id: prefRow.cover_skin_id, page_skin_id: prefRow.page_skin_id })
-      }
+      if (prefRow) setPrefs({ cover_skin_id: prefRow.cover_skin_id, page_skin_id: prefRow.page_skin_id })
 
       setLoading(false)
     }
     load()
   }, [])
+
+  // ── Admin skin actions ──────────────────────────────────────────────────────
+  async function adminSkinAction(skin: BookSkin, action: 'set_default' | 'make_public' | 'make_private' | 'toggle_active' | 'delete' | 'sell') {
+    setActionWorking(true); setActionError(null)
+    try {
+      if (action === 'set_default') {
+        await supabase.from('book_skins').update({ is_default: false }).eq('skin_type', skin.skin_type).eq('is_default', true)
+        await supabase.from('book_skins').update({ is_default: true }).eq('id', skin.id)
+      } else if (action === 'make_public') {
+        await supabase.from('book_skins').update({ visibility: 'public' }).eq('id', skin.id)
+      } else if (action === 'make_private') {
+        await supabase.from('book_skins').update({ visibility: 'admin_only' }).eq('id', skin.id)
+      } else if (action === 'toggle_active') {
+        await supabase.from('book_skins').update({ is_active: !skin.is_active }).eq('id', skin.id)
+      } else if (action === 'delete') {
+        if (!confirm(`Delete "${skin.name}"? This cannot be undone.`)) { setActionWorking(false); return }
+        await supabase.from('book_skins').delete().eq('id', skin.id)
+        setActionSkin(null)
+      } else if (action === 'sell') {
+        const price = parseInt(sellPrice, 10)
+        if (isNaN(price) || price < 1) { setActionError('Enter a valid price.'); setActionWorking(false); return }
+        const { data: newItem, error: itemErr } = await supabase.from('shop_items').insert({
+          title: skin.name, description: skin.description || `Book ${skin.skin_type} skin`, cost: price,
+          image_url: skin.image_url, is_active: true, created_by: userId,
+          category: 'other', commodity_type: 'standard', draws_per_redemption: 1,
+        }).select('id').single()
+        if (itemErr || !newItem) throw new Error('Shop item creation failed')
+        await supabase.from('book_skins').update({ shop_item_id: newItem.id, visibility: 'public' }).eq('id', skin.id)
+        setShowSellInput(false); setSellPrice('')
+      }
+      await loadSkins(userId!, isAdmin)
+      if (action !== 'delete') {
+        const { data: fresh } = await supabase.from('book_skins').select('*').eq('id', skin.id).single()
+        if (fresh) setActionSkin(fresh as BookSkin)
+      }
+    } catch (err: any) { setActionError(err.message) }
+    finally { setActionWorking(false) }
+  }
 
   // ── Save prefs ──────────────────────────────────────────────────────────────
   async function savePrefs() {
@@ -172,6 +231,8 @@ export default function BookSkinsUserPage() {
               onSelect={(id) => setPrefs(p => ({ ...p, cover_skin_id: id }))}
               previewAspect={400 / 620}
               skinType="cover"
+              isAdmin={isAdmin}
+              onManage={(skin) => { setActionSkin(skin); setActionError(null); setShowSellInput(false); setSellPrice('') }}
             />
 
             {/* ── Page skin picker ── */}
@@ -183,6 +244,8 @@ export default function BookSkinsUserPage() {
               onSelect={(id) => setPrefs(p => ({ ...p, page_skin_id: id }))}
               previewAspect={400 / 620}
               skinType="page"
+              isAdmin={isAdmin}
+              onManage={(skin) => { setActionSkin(skin); setActionError(null); setShowSellInput(false); setSellPrice('') }}
             />
 
             {/* Save button */}
@@ -210,6 +273,77 @@ export default function BookSkinsUserPage() {
         )}
       </main>
     </div>
+
+      {/* ── Admin Manage modal ─────────────────────────────────────────────── */}
+      {actionSkin && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4" onClick={() => !actionWorking && setActionSkin(null)}>
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <div className="font-bold text-gray-900">⚙️ {actionSkin.name}</div>
+                <div className="text-xs text-gray-400 mt-0.5">
+                  {actionSkin.skin_type === 'cover' ? '📖 Cover' : '📄 Page'} ·{' '}
+                  {actionSkin.visibility === 'public' ? '👥 Public' : '🔒 Admin only'}
+                  {actionSkin.is_default ? ' · ⭐ Default' : ''}
+                  {!actionSkin.is_active ? ' · ❌ Inactive' : ''}
+                  {actionSkin.shop_item_id ? ' · 🛍️ In shop' : ''}
+                </div>
+              </div>
+              <button onClick={() => !actionWorking && setActionSkin(null)} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              {actionError && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{actionError}</div>}
+              <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-100" style={{ width: '100%', aspectRatio: '400/620' }}>
+                {actionSkin.image_url
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={actionSkin.image_url} alt={actionSkin.name} className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center text-gray-300 text-3xl">📖</div>}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => adminSkinAction(actionSkin, 'set_default')} disabled={actionWorking || !!actionSkin.is_default}
+                  className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-40 transition-colors">
+                  {actionSkin.is_default ? '⭐ Is Default' : 'Set default'}
+                </button>
+                {actionSkin.visibility === 'public'
+                  ? <button onClick={() => adminSkinAction(actionSkin, 'make_private')} disabled={actionWorking}
+                      className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 transition-colors">🔒 Make private</button>
+                  : <button onClick={() => adminSkinAction(actionSkin, 'make_public')} disabled={actionWorking}
+                      className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 transition-colors">👥 Make public</button>}
+                <button onClick={() => adminSkinAction(actionSkin, 'toggle_active')} disabled={actionWorking}
+                  className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 transition-colors">
+                  {actionSkin.is_active ? 'Deactivate' : 'Activate'}
+                </button>
+                {!actionSkin.shop_item_id
+                  ? <button onClick={() => setShowSellInput(v => !v)} disabled={actionWorking}
+                      className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-40 transition-colors">🛍️ Sell in shop</button>
+                  : <button onClick={async () => {
+                      if (!confirm('Remove from shop?')) return
+                      setActionWorking(true)
+                      await supabase.from('shop_items').update({ is_active: false }).eq('id', actionSkin.shop_item_id!)
+                      await supabase.from('book_skins').update({ shop_item_id: null }).eq('id', actionSkin.id)
+                      await loadSkins(userId!, isAdmin)
+                      const { data: fresh } = await supabase.from('book_skins').select('*').eq('id', actionSkin.id).single()
+                      if (fresh) setActionSkin(fresh as BookSkin)
+                      setActionWorking(false)
+                    }} disabled={actionWorking}
+                      className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-gray-200 bg-white text-gray-500 disabled:opacity-40 transition-colors">🛍️ In shop ✓</button>}
+                <button onClick={() => adminSkinAction(actionSkin, 'delete')} disabled={actionWorking}
+                  className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 transition-colors col-span-2">🗑️ Delete</button>
+              </div>
+              {showSellInput && (
+                <div className="flex gap-2">
+                  <input type="number" min={1} value={sellPrice} onChange={e => setSellPrice(e.target.value)}
+                    placeholder="Price (points)" className="flex-1 px-3 py-2 border-2 border-amber-200 rounded-xl text-sm bg-white" />
+                  <button onClick={() => adminSkinAction(actionSkin, 'sell')} disabled={actionWorking || !sellPrice}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-semibold rounded-xl text-sm">
+                    {actionWorking ? '⏳' : 'List'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
   )
 }
 
@@ -224,16 +358,19 @@ function SkinPicker({
   onSelect,
   previewAspect,
   skinType,
+  isAdmin,
+  onManage,
 }: {
   title: string
   description: string
   skins: BookSkin[]
   selectedId: string | null
   onSelect: (id: string | null) => void
-  previewAspect: number  // width / height
+  previewAspect: number
   skinType: 'cover' | 'page'
+  isAdmin?: boolean
+  onManage?: (skin: BookSkin) => void
 }) {
-  // Find the default skin for this type (may be null if none set)
   const defaultSkin = skins.find(s => s.is_default) ?? null
 
   return (
@@ -244,8 +381,6 @@ function SkinPicker({
       </Card.Header>
       <Card.Body>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-
-          {/* Always show the "Default" option first */}
           <SkinOption
             label="Default"
             sublabel={defaultSkin ? defaultSkin.name : 'Built-in parchment'}
@@ -256,22 +391,28 @@ function SkinPicker({
             badge="⭐"
             skinType={skinType}
           />
-
-          {/* User's owned skins — for now only defaults are available */}
           {skins.filter(s => !s.is_default).map(skin => (
-            <SkinOption
-              key={skin.id}
-              label={skin.name}
-              sublabel={skin.description ?? undefined}
-              imageUrl={skin.image_url}
-              isSelected={selectedId === skin.id}
-              onClick={() => onSelect(skin.id)}
-              aspect={previewAspect}
-              skinType={skinType}
-            />
+            <div key={skin.id} className="relative">
+              <SkinOption
+                label={skin.name}
+                sublabel={skin.description ?? undefined}
+                imageUrl={skin.image_url}
+                isSelected={selectedId === skin.id}
+                onClick={() => !(skin.is_active === false) && onSelect(skin.id)}
+                aspect={previewAspect}
+                skinType={skinType}
+                isInactive={skin.is_active === false}
+                isPrivate={skin.visibility === 'admin_only' && isAdmin}
+              />
+              {isAdmin && onManage && (
+                <button
+                  onClick={e => { e.stopPropagation(); onManage(skin) }}
+                  className="absolute top-1 right-1 z-10 text-xs bg-amber-500/90 hover:bg-amber-600 text-white px-1.5 py-0.5 rounded-md font-semibold shadow"
+                  title="Manage this skin"
+                >⚙️</button>
+              )}
+            </div>
           ))}
-
-          {/* Placeholder to show the shop teaser */}
           <div
             className="rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center p-4 cursor-pointer hover:border-amber-300 hover:bg-amber-50 transition-colors"
             style={{ aspectRatio: String(previewAspect) }}
@@ -280,7 +421,6 @@ function SkinPicker({
             <div className="text-2xl mb-1">🛍️</div>
             <p className="text-xs font-medium text-gray-500">More in Shop</p>
           </div>
-
         </div>
       </Card.Body>
     </Card>
@@ -299,6 +439,8 @@ function SkinOption({
   aspect,
   badge,
   skinType,
+  isInactive,
+  isPrivate,
 }: {
   label: string
   sublabel?: string
@@ -308,61 +450,40 @@ function SkinOption({
   aspect: number
   badge?: string
   skinType: 'cover' | 'page'
+  isInactive?: boolean
+  isPrivate?: boolean
 }) {
   return (
     <button
       onClick={onClick}
-      className={`rounded-xl border-2 overflow-hidden flex flex-col text-left transition-all focus:outline-none ${
-        isSelected
-          ? 'border-amber-500 shadow-lg shadow-amber-100'
-          : 'border-gray-200 hover:border-amber-300'
+      className={`rounded-xl border-2 overflow-hidden flex flex-col text-left transition-all focus:outline-none w-full ${
+        isInactive ? 'opacity-50 cursor-not-allowed' :
+        isSelected ? 'border-amber-500 shadow-lg shadow-amber-100' : 'border-gray-200 hover:border-amber-300'
       }`}
     >
-      {/* Thumbnail */}
-      <div
-        className="relative w-full overflow-hidden bg-gray-100"
-        style={{ paddingBottom: `${(1 / aspect) * 100}%` }}
-      >
+      <div className="relative w-full overflow-hidden bg-gray-100" style={{ paddingBottom: `${(1 / aspect) * 100}%` }}>
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={imageUrl}
-            alt={label}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <img src={imageUrl} alt={label} className="absolute inset-0 w-full h-full object-cover" />
         ) : (
-          /* Fallback — show the built-in default skin preview */
-          <div
-            className="absolute inset-0"
-            style={{
-              background: skinType === 'page'
-                ? 'linear-gradient(to bottom, #faf6ee 0%, #f2e8d5 50%, #ede0c4 100%)'
-                : 'linear-gradient(160deg, #c8b08a 0%, #b09060 35%, #9a7a48 70%, #7a5e30 100%)',
-            }}
-          />
+          <div className="absolute inset-0" style={{
+            background: skinType === 'page'
+              ? 'linear-gradient(to bottom, #faf6ee 0%, #f2e8d5 50%, #ede0c4 100%)'
+              : 'linear-gradient(160deg, #c8b08a 0%, #b09060 35%, #9a7a48 70%, #7a5e30 100%)',
+          }} />
         )}
-
-        {/* Selected checkmark */}
         {isSelected && (
-          <div className="absolute top-1.5 right-1.5 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow">
-            ✓
-          </div>
+          <div className="absolute top-1.5 right-1.5 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow">✓</div>
         )}
-
-        {/* Badge (e.g. ⭐ for default) */}
         {badge && !isSelected && (
-          <div className="absolute top-1.5 left-1.5 text-sm leading-none">
-            {badge}
-          </div>
+          <div className="absolute top-1.5 left-1.5 text-sm leading-none">{badge}</div>
         )}
+        {isInactive && <div className="absolute inset-0 bg-gray-900/30 flex items-center justify-center"><span className="text-white text-xs font-bold bg-gray-800/60 px-1.5 py-0.5 rounded">Inactive</span></div>}
+        {isPrivate && !isInactive && <div className="absolute bottom-1 left-1 text-xs bg-gray-800/60 text-white px-1.5 py-0.5 rounded">🔒</div>}
       </div>
-
-      {/* Label */}
       <div className={`px-2 py-2 text-xs font-semibold truncate ${isSelected ? 'text-amber-700 bg-amber-50' : 'text-gray-700 bg-white'}`}>
         {label}
-        {sublabel && (
-          <span className="block font-normal text-gray-400 truncate">{sublabel}</span>
-        )}
+        {sublabel && <span className="block font-normal text-gray-400 truncate">{sublabel}</span>}
       </div>
     </button>
   )
