@@ -37,10 +37,10 @@ export async function POST(request: Request) {
 
     // ── Parse body ────────────────────────────────────────────────────────────
     const body = await request.json()
-    const { email, password, firstName, lastName, nickname, role } = body
+    const { email, password, firstName, lastName, nickname, role, classId } = body
 
-    if (!email?.trim() || !password || !firstName?.trim() || !lastName?.trim()) {
-      return NextResponse.json({ error: 'email, password, firstName and lastName are required' }, { status: 400 })
+    if (!email?.trim() || !password || !firstName?.trim()) {
+      return NextResponse.json({ error: 'email, password and firstName are required' }, { status: 400 })
     }
 
     if (password.length < 6) {
@@ -57,10 +57,10 @@ export async function POST(request: Request) {
     const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: email.trim(),
       password,
-      email_confirm: true, // immediately active — no confirmation email needed
+      email_confirm: true,
       user_metadata: {
         first_name: firstName.trim(),
-        last_name: lastName.trim(),
+        last_name: (lastName ?? '').trim(),
         nickname: nickname?.trim() || null,
       },
     })
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
       .upsert({
         id: newUserId,
         first_name: firstName.trim(),
-        last_name: lastName.trim(),
+        last_name: (lastName ?? '').trim(),
         nickname: nickname?.trim() || null,
         email: email.trim(),
       }, { onConflict: 'id' })
@@ -110,11 +110,22 @@ export async function POST(request: Request) {
       }
     }
 
+    // ── Optionally enroll in a class ─────────────────────────────────────────
+    if (classId) {
+      const { error: memberErr } = await supabaseAdmin
+        .from('class_members')
+        .insert({ class_id: classId, user_id: newUserId })
+
+      if (memberErr && !memberErr.message?.includes('duplicate')) {
+        console.error('[admin/create-user] class_members insert error:', memberErr)
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       userId: newUserId,
       email: email.trim(),
-      fullName: `${firstName.trim()} ${lastName.trim()}`,
+      fullName: `${firstName.trim()} ${(lastName ?? '').trim()}`.trim(),
     })
   } catch (err) {
     console.error('[admin/create-user] unhandled error:', err)

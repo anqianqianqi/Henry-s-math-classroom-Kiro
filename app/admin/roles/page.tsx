@@ -23,6 +23,7 @@ interface CreateUserForm {
   email: string
   password: string
   role: string
+  classId: string
 }
 
 export default function AdminRolesPage() {
@@ -36,8 +37,18 @@ export default function AdminRolesPage() {
   const [createError, setCreateError] = useState<string | null>(null)
   const [createSuccess, setCreateSuccess] = useState<string | null>(null)
   const [form, setForm] = useState<CreateUserForm>({
-    firstName: '', lastName: '', email: '', password: '', role: 'student',
+    firstName: '', lastName: '', email: '', password: '', role: 'student', classId: '',
   })
+  const [classes, setClasses] = useState<{ id: string; name: string }[]>([])
+
+  async function loadClasses() {
+    const { data } = await supabase
+      .from('classes')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name', { ascending: true })
+    setClasses(data ?? [])
+  }
 
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault()
@@ -55,6 +66,7 @@ export default function AdminRolesPage() {
           firstName: form.firstName.trim(),
           lastName: form.lastName.trim(),
           role: form.role,
+          classId: form.classId || null,
         }),
       })
       const data = await res.json()
@@ -62,7 +74,7 @@ export default function AdminRolesPage() {
         setCreateError(data.error ?? 'Failed to create user')
       } else {
         setCreateSuccess(`✅ ${data.fullName} (${data.email}) created successfully!`)
-        setForm({ firstName: '', lastName: '', email: '', password: '', role: 'student' })
+        setForm({ firstName: '', lastName: '', email: '', password: '', role: 'student', classId: '' })
         await loadUsers()
         setTimeout(() => {
           setShowCreate(false)
@@ -181,7 +193,7 @@ export default function AdminRolesPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-gray-500">{users.length} user{users.length !== 1 ? 's' : ''} total</p>
-          <Button size="sm" onClick={() => { setShowCreate(true); setCreateError(null); setCreateSuccess(null) }}>
+          <Button size="sm" onClick={() => { setShowCreate(true); setCreateError(null); setCreateSuccess(null); loadClasses() }}>
             + Create User
           </Button>
         </div>
@@ -292,10 +304,9 @@ export default function AdminRolesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Last name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Last name <span className="text-gray-400 font-normal">(optional)</span></label>
                   <input
                     type="text"
-                    required
                     value={form.lastName}
                     onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none"
@@ -341,6 +352,25 @@ export default function AdminRolesPage() {
                   <option value="administrator">Administrator</option>
                   <option value="">No role</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Assign to class <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <select
+                  value={form.classId}
+                  onChange={e => setForm(f => ({ ...f, classId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:border-primary-500 outline-none"
+                >
+                  <option value="">— No class —</option>
+                  {classes.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                {classes.length === 0 && (
+                  <p className="text-xs text-gray-400 mt-1">No active classes found</p>
+                )}
               </div>
 
               <p className="text-xs text-gray-500">
