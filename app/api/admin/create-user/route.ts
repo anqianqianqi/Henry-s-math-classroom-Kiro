@@ -87,7 +87,7 @@ export async function POST(request: Request) {
         first_name: firstName.trim(),
         last_name: (lastName ?? '').trim(),
         nickname: nickname?.trim() || null,
-        email: email.trim(),
+        email: email.trim().toLowerCase(),  // normalize to lowercase
       }, { onConflict: 'id' })
 
     if (profileErr) {

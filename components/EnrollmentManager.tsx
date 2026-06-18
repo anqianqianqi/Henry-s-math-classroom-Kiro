@@ -115,11 +115,11 @@ export default function EnrollmentManager({ classId, members, onMembersUpdate }:
     setMessage(null)
 
     try {
-      // Find user by email
+      // Find user by email (case-insensitive)
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id, full_name, email')
-        .eq('email', enrollEmail.trim().toLowerCase())
+        .ilike('email', enrollEmail.trim())
         .maybeSingle()
 
       if (profileError) throw profileError
