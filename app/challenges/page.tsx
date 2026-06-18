@@ -94,6 +94,8 @@ export default function ChallengesPage() {
   const [showUsed, setShowUsed] = useState(false)
   // Two-step confirm: null = browse, non-null = confirm stage
   const [pendingChallenge, setPendingChallenge] = useState<{id: string, title: string, description: string, tag_ids: string[], image_url?: string | null} | null>(null)
+  // Lightbox for zoomed image preview
+  const [imgLightbox, setImgLightbox] = useState<string | null>(null)
   
   const router = useRouter()
   const supabase = createClient()
@@ -1401,7 +1403,8 @@ export default function ChallengesPage() {
                       <img
                         src={pendingChallenge.image_url}
                         alt="Challenge"
-                        className="mt-3 w-full rounded-lg object-contain max-h-48 bg-white border border-primary-100"
+                        onClick={() => setImgLightbox(pendingChallenge.image_url!)}
+                        className="mt-3 w-full rounded-lg object-contain max-h-48 bg-white border border-primary-100 cursor-zoom-in"
                       />
                     )}
                     {pendingChallenge.tag_ids.length > 0 && (
@@ -1497,6 +1500,27 @@ export default function ChallengesPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* ── Image lightbox ── */}
+      {imgLightbox && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 cursor-zoom-out"
+          onClick={() => setImgLightbox(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imgLightbox}
+            alt="Challenge (zoomed)"
+            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl select-none"
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            className="absolute top-4 right-4 text-white/80 hover:text-white text-3xl leading-none"
+            onClick={() => setImgLightbox(null)}
+          >
+            ×
+          </button>
         </div>
       )}
     </div>
