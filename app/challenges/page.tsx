@@ -84,7 +84,7 @@ export default function ChallengesPage() {
 
   // Assign-from-bank modal state
   const [pickTarget, setPickTarget] = useState<{ classId: string, className: string, date: string } | null>(null)
-  const [bankChallenges, setBankChallenges] = useState<Array<{id: string, title: string, description: string, tag_ids: string[]}>>([])
+  const [bankChallenges, setBankChallenges] = useState<Array<{id: string, title: string, description: string, tag_ids: string[], image_url?: string | null}>>([])
   const [bankTagMap, setBankTagMap] = useState<Record<string, string>>({}) // tagId → name
   const [bankSearch, setBankSearch] = useState('')
   const [bankLoading, setBankLoading] = useState(false)
@@ -93,7 +93,7 @@ export default function ChallengesPage() {
   const [usedBankIds, setUsedBankIds] = useState<Set<string>>(new Set())
   const [showUsed, setShowUsed] = useState(false)
   // Two-step confirm: null = browse, non-null = confirm stage
-  const [pendingChallenge, setPendingChallenge] = useState<{id: string, title: string, description: string, tag_ids: string[]} | null>(null)
+  const [pendingChallenge, setPendingChallenge] = useState<{id: string, title: string, description: string, tag_ids: string[], image_url?: string | null} | null>(null)
   
   const router = useRouter()
   const supabase = createClient()
@@ -450,7 +450,7 @@ export default function ChallengesPage() {
     const [{ data: challenges }, { data: tagsData }] = await Promise.all([
       supabase
         .from('challenge_bank')
-        .select('id, title, description, tag_ids')
+        .select('id, title, description, tag_ids, image_url')
         .order('created_at', { ascending: false }),
       supabase
         .from('challenge_tags')
@@ -1396,6 +1396,14 @@ export default function ChallengesPage() {
                     <p className="text-xs font-semibold text-primary-500 uppercase tracking-wide mb-1">Selected challenge</p>
                     <p className="font-bold text-gray-900">{pendingChallenge.title}</p>
                     <p className="text-sm text-gray-600 mt-1 line-clamp-4">{pendingChallenge.description}</p>
+                    {pendingChallenge.image_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={pendingChallenge.image_url}
+                        alt="Challenge"
+                        className="mt-3 w-full rounded-lg object-contain max-h-48 bg-white border border-primary-100"
+                      />
+                    )}
                     {pendingChallenge.tag_ids.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {pendingChallenge.tag_ids.map(tid => bankTagMap[tid] ? (
