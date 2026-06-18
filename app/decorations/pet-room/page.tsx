@@ -27,12 +27,42 @@ export default function PetRoomPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [lightbox, setLightbox] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // Admin: generate with AI
+  const [genOpen, setGenOpen] = useState(false)
+  const [genPrompt, setGenPrompt] = useState('')
+  const [genName, setGenName] = useState('')
+  const [genDesc, setGenDesc] = useState('')
+  const [genSetDefault, setGenSetDefault] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
+  const [genSuccess, setGenSuccess] = useState<string | null>(null)
+
+  // Admin: upload image
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadName, setUploadName] = useState('')
+  const [uploadDesc, setUploadDesc] = useState('')
+  const [uploadSetDefault, setUploadSetDefault] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
+
+      // Check admin/teacher role
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('roles!inner(name)')
+        .eq('user_id', user.id)
+        .is('class_id', null)
+      const admin = (roles as any[])?.some((r: any) => r.roles?.name === 'administrator' || r.roles?.name === 'teacher')
+      setIsAdmin(!!admin)
 
       // Load available backgrounds
       const { data: bgs } = await supabase
@@ -59,6 +89,89 @@ export default function PetRoomPage() {
     }
     load()
   }, [])
+
+  async function refreshBackgrounds() {
+    const { data: bgs } = await supabase
+      .from('pet_room_backgrounds')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+    setBackgrounds(bgs || [])
+  }
+
+  async function handleGenerate() {
+    if (!genPrompt.trim() || !genName.trim()) {
+      setGenError('Please enter a name and a description for the room.')
+      return
+    }
+    setGenError(null)
+    setGenSuccess(null)
+    setGenerating(true)
+    try {
+      const res = await fetch('/api/generate-pet-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: genPrompt.trim(),
+          name: genName.trim(),
+          description: genDesc.trim() || undefined,
+          setDefault: genSetDefault,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`)
+      setGenSuccess(`✅ "${data.name}" generated and added to the room list!`)
+      setGenPrompt(''); setGenName(''); setGenDesc(''); setGenSetDefault(false)
+      await refreshBackgrounds()
+    } catch (err: any) {
+      setGenError(err.message)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  async function handleUpload() {
+    if (!uploadFile || !uploadName.trim()) {
+      setUploadError('Please choose an image and enter a name.')
+      return
+    }
+    setUploadError(null)
+    setUploadSuccess(null)
+    setUploading(true)
+    try {
+      const fileName = `pet-room-bg-${Date.now()}.png`
+      const { error: storageErr } = await supabase.storage
+        .from('challenge-images')
+        .upload(fileName, uploadFile, { contentType: uploadFile.type, upsert: false })
+      if (storageErr) throw new Error('Storage upload failed: ' + storageErr.message)
+      const { data: { publicUrl } } = supabase.storage.from('challenge-images').getPublicUrl(fileName)
+
+      if (uploadSetDefault) {
+        await supabase.from('pet_room_backgrounds').update({ is_default: false }).eq('is_default', true)
+      }
+
+      const { error: insertErr } = await supabase
+        .from('pet_room_backgrounds')
+        .insert({
+          name: uploadName.trim(),
+          description: uploadDesc.trim() || null,
+          image_url: publicUrl,
+          is_default: uploadSetDefault,
+          is_active: true,
+          created_by: userId,
+          frame_slots: [{ id: 'wall_frame', x: 60, y: 6, w: 20, h: 30, z_index: 2, label: 'Wall Picture', default_image_url: null }],
+        })
+      if (insertErr) throw new Error('DB insert failed: ' + insertErr.message)
+
+      setUploadSuccess(`✅ "${uploadName.trim()}" uploaded!`)
+      setUploadFile(null); setUploadName(''); setUploadDesc(''); setUploadSetDefault(false)
+      await refreshBackgrounds()
+    } catch (err: any) {
+      setUploadError(err.message)
+    } finally {
+      setUploading(false)
+    }
+  }
 
   async function handleSelect(bgId: string) {
     if (!userId || saving) return
@@ -89,6 +202,160 @@ export default function PetRoomPage() {
 
       <main className="max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <p className="text-gray-500 mb-6">Choose a room background for your pet on the dashboard.</p>
+
+        {/* ── Admin: Generate / Upload section ────────────────────────────── */}
+        {isAdmin && (
+          <div className="mb-8 space-y-4">
+            {/* Generate with AI */}
+            <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 overflow-hidden">
+              <button
+                className="w-full flex items-center justify-between px-5 py-4 text-left"
+                onClick={() => setGenOpen(v => !v)}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">✨</span>
+                  <div>
+                    <div className="font-bold text-amber-800">Generate Room with AI</div>
+                    <div className="text-xs text-amber-600">
+                      Describe a room — image is auto-generated at <strong>1536×1024</strong> (landscape, fits the pet area perfectly)
+                    </div>
+                  </div>
+                </div>
+                <span className="text-amber-600 font-bold text-lg">{genOpen ? '▲' : '▼'}</span>
+              </button>
+
+              {genOpen && (
+                <div className="px-5 pb-5 space-y-3 border-t border-amber-200">
+                  {genError && (
+                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex justify-between">
+                      <span>{genError}</span>
+                      <button onClick={() => setGenError(null)} className="font-bold ml-3">✕</button>
+                    </div>
+                  )}
+                  {genSuccess && (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm flex justify-between">
+                      <span>{genSuccess}</span>
+                      <button onClick={() => setGenSuccess(null)} className="font-bold ml-3">✕</button>
+                    </div>
+                  )}
+
+                  <div className="mt-3">
+                    <label className="block text-xs font-semibold text-amber-800 mb-1">Room Name *</label>
+                    <input
+                      type="text"
+                      value={genName}
+                      onChange={e => setGenName(e.target.value)}
+                      placeholder='e.g. "Night Library"'
+                      className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl text-sm focus:border-amber-400 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-amber-800 mb-1">
+                      Describe the room *
+                      <span className="font-normal text-amber-500 ml-1">— pet area composition rules are added automatically</span>
+                    </label>
+                    <textarea
+                      value={genPrompt}
+                      onChange={e => setGenPrompt(e.target.value)}
+                      placeholder="e.g. a cozy anime bedroom at night, moonlight through the window, bookshelves, warm lamp, a picture frame on the wall"
+                      rows={3}
+                      className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl text-sm focus:border-amber-400 bg-white resize-none"
+                    />
+                    <p className="text-xs text-amber-500 mt-1">
+                      💡 I'll automatically add: landscape orientation (1536×1024), clear lower-centre for the pet, wall frame placeholder, anime/Ghibli style.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-amber-800 mb-1">Description (optional)</label>
+                    <input
+                      type="text"
+                      value={genDesc}
+                      onChange={e => setGenDesc(e.target.value)}
+                      placeholder="Short description shown to users"
+                      className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl text-sm focus:border-amber-400 bg-white"
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-amber-800">
+                    <input type="checkbox" checked={genSetDefault} onChange={e => setGenSetDefault(e.target.checked)} className="accent-amber-600" />
+                    Set as default room for new users
+                  </label>
+
+                  <button
+                    onClick={handleGenerate}
+                    disabled={generating || !genPrompt.trim() || !genName.trim()}
+                    className="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-semibold rounded-xl text-sm transition-colors"
+                  >
+                    {generating ? '⏳ Generating… (may take ~15s)' : '🎨 Generate Room Image'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Upload image */}
+            <div className="rounded-2xl border-2 border-gray-200 bg-gray-50 overflow-hidden">
+              <button
+                className="w-full flex items-center justify-between px-5 py-4 text-left"
+                onClick={() => setUploadOpen(v => !v)}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">📸</span>
+                  <div>
+                    <div className="font-bold text-gray-800">Upload Custom Image</div>
+                    <div className="text-xs text-gray-500">Upload your own room background (recommend 1536×1024 or any landscape image)</div>
+                  </div>
+                </div>
+                <span className="text-gray-500 font-bold text-lg">{uploadOpen ? '▲' : '▼'}</span>
+              </button>
+
+              {uploadOpen && (
+                <div className="px-5 pb-5 space-y-3 border-t border-gray-200">
+                  {uploadError && (
+                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex justify-between">
+                      <span>{uploadError}</span>
+                      <button onClick={() => setUploadError(null)} className="font-bold ml-3">✕</button>
+                    </div>
+                  )}
+                  {uploadSuccess && (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm flex justify-between">
+                      <span>{uploadSuccess}</span>
+                      <button onClick={() => setUploadSuccess(null)} className="font-bold ml-3">✕</button>
+                    </div>
+                  )}
+                  <div className="mt-3">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Room Name *</label>
+                    <input type="text" value={uploadName} onChange={e => setUploadName(e.target.value)}
+                      placeholder='e.g. "Cherry Blossom Room"'
+                      className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Description (optional)</label>
+                    <input type="text" value={uploadDesc} onChange={e => setUploadDesc(e.target.value)}
+                      placeholder="Short description"
+                      className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Image *</label>
+                    <input type="file" accept="image/*"
+                      onChange={e => setUploadFile(e.target.files?.[0] || null)}
+                      className="w-full text-sm text-gray-600" />
+                    <p className="text-xs text-gray-400 mt-1">Recommended: 1536×1024px landscape. Any size works — it will be scaled to cover.</p>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-gray-700">
+                    <input type="checkbox" checked={uploadSetDefault} onChange={e => setUploadSetDefault(e.target.checked)} className="accent-amber-600" />
+                    Set as default room for new users
+                  </label>
+                  <button onClick={handleUpload} disabled={uploading || !uploadFile || !uploadName.trim()}
+                    className="w-full py-2.5 px-4 bg-gray-700 hover:bg-gray-800 disabled:bg-gray-300 text-white font-semibold rounded-xl text-sm transition-colors">
+                    {uploading ? '⏳ Uploading…' : '⬆️ Upload Room Image'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {backgrounds.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
