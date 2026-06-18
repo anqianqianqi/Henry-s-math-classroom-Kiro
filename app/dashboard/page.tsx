@@ -114,10 +114,11 @@ export default function DashboardPage() {
       if (bgId) {
         const { data: bg } = await supabase
           .from('pet_room_backgrounds')
-          .select('image_url')
+          .select('image_url, is_active')
           .eq('id', bgId)
           .maybeSingle()
-        if (bg?.image_url) setPetRoomBgUrl(bg.image_url)
+        // Only show if the room is still active — deactivated rooms are hidden even for owners
+        if (bg?.image_url && bg.is_active) setPetRoomBgUrl(bg.image_url)
       }
     } catch (_) {
       // pet_room_backgrounds table may not exist yet — ignore

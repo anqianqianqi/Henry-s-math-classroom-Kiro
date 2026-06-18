@@ -115,7 +115,8 @@ export default function PetRoomPage() {
         .eq('visibility', 'public')
         .order('created_at', { ascending: false })
 
-      // Rooms this user purchased via redemptions (survives visibility changes)
+      // Rooms this user purchased via redemptions — only if still active
+      // (deactivated rooms are hidden even for owners; private rooms still show for owners)
       const { data: purchased } = targetUid ? await supabase
         .from('redemptions')
         .select('pet_room_background_id, pet_room_backgrounds:pet_room_background_id(*)')
@@ -127,7 +128,7 @@ export default function PetRoomPage() {
       const publicIds = new Set((bgs ?? []).map((b: any) => b.id))
       const purchasedRows = (purchased ?? [])
         .map((r: any) => r.pet_room_backgrounds)
-        .filter((b: any) => b && !publicIds.has(b.id))
+        .filter((b: any) => b && b.is_active && !publicIds.has(b.id))  // must be active + not already in public list
 
       const allBgs = [...(bgs ?? []), ...purchasedRows] as PetRoomBackground[]
       setBackgrounds(allBgs)
