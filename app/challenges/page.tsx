@@ -87,7 +87,6 @@ export default function ChallengesPage() {
   const [bankChallenges, setBankChallenges] = useState<Array<{id: string, title: string, description: string, tag_ids: string[]}>>([])
   const [bankTagMap, setBankTagMap] = useState<Record<string, string>>({}) // tagId → name
   const [bankSearch, setBankSearch] = useState('')
-  const [bankSelectedTags, setBankSelectedTags] = useState<string[]>([])
   const [bankLoading, setBankLoading] = useState(false)
   const [assigning, setAssigning] = useState(false)
   
@@ -408,7 +407,6 @@ export default function ChallengesPage() {
   async function openPickModal(classId: string, className: string, date: string) {
     setPickTarget({ classId, className, date })
     setBankSearch('')
-    setBankSelectedTags([])
     setBankLoading(true)
     const [{ data: challenges }, { data: tagsData }] = await Promise.all([
       supabase
@@ -1218,42 +1216,10 @@ export default function ChallengesPage() {
                 type="text"
                 value={bankSearch}
                 onChange={e => setBankSearch(e.target.value)}
-                placeholder="Search challenges..."
+                placeholder="Search by title, description or tag…"
                 autoFocus
                 className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-colors"
               />
-              {/* Tag chips */}
-              {Object.keys(bankTagMap).length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {Object.entries(bankTagMap).map(([tagId, tagName]) => (
-                    <button
-                      key={tagId}
-                      type="button"
-                      onClick={() =>
-                        setBankSelectedTags(prev =>
-                          prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]
-                        )
-                      }
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
-                        bankSelectedTags.includes(tagId)
-                          ? 'bg-primary-600 text-white border-primary-600'
-                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-primary-400 hover:text-primary-600'
-                      }`}
-                    >
-                      {tagName}
-                    </button>
-                  ))}
-                  {bankSelectedTags.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setBankSelectedTags([])}
-                      className="px-2 py-0.5 rounded-full text-xs text-gray-400 hover:text-gray-600 border border-transparent"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Challenge list */}
@@ -1262,26 +1228,20 @@ export default function ChallengesPage() {
                 <p className="text-center text-gray-400 py-8 text-sm">Loading…</p>
               ) : bankChallenges.filter(c => {
                   const q = bankSearch.trim().toLowerCase()
-                  const matchesText = !q ||
+                  return !q ||
                     c.title.toLowerCase().includes(q) ||
                     c.description.toLowerCase().includes(q) ||
                     c.tag_ids.some(tid => (bankTagMap[tid] || '').toLowerCase().includes(q))
-                  const matchesTags = bankSelectedTags.length === 0 ||
-                    bankSelectedTags.every(tid => c.tag_ids.includes(tid))
-                  return matchesText && matchesTags
                 }).length === 0 ? (
                 <p className="text-center text-gray-400 py-8 text-sm">No challenges found</p>
               ) : (
                 bankChallenges
                   .filter(c => {
                     const q = bankSearch.trim().toLowerCase()
-                    const matchesText = !q ||
+                    return !q ||
                       c.title.toLowerCase().includes(q) ||
                       c.description.toLowerCase().includes(q) ||
                       c.tag_ids.some(tid => (bankTagMap[tid] || '').toLowerCase().includes(q))
-                    const matchesTags = bankSelectedTags.length === 0 ||
-                      bankSelectedTags.every(tid => c.tag_ids.includes(tid))
-                    return matchesText && matchesTags
                   })
                   .map(c => (
                     <div
