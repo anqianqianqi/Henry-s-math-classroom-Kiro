@@ -19,6 +19,10 @@ CREATE INDEX IF NOT EXISTS idx_bsf_skin ON book_skin_frames(skin_id, sort_order)
 
 ALTER TABLE book_skin_frames ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies before recreating (safe to re-run)
+DROP POLICY IF EXISTS "bsf_authenticated_read" ON book_skin_frames;
+DROP POLICY IF EXISTS "bsf_admin_write" ON book_skin_frames;
+
 -- Anyone authenticated can read frames (needed on challenge page)
 CREATE POLICY "bsf_authenticated_read"
   ON book_skin_frames FOR SELECT
