@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/ui/PageHeader'
 
@@ -29,6 +29,7 @@ interface SandboxState {
 
 export default function PetRoomPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
   const [backgrounds, setBackgrounds] = useState<PetRoomBackground[]>([])
@@ -88,6 +89,14 @@ export default function PetRoomPage() {
     }
     load()
   }, [])
+
+  // Auto-open the correct panel if arriving from a hub card link
+  useEffect(() => {
+    if (loading) return
+    const panel = searchParams?.get('panel')
+    if (panel === 'generate') setGenOpen(true)
+    if (panel === 'upload') setUploadOpen(true)
+  }, [loading, searchParams])
 
   async function loadBgs(uid?: string, adminRole?: boolean) {
     const targetUid = uid ?? userId

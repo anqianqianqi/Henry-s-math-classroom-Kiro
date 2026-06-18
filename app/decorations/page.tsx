@@ -53,6 +53,20 @@ export default function DecorationsPage() {
       href: '/admin/book-skins',
       description: 'Upload cover and page skins, set visibility, set as default, and sell in the shop.',
     },
+    {
+      icon: '✨',
+      title: 'Generate Pet Room',
+      subtitle: 'Admin: AI room generator',
+      href: '/decorations/pet-room?panel=generate',
+      description: 'Generate anime-style pet room backgrounds with AI. Iterate until happy, then save to the collection.',
+    },
+    {
+      icon: '📸',
+      title: 'Upload Pet Room',
+      subtitle: 'Admin: custom room image',
+      href: '/decorations/pet-room?panel=upload',
+      description: 'Upload a custom room background image (1536×1024 landscape recommended).',
+    },
   ]
 
   return (
