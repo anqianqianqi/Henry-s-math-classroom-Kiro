@@ -214,31 +214,35 @@ export default function DesktopPet({
 
   const pathname = usePathname()
 
-  // On /dashboard the pet area has a virtual "floor" at the bottom of the pet zone.
-  // Header ~60px + page top padding ~32px + pet area height ~280px = ~372px from top.
-  // posY is distance from the viewport bottom, so floor = innerHeight - 372.
-  // On all other pages the real floor is posY = 0 (bottom of viewport).
-  function getFloor() {
-    if (pathname === '/dashboard') {
-      return Math.max(0, window.innerHeight - 375)
-    }
-    return 0
+  // Get the pet area's actual DOM rect on the dashboard page.
+  // Returns null on other pages (no pet area element).
+  function getPetAreaRect(): DOMRect | null {
+    if (pathname !== '/dashboard') return null
+    const el = document.getElementById('pet-area')
+    return el ? el.getBoundingClientRect() : null
+  }
+
+  // posY is distance from viewport bottom. Convert DOMRect.bottom → posY.
+  function rectToFloor(rect: DOMRect): number {
+    return Math.max(0, window.innerHeight - rect.bottom)
   }
 
   // ── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const floor = getFloor()
+    const rect = getPetAreaRect()
     let x: number
-    if (pathname === '/dashboard') {
-      // Random X within the right half, random Y near but not below the floor
-      const rightStart = window.innerWidth * 0.5
-      const rightEnd   = window.innerWidth - 160
-      x = Math.round(rightStart + Math.random() * (rightEnd - rightStart))
+    let y: number
+    if (rect) {
+      // Random X within the pet area, Y on the floor (bottom of pet area)
+      const margin = 20
+      x = Math.round(rect.left + margin + Math.random() * Math.max(0, rect.width - catSize - margin * 2))
+      y = rectToFloor(rect)
     } else {
       x = window.innerWidth - 160
+      y = 0
     }
     setPosX(x)
-    setPosY(floor)
+    setPosY(y)
     setMounted(true)
     setTimeout(() => setPopIn(true), 100)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -348,15 +352,22 @@ export default function DesktopPet({
     const onMove = (ev: MouseEvent) => {
       dragMoved.current = true
       setIsDragging(true)
-      const floor = getFloor()
-      const newX = Math.max(0, Math.min(window.innerWidth - 140, ev.clientX - dragOffset.current.x))
-      const rawY = Math.max(0, window.innerHeight - ev.clientY - 10)
-      // On dashboard, clamp Y so pet stays within pet area (floor to floor+280)
-      const newY = pathname === '/dashboard'
-        ? Math.max(floor, Math.min(floor + 280, rawY))
-        : rawY
-      setPosX(newX)
-      setPosY(newY)
+      const rect = getPetAreaRect()
+      if (rect) {
+        // Clamp X within pet area, clamp Y between top and floor of pet area
+        const floor = rectToFloor(rect)
+        const petAreaTop = rectToFloor({ ...rect, bottom: rect.top } as DOMRect)
+        const newX = Math.max(rect.left, Math.min(rect.right - catSize, ev.clientX - dragOffset.current.x))
+        const rawY = Math.max(0, window.innerHeight - ev.clientY - 10)
+        const newY = Math.max(floor, Math.min(floor + rect.height, rawY))
+        setPosX(newX)
+        setPosY(newY)
+      } else {
+        const newX = Math.max(0, Math.min(window.innerWidth - 140, ev.clientX - dragOffset.current.x))
+        const newY = Math.max(0, window.innerHeight - ev.clientY - 10)
+        setPosX(newX)
+        setPosY(newY)
+      }
     }
 
     const onUp = () => {
@@ -369,7 +380,8 @@ export default function DesktopPet({
       }, 0)
       // Only snap to floor if the user actually dragged (not just a click)
       if (!dragMoved.current) return
-      setPosY(getFloor())
+      const rect = getPetAreaRect()
+      setPosY(rect ? rectToFloor(rect) : 0)
       setBehavior({ pose: 'playing', ms: 1200 })
       say('*thud*')
       setTimeout(() => {
