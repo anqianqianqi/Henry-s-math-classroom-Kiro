@@ -26,7 +26,7 @@ export default function DashboardPage() {
     spendableBalance: 0,
   })
   const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean; submissionId?: string; hasNewTeacherComment?: boolean }>>([])
-  const router = useRouter()
+  const [petRoomBgUrl, setPetRoomBgUrl] = useState<string | null>(null)  const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
@@ -85,6 +85,39 @@ export default function DashboardPage() {
     // Load stats - pass role directly since setState is async
     await loadStats(user.id, hasTeacherRole || hasAdminRole)
     await loadTodayChallenge(user.id, hasTeacherRole || hasAdminRole)
+
+    // Load pet room background
+    try {
+      const { data: userRoom } = await supabase
+        .from('user_pet_room')
+        .select('background_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      let bgId = userRoom?.background_id ?? null
+
+      if (!bgId) {
+        // Fall back to the default room
+        const { data: defaultRoom } = await supabase
+          .from('pet_room_backgrounds')
+          .select('id')
+          .eq('is_default', true)
+          .eq('is_active', true)
+          .maybeSingle()
+        bgId = defaultRoom?.id ?? null
+      }
+
+      if (bgId) {
+        const { data: bg } = await supabase
+          .from('pet_room_backgrounds')
+          .select('image_url')
+          .eq('id', bgId)
+          .maybeSingle()
+        if (bg?.image_url) setPetRoomBgUrl(bg.image_url)
+      }
+    } catch (_) {
+      // pet_room_backgrounds table may not exist yet — ignore
+    }
 
     setLoading(false)
   }
@@ -545,8 +578,17 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Right half: pet area — transparent, fixed height matching collapsed banner */}
-          <div id="pet-area" className="flex-1 min-w-0 self-start" style={{ minHeight: '280px' }} />
+          {/* Right half: pet area — shows selected room background */}
+          <div
+            id="pet-area"
+            className="flex-1 min-w-0 self-start rounded-3xl overflow-hidden"
+            style={{
+              minHeight: '280px',
+              backgroundImage: petRoomBgUrl ? `url(${petRoomBgUrl})` : undefined,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center bottom',
+            }}
+          />
         </div>
 
         {/* Stats Cards */}
