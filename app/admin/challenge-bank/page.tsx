@@ -360,7 +360,8 @@ export default function ChallengeBankPage() {
   const filtered = challenges.filter(c =>
     (!search.trim() ||
       c.title.toLowerCase().includes(search.toLowerCase()) ||
-      c.description.toLowerCase().includes(search.toLowerCase())) &&
+      c.description.toLowerCase().includes(search.toLowerCase()) ||
+      c.tag_ids?.some(tid => (tags.find(t => t.id === tid)?.name || '').toLowerCase().includes(search.toLowerCase()))) &&
     (selectedTags.length === 0 || selectedTags.every(t => c.tag_ids?.includes(t)))
   )
 
