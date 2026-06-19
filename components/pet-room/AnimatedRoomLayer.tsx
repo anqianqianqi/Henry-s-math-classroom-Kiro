@@ -149,18 +149,38 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
             //
             // Correct approach: both images get the polygon clipPath directly.
             // - Layer A (static): always fills the full polygon, never moves.
+            //   If fillColor is set, use a lightweight SVG polygon instead of a full image copy.
             // - Layer B (animated): same polygon clip, animates on top.
             // Any gap the animated image leaves behind is covered by Layer A.
+            const staticLayer = zone.fillColor ? (
+              // Solid color fill — lightweight, no extra image load
+              <svg
+                key={`${clipId}_fill`}
+                className="absolute inset-0 w-full h-full"
+                style={{ overflow: 'visible' }}
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+              >
+                <polygon
+                  points={zone.polygon.map(p => `${p.x},${p.y}`).join(' ')}
+                  fill={zone.fillColor}
+                />
+              </svg>
+            ) : (
+              // Full static image copy as fallback
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={`${clipId}_static`}
+                src={imageUrl}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ clipPath: `url(#${clipId})` }}
+              />
+            )
+
             return (
               <React.Fragment key={clipId}>
-                {/* Static base — always fills the polygon, never moves */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={imageUrl}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover"
-                  style={{ clipPath: `url(#${clipId})` }}
-                />
+                {staticLayer}
                 {/* Animated layer — same clip, moves freely; static shows through any gap */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -173,19 +193,35 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
             )
           }
 
-          // Default mode: animated img clipped to polygon (overflow shows as shifted background)
+          // Default mode: animated img clipped to polygon (overflow shows as shifted background).
+          // If fillColor is set, also render a solid fill polygon underneath so gaps show the
+          // chosen color rather than whatever the underlying layer happens to be.
           return (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={clipId}
-              src={imageUrl}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{
-                clipPath: `url(#${clipId})`,
-                ...getAnimStyle(animId, zone),
-              }}
-            />
+            <React.Fragment key={clipId}>
+              {zone.fillColor && (
+                <svg
+                  className="absolute inset-0 w-full h-full"
+                  style={{ overflow: 'visible' }}
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                >
+                  <polygon
+                    points={zone.polygon.map(p => `${p.x},${p.y}`).join(' ')}
+                    fill={zone.fillColor}
+                  />
+                </svg>
+              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{
+                  clipPath: `url(#${clipId})`,
+                  ...getAnimStyle(animId, zone),
+                }}
+              />
+            </React.Fragment>
           )
         })}
       </div>

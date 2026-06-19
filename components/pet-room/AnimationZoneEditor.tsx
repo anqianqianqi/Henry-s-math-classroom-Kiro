@@ -28,6 +28,7 @@ export interface AnimZone {
   intensity: number
   speed: number
   containOverflow?: boolean  // when true, static layer fills polygon so overflow is hidden behind static background
+  fillColor?: string          // optional solid color to fill the original polygon area (gap filler), e.g. '#a3b845'
 }
 
 const ANIM_OPTIONS: { value: AnimZone['animation']; label: string; desc: string }[] = [
@@ -71,6 +72,9 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   const [zoomDragStart, setZoomDragStart] = useState<AnimPoint | null>(null)
   const [zoomDragCurrent, setZoomDragCurrent] = useState<AnimPoint | null>(null)
 
+  // Eyedropper state — when set, next canvas click samples pixel and sets fillColor on that zone
+  const [eyedropperZoneId, setEyedropperZoneId] = useState<string | null>(null)
+
   // Load image
   useEffect(() => {
     const img = new Image()
@@ -89,6 +93,7 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
           setZoomDragStart(null)
           setZoomDragCurrent(null)
         }
+        if (eyedropperZoneId) setEyedropperZoneId(null)
       }
       if ((e.key === 'Enter') && drawing && currentPoints.length >= 3) {
         finishZone()
@@ -96,7 +101,7 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [drawing, zoomMode, currentPoints])
+  }, [drawing, zoomMode, currentPoints, eyedropperZoneId])
 
   // Draw everything onto canvas
   useEffect(() => {
@@ -278,6 +283,22 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
     // In zoom-select mode clicks are handled by mousedown/up
     if (zoomMode === 'selecting') return
 
+    // Eyedropper mode — sample the pixel color and assign to the zone
+    if (eyedropperZoneId) {
+      const canvas = canvasRef.current!
+      const rect = canvas.getBoundingClientRect()
+      const scaleX = canvas.width / rect.width
+      const scaleY = canvas.height / rect.height
+      const px = Math.round((e.clientX - rect.left) * scaleX)
+      const py = Math.round((e.clientY - rect.top) * scaleY)
+      const ctx = canvas.getContext('2d')!
+      const [r, g, b] = ctx.getImageData(px, py, 1, 1).data
+      const hex = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')
+      updateZone(eyedropperZoneId, { fillColor: hex })
+      setEyedropperZoneId(null)
+      return
+    }
+
     const pt = getRelPct(e)
 
     if (!drawing) {
@@ -356,7 +377,9 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
     <div className="space-y-3">
       {/* Instructions */}
       <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2 border border-gray-200">
-        {zoomMode === 'selecting'
+        {eyedropperZoneId
+          ? '🎨 Click any spot on the image to sample that color as the fill for this zone. Press Esc to cancel.'
+          : zoomMode === 'selecting'
           ? 'Drag a rectangle on the image to zoom into that area. Release to commit.'
           : drawing
           ? `${currentPoints.length} point${currentPoints.length !== 1 ? 's' : ''} placed — click to add more, click near ● to close, or press Esc to cancel`
@@ -366,7 +389,7 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
 
       {/* Canvas */}
       <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden border border-gray-200"
-        style={{ cursor: zoomMode === 'selecting' ? 'crosshair' : drawing ? 'crosshair' : 'default' }}>
+        style={{ cursor: eyedropperZoneId ? 'crosshair' : zoomMode === 'selecting' ? 'crosshair' : drawing ? 'crosshair' : 'default' }}>
         <canvas
           ref={canvasRef}
           onClick={handleCanvasClick}
@@ -375,6 +398,10 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
           onMouseUp={handleCanvasMouseUp}
           className="w-full select-none"
         />
+        {/* Eyedropper active overlay hint */}
+        {eyedropperZoneId && (
+          <div className="absolute inset-0 border-4 border-orange-400 rounded-xl pointer-events-none" />
+        )}
       </div>
 
       {/* Zoom toolbar */}
@@ -472,6 +499,34 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
                     className="accent-blue-500" />
                   <span title="Static layer fills the polygon so animation overflow is hidden behind the background">Contain</span>
                 </label>
+                {/* Fill color — eyedropper to sample + swatch + clear */}
+                <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                  <button
+                    title="Sample a background color to fill the polygon gap"
+                    onClick={() => setEyedropperZoneId(eyedropperZoneId === zone.id ? null : zone.id)}
+                    className={`text-xs px-1.5 py-0.5 rounded border font-semibold transition-colors ${
+                      eyedropperZoneId === zone.id
+                        ? 'bg-orange-400 border-orange-500 text-white'
+                        : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-600'
+                    }`}
+                  >
+                    🎨
+                  </button>
+                  {zone.fillColor && (
+                    <>
+                      <div
+                        className="w-4 h-4 rounded border border-gray-300 shrink-0"
+                        style={{ background: zone.fillColor }}
+                        title={zone.fillColor}
+                      />
+                      <button
+                        onClick={() => updateZone(zone.id, { fillColor: undefined })}
+                        className="text-[10px] text-gray-400 hover:text-red-500 leading-none"
+                        title="Remove fill color"
+                      >✕</button>
+                    </>
+                  )}
+                </div>
                 <span className="text-[10px] text-gray-400">{zone.polygon.length} pts</span>
                 <button onClick={e => { e.stopPropagation(); deleteZone(zone.id) }}
                   className="text-xs text-red-400 hover:text-red-600 font-bold px-1">✕</button>
