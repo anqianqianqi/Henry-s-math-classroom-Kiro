@@ -277,9 +277,9 @@ export default function PetRoomPage() {
       const dyPct = ((me.clientY - dragState.current.startY) / rect.height) * 100
       const s = dragState.current.startSlot
       if (dragState.current.type === 'move') {
-        setEditingSlot({ x: Math.max(0, Math.min(100 - s.w, s.x + dxPct)), y: Math.max(0, Math.min(100 - s.h, s.y + dyPct)), w: s.w, h: s.h })
+        setEditingSlot({ x: Math.max(0, Math.min(100 - s.w, s.x + dxPct)), y: Math.max(0, Math.min(100 - s.h, s.y + dyPct)), w: s.w, h: s.h, rotate: s.rotate })
       } else {
-        setEditingSlot({ x: s.x, y: s.y, w: Math.max(5, Math.min(100 - s.x, s.w + dxPct)), h: Math.max(5, Math.min(100 - s.y, s.h + dyPct)) })
+        setEditingSlot({ x: s.x, y: s.y, w: Math.max(5, Math.min(100 - s.x, s.w + dxPct)), h: Math.max(5, Math.min(100 - s.y, s.h + dyPct)), rotate: s.rotate })
       }
     }
     window.addEventListener('mousemove', move)
