@@ -665,16 +665,11 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Post-process: AI generates 1024×1024 with a 3:4 proportion book cover.
-      // We scale it to 400×533 (3:4 ratio, wider than 2:3) then place it centered
-      // on a 480×700 transparent canvas (final stored size matching the system).
-      // This gives: 40px side padding, 83px top/bottom padding — corner objects bleed.
-      const BOOK_W = 400   // 3:4 ratio book face width
-      const BOOK_H = 533   // 3:4 ratio book face height (400 * 4/3)
-      const FINAL_W = 480  // book + 40px each side
-      const FINAL_H = 700  // book + ~83px top + ~84px bottom
-      const OFF_X = (FINAL_W - BOOK_W) / 2  // 40px
-      const OFF_Y = (FINAL_H - BOOK_H) / 2  // ~83px
+      // Post-process: AI generates 1024×1024. Scale it to fit inside 480×700
+      // (object-fit: contain) so nothing gets cropped — transparent padding fills
+      // any remaining space. The book image stays complete at its natural ratio.
+      const FINAL_W = 480
+      const FINAL_H = 700
       const imgEl = new Image()
       imgEl.crossOrigin = 'anonymous'
       const imgLoaded = new Promise<void>((res, rej) => {
@@ -684,12 +679,21 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       imgEl.src = sandbox.imageUrl
       await imgLoaded
 
+      // Compute scale to fit (contain) within FINAL_W × FINAL_H
+      const scaleX = FINAL_W / imgEl.naturalWidth
+      const scaleY = FINAL_H / imgEl.naturalHeight
+      const scale = Math.min(scaleX, scaleY)
+      const drawW = Math.round(imgEl.naturalWidth * scale)
+      const drawH = Math.round(imgEl.naturalHeight * scale)
+      const offX = Math.round((FINAL_W - drawW) / 2)
+      const offY = Math.round((FINAL_H - drawH) / 2)
+
       const canvas = document.createElement('canvas')
       canvas.width = FINAL_W
       canvas.height = FINAL_H
       const ctx = canvas.getContext('2d')!
-      // Canvas is transparent by default — scale the 1024×1024 AI image to 3:4 book face
-      ctx.drawImage(imgEl, OFF_X, OFF_Y, BOOK_W, BOOK_H)
+      // Canvas is transparent by default — draw the AI image scaled to fit
+      ctx.drawImage(imgEl, offX, offY, drawW, drawH)
 
       const paddedBlob = await new Promise<Blob>((res, rej) =>
         canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png')
