@@ -22,13 +22,15 @@ Generate a hardcover book cover illustration. The book is viewed straight-on fro
 
 IMPORTANT: Do NOT paint any background, environment, landscape, or scene outside the book cover edges. The book cover IS the full image. There is nothing outside it — no jungle, no sky, no scenery, nothing. The image boundary is the book boundary.
 
-COVER SURFACE: Rich thematic texture across the entire surface — deeply embossed feeling near the edges, smoother toward the center. A thin ornate gold border line runs along the inner perimeter. The cover material looks and feels like premium cloth or leather hardcover — tactile, physical, real.
+IMPORTANT: Do NOT draw a thick dark book binding or border frame around the outside of the cover. Do NOT draw a black or dark rectangular border/frame that acts like a physical book binding. The very edges of the image are the very edges of the cover face — no thick outer frame, no binding strip, no raised edge. The cover illustration goes all the way to the pixel boundary.
+
+COVER SURFACE: Rich thematic texture across the entire surface — deeply embossed feeling near the edges, smoother toward the center. A thin ornate gold decorative border line runs INSIDE the cover (inset from the edges), as part of the cover design. The cover material looks and feels like premium cloth or leather hardcover.
 
 CORNER DECORATION: Each corner has a dense cluster of 2–4 closely grouped 3D objects forming a small vignette scene. Objects sit ON the cover surface, casting soft shadows onto it. The clusters extend to the very corner edges of the cover.
 
 CENTER ZONE: Keep the central area (roughly middle 60% width, middle 50% height) relatively plain — just the background texture — clear space for title and text overlay.
 
-DEPTH & REALISM: Give it physical weight through: subtle edge darkening/vignette around the perimeter, slight embossing on the border ornaments, realistic material texture that makes it look like a real book you can pick up.
+DEPTH & REALISM: Give it physical weight through: subtle edge darkening/vignette, slight embossing on the decorative border ornaments, realistic material texture.
 
 NO text, letters, numbers, or glyphs anywhere in the image.
 `.trim()
