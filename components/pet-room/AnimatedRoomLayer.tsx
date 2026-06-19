@@ -75,35 +75,73 @@ function ZoneCanvas({ imageUrl, zone, containerWidth, containerHeight }: ZoneCan
 
       const val = getAnimValue((now - startTime) / duration)
 
-      // 1. Draw fill layer clipped to the original fixed polygon
-      if (zone.fillColor || zone.containOverflow) {
+      if (zone.containOverflow) {
+        // CONTAINED mode: everything is strictly within the original polygon.
+        // Outside the original polygon → always shows the real background (unaffected).
+        // Inside the original polygon → fill color base + animated image on top.
         ctx.save()
+        // Hard outer boundary: nothing ever paints outside the original polygon
         ctx.beginPath()
         drawPoly(ctx)
         ctx.closePath()
         ctx.clip()
+
+        // Base: fill color (or static image) covers the whole clipped area
         if (zone.fillColor) {
           ctx.fillStyle = zone.fillColor
           ctx.fillRect(0, 0, containerWidth, containerHeight)
-        } else if (zone.containOverflow && imgRef.current) {
+        } else if (imgRef.current) {
           ctx.drawImage(imgRef.current, 0, 0, containerWidth, containerHeight)
         }
-        ctx.restore()
-      }
 
-      // 2. Draw animated image clipped to the transformed (new) polygon
-      if (imgRef.current) {
-        ctx.save()
-        ctx.translate(pivotX, pivotY)
-        if (zone.animation === 'sway')  ctx.rotate((val * Math.PI) / 180)
-        if (zone.animation === 'float') ctx.translate(0, val)
-        ctx.translate(-pivotX, -pivotY)
-        ctx.beginPath()
-        drawPoly(ctx)
-        ctx.closePath()
-        ctx.clip()
-        ctx.drawImage(imgRef.current, 0, 0, containerWidth, containerHeight)
+        // Animated image on top, also constrained by the outer clip
+        if (imgRef.current) {
+          ctx.save()
+          ctx.translate(pivotX, pivotY)
+          if (zone.animation === 'sway')  ctx.rotate((val * Math.PI) / 180)
+          if (zone.animation === 'float') ctx.translate(0, val)
+          ctx.translate(-pivotX, -pivotY)
+          ctx.beginPath()
+          drawPoly(ctx)
+          ctx.closePath()
+          ctx.clip()
+          ctx.drawImage(imgRef.current, 0, 0, containerWidth, containerHeight)
+          ctx.restore()
+        }
+
         ctx.restore()
+
+      } else {
+        // NOT CONTAINED mode: animated polygon can move outside the original boundary.
+        // Fill shows in original polygon area not covered by animated polygon.
+        // Animated image can bleed outside original polygon.
+
+        // 1. Draw fill on the original fixed polygon
+        if (zone.fillColor) {
+          ctx.save()
+          ctx.beginPath()
+          drawPoly(ctx)
+          ctx.closePath()
+          ctx.clip()
+          ctx.fillStyle = zone.fillColor
+          ctx.fillRect(0, 0, containerWidth, containerHeight)
+          ctx.restore()
+        }
+
+        // 2. Draw animated image clipped to the transformed (new) polygon
+        if (imgRef.current) {
+          ctx.save()
+          ctx.translate(pivotX, pivotY)
+          if (zone.animation === 'sway')  ctx.rotate((val * Math.PI) / 180)
+          if (zone.animation === 'float') ctx.translate(0, val)
+          ctx.translate(-pivotX, -pivotY)
+          ctx.beginPath()
+          drawPoly(ctx)
+          ctx.closePath()
+          ctx.clip()
+          ctx.drawImage(imgRef.current, 0, 0, containerWidth, containerHeight)
+          ctx.restore()
+        }
       }
 
       rafRef.current = requestAnimationFrame(draw)
