@@ -865,7 +865,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
             {adminTab === 'generate' && (
               <div className="space-y-4">
                 <p className="text-xs text-amber-700">
-                  💡 AI generates a physical hardcover book viewed at a slight angle — with visible spine, textured cover, clear center space, and 3D sculptural corner ornaments matching your theme.
+                  💡 AI generates a front-facing book cover (no angle, transparent background) with 3D sculptural corner ornaments, ornate border, and clear center space for the title and button.
                 </p>
 
                 {!sandbox ? (
