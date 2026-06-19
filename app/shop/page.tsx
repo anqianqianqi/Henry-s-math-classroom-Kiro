@@ -657,7 +657,6 @@ export default function ShopPage() {
         .from('pet_room_backgrounds')
         .select('id, name, description, image_url, animation_zones, shop_item_id')
         .eq('is_active', true)
-        .eq('visibility', 'public')
         .not('shop_item_id', 'is', null)
         .order('created_at', { ascending: false })
 
@@ -677,7 +676,6 @@ export default function ShopPage() {
         .from('book_skins')
         .select('id, name, description, image_url, skin_type, shop_item_id')
         .eq('is_active', true)
-        .eq('visibility', 'public')
         .eq('skin_type', 'cover')
         .not('shop_item_id', 'is', null)
         .order('created_at', { ascending: false })
