@@ -641,12 +641,12 @@ export default function DashboardPage() {
               />
             )}
 
-            <InlinePet />
-
             {/* Animated zones — gentle ambient animation on specific objects */}
             {petRoomBgUrl && petRoomAnimZones.length > 0 && (
               <AnimatedRoomLayer imageUrl={petRoomBgUrl} zones={petRoomAnimZones} />
             )}
+
+            <InlinePet />
           </div>
         </div>
 

@@ -77,6 +77,14 @@ function getKeyframes(id: string, zone: AnimZone): string {
           100% { filter: hue-rotate(${s * 360}deg) brightness(1); }
         }
       `
+    case 'glow':
+      // Brightness pulse — same colour, just gets brighter then dimmer
+      return `
+        @keyframes anim_${id} {
+          0%   { filter: brightness(1); }
+          100% { filter: brightness(${1 + s * 0.8}); }
+        }
+      `
   }
 }
 
@@ -92,9 +100,9 @@ function getAnimStyle(id: string, zone: AnimZone): React.CSSProperties {
     // alternate = plays forward then backward → perfectly smooth loop with no stutter
     // sway and float both benefit from alternate direction
     // bling uses normal (full 360° hue cycle is already seamless at endpoints)
-    animationDirection: zone.animation === 'bling' ? 'normal' : (zone.animation === 'shimmer' || zone.animation === 'float' || zone.animation === 'sway') ? 'alternate' : 'normal',
+    animationDirection: zone.animation === 'bling' ? 'normal' : (zone.animation === 'shimmer' || zone.animation === 'float' || zone.animation === 'sway' || zone.animation === 'glow') ? 'alternate' : 'normal',
     transformOrigin: `${pxv}% ${pyv}%`,
-    willChange: zone.animation === 'bling' ? 'filter' : 'transform, opacity',
+    willChange: (zone.animation === 'bling' || zone.animation === 'glow') ? 'filter' : 'transform, opacity',
   }
 }
 
