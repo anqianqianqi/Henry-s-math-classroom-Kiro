@@ -949,7 +949,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 
                     {/* Preview */}
                     <div className="flex justify-center">
-                      <div className="rounded-xl overflow-hidden border-2 border-amber-200 shadow-lg" style={{ width: 160, height: 248 }}>
+                      <div className="rounded-xl overflow-hidden border-2 border-amber-200 shadow-lg" style={{ width: 280, height: 434 }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={sandbox.imageUrl} alt="Generated cover" className="w-full h-full object-cover" />
                       </div>
