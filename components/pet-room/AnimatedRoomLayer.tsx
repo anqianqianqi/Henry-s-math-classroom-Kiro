@@ -30,14 +30,12 @@ function getKeyframes(id: string, zone: AnimZone): string {
 
   switch (zone.animation) {
     case 'sway':
-      // Translate horizontally — the image physically moves left/right so the
-      // fill color actually shows through at the vacated edge of the polygon.
-      // Rotation was wrong because a rotated full-size image always covers the
-      // entire polygon area regardless of angle.
+      // Wrapper rotates carrying the clip polygon with it — creates a real gap
+      // between original and new polygon position, filled by the fill layer.
       return `
         @keyframes anim_${id} {
-          0%   { transform: translateX(${-s * 3}%); }
-          100% { transform: translateX(${s * 3}%); }
+          0%   { transform: rotate(${-s * 3}deg); }
+          100% { transform: rotate(${s * 3}deg); }
         }
       `
     case 'float':
@@ -101,13 +99,47 @@ function getAnimStyle(id: string, zone: AnimZone): React.CSSProperties {
     animationDuration: `${duration}s`,
     animationTimingFunction: zone.animation === 'flicker' ? 'steps(1)' : 'ease-in-out',
     animationIterationCount: 'infinite',
-    // alternate = plays forward then backward → perfectly smooth loop with no stutter
-    // sway and float both benefit from alternate direction
-    // bling uses normal (full 360° hue cycle is already seamless at endpoints)
     animationDirection: zone.animation === 'bling' ? 'normal' : (zone.animation === 'shimmer' || zone.animation === 'float' || zone.animation === 'sway' || zone.animation === 'glow') ? 'alternate' : 'normal',
     transformOrigin: `${pxv}% ${pyv}%`,
     willChange: (zone.animation === 'bling' || zone.animation === 'glow') ? 'filter' : 'transform, opacity',
   }
+}
+
+// For animations that transform the whole polygon region (sway, float),
+// we apply the animation to the WRAPPER div (which carries the clip-path),
+// not the image inside. This makes the clip polygon co-rotate/translate with
+// the content — so the gap between original polygon and new polygon position
+// is correctly filled by the fill layer underneath.
+// The image inside the wrapper must counter-transform to stay aligned with
+// the full background (otherwise it would rotate relative to itself and
+// show wrong pixels). For a full-size absolute-inset image, the counter-
+// transform keeps it mapped to the correct background position.
+function getWrapperAnimStyle(id: string, zone: AnimZone): React.CSSProperties | null {
+  // Only sway and float move the whole polygon — apply to wrapper
+  if (zone.animation === 'sway' || zone.animation === 'float') {
+    return getAnimStyle(id, zone)
+  }
+  return null
+}
+
+function getImageAnimStyle(id: string, zone: AnimZone): React.CSSProperties {
+  // For sway/float: animation is on wrapper, image needs counter-transform to stay aligned
+  // For other animations (opacity, filter): apply directly to image as before
+  if (zone.animation === 'sway' || zone.animation === 'float') {
+    // The image counter-transforms to undo the wrapper's transform,
+    // keeping the background pixels correctly positioned.
+    // We emit the same keyframe name but with opposite values.
+    return {
+      animationName: `anim_${id}_counter`,
+      animationDuration: `${(3 / zone.speed).toFixed(2)}s`,
+      animationTimingFunction: 'ease-in-out',
+      animationIterationCount: 'infinite',
+      animationDirection: 'alternate',
+      transformOrigin: `${zone.pivot.x}% ${zone.pivot.y}%`,
+      willChange: 'transform',
+    }
+  }
+  return getAnimStyle(id, zone)
 }
 
 export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: Props) {
@@ -117,7 +149,28 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
 
   const styleContent = zones.map((zone, i) => {
     const id = `${baseId}_${i}`
-    return getKeyframes(id, zone)
+    const forward = getKeyframes(id, zone)
+    // For sway/float: also emit counter-keyframes for the image (undoes wrapper transform)
+    let counter = ''
+    if (zone.animation === 'sway') {
+      const s = zone.intensity
+      counter = `
+        @keyframes anim_${id}_counter {
+          0%   { transform: rotate(${s * 3}deg); }
+          100% { transform: rotate(${-s * 3}deg); }
+        }
+      `
+    } else if (zone.animation === 'float') {
+      const s = zone.intensity
+      counter = `
+        @keyframes anim_${id}_counter {
+          0%   { transform: translateY(0px); }
+          50%  { transform: translateY(${s * 6}px); }
+          100% { transform: translateY(0px); }
+        }
+      `
+    }
+    return forward + counter
   }).join('\n')
 
   return (
@@ -157,17 +210,24 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
           return (
             <React.Fragment key={clipId}>
               {staticFill}
-              {/* Animated wrapper — exact same polygon clip, never transforms */}
+              {/* Animated wrapper — clip polygon rotates/moves WITH the content.
+                  This creates the correct gap: original polygon minus rotated polygon
+                  = region where fill color shows through. */}
               <div
                 className="absolute inset-0"
-                style={{ clipPath: polygonCss }}
+                style={{
+                  clipPath: polygonCss,
+                  ...(getWrapperAnimStyle(animId, zone) ?? {}),
+                }}
               >
+                {/* Image counter-animates to stay aligned with the background.
+                    For opacity/filter animations, the normal animation applies here. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl}
                   alt=""
                   className="absolute inset-0 w-full h-full object-cover"
-                  style={getAnimStyle(animId, zone)}
+                  style={getImageAnimStyle(animId, zone)}
                 />
               </div>
             </React.Fragment>
