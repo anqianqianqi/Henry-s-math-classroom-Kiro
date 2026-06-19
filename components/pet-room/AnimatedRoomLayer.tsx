@@ -30,10 +30,14 @@ function getKeyframes(id: string, zone: AnimZone): string {
 
   switch (zone.animation) {
     case 'sway':
+      // Translate horizontally — the image physically moves left/right so the
+      // fill color actually shows through at the vacated edge of the polygon.
+      // Rotation was wrong because a rotated full-size image always covers the
+      // entire polygon area regardless of angle.
       return `
         @keyframes anim_${id} {
-          0%   { transform: rotate(${-s * 3}deg); }
-          100% { transform: rotate(${s * 3}deg); }
+          0%   { transform: translateX(${-s * 3}%); }
+          100% { transform: translateX(${s * 3}%); }
         }
       `
     case 'float':
