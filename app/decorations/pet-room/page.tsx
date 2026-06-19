@@ -220,12 +220,10 @@ export default function PetRoomPage() {
       const { error: insertErr } = await supabase.from('pet_room_backgrounds').insert({
         name: saveName.trim(), description: saveDesc.trim() || null,
         image_url: sandbox.imageUrl, prompt: sandbox.prompt,
-        frame_overlay_url: sandbox.frameOverlayUrl ?? null,
-        frame_slot: sandbox.frameSlot ?? null,
+        frame_overlay_url: null,   // frame is baked into the room image
+        frame_slot: null,          // set via 📐 Adjust Frame after saving
         is_default: saveSetDefault, is_active: true, visibility: 'admin_only', created_by: userId,
-        frame_slots: sandbox.frameSlot
-          ? [{ id: 'wall_frame', x: sandbox.frameSlot.x, y: sandbox.frameSlot.y, w: sandbox.frameSlot.w, h: sandbox.frameSlot.h, z_index: 2, label: 'Wall Picture', default_image_url: null }]
-          : [{ id: 'wall_frame', x: 62, y: 8, w: 18, h: 28, z_index: 2, label: 'Wall Picture', default_image_url: null }],
+        frame_slots: [{ id: 'wall_frame', x: 62, y: 8, w: 18, h: 28, z_index: 2, label: 'Wall Picture', default_image_url: null }],
       })
       if (insertErr) throw new Error(insertErr.message)
       setSaveOpen(false); setSaveName(''); setSaveDesc(''); setSaveSetDefault(false)
@@ -436,32 +434,16 @@ export default function PetRoomPage() {
                           className="text-xs text-gray-400 hover:text-gray-600">✕ Start over</button>
                       </div>
 
-                      {/* Preview — room + frame overlay */}
+                      {/* Preview — room with frame baked in */}
                       <div className="relative w-full rounded-xl overflow-hidden border border-amber-200 cursor-zoom-in"
                         onClick={() => setLightbox(sandbox.imageUrl)}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={sandbox.imageUrl} alt="Preview" className="w-full" />
-                        {/* Frame overlay rendered with mix-blend-mode: multiply */}
-                        {sandbox.frameOverlayUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={sandbox.frameOverlayUrl}
-                            alt="Frame overlay"
-                            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                            style={{ mixBlendMode: 'multiply' }}
-                          />
-                        )}
                       </div>
 
-                      {sandbox.frameOverlayUrl && (
-                        <div className="flex items-center gap-2 text-xs text-amber-600">
-                          <span>🖼️ Frame overlay generated</span>
-                          <button
-                            onClick={() => setLightbox(sandbox.frameOverlayUrl!)}
-                            className="underline hover:text-amber-800"
-                          >preview frame</button>
-                        </div>
-                      )}
+                      <p className="text-xs text-amber-500">
+                        🖼️ Frame is baked into the room. After saving, use ⚙️ Manage → 📐 Adjust Frame to set the photo area inside the frame.
+                      </p>
 
                       {/* Prompt history */}
                       <details className="text-xs text-amber-600">

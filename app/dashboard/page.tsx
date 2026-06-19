@@ -625,7 +625,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Right half: pet area — shows selected room background + frame overlay */}
+          {/* Right half: pet area — room+frame baked into background, user photo in frame_slot */}
           <div
             id="pet-area"
             className="flex-1 min-w-0 self-start rounded-3xl overflow-hidden relative"
@@ -636,7 +636,7 @@ export default function DashboardPage() {
               backgroundPosition: 'center bottom',
             }}
           >
-            {/* User's blindbox photo — clipped to the frame_slot area, below the frame overlay */}
+            {/* User's blindbox photo — clipped to the frame_slot area */}
             {userPhotoUrl && petRoomFrameSlot && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -650,17 +650,6 @@ export default function DashboardPage() {
                   height: `${petRoomFrameSlot.h}%`,
                   pointerEvents: 'none',
                 }}
-              />
-            )}
-
-            {/* Frame overlay — on top of photo, mix-blend-mode: multiply makes white transparent */}
-            {petRoomFrameUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={petRoomFrameUrl}
-                alt="Frame overlay"
-                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                style={{ mixBlendMode: 'multiply' }}
               />
             )}
 
