@@ -120,69 +120,46 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
     <>
       <style dangerouslySetInnerHTML={{ __html: styleContent }} />
       <div className={`absolute inset-0 pointer-events-none ${className}`} aria-hidden="true">
-        <svg width="0" height="0" style={{ position: 'absolute' }}>
-          <defs>
-            {zones.map((zone, i) => {
-              const id = `clip_${baseId}_${i}`
-              const pts = zone.polygon.map(p => `${p.x}% ${p.y}%`).join(', ')
-              return (
-                <clipPath key={id} id={id} clipPathUnits="objectBoundingBox">
-                  <polygon points={
-                    zone.polygon.map(p => `${(p.x / 100).toFixed(4)},${(p.y / 100).toFixed(4)}`).join(' ')
-                  } />
-                </clipPath>
-              )
-            })}
-          </defs>
-        </svg>
 
         {zones.map((zone, i) => {
           const clipId = `clip_${baseId}_${i}`
           const animId = `${baseId}_${i}`
 
-          // KEY INSIGHT: clipPath and transform must NOT be on the same element.
-          // If they are, the clip is evaluated in the element's pre-transform space,
-          // so the clip rotates/moves WITH the image — pixels escape the polygon.
+          // Use CSS clip-path polygon() directly — avoids SVG clipPath + compositing
+          // layer issues where will-change/transform on a child can escape a parent's
+          // SVG clipPath in GPU-composited rendering.
           //
-          // Correct pattern:
-          //   <div clipPath="polygon">          ← clip sits here, never moves
-          //     <img transform="animate" />     ← transform here, clipped by parent
-          //   </div>
-          //
-          // The clipped div is a hard pixel boundary. No matter how the child image
-          // rotates or translates, nothing can paint outside the polygon.
+          // polygon() is evaluated in the element's own coordinate space as percentages,
+          // so it always hard-clips regardless of child compositing layers.
+          const polygonCss = `polygon(${zone.polygon.map(p => `${p.x.toFixed(2)}% ${p.y.toFixed(2)}%`).join(', ')})`
 
-          // Static fill layer (color or image copy) — always the full unmoving polygon
-          // Fill color: use a solid-color div clipped to the same polygon — no SVG coordinate
-          // mapping issues, just a hard-clipped box with background color.
-          // containOverflow fallback: static image copy clipped to polygon.
+          // Static fill layer — solid color div or static image, always fills the original polygon
           const staticFill = zone.fillColor ? (
             <div
               key={`${clipId}_fill`}
               className="absolute inset-0"
-              style={{ clipPath: `url(#${clipId})`, backgroundColor: zone.fillColor }}
+              style={{ clipPath: polygonCss, backgroundColor: zone.fillColor }}
             />
           ) : zone.containOverflow ? (
-            // Static image copy fills gaps left by the animated layer
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={`${clipId}_static`}
               src={imageUrl}
               alt=""
               className="absolute inset-0 w-full h-full object-cover"
-              style={{ clipPath: `url(#${clipId})` }}
+              style={{ clipPath: polygonCss }}
             />
           ) : null
 
           return (
             <React.Fragment key={clipId}>
               {staticFill}
-              {/* Clip wrapper — establishes the hard boundary; never transforms */}
+              {/* Clip wrapper — CSS polygon clip, never transforms */}
               <div
                 className="absolute inset-0"
-                style={{ clipPath: `url(#${clipId})` }}
+                style={{ clipPath: polygonCss }}
               >
-                {/* Animated image — transforms freely but is clipped by the parent */}
+                {/* Animated image — transforms freely, hard-clipped by parent polygon */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl}
