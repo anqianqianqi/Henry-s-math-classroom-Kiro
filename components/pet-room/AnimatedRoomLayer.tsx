@@ -125,37 +125,19 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
           const clipId = `clip_${baseId}_${i}`
           const animId = `${baseId}_${i}`
 
-          // Use CSS clip-path polygon() directly — avoids SVG clipPath + compositing
-          // layer issues where will-change/transform on a child can escape a parent's
-          // SVG clipPath in GPU-composited rendering.
-          const polygonCss = `polygon(${zone.polygon.map(p => `${p.x.toFixed(2)}% ${p.y.toFixed(2)}%`).join(', ')})`
+          // Exact polygon for both fill and animated layers.
+          // Fill layer: exact polygon, solid color, never moves → always visible where
+          //             the animated image has shifted away.
+          // Animated layer: exact polygon clip, transforms freely on top.
+          // Where animated image covers fill → you see the animation.
+          // Where animated image moves away  → fill color shows through.
+          const polygonCss = `polygon(${zone.polygon.map(p => `${p.x.toFixed(3)}% ${p.y.toFixed(3)}%`).join(', ')})`
 
-          // Outset polygon for the fill layer — expands each vertex outward from centroid
-          // by ~1%. Covers any background pixels right at the polygon edge so they never
-          // peek through, regardless of sub-pixel rounding at the clip boundary.
-          const cx = zone.polygon.reduce((s, p) => s + p.x, 0) / zone.polygon.length
-          const cy = zone.polygon.reduce((s, p) => s + p.y, 0) / zone.polygon.length
-          const OUTSET = 1.0   // % outward — enough to cover edge pixels
-          const INSET  = 0.3   // % inward  — animated layer stays just inside fill
-          const outsetPolygonCss = `polygon(${zone.polygon.map(p => {
-            const dx = p.x - cx; const dy = p.y - cy
-            const len = Math.hypot(dx, dy) || 1
-            return `${(p.x + (dx / len) * OUTSET).toFixed(3)}% ${(p.y + (dy / len) * OUTSET).toFixed(3)}%`
-          }).join(', ')})`
-          const insetPolygonCss = `polygon(${zone.polygon.map(p => {
-            const dx = p.x - cx; const dy = p.y - cy
-            const len = Math.hypot(dx, dy) || 1
-            return `${(p.x - (dx / len) * INSET).toFixed(3)}% ${(p.y - (dy / len) * INSET).toFixed(3)}%`
-          }).join(', ')})`
-
-          // Fill layer uses OUTSET polygon — bleeds slightly outside the exact boundary
-          // so it covers any background edge pixels that would otherwise show through.
-          // Animated layer uses INSET polygon — stays slightly inside the fill zone.
           const staticFill = zone.fillColor ? (
             <div
               key={`${clipId}_fill`}
               className="absolute inset-0"
-              style={{ clipPath: outsetPolygonCss, backgroundColor: zone.fillColor }}
+              style={{ clipPath: polygonCss, backgroundColor: zone.fillColor }}
             />
           ) : zone.containOverflow ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -164,19 +146,18 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
               src={imageUrl}
               alt=""
               className="absolute inset-0 w-full h-full object-cover"
-              style={{ clipPath: outsetPolygonCss }}
+              style={{ clipPath: polygonCss }}
             />
           ) : null
 
           return (
             <React.Fragment key={clipId}>
               {staticFill}
-              {/* Clip wrapper — full polygon, never transforms */}
+              {/* Animated wrapper — exact same polygon clip, never transforms */}
               <div
                 className="absolute inset-0"
-                style={{ clipPath: insetPolygonCss }}
+                style={{ clipPath: polygonCss }}
               >
-                {/* Animated image — transforms freely, hard-clipped by inset polygon */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl}
