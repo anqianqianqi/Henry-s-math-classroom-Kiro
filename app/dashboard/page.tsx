@@ -119,7 +119,7 @@ export default function DashboardPage() {
       if (bgId) {
         const { data: bg } = await supabase
           .from('pet_room_backgrounds')
-          .select('image_url, is_active, frame_overlay_url, frame_slot, animation_zones')
+          .select('image_url, is_active, frame_overlay_url, frame_slot')
           .eq('id', bgId)
           .maybeSingle()
         // Only show if the room is still active — deactivated rooms are hidden even for owners
@@ -127,7 +127,15 @@ export default function DashboardPage() {
           setPetRoomBgUrl(bg.image_url)
           setPetRoomFrameUrl(bg.frame_overlay_url ?? null)
           setPetRoomFrameSlot(bg.frame_slot ?? null)
-          setPetRoomAnimZones((bg as any).animation_zones ?? [])
+          // Fetch animation zones separately so a missing column never breaks the background
+          try {
+            const { data: bgAnim } = await supabase
+              .from('pet_room_backgrounds')
+              .select('animation_zones')
+              .eq('id', bgId)
+              .maybeSingle()
+            setPetRoomAnimZones((bgAnim as any)?.animation_zones ?? [])
+          } catch (_) { setPetRoomAnimZones([]) }
         }
       }
 
