@@ -665,9 +665,9 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Post-process: scale the AI image (1024×1536) to 480×700 canvas,
-      // then flood-fill the background (from all 4 corners) with transparency.
-      // This removes the dark binding / white background the AI adds outside the book.
+      // Post-process: scale the AI image to 480×700 and save.
+      // The white/dark background outside the book is handled by mix-blend-mode: multiply
+      // in the challenge page display — white pixels become transparent, book content stays.
       const FINAL_W = 480
       const FINAL_H = 700
       const imgEl = new Image()
@@ -684,55 +684,6 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       canvas.height = FINAL_H
       const ctx = canvas.getContext('2d')!
       ctx.drawImage(imgEl, 0, 0, FINAL_W, FINAL_H)
-
-      // Flood-fill background removal: sample the corner pixel color, then
-      // replace all connected pixels within a tolerance with transparency.
-      const imageData = ctx.getImageData(0, 0, FINAL_W, FINAL_H)
-      const data = imageData.data
-
-      function colorDistance(idx: number, tr: number, tg: number, tb: number): number {
-        const r = data[idx], g = data[idx + 1], b = data[idx + 2]
-        return Math.sqrt((r - tr) ** 2 + (g - tg) ** 2 + (b - tb) ** 2)
-      }
-
-      function floodFill(startX: number, startY: number, tolerance: number) {
-        const idx = (startY * FINAL_W + startX) * 4
-        const tr = data[idx], tg = data[idx + 1], tb = data[idx + 2]
-        const visited = new Uint8Array(FINAL_W * FINAL_H)
-        const queue: number[] = [startY * FINAL_W + startX]
-        visited[startY * FINAL_W + startX] = 1
-        while (queue.length > 0) {
-          const pos = queue.pop()!
-          const x = pos % FINAL_W
-          const y = Math.floor(pos / FINAL_W)
-          const i = pos * 4
-          if (data[i + 3] === 0) continue  // already transparent
-          if (colorDistance(i, tr, tg, tb) <= tolerance) {
-            data[i + 3] = 0  // make transparent
-            const neighbors = [
-              x > 0 ? pos - 1 : -1,
-              x < FINAL_W - 1 ? pos + 1 : -1,
-              y > 0 ? pos - FINAL_W : -1,
-              y < FINAL_H - 1 ? pos + FINAL_W : -1,
-            ]
-            for (const n of neighbors) {
-              if (n >= 0 && !visited[n]) {
-                visited[n] = 1
-                queue.push(n)
-              }
-            }
-          }
-        }
-      }
-
-      // Fill from all 4 corners with tolerance 40 (handles dark and light backgrounds)
-      const TOLERANCE = 40
-      floodFill(0, 0, TOLERANCE)
-      floodFill(FINAL_W - 1, 0, TOLERANCE)
-      floodFill(0, FINAL_H - 1, TOLERANCE)
-      floodFill(FINAL_W - 1, FINAL_H - 1, TOLERANCE)
-
-      ctx.putImageData(imageData, 0, 0)
 
       const paddedBlob = await new Promise<Blob>((res, rej) =>
         canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png')

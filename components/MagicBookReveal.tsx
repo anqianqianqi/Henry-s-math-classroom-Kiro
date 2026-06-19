@@ -394,7 +394,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                       : coverImageUrl}
                     alt="Book cover"
                     className="w-full h-auto object-contain"
-                    style={{ display: 'block', maxHeight: '85vh' }}
+                    style={{ display: 'block', maxHeight: '85vh', mixBlendMode: 'multiply' }}
                   />
                   {/* Hidden prerender: keep all frame images decoded in memory */}
                   {coverFrameUrls && coverFrameUrls.length >= 2 && (
