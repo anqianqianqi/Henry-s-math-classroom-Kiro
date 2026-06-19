@@ -20,13 +20,15 @@ COMPOSITION RULES — follow exactly:
 
 Generate a hardcover book cover illustration. The book is viewed straight-on from the front — perfectly flat, no tilt, no angle, no visible spine or side. The cover face fills the ENTIRE image from edge to edge, top to bottom, left to right. No background, no padding, no empty space around the book.
 
+IMPORTANT: Do NOT paint any background, environment, landscape, or scene outside the book cover edges. The book cover IS the full image. There is nothing outside it — no jungle, no sky, no scenery, nothing. The image boundary is the book boundary.
+
 COVER SURFACE: Rich thematic texture across the entire surface — deeply embossed feeling near the edges, smoother toward the center. A thin ornate gold border line runs along the inner perimeter. The cover material looks and feels like premium cloth or leather hardcover — tactile, physical, real.
 
-CORNER DECORATION: Each corner has a dense cluster of 2–4 closely grouped 3D objects forming a small vignette scene. Objects are large, richly detailed, fully colored in their natural tones, casting soft shadows on the cover surface. The clusters physically overlap and extend past the gold border frame.
+CORNER DECORATION: Each corner has a dense cluster of 2–4 closely grouped 3D objects forming a small vignette scene. Objects sit ON the cover surface, casting soft shadows onto it. The clusters extend to the very corner edges of the cover.
 
 CENTER ZONE: Keep the central area (roughly middle 60% width, middle 50% height) relatively plain — just the background texture — clear space for title and text overlay.
 
-DEPTH & REALISM: Even though it's front-facing, give it physical weight through: subtle edge darkening/vignette around the perimeter, slight embossing on the border ornaments, realistic material texture that makes it look like a real book you can pick up.
+DEPTH & REALISM: Give it physical weight through: subtle edge darkening/vignette around the perimeter, slight embossing on the border ornaments, realistic material texture that makes it look like a real book you can pick up.
 
 NO text, letters, numbers, or glyphs anywhere in the image.
 `.trim()
