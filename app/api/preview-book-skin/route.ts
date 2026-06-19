@@ -18,15 +18,15 @@ export const dynamic = 'force-dynamic'
 const COVER_CONTEXT = `
 COMPOSITION RULES — follow exactly:
 
-Generate a flat front-facing hardcover book cover illustration. The book cover fills a 3:4 portrait rectangle that occupies the FULL WIDTH and FULL HEIGHT of the image — no empty space, no margins, no background outside the cover.
+Generate a hardcover book cover illustration. The book is viewed at a very slight 3D angle — just enough to see a narrow dark spine strip on the left edge (~5% of width), with the front cover face taking up the remaining 95% of the canvas. This gives the book a physical, solid depth feel as if you are holding it.
 
-The cover is wider than a standard 2:3 book — it has a 3:4 aspect ratio (wider proportions, like a classic hardcover). The surface fills every pixel of the canvas.
+COVER FACE: The front face fills the full height and nearly all the width. The surface has rich thematic texture — ornate, embossed-feeling near the edges, smoother toward the center. A thin ornate gold border line frames the inner perimeter of the cover face. The cover material looks like premium cloth or leather hardcover.
 
-COVER SURFACE: Rich thematic texture across the entire face — ornate and decorative near the edges, smoother toward the center. A thin ornate gold border line runs along the inner perimeter.
+CORNER DECORATION: Each corner of the cover face has a dense cluster of 2–4 closely grouped 3D objects forming a small vignette scene. Objects are large, richly detailed, fully colored in their natural tones, casting soft shadows on the cover surface. The clusters physically overlap and extend past the gold border frame.
 
-CORNER DECORATION: Each corner has a dense cluster of 2–4 closely grouped 3D objects forming a small vignette. Objects are large, richly detailed, fully colored in their natural tones, casting shadows on the cover surface. The clusters physically overlap and extend past the gold border frame.
+CENTER ZONE: Keep the central area (roughly middle 60% width, middle 50% height) relatively plain — just the background texture — clear space for title and text overlay.
 
-CENTER ZONE: Keep the central area (roughly middle 60% width, middle 50% height) relatively plain — just the background texture — for title and text overlay.
+LIGHTING: Subtle directional light from top-right giving the cover face a slight sheen. The spine strip on the left is slightly darker, reinforcing the 3D book shape.
 
 NO text, letters, numbers, or glyphs anywhere in the image.
 `.trim()
