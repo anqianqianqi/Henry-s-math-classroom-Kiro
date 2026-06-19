@@ -119,24 +119,32 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
           const animId = `${baseId}_${i}`
 
           if (zone.containOverflow) {
-            // "Contain overflow" mode:
-            // The animated img is NOT clipped — it moves freely as a full image.
-            // A parent div IS clipped to the polygon, acting as a window/mask.
-            // The static background below shows through outside the polygon naturally.
-            // Result: only the polygon-shaped window shows the animation; overflow is
-            // hidden because the parent div is clipped, not the img itself.
+            // "Contain overflow" mode — three layers:
+            // 1. Static base img inside the clipped div (fills gaps when animated layer moves away)
+            // 2. Animated img on top (moves freely within the clipped window)
+            // The parent div is clipped to the polygon, so nothing shows outside it.
+            // When the animated img shifts left, the right edge shows the static base img.
             return (
               <div
                 key={clipId}
                 className="absolute inset-0"
                 style={{ clipPath: `url(#${clipId})`, overflow: 'hidden', zIndex: 1 }}
               >
+                {/* Static base — fills any gaps left by animation */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl}
                   alt=""
                   className="absolute inset-0 w-full h-full object-cover"
-                  style={getAnimStyle(animId, zone)}
+                  style={{ zIndex: 1 }}
+                />
+                {/* Animated layer on top — moves freely, shows static when it shifts away */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imageUrl}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={{ zIndex: 2, ...getAnimStyle(animId, zone) }}
                 />
               </div>
             )
