@@ -24,39 +24,36 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 // ── Frame slot (as % of 1536×1024) ───────────────────────────────────────────
-// Upper-right wall area. Kept consistent across all rooms so compositing is
-// predictable. The actual pixel position for 1536×1024:
-//   x: 60% → 921px from left
-//   y: 6%  → 61px from top
-//   w: 20% → 307px wide
-//   h: 32% → 327px tall  (≈ square inner area after frame border)
-const FRAME_SLOT = { x: 60, y: 6, w: 20, h: 32 }
+// Upper-right wall area. A small-to-medium picture frame on the wall.
+// Pixel position for 1536×1024:
+//   x: 62% → ~952px from left
+//   y: 8%  → ~82px from top
+//   w: 18% → ~276px wide
+//   h: 28% → ~287px tall (close to square inner area)
+const FRAME_SLOT = { x: 62, y: 8, w: 18, h: 28 }
 
 // ── Room background context ───────────────────────────────────────────────────
 const ROOM_CONTEXT = `
-The image is a background for a pet area on a web dashboard.
-Landscape orientation (wider than tall, 3:2 aspect ratio, 1536x1024 pixels).
-Leave the lower-centre clear — a small cat sits there.
-On the upper-right area of the wall (approximately 60-80% from the left, 6-38% from the top),
-include a FLAT SOLID LIGHT-COLOURED RECTANGLE on the wall — this is a blank wall space
-where a decorative picture frame will be overlaid. The rectangle should be a uniform colour
-(light beige, cream, or wall colour) with NO detail inside it.
-Style: anime / Studio Ghibli cozy interior.
+IMPORTANT COMPOSITION RULES — follow exactly:
+1. This is a BACKGROUND image only. Do NOT include any animals, cats, pets, or characters.
+2. On the upper-right portion of the wall (roughly the area 62% to 80% from left, 8% to 36% from top), paint a plain empty rectangular patch of flat uniform wall colour (cream, beige, or light grey). This patch should look like a blank section of wall — NO artwork, NO decoration, NO texture variation inside this rectangle. It will have a picture frame overlaid on top later.
+3. The lower-centre of the image should be clear floor space (no furniture blocking it).
+4. Landscape orientation, 3:2 aspect ratio.
+5. Anime / Studio Ghibli interior style.
 `.trim()
 
 // ── Frame overlay prompt ──────────────────────────────────────────────────────
-// The frame is generated separately and composited on top of the room.
-// White background → rendered with mix-blend-mode: multiply at runtime.
 function buildFramePrompt(roomStyle: string): string {
-  return `A single decorative picture frame, anime / Studio Ghibli style matching: ${roomStyle}.
-The frame is centered on a pure white background.
-The frame occupies roughly the centre 40% of the image (both horizontally and vertically).
-The frame has an ornate border — wood, carved, or gilded depending on the room style.
-The inner opening of the frame is pure white (completely empty, no image inside).
-Everything outside the frame border is pure white.
-No shadows, no background room elements, no furniture — only the frame on white.
-The frame opening is approximately square (1:1 ratio).
-Image size: 1536x1024, landscape.`
+  return `A single decorative picture frame on a pure white background.
+Style: anime / Studio Ghibli, matching this room: ${roomStyle}.
+IMPORTANT RULES:
+- The frame is SMALL — it occupies only about 20% of the image width and 30% of the image height, positioned in the upper-right area of the canvas.
+- The frame has a decorative border — wood, gilded, or carved.
+- The inside of the frame is completely empty — pure white, no image inside.
+- Everything outside the frame border is pure white.
+- No room, no background, no shadows, no furniture — just the frame on white.
+- The frame opening is approximately square (1:1 ratio).
+Image canvas: 1536x1024 landscape. Frame positioned at roughly 62-80% from left, 8-36% from top.`
 }
 
 async function generateImage(

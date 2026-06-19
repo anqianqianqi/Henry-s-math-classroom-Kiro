@@ -218,7 +218,7 @@ export default function PetRoomPage() {
         is_default: saveSetDefault, is_active: true, visibility: 'admin_only', created_by: userId,
         frame_slots: sandbox.frameSlot
           ? [{ id: 'wall_frame', x: sandbox.frameSlot.x, y: sandbox.frameSlot.y, w: sandbox.frameSlot.w, h: sandbox.frameSlot.h, z_index: 2, label: 'Wall Picture', default_image_url: null }]
-          : [{ id: 'wall_frame', x: 60, y: 6, w: 20, h: 32, z_index: 2, label: 'Wall Picture', default_image_url: null }],
+          : [{ id: 'wall_frame', x: 62, y: 8, w: 18, h: 28, z_index: 2, label: 'Wall Picture', default_image_url: null }],
       })
       if (insertErr) throw new Error(insertErr.message)
       setSaveOpen(false); setSaveName(''); setSaveDesc(''); setSaveSetDefault(false)
@@ -241,7 +241,7 @@ export default function PetRoomPage() {
       const { error: insertErr } = await supabase.from('pet_room_backgrounds').insert({
         name: uploadName.trim(), description: uploadDesc.trim() || null, image_url: publicUrl,
         is_default: uploadSetDefault, is_active: true, visibility: 'admin_only', created_by: userId,
-        frame_slots: [{ id: 'wall_frame', x: 60, y: 6, w: 20, h: 30, z_index: 2, label: 'Wall Picture', default_image_url: null }],
+        frame_slots: [{ id: 'wall_frame', x: 62, y: 8, w: 18, h: 28, z_index: 2, label: 'Wall Picture', default_image_url: null }],
       })
       if (insertErr) throw new Error(insertErr.message)
       setUploadSuccess(`✅ "${uploadName.trim()}" uploaded!`)
@@ -435,7 +435,7 @@ export default function PetRoomPage() {
                         {/* Quick suggestion chips */}
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {[
-                            'Make the wall area on the right side a clean flat patch — remove any detail from that zone',
+                            'Clean up the upper-right wall area — make it a flat blank rectangle with no decoration, ready for a picture frame overlay',
                             'Make the lighting warmer and softer, add a cozy lamp glow',
                             'Change to a night scene with moonlight through the window',
                             'Add more plants and greenery around the room',
@@ -443,6 +443,7 @@ export default function PetRoomPage() {
                             'Add a window with a view of cherry blossoms outside',
                             'Make it feel more magical — add soft sparkles or glowing lights',
                             'Darken the overall mood, more dramatic shadows',
+                            'Remove any animals or characters from the scene',
                           ].map(suggestion => (
                             <button
                               key={suggestion}
