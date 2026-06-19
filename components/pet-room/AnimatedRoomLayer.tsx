@@ -140,87 +140,61 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
           const clipId = `clip_${baseId}_${i}`
           const animId = `${baseId}_${i}`
 
-          if (zone.containOverflow) {
-            // "Contain overflow" mode:
-            // The problem with putting clipPath on a parent div is that CSS transforms
-            // on children happen AFTER layout — the clip stays fixed while the image
-            // moves, so gaps appear that show the underlying background instead of
-            // the static fill.
-            //
-            // Correct approach: both images get the polygon clipPath directly.
-            // - Layer A (static): always fills the full polygon, never moves.
-            //   If fillColor is set, use a lightweight SVG polygon instead of a full image copy.
-            // - Layer B (animated): same polygon clip, animates on top.
-            // Any gap the animated image leaves behind is covered by Layer A.
-            const staticLayer = zone.fillColor ? (
-              // Solid color fill — lightweight, no extra image load
-              <svg
-                key={`${clipId}_fill`}
-                className="absolute inset-0 w-full h-full"
-                style={{ overflow: 'visible' }}
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-              >
-                <polygon
-                  points={zone.polygon.map(p => `${p.x},${p.y}`).join(' ')}
-                  fill={zone.fillColor}
-                />
-              </svg>
-            ) : (
-              // Full static image copy as fallback
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={`${clipId}_static`}
-                src={imageUrl}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover"
-                style={{ clipPath: `url(#${clipId})` }}
-              />
-            )
+          // KEY INSIGHT: clipPath and transform must NOT be on the same element.
+          // If they are, the clip is evaluated in the element's pre-transform space,
+          // so the clip rotates/moves WITH the image — pixels escape the polygon.
+          //
+          // Correct pattern:
+          //   <div clipPath="polygon">          ← clip sits here, never moves
+          //     <img transform="animate" />     ← transform here, clipped by parent
+          //   </div>
+          //
+          // The clipped div is a hard pixel boundary. No matter how the child image
+          // rotates or translates, nothing can paint outside the polygon.
 
-            return (
-              <React.Fragment key={clipId}>
-                {staticLayer}
-                {/* Animated layer — same clip, moves freely; static shows through any gap */}
+          // Static fill layer (color or image copy) — always the full unmoving polygon
+          const staticFill = zone.fillColor ? (
+            <svg
+              key={`${clipId}_fill`}
+              className="absolute inset-0 w-full h-full"
+              style={{ overflow: 'visible' }}
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+            >
+              <polygon
+                points={zone.polygon.map(p => `${p.x},${p.y}`).join(' ')}
+                fill={zone.fillColor}
+              />
+            </svg>
+          ) : zone.containOverflow ? (
+            // Static image copy fills gaps left by the animated layer
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={`${clipId}_static`}
+              src={imageUrl}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ clipPath: `url(#${clipId})` }}
+            />
+          ) : null
+
+          return (
+            <React.Fragment key={clipId}>
+              {staticFill}
+              {/* Clip wrapper — establishes the hard boundary; never transforms */}
+              <div
+                className="absolute inset-0"
+                style={{ clipPath: `url(#${clipId})` }}
+              >
+                {/* Animated image — transforms freely but is clipped by the parent */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl}
                   alt=""
                   className="absolute inset-0 w-full h-full object-cover"
-                  style={{ clipPath: `url(#${clipId})`, ...getAnimStyle(animId, zone) }}
+                  style={getAnimStyle(animId, zone)}
                 />
-              </React.Fragment>
-            )
-          }
-
-          // Default mode: animated img clipped to polygon (overflow shows as shifted background).
-          // If fillColor is set, also render a solid fill polygon underneath so gaps show the
-          // chosen color rather than whatever the underlying layer happens to be.
-          return (
-            <React.Fragment key={clipId}>
-              {zone.fillColor && (
-                <svg
-                  className="absolute inset-0 w-full h-full"
-                  style={{ overflow: 'visible' }}
-                  viewBox="0 0 100 100"
-                  preserveAspectRatio="none"
-                >
-                  <polygon
-                    points={zone.polygon.map(p => `${p.x},${p.y}`).join(' ')}
-                    fill={zone.fillColor}
-                  />
-                </svg>
-              )}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={imageUrl}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover"
-                style={{
-                  clipPath: `url(#${clipId})`,
-                  ...getAnimStyle(animId, zone),
-                }}
-              />
+              </div>
             </React.Fragment>
           )
         })}
