@@ -665,11 +665,14 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Post-process: AI generates 1024×1024. Scale it to fit inside 480×700
-      // (object-fit: contain) so nothing gets cropped — transparent padding fills
-      // any remaining space. The book image stays complete at its natural ratio.
-      const FINAL_W = 480
-      const FINAL_H = 700
+      // Post-process: scale the AI image (1024×1536) to 400×620 (COVER_W × COVER_H),
+      // then place centered on a 480×700 transparent canvas with 40px padding on each side.
+      // This matches exactly how the Default/Science cover was created.
+      const COVER_W = 400
+      const COVER_H = 620
+      const PADDING = 40
+      const FINAL_W = COVER_W + PADDING * 2  // 480
+      const FINAL_H = COVER_H + PADDING * 2  // 700
       const imgEl = new Image()
       imgEl.crossOrigin = 'anonymous'
       const imgLoaded = new Promise<void>((res, rej) => {
@@ -679,21 +682,12 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       imgEl.src = sandbox.imageUrl
       await imgLoaded
 
-      // Compute scale to fit (contain) within FINAL_W × FINAL_H
-      const scaleX = FINAL_W / imgEl.naturalWidth
-      const scaleY = FINAL_H / imgEl.naturalHeight
-      const scale = Math.min(scaleX, scaleY)
-      const drawW = Math.round(imgEl.naturalWidth * scale)
-      const drawH = Math.round(imgEl.naturalHeight * scale)
-      const offX = Math.round((FINAL_W - drawW) / 2)
-      const offY = Math.round((FINAL_H - drawH) / 2)
-
       const canvas = document.createElement('canvas')
       canvas.width = FINAL_W
       canvas.height = FINAL_H
       const ctx = canvas.getContext('2d')!
-      // Canvas is transparent by default — draw the AI image scaled to fit
-      ctx.drawImage(imgEl, offX, offY, drawW, drawH)
+      // Canvas is transparent — draw the AI image scaled to cover face, inset by padding
+      ctx.drawImage(imgEl, PADDING, PADDING, COVER_W, COVER_H)
 
       const paddedBlob = await new Promise<Blob>((res, rej) =>
         canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png')
