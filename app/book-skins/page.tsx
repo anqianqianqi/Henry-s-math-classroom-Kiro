@@ -665,12 +665,16 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Post-process: add transparent padding so corner objects can visually overflow
-      // Stored at 400x620 (COVER_W x COVER_H). Adding 40px padding on each side
-      // gives 480x700 total, with the book face inset — matching Science cover style.
-      const PADDING = 40  // px on each side
-      const finalW = COVER_W + PADDING * 2  // 480
-      const finalH = COVER_H + PADDING * 2  // 700
+      // Post-process: AI generates 1024×1024 with a 3:4 proportion book cover.
+      // We scale it to 400×533 (3:4 ratio, wider than 2:3) then place it centered
+      // on a 480×700 transparent canvas (final stored size matching the system).
+      // This gives: 40px side padding, 83px top/bottom padding — corner objects bleed.
+      const BOOK_W = 400   // 3:4 ratio book face width
+      const BOOK_H = 533   // 3:4 ratio book face height (400 * 4/3)
+      const FINAL_W = 480  // book + 40px each side
+      const FINAL_H = 700  // book + ~83px top + ~84px bottom
+      const OFF_X = (FINAL_W - BOOK_W) / 2  // 40px
+      const OFF_Y = (FINAL_H - BOOK_H) / 2  // ~83px
       const imgEl = new Image()
       imgEl.crossOrigin = 'anonymous'
       const imgLoaded = new Promise<void>((res, rej) => {
@@ -681,11 +685,11 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       await imgLoaded
 
       const canvas = document.createElement('canvas')
-      canvas.width = finalW
-      canvas.height = finalH
+      canvas.width = FINAL_W
+      canvas.height = FINAL_H
       const ctx = canvas.getContext('2d')!
-      // Canvas is already transparent by default — draw the AI image inset by PADDING
-      ctx.drawImage(imgEl, PADDING, PADDING, COVER_W, COVER_H)
+      // Canvas is transparent by default — scale the 1024×1024 AI image to 3:4 book face
+      ctx.drawImage(imgEl, OFF_X, OFF_Y, BOOK_W, BOOK_H)
 
       const paddedBlob = await new Promise<Blob>((res, rej) =>
         canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png')
@@ -698,7 +702,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       const { error: insertErr } = await supabase.from('book_skins').insert({
         name: genSaveName.trim(), description: genSaveDesc.trim() || null,
         skin_type: 'cover', image_url: publicUrl,
-        width: finalW, height: finalH,
+        width: FINAL_W, height: FINAL_H,
         created_by: user.id, visibility: genSaveVisibility,
         cover_layout: genCoverLayout,
       })
