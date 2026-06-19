@@ -91,7 +91,7 @@ export default function AdminShopPage() {
   const [showBookBrowse, setShowBookBrowse] = useState(false)
   // Preview states for clicking individual images
   const [previewRoom, setPreviewRoom] = useState<RoomBg | null>(null)
-  const [previewCover, setPreviewCover] = useState<BookSkin | null>(null))
+  const [previewCover, setPreviewCover] = useState<BookSkin | null>(null)
 
   const loadData = useCallback(async () => {
     try {
