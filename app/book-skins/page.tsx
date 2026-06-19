@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { HomeButton } from '@/components/ui/HomeButton'
+import { CoverLayoutEditor, DEFAULT_LAYOUT, type CoverLayout } from '@/components/CoverLayoutEditor'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -561,6 +562,8 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   const [genSaveVisibility, setGenSaveVisibility] = useState<'admin_only' | 'public'>('admin_only')
   const [genSaving, setGenSaving] = useState(false)
   const [genSaveError, setGenSaveError] = useState<string | null>(null)
+  const [genCoverLayout, setGenCoverLayout] = useState<CoverLayout>(DEFAULT_LAYOUT)
+  const [showGenLayoutEditor, setShowGenLayoutEditor] = useState(false)
 
   async function handleGenerate() {
     if (!genPrompt.trim()) { setGenError('Enter a description.'); return }
@@ -612,10 +615,12 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
         skin_type: 'cover', image_url: publicUrl,
         width: COVER_W, height: COVER_H,
         created_by: user.id, visibility: genSaveVisibility,
+        cover_layout: genCoverLayout,
       })
       if (insertErr) throw new Error(insertErr.message)
       setGenSaveOpen(false); setGenSaveName(''); setGenSaveDesc('')
       setSandbox(null); setGenPrompt(''); setRefinePrompt('')
+      setGenCoverLayout(DEFAULT_LAYOUT); setShowGenLayoutEditor(false)
       setUploadSuccess('✅ Book cover saved!')
       onSaved?.()
     } catch (err: any) { setGenSaveError(err.message) }
@@ -950,6 +955,24 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                         <img src={sandbox.imageUrl} alt="Generated cover" className="w-full h-full object-cover" />
                       </div>
                     </div>
+
+                    {/* Layout editor toggle */}
+                    <button
+                      type="button"
+                      onClick={() => setShowGenLayoutEditor(v => !v)}
+                      className="w-full py-2 px-3 text-xs font-semibold rounded-xl border-2 border-dashed border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
+                    >
+                      🎨 {showGenLayoutEditor ? 'Hide' : 'Customise'} Title &amp; Prompt Layout
+                    </button>
+
+                    {/* Layout editor */}
+                    {showGenLayoutEditor && (
+                      <CoverLayoutEditor
+                        imageUrl={sandbox.imageUrl}
+                        layout={genCoverLayout}
+                        onChange={setGenCoverLayout}
+                      />
+                    )}
 
                     {/* Refine */}
                     <div>
