@@ -117,6 +117,32 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
         {zones.map((zone, i) => {
           const clipId = `clip_${baseId}_${i}`
           const animId = `${baseId}_${i}`
+
+          if (zone.containOverflow) {
+            // "Contain overflow" mode:
+            // The animated img is NOT clipped — it moves freely as a full image.
+            // A parent div IS clipped to the polygon, acting as a window/mask.
+            // The static background below shows through outside the polygon naturally.
+            // Result: only the polygon-shaped window shows the animation; overflow is
+            // hidden because the parent div is clipped, not the img itself.
+            return (
+              <div
+                key={clipId}
+                className="absolute inset-0"
+                style={{ clipPath: `url(#${clipId})`, overflow: 'hidden', zIndex: 1 }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imageUrl}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={getAnimStyle(animId, zone)}
+                />
+              </div>
+            )
+          }
+
+          // Default mode: animated img clipped to polygon (overflow shows as shifted background)
           return (
             // eslint-disable-next-line @next/next/no-img-element
             <img

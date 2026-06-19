@@ -27,6 +27,7 @@ export interface AnimZone {
   animation: 'sway' | 'float' | 'shimmer' | 'flicker'
   intensity: number
   speed: number
+  containOverflow?: boolean  // when true, static layer fills polygon so overflow is hidden behind static background
 }
 
 const ANIM_OPTIONS: { value: AnimZone['animation']; label: string; desc: string }[] = [
@@ -300,6 +301,13 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
                     onClick={e => e.stopPropagation()}
                     className="w-16 accent-blue-500" />
                   {zone.intensity.toFixed(1)}
+                </label>
+                <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer shrink-0"
+                  onClick={e => e.stopPropagation()}>
+                  <input type="checkbox" checked={!!zone.containOverflow}
+                    onChange={e => updateZone(zone.id, { containOverflow: e.target.checked })}
+                    className="accent-blue-500" />
+                  <span title="Static layer fills the polygon so animation overflow is hidden behind the background">Contain</span>
                 </label>
                 <span className="text-[10px] text-gray-400">{zone.polygon.length} pts</span>
                 <button onClick={e => { e.stopPropagation(); deleteZone(zone.id) }}
