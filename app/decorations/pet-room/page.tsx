@@ -348,6 +348,26 @@ export default function PetRoomPage() {
                           placeholder="e.g. a cozy anime bedroom at night, moonlight through the window, bookshelves, warm lamp, picture frame on the wall"
                           rows={3} className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl text-sm focus:border-amber-400 bg-white resize-none" />
                         <p className="text-xs text-amber-500 mt-1">💡 I'll add: 1536×1024 landscape, clear lower-centre for pet, wall frame, anime/Ghibli style.</p>
+
+                        {/* Quick example prompts */}
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {[
+                            'A cozy anime bedroom at night, moonlight through the window, warm lamp, bookshelves',
+                            'A magical library with glowing lanterns and floating books',
+                            'A space-themed room with a telescope, star maps on the wall',
+                            'A Japanese-style tatami room with paper screens and cherry blossoms outside',
+                            'A sunny afternoon living room with plants, a sofa, and a round rug',
+                            'A wizard\'s study with candles, potion bottles, and stone walls',
+                          ].map(example => (
+                            <button
+                              key={example}
+                              onClick={() => setGenPrompt(example)}
+                              className="text-[11px] px-2.5 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium transition-colors text-left leading-snug border border-amber-200"
+                            >
+                              {example.length > 50 ? example.slice(0, 50) + '…' : example}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                       <button onClick={handleGenerate} disabled={generating || !genPrompt.trim()}
                         className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-semibold rounded-xl text-sm transition-colors">
@@ -410,6 +430,28 @@ export default function PetRoomPage() {
                             className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-semibold rounded-xl text-sm transition-colors whitespace-nowrap">
                             {generating ? '⏳' : '✨ Refine'}
                           </button>
+                        </div>
+
+                        {/* Quick suggestion chips */}
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {[
+                            'Make the wall area on the right side a clean flat patch — remove any detail from that zone',
+                            'Make the lighting warmer and softer, add a cozy lamp glow',
+                            'Change to a night scene with moonlight through the window',
+                            'Add more plants and greenery around the room',
+                            'Make the colour palette more pastel and dreamy',
+                            'Add a window with a view of cherry blossoms outside',
+                            'Make it feel more magical — add soft sparkles or glowing lights',
+                            'Darken the overall mood, more dramatic shadows',
+                          ].map(suggestion => (
+                            <button
+                              key={suggestion}
+                              onClick={() => setRefinePrompt(suggestion)}
+                              className="text-[11px] px-2.5 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium transition-colors text-left leading-snug border border-amber-200"
+                            >
+                              {suggestion.length > 45 ? suggestion.slice(0, 45) + '…' : suggestion}
+                            </button>
+                          ))}
                         </div>
                       </div>
 
