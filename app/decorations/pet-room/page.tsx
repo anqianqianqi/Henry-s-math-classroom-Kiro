@@ -107,6 +107,8 @@ export default function PetRoomPage() {
           const { redemptions: rList } = await res.json()
           const allImages: string[] = []
           for (const r of rList ?? []) {
+            // Only include digital blindbox images, not physical blindbox previews
+            if (r.item_commodity_type !== 'blindbox') continue
             if (r.blindbox_image_urls?.length) allImages.push(...r.blindbox_image_urls)
             else if (r.blindbox_image_url) allImages.push(r.blindbox_image_url)
           }
@@ -626,19 +628,31 @@ export default function PetRoomPage() {
               {/* "None" option */}
               <button
                 onClick={() => handleSelectPhoto(null)}
-                className={`shrink-0 w-16 h-16 rounded-xl border-2 flex items-center justify-center text-xs font-semibold transition-all ${selectedPhotoUrl === null ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 bg-gray-50 text-gray-400 hover:border-gray-400'}`}
+                className={`shrink-0 w-24 h-24 rounded-xl border-2 flex items-center justify-center text-xs font-semibold transition-all ${selectedPhotoUrl === null ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 bg-gray-50 text-gray-400 hover:border-gray-400'}`}
               >
                 None
               </button>
               {blindboxImages.map((url, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleSelectPhoto(url)}
-                  className={`shrink-0 w-16 h-16 rounded-xl border-2 overflow-hidden transition-all ${selectedPhotoUrl === url ? 'border-primary-500 shadow-lg shadow-primary-200' : 'border-gray-200 hover:border-primary-300'}`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                </button>
+                <div key={i} className="relative shrink-0 group">
+                  <button
+                    onClick={() => handleSelectPhoto(url)}
+                    className={`block w-24 h-24 rounded-xl border-2 overflow-hidden transition-all ${selectedPhotoUrl === url ? 'border-primary-500 shadow-lg shadow-primary-200' : 'border-gray-200 hover:border-primary-300'}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                  {/* Zoom button */}
+                  <button
+                    onClick={e => { e.stopPropagation(); setLightbox(url) }}
+                    className="absolute top-1 right-1 w-6 h-6 bg-black/50 hover:bg-black/70 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="View full size"
+                  >
+                    🔍
+                  </button>
+                  {selectedPhotoUrl === url && (
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-bold text-primary-600 bg-white px-1.5 rounded-full shadow">✓</div>
+                  )}
+                </div>
               ))}
             </div>
             {selectedPhotoUrl && (
