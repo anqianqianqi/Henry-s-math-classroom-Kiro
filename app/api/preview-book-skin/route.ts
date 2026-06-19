@@ -18,23 +18,17 @@ export const dynamic = 'force-dynamic'
 const COVER_CONTEXT = `
 STRICT COMPOSITION RULES — follow exactly:
 
-CANVAS SIZE: The full image is 1024×1536 pixels.
+This image is a hardcover book cover illustration on a TRANSPARENT background.
 
-BOOK COVER PLACEMENT: Draw a flat, straight-on hardcover book cover face as a rectangle exactly 800 pixels wide × 1240 pixels tall, centered in the 1024×1536 canvas. This means:
-- Left edge of book: 112px from left of canvas
-- Right edge of book: 912px from left of canvas (112+800)
-- Top edge of book: 148px from top of canvas
-- Bottom edge of book: 1388px from top of canvas (148+1240)
+LAYOUT: The book cover face is a flat, front-facing rectangle that occupies the FULL WIDTH and FULL HEIGHT of the image — edge to edge. There are NO transparent margins. The book cover IS the entire image. Outside the image bounds is irrelevant.
 
-The 112px margins on left/right and 148px margins on top/bottom must be FULLY TRANSPARENT — pure alpha, no color, no shadow, no fill.
+BOOK COVER (full image): Flat, straight-on, no perspective, no tilt, no visible spine. Portrait orientation (taller than wide). The surface has thematic texture richer near edges and fading to plain smooth in the center. An ornate thin gold border line frames the perimeter.
 
-CORNER OBJECTS: The 3D decorative objects at the four corners of the book SHOULD OVERFLOW beyond the book rectangle edges into the transparent margin area. They physically protrude outside the book boundary — like objects sitting on top of the book corners, extending into the space around it. Their shadows may also fall in the transparent area.
+CORNER OBJECTS: Large, richly detailed 3D objects sit at each of the four corners. They are large enough that they visually "break" the gold border frame edge — appearing to sit on top of and slightly overflow the book's surface. They have full natural colors, realistic volume, cast shadows on the cover surface.
 
-BOOK COVER FACE (the 800×1240px rectangle): Flat, straight-on, no perspective or tilt. The surface has thematic texture that is richer near edges and fades to a plain smooth center. Thin ornate gold border line around the book rectangle perimeter.
+CENTER ZONE: The inner area (roughly middle 30–60% width, 20–65% height) stays plain and relatively undecorated for text overlay.
 
-CENTER ZONE: Inner area of the book face (roughly x:240–560, y:396–892 within the book) stays plain and uncluttered for text overlay.
-
-NO TEXT, letters, or words anywhere on the image.
+NO TEXT, letters, words, or typography anywhere.
 `.trim()
 
 async function callGenerations(apiKey: string, prompt: string): Promise<string> {
