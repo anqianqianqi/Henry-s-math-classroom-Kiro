@@ -106,16 +106,13 @@ function getAnimStyle(id: string, zone: AnimZone): React.CSSProperties {
 }
 
 // For animations that transform the whole polygon region (sway, float),
-// we apply the animation to the WRAPPER div (which carries the clip-path),
-// not the image inside. This makes the clip polygon co-rotate/translate with
-// the content — so the gap between original polygon and new polygon position
-// is correctly filled by the fill layer underneath.
-// The image inside the wrapper must counter-transform to stay aligned with
-// the full background (otherwise it would rotate relative to itself and
-// show wrong pixels). For a full-size absolute-inset image, the counter-
-// transform keeps it mapped to the correct background position.
+// we apply the SAME animation to BOTH the wrapper div (which carries the
+// clip-path) AND the image inside it.
+// - The wrapper's clip polygon co-moves with the content, creating the gap
+//   between original polygon and new polygon position.
+// - The image also animates, showing the actual swaying/floating visual.
+// - Fill layer underneath shows through the gap with the user's chosen color.
 function getWrapperAnimStyle(id: string, zone: AnimZone): React.CSSProperties | null {
-  // Only sway and float move the whole polygon — apply to wrapper
   if (zone.animation === 'sway' || zone.animation === 'float') {
     return getAnimStyle(id, zone)
   }
@@ -123,22 +120,8 @@ function getWrapperAnimStyle(id: string, zone: AnimZone): React.CSSProperties | 
 }
 
 function getImageAnimStyle(id: string, zone: AnimZone): React.CSSProperties {
-  // For sway/float: animation is on wrapper, image needs counter-transform to stay aligned
-  // For other animations (opacity, filter): apply directly to image as before
-  if (zone.animation === 'sway' || zone.animation === 'float') {
-    // The image counter-transforms to undo the wrapper's transform,
-    // keeping the background pixels correctly positioned.
-    // We emit the same keyframe name but with opposite values.
-    return {
-      animationName: `anim_${id}_counter`,
-      animationDuration: `${(3 / zone.speed).toFixed(2)}s`,
-      animationTimingFunction: 'ease-in-out',
-      animationIterationCount: 'infinite',
-      animationDirection: 'alternate',
-      transformOrigin: `${zone.pivot.x}% ${zone.pivot.y}%`,
-      willChange: 'transform',
-    }
-  }
+  // For all animations: apply directly to the image.
+  // For sway/float: same animation also on the wrapper — both move together.
   return getAnimStyle(id, zone)
 }
 
@@ -149,28 +132,7 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
 
   const styleContent = zones.map((zone, i) => {
     const id = `${baseId}_${i}`
-    const forward = getKeyframes(id, zone)
-    // For sway/float: also emit counter-keyframes for the image (undoes wrapper transform)
-    let counter = ''
-    if (zone.animation === 'sway') {
-      const s = zone.intensity
-      counter = `
-        @keyframes anim_${id}_counter {
-          0%   { transform: rotate(${s * 3}deg); }
-          100% { transform: rotate(${-s * 3}deg); }
-        }
-      `
-    } else if (zone.animation === 'float') {
-      const s = zone.intensity
-      counter = `
-        @keyframes anim_${id}_counter {
-          0%   { transform: translateY(0px); }
-          50%  { transform: translateY(${s * 6}px); }
-          100% { transform: translateY(0px); }
-        }
-      `
-    }
-    return forward + counter
+    return getKeyframes(id, zone)
   }).join('\n')
 
   return (
