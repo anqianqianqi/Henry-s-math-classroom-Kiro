@@ -78,7 +78,7 @@ function ZoneCanvas({ imageUrl, zone, containerWidth, containerHeight }: ZoneCan
       if (zone.containOverflow) {
         // CONTAINED mode: everything is strictly within the original polygon.
         // Outside the original polygon → always shows the real background (unaffected).
-        // Inside the original polygon → fill color base + animated image on top.
+        // Inside the original polygon → fill base + animated image on top.
         ctx.save()
         // Hard outer boundary: nothing ever paints outside the original polygon
         ctx.beginPath()
@@ -86,15 +86,18 @@ function ZoneCanvas({ imageUrl, zone, containerWidth, containerHeight }: ZoneCan
         ctx.closePath()
         ctx.clip()
 
-        // Base: fill color (or static image) covers the whole clipped area
+        // Base: fill color, original image, or nothing
         if (zone.fillColor) {
           ctx.fillStyle = zone.fillColor
           ctx.fillRect(0, 0, containerWidth, containerHeight)
+        } else if (zone.fillImage && imgRef.current) {
+          ctx.drawImage(imgRef.current, 0, 0, containerWidth, containerHeight)
         } else if (imgRef.current) {
+          // Default contained fallback: static image
           ctx.drawImage(imgRef.current, 0, 0, containerWidth, containerHeight)
         }
 
-        // Animated image on top, also constrained by the outer clip
+        // Animated image on top, constrained by the outer clip
         if (imgRef.current) {
           ctx.save()
           ctx.translate(pivotX, pivotY)
@@ -114,17 +117,20 @@ function ZoneCanvas({ imageUrl, zone, containerWidth, containerHeight }: ZoneCan
       } else {
         // NOT CONTAINED mode: animated polygon can move outside the original boundary.
         // Fill shows in original polygon area not covered by animated polygon.
-        // Animated image can bleed outside original polygon.
 
-        // 1. Draw fill on the original fixed polygon
-        if (zone.fillColor) {
+        // 1. Draw base fill on the original fixed polygon
+        if (zone.fillColor || zone.fillImage) {
           ctx.save()
           ctx.beginPath()
           drawPoly(ctx)
           ctx.closePath()
           ctx.clip()
-          ctx.fillStyle = zone.fillColor
-          ctx.fillRect(0, 0, containerWidth, containerHeight)
+          if (zone.fillColor) {
+            ctx.fillStyle = zone.fillColor
+            ctx.fillRect(0, 0, containerWidth, containerHeight)
+          } else if (zone.fillImage && imgRef.current) {
+            ctx.drawImage(imgRef.current, 0, 0, containerWidth, containerHeight)
+          }
           ctx.restore()
         }
 

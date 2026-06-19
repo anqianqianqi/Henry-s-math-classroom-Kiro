@@ -28,8 +28,9 @@ export interface AnimZone {
   animation: 'sway' | 'float' | 'shimmer' | 'flicker' | 'bling' | 'glow'
   intensity: number
   speed: number
-  containOverflow?: boolean  // when true, static layer fills polygon so overflow is hidden behind static background
-  fillColor?: string          // optional solid color to fill the original polygon area (gap filler), e.g. '#a3b845'
+  containOverflow?: boolean  // when true, strictly clip animation to original polygon
+  fillColor?: string          // solid hex color to fill the gap area
+  fillImage?: boolean         // when true, use the original background image as the gap fill
 }
 
 const ANIM_OPTIONS: { value: AnimZone['animation']; label: string; desc: string }[] = [
@@ -556,7 +557,19 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
                   >
                     🎨
                   </button>
-                  {zone.fillColor && (
+                  {/* Use original image as fill */}
+                  <button
+                    title="Use the original background image as the gap fill"
+                    onClick={() => updateZone(zone.id, { fillImage: !zone.fillImage, fillColor: zone.fillImage ? zone.fillColor : undefined })}
+                    className={`text-xs px-1.5 py-0.5 rounded border font-semibold transition-colors ${
+                      zone.fillImage
+                        ? 'bg-blue-500 border-blue-600 text-white'
+                        : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-600'
+                    }`}
+                  >
+                    📷
+                  </button>
+                  {zone.fillColor && !zone.fillImage && (
                     <>
                       <div
                         className="w-4 h-4 rounded border border-gray-300 shrink-0"
