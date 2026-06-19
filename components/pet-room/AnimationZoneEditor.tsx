@@ -80,6 +80,9 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   // Pivot drag state — when dragging a pivot dot
   const [pivotDragZoneId, setPivotDragZoneId] = useState<string | null>(null)
 
+  // Vertex drag state — when dragging a polygon vertex of a saved zone
+  const [vertexDrag, setVertexDrag] = useState<{ zoneId: string; vertexIndex: number } | null>(null)
+
   // Preview modal
   const [showPreview, setShowPreview] = useState(false)
 
@@ -196,6 +199,21 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
         ctx.stroke()
         ctx.setLineDash([])
       }
+
+      // Vertex dots — always visible on saved zones so user can drag them
+      // (larger and brighter when zone is selected or being vertex-dragged)
+      const isActive = zone.id === selectedZone || vertexDrag?.zoneId === zone.id
+      pts.forEach((p, vi) => {
+        const isDragging = vertexDrag?.zoneId === zone.id && vertexDrag?.vertexIndex === vi
+        const r = isDragging ? 8 : isActive ? 6 : 4
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
+        ctx.fillStyle = isDragging ? 'white' : isActive ? color : color + 'aa'
+        ctx.strokeStyle = color
+        ctx.lineWidth = isDragging ? 3 : 2
+        ctx.fill()
+        ctx.stroke()
+      })
     })
 
     // Draw in-progress polygon
@@ -243,7 +261,7 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
       ctx.fillStyle = 'rgba(250, 204, 21, 0.12)'
       ctx.fillRect(rx, ry, rw, rh)
     }
-  }, [imgLoaded, zones, currentPoints, mousePos, drawing, selectedZone, viewport, zoomMode, zoomDragStart, zoomDragCurrent])
+  }, [imgLoaded, zones, currentPoints, mousePos, drawing, selectedZone, viewport, zoomMode, zoomDragStart, zoomDragCurrent, vertexDrag])
 
   // Map a canvas mouse event → % coords in the original image space (viewport-aware)
   function getRelPct(e: React.MouseEvent<HTMLCanvasElement>): AnimPoint {
@@ -270,15 +288,27 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
       setZoomDragCurrent(pt)
       return
     }
-    // Check if clicking near a pivot dot to start dragging it
     if (!drawing && !eyedropperZoneId) {
       const pt = getRelPct(e)
       const vp = viewport ?? { x0: 0, y0: 0, x1: 100, y1: 100 }
-      const vpW = vp.x1 - vp.x0
-      const threshold = vpW * 0.03  // 3% of viewport width
+      const threshold = (vp.x1 - vp.x0) * 0.03
+
+      // Check vertices first (higher priority than pivot)
       for (const zone of zones) {
-        const dist = Math.hypot(pt.x - zone.pivot.x, pt.y - zone.pivot.y)
-        if (dist < threshold) {
+        for (let vi = 0; vi < zone.polygon.length; vi++) {
+          const v = zone.polygon[vi]
+          if (Math.hypot(pt.x - v.x, pt.y - v.y) < threshold) {
+            e.preventDefault()
+            setVertexDrag({ zoneId: zone.id, vertexIndex: vi })
+            setSelectedZone(zone.id)
+            return
+          }
+        }
+      }
+
+      // Then check pivot dots
+      for (const zone of zones) {
+        if (Math.hypot(pt.x - zone.pivot.x, pt.y - zone.pivot.y) < threshold) {
           e.preventDefault()
           setPivotDragZoneId(zone.id)
           setSelectedZone(zone.id)
@@ -289,6 +319,10 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   }
 
   function handleCanvasMouseUp(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (vertexDrag) {
+      setVertexDrag(null)
+      return
+    }
     if (pivotDragZoneId) {
       setPivotDragZoneId(null)
       return
@@ -355,6 +389,18 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   }
 
   function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    // Vertex drag
+    if (vertexDrag) {
+      const pt = getRelPct(e)
+      const zone = zones.find(z => z.id === vertexDrag.zoneId)
+      if (zone) {
+        const newPoly = zone.polygon.map((v, i) =>
+          i === vertexDrag.vertexIndex ? pt : v
+        )
+        updateZone(vertexDrag.zoneId, { polygon: newPoly })
+      }
+      return
+    }
     // Pivot drag
     if (pivotDragZoneId) {
       const pt = getRelPct(e)
@@ -425,7 +471,7 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
 
       {/* Canvas */}
       <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden border border-gray-200"
-        style={{ cursor: eyedropperZoneId ? 'crosshair' : zoomMode === 'selecting' ? 'crosshair' : drawing ? 'crosshair' : pivotDragZoneId ? 'grabbing' : 'default' }}>
+        style={{ cursor: eyedropperZoneId ? 'crosshair' : zoomMode === 'selecting' ? 'crosshair' : drawing ? 'crosshair' : (pivotDragZoneId || vertexDrag) ? 'grabbing' : 'default' }}>
         <canvas
           ref={canvasRef}
           onClick={handleCanvasClick}
