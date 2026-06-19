@@ -78,6 +78,11 @@ export default function PetRoomPage() {
   // Purchased room IDs for non-admin users (shows "🛒 Owned" badge)
   const [purchasedIds, setPurchasedIds] = useState<Set<string>>(new Set())
 
+  // User's blindbox image collection + currently selected photo for the frame
+  const [blindboxImages, setBlindboxImages] = useState<string[]>([])
+  const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null)
+  const [photoSaving, setPhotoSaving] = useState(false)
+
   // Frame slot editor
   const [frameSlotEditor, setFrameSlotEditor] = useState<PetRoomBackground | null>(null)
   const [editingSlot, setEditingSlot] = useState<{ x: number; y: number; w: number; h: number; rotate: number; rotateY: number; rotateX: number }>({ x: 62, y: 8, w: 18, h: 28, rotate: 0, rotateY: 0, rotateX: 0 })
@@ -94,6 +99,25 @@ export default function PetRoomPage() {
       const admin = (roles as any[])?.some((r: any) => r.roles?.name === 'administrator' || r.roles?.name === 'teacher')
       setIsAdmin(!!admin)
       await loadBgs(user.id, !!admin)
+
+      // Load user's blindbox image collection
+      try {
+        const res = await fetch('/api/shop/redemptions')
+        if (res.ok) {
+          const { redemptions: rList } = await res.json()
+          const allImages: string[] = []
+          for (const r of rList ?? []) {
+            if (r.blindbox_image_urls?.length) allImages.push(...r.blindbox_image_urls)
+            else if (r.blindbox_image_url) allImages.push(r.blindbox_image_url)
+          }
+          setBlindboxImages([...new Set(allImages)])  // deduplicate
+        }
+      } catch (_) {}
+
+      // Load currently selected photo
+      const { data: roomPref } = await supabase.from('user_pet_room').select('selected_photo_url').eq('user_id', user.id).maybeSingle()
+      if (roomPref?.selected_photo_url) setSelectedPhotoUrl(roomPref.selected_photo_url)
+
       setLoading(false)
     }
     load()
@@ -306,6 +330,14 @@ export default function PetRoomPage() {
     setSaving(true); setSelectedId(bgId)
     await supabase.from('user_pet_room').upsert({ user_id: userId, background_id: bgId }, { onConflict: 'user_id' })
     setSaving(false)
+  }
+
+  async function handleSelectPhoto(url: string | null) {
+    if (!userId) return
+    setPhotoSaving(true)
+    setSelectedPhotoUrl(url)
+    await supabase.from('user_pet_room').upsert({ user_id: userId, selected_photo_url: url }, { onConflict: 'user_id' })
+    setPhotoSaving(false)
   }
 
   // ── Admin card actions ────────────────────────────────────────────────────
@@ -581,6 +613,39 @@ export default function PetRoomPage() {
         )}
 
         {saving && <div className="fixed bottom-6 right-6 bg-primary-600 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium">Saving…</div>}
+        {photoSaving && <div className="fixed bottom-6 left-6 bg-purple-600 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium">Updating frame photo…</div>}
+
+        {/* ── Frame photo picker — shown if user has blindbox images ─────── */}
+        {!isAdmin && blindboxImages.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+              🖼️ Wall Frame Photo
+              <span className="font-normal text-gray-400 text-xs">— choose which image from your collection to display in the room frame</span>
+            </h3>
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {/* "None" option */}
+              <button
+                onClick={() => handleSelectPhoto(null)}
+                className={`shrink-0 w-16 h-16 rounded-xl border-2 flex items-center justify-center text-xs font-semibold transition-all ${selectedPhotoUrl === null ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 bg-gray-50 text-gray-400 hover:border-gray-400'}`}
+              >
+                None
+              </button>
+              {blindboxImages.map((url, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleSelectPhoto(url)}
+                  className={`shrink-0 w-16 h-16 rounded-xl border-2 overflow-hidden transition-all ${selectedPhotoUrl === url ? 'border-primary-500 shadow-lg shadow-primary-200' : 'border-gray-200 hover:border-primary-300'}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+            {selectedPhotoUrl && (
+              <p className="text-xs text-gray-400 mt-1">Selected photo will appear in your room frame on the dashboard.</p>
+            )}
+          </div>
+        )}
       </main>
 
       {/* ── Lightbox ──────────────────────────────────────────────────────── */}

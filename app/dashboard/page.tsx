@@ -97,7 +97,7 @@ export default function DashboardPage() {
     try {
       const { data: userRoom } = await supabase
         .from('user_pet_room')
-        .select('background_id')
+        .select('background_id, selected_photo_url')
         .eq('user_id', user.id)
         .maybeSingle()
 
@@ -128,39 +128,9 @@ export default function DashboardPage() {
         }
       }
 
-      // Load user's most recent blindbox image for the wall frame
-      try {
-        const { data: latestBlindbox } = await supabase
-          .from('redemptions')
-          .select('blindbox_image_url:item_id(image_url)')
-          .eq('user_id', user.id)
-          .is('refunded_at', null)
-          .not('blindbox_image_url', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        // Also check blindbox_draws for the actual drawn image
-        const { data: latestDraw } = await supabase
-          .from('redemptions')
-          .select('id, item_id, created_at')
-          .eq('user_id', user.id)
-          .is('refunded_at', null)
-          .order('created_at', { ascending: false })
-          .limit(5)
-        // Find latest redemption with a blindbox image
-        if (latestDraw && latestDraw.length > 0) {
-          const redemptionIds = latestDraw.map((r: any) => r.id)
-          const { data: draws } = await supabase
-            .from('blindbox_draws')
-            .select('image_url')
-            .in('redemption_id', redemptionIds)
-            .order('drawn_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-          if ((draws as any)?.image_url) setUserPhotoUrl((draws as any).image_url)
-        }
-      } catch (_) {
-        // blindbox_draws may not exist — ignore
+      // Load the user's selected frame photo from user_pet_room
+      if (userRoom?.selected_photo_url) {
+        setUserPhotoUrl(userRoom.selected_photo_url)
       }
     } catch (_) {
       // pet_room_backgrounds table may not exist yet — ignore
