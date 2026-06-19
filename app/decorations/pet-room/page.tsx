@@ -6,6 +6,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/ui/PageHeader'
+import dynamic from 'next/dynamic'
+import type { AnimZone } from '@/components/pet-room/AnimationZoneEditor'
+
+const AnimationZoneEditor = dynamic(() => import('@/components/pet-room/AnimationZoneEditor'), { ssr: false })
 
 interface PetRoomBackground {
   id: string
@@ -17,6 +21,7 @@ interface PetRoomBackground {
   is_active: boolean
   visibility: string | null
   shop_item_id: string | null
+  animation_zones?: AnimZone[]
   created_at: string
 }
 
@@ -77,6 +82,11 @@ export default function PetRoomPage() {
 
   // Purchased room IDs for non-admin users (shows "🛒 Owned" badge)
   const [purchasedIds, setPurchasedIds] = useState<Set<string>>(new Set())
+
+  // Animation zone editor
+  const [zoneEditorBg, setZoneEditorBg] = useState<PetRoomBackground | null>(null)
+  const [editingZones, setEditingZones] = useState<AnimZone[]>([])
+  const [zoneSaving, setZoneSaving] = useState(false)
 
   // User's blindbox image collection + currently selected photo for the frame
   const [blindboxImages, setBlindboxImages] = useState<string[]>([])
@@ -322,6 +332,20 @@ export default function PetRoomPage() {
     setSlotSaving(false)
     if (!error) {
       setFrameSlotEditor(null)
+      await loadBgs(userId ?? undefined, isAdmin)
+    }
+  }
+
+  async function handleSaveZones() {
+    if (!zoneEditorBg) return
+    setZoneSaving(true)
+    const { error } = await supabase
+      .from('pet_room_backgrounds')
+      .update({ animation_zones: editingZones })
+      .eq('id', zoneEditorBg.id)
+    setZoneSaving(false)
+    if (!error) {
+      setZoneEditorBg(null)
       await loadBgs(userId ?? undefined, isAdmin)
     }
   }
@@ -769,6 +793,17 @@ export default function PetRoomPage() {
                   📐 Adjust Frame
                 </button>
 
+                {/* Animation zones */}
+                <button onClick={() => {
+                  const existing = (actionBg as any).animation_zones ?? []
+                  setEditingZones(existing)
+                  setZoneEditorBg(actionBg)
+                  setActionBg(null)
+                }} disabled={actionWorking}
+                  className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-40 transition-colors">
+                  🌿 Animate
+                </button>
+
                 {/* Sell in shop */}
                 {!actionBg.shop_item_id ? (
                   <button onClick={() => setShowSellInput(v => !v)} disabled={actionWorking}
@@ -928,6 +963,34 @@ export default function PetRoomPage() {
                   {slotSaving ? '⏳ Saving…' : '💾 Save Frame Slot'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Animation zone editor modal */}
+      {zoneEditorBg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+              <div>
+                <div className="font-bold text-gray-900">🌿 Animation Zones — {zoneEditorBg.name}</div>
+                <div className="text-xs text-gray-400 mt-0.5">Click on the image to draw polygons around objects you want to animate</div>
+              </div>
+              <button onClick={() => setZoneEditorBg(null)} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
+            </div>
+            <div className="px-5 py-4 overflow-y-auto flex-1">
+              <AnimationZoneEditor
+                imageUrl={zoneEditorBg.image_url}
+                zones={editingZones}
+                onChange={setEditingZones}
+              />
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 shrink-0 flex gap-3">
+              <button onClick={() => setZoneEditorBg(null)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm">Cancel</button>
+              <button onClick={handleSaveZones} disabled={zoneSaving}
+                className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-bold rounded-xl text-sm">
+                {zoneSaving ? '⏳ Saving…' : `💾 Save ${editingZones.length} zone${editingZones.length !== 1 ? 's' : ''}`}
+              </button>
             </div>
           </div>
         </div>

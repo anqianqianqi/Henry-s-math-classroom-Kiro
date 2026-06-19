@@ -12,6 +12,7 @@ import { localDateString } from '@/lib/utils/date'
 import dynamicImport from 'next/dynamic'
 
 const InlinePet = dynamicImport(() => import('@/components/desktop-pet/InlinePet'), { ssr: false })
+const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/AnimatedRoomLayer'), { ssr: false })
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
@@ -32,6 +33,7 @@ export default function DashboardPage() {
   const [petRoomBgUrl, setPetRoomBgUrl] = useState<string | null>(null)
   const [petRoomFrameUrl, setPetRoomFrameUrl] = useState<string | null>(null)
   const [petRoomFrameSlot, setPetRoomFrameSlot] = useState<{ x: number; y: number; w: number; h: number; rotate?: number; rotateY?: number; rotateX?: number } | null>(null)
+  const [petRoomAnimZones, setPetRoomAnimZones] = useState<any[]>([])
   const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null) // latest blindbox image this user owns
   const router = useRouter()
   const supabase = createClient()
@@ -117,7 +119,7 @@ export default function DashboardPage() {
       if (bgId) {
         const { data: bg } = await supabase
           .from('pet_room_backgrounds')
-          .select('image_url, is_active, frame_overlay_url, frame_slot')
+          .select('image_url, is_active, frame_overlay_url, frame_slot, animation_zones')
           .eq('id', bgId)
           .maybeSingle()
         // Only show if the room is still active — deactivated rooms are hidden even for owners
@@ -125,6 +127,7 @@ export default function DashboardPage() {
           setPetRoomBgUrl(bg.image_url)
           setPetRoomFrameUrl(bg.frame_overlay_url ?? null)
           setPetRoomFrameSlot(bg.frame_slot ?? null)
+          setPetRoomAnimZones((bg as any).animation_zones ?? [])
         }
       }
 
@@ -631,6 +634,11 @@ export default function DashboardPage() {
             )}
 
             <InlinePet />
+
+            {/* Animated zones — gentle ambient animation on specific objects */}
+            {petRoomBgUrl && petRoomAnimZones.length > 0 && (
+              <AnimatedRoomLayer imageUrl={petRoomBgUrl} zones={petRoomAnimZones} />
+            )}
           </div>
         </div>
 

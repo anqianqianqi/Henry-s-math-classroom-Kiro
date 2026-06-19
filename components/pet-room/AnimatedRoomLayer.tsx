@@ -1,0 +1,137 @@
+'use client'
+
+// AnimatedRoomLayer — renders animated zones on top of a pet room background.
+//
+// How it works:
+//   - The room background sits below as a normal <img> (or CSS background)
+//   - For each animation zone, we place an absolutely-positioned <img> element
+//     showing the SAME background image at FULL size, clipped via SVG clipPath
+//     to the polygon, and CSS-animated so only that polygon region moves.
+//   - The result: everything outside the polygon is static; inside it sways/floats.
+//
+// Usage:
+//   <AnimatedRoomLayer imageUrl="..." zones={zones} />
+
+import { useId } from 'react'
+import type { AnimZone } from './AnimationZoneEditor'
+
+interface Props {
+  imageUrl: string
+  zones: AnimZone[]
+  className?: string
+}
+
+// Generate CSS keyframes per animation type
+function getKeyframes(id: string, zone: AnimZone): string {
+  const s = zone.intensity
+  const pxv = zone.pivot.x  // pivot x as %
+  const pyv = zone.pivot.y  // pivot y as %
+  const pivotCss = `${pxv}% ${pyv}%`
+
+  switch (zone.animation) {
+    case 'sway':
+      return `
+        @keyframes anim_${id} {
+          0%   { transform: rotate(0deg); }
+          25%  { transform: rotate(${s * 3}deg); }
+          75%  { transform: rotate(${-s * 3}deg); }
+          100% { transform: rotate(0deg); }
+        }
+      `
+    case 'float':
+      return `
+        @keyframes anim_${id} {
+          0%   { transform: translateY(0px); }
+          50%  { transform: translateY(${-s * 6}px); }
+          100% { transform: translateY(0px); }
+        }
+      `
+    case 'shimmer':
+      return `
+        @keyframes anim_${id} {
+          0%   { opacity: 1; }
+          50%  { opacity: ${1 - s * 0.3}; }
+          100% { opacity: 1; }
+        }
+      `
+    case 'flicker':
+      return `
+        @keyframes anim_${id} {
+          0%   { opacity: 1; }
+          10%  { opacity: ${1 - s * 0.4}; }
+          20%  { opacity: 1; }
+          50%  { opacity: ${1 - s * 0.2}; }
+          60%  { opacity: 1; }
+          90%  { opacity: ${1 - s * 0.5}; }
+          100% { opacity: 1; }
+        }
+      `
+  }
+}
+
+function getAnimStyle(id: string, zone: AnimZone): React.CSSProperties {
+  const duration = (3 / zone.speed).toFixed(2)
+  const pxv = zone.pivot.x
+  const pyv = zone.pivot.y
+  return {
+    animationName: `anim_${id}`,
+    animationDuration: `${duration}s`,
+    animationTimingFunction: zone.animation === 'flicker' ? 'steps(1)' : 'ease-in-out',
+    animationIterationCount: 'infinite',
+    animationDirection: zone.animation === 'shimmer' || zone.animation === 'float' ? 'alternate' : 'normal',
+    transformOrigin: `${pxv}% ${pyv}%`,
+    willChange: 'transform, opacity',
+  }
+}
+
+export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: Props) {
+  const baseId = useId().replace(/:/g, '_')
+
+  if (!zones || zones.length === 0) return null
+
+  const styleContent = zones.map((zone, i) => {
+    const id = `${baseId}_${i}`
+    return getKeyframes(id, zone)
+  }).join('\n')
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: styleContent }} />
+      <div className={`absolute inset-0 pointer-events-none ${className}`} aria-hidden="true">
+        <svg width="0" height="0" style={{ position: 'absolute' }}>
+          <defs>
+            {zones.map((zone, i) => {
+              const id = `clip_${baseId}_${i}`
+              const pts = zone.polygon.map(p => `${p.x}% ${p.y}%`).join(', ')
+              return (
+                <clipPath key={id} id={id} clipPathUnits="objectBoundingBox">
+                  <polygon points={
+                    zone.polygon.map(p => `${(p.x / 100).toFixed(4)},${(p.y / 100).toFixed(4)}`).join(' ')
+                  } />
+                </clipPath>
+              )
+            })}
+          </defs>
+        </svg>
+
+        {zones.map((zone, i) => {
+          const clipId = `clip_${baseId}_${i}`
+          const animId = `${baseId}_${i}`
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={clipId}
+              src={imageUrl}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{
+                clipPath: `url(#${clipId})`,
+                ...getAnimStyle(animId, zone),
+              }}
+            />
+          )
+        })}
+      </div>
+    </>
+  )
+}
