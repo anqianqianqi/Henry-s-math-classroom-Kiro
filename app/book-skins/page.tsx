@@ -882,36 +882,34 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                         <span className="text-[11px] text-amber-600 font-medium">Examples:</span>
                         <button
                           onClick={() => {
-                            const themes = [
-                              'space exploration — globe, rocket, telescope as gold 3D ornaments',
-                              'enchanted forest — crystal mushrooms, owl, compass as bronze ornaments',
-                              'deep ocean — coral, anchor, submarine periscope as silver ornaments',
-                              'ancient Egypt — scarab, pyramid, ankh as gilded 3D ornaments',
-                              'steampunk — clockwork gears, goggles, airship as brass ornaments',
-                              'cherry blossom — lantern, koi fish, fan as jade and gold ornaments',
-                              'arctic — polar bear, snowflake, aurora borealis as crystal ornaments',
-                              'pirate — compass, treasure chest, ship wheel as aged bronze ornaments',
-                              'medieval knight — sword, shield, castle as silver relief ornaments',
-                              'wizard — crystal ball, potions, wand as gem-encrusted ornaments',
-                              'underwater — starfish, seahorse, shell as pearl and gold ornaments',
-                              'volcano — dragon, lava gem, obsidian crystal as molten gold ornaments',
+                            const backgrounds = [
+                              'deep navy blue starry night leather cover',
+                              'forest green moss-textured cloth cover',
+                              'midnight purple cosmic nebula leather cover',
+                              'dark burgundy aged leather cover',
+                              'deep teal ocean leather cover',
+                              'charcoal grey storm clouds cloth cover',
+                              'dark olive green jungle leather cover',
+                              'deep crimson red silk fabric cover',
+                              'slate blue mountain mist leather cover',
+                              'ebony black dragon-scale textured cover',
                             ]
-                            const covers = [
-                              'deep navy blue leather cover',
-                              'dark emerald green cloth cover',
-                              'burgundy leather with gold tooling',
-                              'midnight black cover with silver edge',
-                              'deep purple velvet-look cover',
-                              'dark brown worn leather cover',
-                            ]
-                            const borders = [
-                              'thin ornate gold filigree border',
-                              'gilded geometric corner frame',
-                              'engraved gold vine border',
-                              'raised gold relief border pattern',
+                            const gadgets = [
+                              'corner gadgets: blue-green Earth globe, silver-white rocket with orange flame, brass telescope, grey Moon sphere',
+                              'corner gadgets: red apple, green potion bottle, blue globe on stand, purple potion flask',
+                              'corner gadgets: orange tabby cat, green emerald gem cluster, brown compass, red ruby crystal',
+                              'corner gadgets: golden sunflower, blue butterfly, brown acorn, green four-leaf clover',
+                              'corner gadgets: silver microscope, green seedling in pot, blue beaker, orange bunsen flame',
+                              'corner gadgets: white snowflake crystal, blue penguin, grey wolf, silver icicle',
+                              'corner gadgets: yellow lightning bolt, blue storm cloud, silver stopwatch, green circuit board',
+                              'corner gadgets: red volcano, orange lava gem, brown fossil skull, grey rock crystal',
+                              'corner gadgets: pink cherry blossom branch, orange koi fish, jade tea cup, cream paper fan',
+                              'corner gadgets: purple wizard hat, orange salamander, blue crystal wand, green cauldron',
+                              'corner gadgets: grey chess knight, red cardinal bird, brown hourglass, blue inkwell with quill',
+                              'corner gadgets: silver robot head, blue circuit chip, green LED display, orange gear cog',
                             ]
                             const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)]
-                            setGenPrompt(`A physical hardcover book, ${pick(covers)}, ${pick(borders)}, with ${pick(themes)} in the four corners`)
+                            setGenPrompt(`${pick(backgrounds)}, ${pick(gadgets)}`)
                           }}
                           className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors border border-amber-600"
                         >
@@ -920,12 +918,12 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {[
-                          'Deep navy leather book, gold border, space exploration — globe, rocket, telescope as gold 3D corner ornaments',
-                          'Dark emerald cloth book, engraved border, enchanted forest — owl, mushroom, crystal as bronze corner ornaments',
-                          'Burgundy leather book, gilded frame, ancient Egypt — scarab, ankh, pyramid as gold corner ornaments',
-                          'Midnight black book, silver frame, steampunk — gears, airship, compass as brass 3D corner pieces',
-                          'Deep purple book, ornate gold border, wizard — crystal ball, wand, potion as gem-encrusted corners',
-                          'Dark brown leather, gold vines border, pirate adventure — compass, chest, wheel as aged bronze corners',
+                          'Deep navy blue starry leather cover, corner gadgets: blue-green Earth globe, silver rocket with orange flame, brass telescope, grey Moon',
+                          'Forest green cloth cover, corner gadgets: red apple, green potion bottle, brown compass, orange salamander',
+                          'Midnight purple leather cover, corner gadgets: purple wizard hat, blue crystal wand, green cauldron, silver star',
+                          'Dark burgundy leather cover, corner gadgets: grey chess knight, red cardinal, brown hourglass, blue quill inkwell',
+                          'Deep teal ocean leather cover, corner gadgets: silver microscope, blue beaker, green seedling pot, orange bunsen flame',
+                          'Charcoal grey cloth cover, corner gadgets: yellow lightning bolt, blue storm cloud, silver robot head, green circuit board',
                         ].map(ex => (
                           <button key={ex} onClick={() => setGenPrompt(ex)}
                             className="text-[11px] px-2.5 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium transition-colors text-left leading-snug border border-amber-200">
