@@ -63,6 +63,13 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   const [newIntensity, setNewIntensity] = useState(0.5)
   const [newSpeed, setNewSpeed] = useState(1.0)
 
+  // Zoom state — viewport is a % region of the image [x0,y0,x1,y1]
+  type ZoomMode = 'none' | 'selecting'
+  const [zoomMode, setZoomMode] = useState<ZoomMode>('none')
+  const [viewport, setViewport] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
+  const [zoomDragStart, setZoomDragStart] = useState<AnimPoint | null>(null)
+  const [zoomDragCurrent, setZoomDragCurrent] = useState<AnimPoint | null>(null)
+
   // Load image
   useEffect(() => {
     const img = new Image()
@@ -70,6 +77,25 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
     img.onload = () => { imgRef.current = img; setImgLoaded(true) }
     img.src = imageUrl
   }, [imageUrl])
+
+  // Keyboard: Escape cancels drawing or zoom mode
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        if (drawing) cancelDrawing()
+        if (zoomMode !== 'none') {
+          setZoomMode('none')
+          setZoomDragStart(null)
+          setZoomDragCurrent(null)
+        }
+      }
+      if ((e.key === 'Enter') && drawing && currentPoints.length >= 3) {
+        finishZone()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [drawing, zoomMode, currentPoints])
 
   // Draw everything onto canvas
   useEffect(() => {
@@ -85,13 +111,40 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
     canvas.width = cw
     canvas.height = ch
 
-    // Draw background
-    ctx.drawImage(img, 0, 0, cw, ch)
+    // Determine the visible region in % coords
+    const vp = viewport ?? { x0: 0, y0: 0, x1: 100, y1: 100 }
+    const vpW = vp.x1 - vp.x0   // width of viewport in % units
+    const vpH = vp.y1 - vp.y0
+    // Scale: how many canvas px per 1% of original image
+    const scaleX = cw / vpW
+    const scaleY = ch / vpH
+
+    // Helper: convert % coords → canvas px (accounting for viewport)
+    const pctToCanvas = (px: number, py: number) => ({
+      x: (px - vp.x0) * scaleX,
+      y: (py - vp.y0) * scaleY,
+    })
+
+    // Draw the image cropped to viewport
+    const srcX = (vp.x0 / 100) * img.naturalWidth
+    const srcY = (vp.y0 / 100) * img.naturalHeight
+    const srcW = (vpW / 100) * img.naturalWidth
+    const srcH = (vpH / 100) * img.naturalHeight
+    ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, cw, ch)
+
+    // Viewport indicator (mini-map hint when zoomed)
+    if (viewport) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)'
+      ctx.lineWidth = 2
+      ctx.setLineDash([4, 4])
+      ctx.strokeRect(2, 2, cw - 4, ch - 4)
+      ctx.setLineDash([])
+    }
 
     // Draw saved zones
     zones.forEach((zone, zi) => {
       const color = ZONE_COLORS[zi % ZONE_COLORS.length]
-      const pts = zone.polygon.map(p => ({ x: p.x / 100 * cw, y: p.y / 100 * ch }))
+      const pts = zone.polygon.map(p => pctToCanvas(p.x, p.y))
       if (pts.length < 2) return
       ctx.beginPath()
       ctx.moveTo(pts[0].x, pts[0].y)
@@ -104,7 +157,7 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
       ctx.stroke()
 
       // Pivot marker
-      const piv = { x: zone.pivot.x / 100 * cw, y: zone.pivot.y / 100 * ch }
+      const piv = pctToCanvas(zone.pivot.x, zone.pivot.y)
       ctx.beginPath()
       ctx.arc(piv.x, piv.y, 5, 0, Math.PI * 2)
       ctx.fillStyle = color
@@ -133,12 +186,13 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
     // Draw in-progress polygon
     if (drawing && currentPoints.length > 0) {
       const color = ZONE_COLORS[zones.length % ZONE_COLORS.length]
-      const pts = currentPoints.map(p => ({ x: p.x / 100 * cw, y: p.y / 100 * ch }))
+      const pts = currentPoints.map(p => pctToCanvas(p.x, p.y))
       ctx.beginPath()
       ctx.moveTo(pts[0].x, pts[0].y)
       pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y))
       if (mousePos) {
-        ctx.lineTo(mousePos.x / 100 * cw, mousePos.y / 100 * ch)
+        const mp = pctToCanvas(mousePos.x, mousePos.y)
+        ctx.lineTo(mp.x, mp.y)
       }
       ctx.strokeStyle = color
       ctx.lineWidth = 2
@@ -157,18 +211,72 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
         ctx.stroke()
       })
     }
-  }, [imgLoaded, zones, currentPoints, mousePos, drawing, selectedZone])
 
+    // Draw zoom selection rectangle (while dragging in zoom mode)
+    if (zoomMode === 'selecting' && zoomDragStart && zoomDragCurrent) {
+      const s = pctToCanvas(zoomDragStart.x, zoomDragStart.y)
+      const c = pctToCanvas(zoomDragCurrent.x, zoomDragCurrent.y)
+      const rx = Math.min(s.x, c.x)
+      const ry = Math.min(s.y, c.y)
+      const rw = Math.abs(s.x - c.x)
+      const rh = Math.abs(s.y - c.y)
+      ctx.strokeStyle = '#facc15'
+      ctx.lineWidth = 2
+      ctx.setLineDash([6, 3])
+      ctx.strokeRect(rx, ry, rw, rh)
+      ctx.setLineDash([])
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.12)'
+      ctx.fillRect(rx, ry, rw, rh)
+    }
+  }, [imgLoaded, zones, currentPoints, mousePos, drawing, selectedZone, viewport, zoomMode, zoomDragStart, zoomDragCurrent])
+
+  // Map a canvas mouse event → % coords in the original image space (viewport-aware)
   function getRelPct(e: React.MouseEvent<HTMLCanvasElement>): AnimPoint {
     const canvas = canvasRef.current!
     const rect = canvas.getBoundingClientRect()
+    // Fractional position within the canvas [0..1]
+    const fx = (e.clientX - rect.left) / rect.width
+    const fy = (e.clientY - rect.top) / rect.height
+    // Map through viewport back to original % space
+    const vp = viewport ?? { x0: 0, y0: 0, x1: 100, y1: 100 }
+    const vpW = vp.x1 - vp.x0
+    const vpH = vp.y1 - vp.y0
     return {
-      x: ((e.clientX - rect.left) / rect.width) * 100,
-      y: ((e.clientY - rect.top) / rect.height) * 100,
+      x: vp.x0 + fx * vpW,
+      y: vp.y0 + fy * vpH,
+    }
+  }
+
+  function handleCanvasMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (zoomMode === 'selecting') {
+      e.preventDefault()
+      const pt = getRelPct(e)
+      setZoomDragStart(pt)
+      setZoomDragCurrent(pt)
+    }
+  }
+
+  function handleCanvasMouseUp(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (zoomMode === 'selecting' && zoomDragStart && zoomDragCurrent) {
+      e.preventDefault()
+      const x0 = Math.min(zoomDragStart.x, zoomDragCurrent.x)
+      const y0 = Math.min(zoomDragStart.y, zoomDragCurrent.y)
+      const x1 = Math.max(zoomDragStart.x, zoomDragCurrent.x)
+      const y1 = Math.max(zoomDragStart.y, zoomDragCurrent.y)
+      // Only commit if the selection is meaningful (> 2% wide/tall)
+      if (x1 - x0 > 2 && y1 - y0 > 2) {
+        setViewport({ x0, y0, x1, y1 })
+      }
+      setZoomDragStart(null)
+      setZoomDragCurrent(null)
+      setZoomMode('none')
     }
   }
 
   function handleCanvasClick(e: React.MouseEvent<HTMLCanvasElement>) {
+    // In zoom-select mode clicks are handled by mousedown/up
+    if (zoomMode === 'selecting') return
+
     const pt = getRelPct(e)
 
     if (!drawing) {
@@ -182,7 +290,10 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
     if (currentPoints.length >= 3) {
       const first = currentPoints[0]
       const dist = Math.hypot(pt.x - first.x, pt.y - first.y)
-      if (dist < 3) {
+      // Proximity threshold scales with viewport size (3% of viewport width)
+      const vp = viewport ?? { x0: 0, y0: 0, x1: 100, y1: 100 }
+      const threshold = (vp.x1 - vp.x0) * 0.04
+      if (dist < threshold) {
         finishZone()
         return
       }
@@ -192,6 +303,11 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   }
 
   function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    // Update zoom drag rectangle
+    if (zoomMode === 'selecting' && zoomDragStart) {
+      setZoomDragCurrent(getRelPct(e))
+      return
+    }
     if (!drawing) return
     setMousePos(getRelPct(e))
   }
@@ -239,19 +355,56 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
     <div className="space-y-3">
       {/* Instructions */}
       <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2 border border-gray-200">
-        {drawing
+        {zoomMode === 'selecting'
+          ? 'Drag a rectangle on the image to zoom into that area. Release to commit.'
+          : drawing
           ? `${currentPoints.length} point${currentPoints.length !== 1 ? 's' : ''} placed — click to add more, click near ● to close, or press Esc to cancel`
-          : 'Click anywhere on the image to start drawing a zone. Trace around the object you want to animate.'}
+          : 'Click anywhere on the image to start drawing a zone. Use 🔍 below to zoom in for precision.'
+        }
       </div>
 
       {/* Canvas */}
-      <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden border border-gray-200 cursor-crosshair">
+      <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden border border-gray-200"
+        style={{ cursor: zoomMode === 'selecting' ? 'crosshair' : drawing ? 'crosshair' : 'default' }}>
         <canvas
           ref={canvasRef}
           onClick={handleCanvasClick}
           onMouseMove={handleMouseMove}
-          className="w-full"
+          onMouseDown={handleCanvasMouseDown}
+          onMouseUp={handleCanvasMouseUp}
+          className="w-full select-none"
         />
+      </div>
+
+      {/* Zoom toolbar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          onClick={() => {
+            setZoomMode(zoomMode === 'selecting' ? 'none' : 'selecting')
+            setZoomDragStart(null)
+            setZoomDragCurrent(null)
+          }}
+          className={`text-xs px-3 py-1.5 font-semibold rounded-lg border transition-colors ${
+            zoomMode === 'selecting'
+              ? 'bg-yellow-400 border-yellow-500 text-yellow-900'
+              : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-700'
+          }`}
+        >
+          🔍 {zoomMode === 'selecting' ? 'Cancel zoom select' : 'Select zoom area'}
+        </button>
+        {viewport && (
+          <button
+            onClick={() => { setViewport(null); setZoomMode('none') }}
+            className="text-xs px-3 py-1.5 font-semibold rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700"
+          >
+            ✕ Reset zoom
+          </button>
+        )}
+        {viewport && (
+          <span className="text-[10px] text-gray-400">
+            Zoomed: {viewport.x0.toFixed(0)}–{viewport.x1.toFixed(0)}% × {viewport.y0.toFixed(0)}–{viewport.y1.toFixed(0)}%
+          </span>
+        )}
       </div>
 
       {/* Controls while drawing */}
