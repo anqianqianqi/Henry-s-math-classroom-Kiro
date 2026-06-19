@@ -665,11 +665,13 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Post-process: scale the AI image to 480×700 and save.
-      // The white/dark background outside the book is handled by mix-blend-mode: multiply
-      // in the challenge page display — white pixels become transparent, book content stays.
+      // Post-process: auto-crop margins + flood-fill from corners to remove any
+      // residual background color the AI left despite the transparent bg instruction.
+      // The canvas starts transparent — only the book and its shadow get drawn.
       const FINAL_W = 480
       const FINAL_H = 700
+      const SCAN_W = 1024
+      const SCAN_H = 1536
       const imgEl = new Image()
       imgEl.crossOrigin = 'anonymous'
       const imgLoaded = new Promise<void>((res, rej) => {
@@ -679,11 +681,108 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       imgEl.src = sandbox.imageUrl
       await imgLoaded
 
+      // Scan at full AI resolution to find crop bounds and remove background
+      const scanCanvas = document.createElement('canvas')
+      scanCanvas.width = SCAN_W
+      scanCanvas.height = SCAN_H
+      const scanCtx = scanCanvas.getContext('2d')!
+      scanCtx.drawImage(imgEl, 0, 0, SCAN_W, SCAN_H)
+      const imageData = scanCtx.getImageData(0, 0, SCAN_W, SCAN_H)
+      const { data } = imageData
+
+      // Sample background from corners
+      const sampleCorner = (x: number, y: number) => {
+        const i = (y * SCAN_W + x) * 4
+        return [data[i], data[i + 1], data[i + 2], data[i + 3]]
+      }
+      const corners4 = [
+        sampleCorner(0, 0), sampleCorner(SCAN_W - 1, 0),
+        sampleCorner(0, SCAN_H - 1), sampleCorner(SCAN_W - 1, SCAN_H - 1),
+      ]
+      const bgR = Math.round(corners4.reduce((s, c) => s + c[0], 0) / 4)
+      const bgG = Math.round(corners4.reduce((s, c) => s + c[1], 0) / 4)
+      const bgB = Math.round(corners4.reduce((s, c) => s + c[2], 0) / 4)
+      const bgA = Math.round(corners4.reduce((s, c) => s + c[3], 0) / 4)
+
+      // Flood-fill from all corners to make background transparent
+      // Use higher tolerance since shadows need gradual fade
+      const TOL = 50
+      const isBg = (i: number) => {
+        if (data[i + 3] === 0) return true  // already transparent
+        // If AI generated transparent background, bgA will be ~0 — use brightness check
+        if (bgA < 30) {
+          // AI used transparent background, just clean up near-transparent pixels
+          return data[i + 3] < 30
+        }
+        const dr = data[i] - bgR, dg = data[i + 1] - bgG, db = data[i + 2] - bgB
+        return Math.sqrt(dr * dr + dg * dg + db * db) < TOL
+      }
+
+      const visited = new Uint8Array(SCAN_W * SCAN_H)
+      const queue: number[] = []
+      const startPositions = [
+        0, SCAN_W - 1, (SCAN_H - 1) * SCAN_W, (SCAN_H - 1) * SCAN_W + SCAN_W - 1
+      ]
+      for (const pos of startPositions) {
+        if (!visited[pos]) { visited[pos] = 1; queue.push(pos) }
+      }
+      while (queue.length > 0) {
+        const pos = queue.pop()!
+        const x = pos % SCAN_W, y = Math.floor(pos / SCAN_W)
+        const i = pos * 4
+        if (!isBg(i)) continue
+        // Make transparent with soft fade based on distance from background color
+        const dr = data[i] - bgR, dg = data[i + 1] - bgG, db = data[i + 2] - bgB
+        const d = Math.sqrt(dr * dr + dg * dg + db * db)
+        const fadeAlpha = d < TOL ? Math.round((d / TOL) * data[i + 3]) : data[i + 3]
+        data[i + 3] = Math.min(data[i + 3], fadeAlpha > 60 ? fadeAlpha : 0)
+        const ns = [
+          x > 0 ? pos - 1 : -1, x < SCAN_W - 1 ? pos + 1 : -1,
+          y > 0 ? pos - SCAN_W : -1, y < SCAN_H - 1 ? pos + SCAN_W : -1,
+        ]
+        for (const n of ns) {
+          if (n >= 0 && !visited[n]) { visited[n] = 1; queue.push(n) }
+        }
+      }
+      scanCtx.putImageData(imageData, 0, 0)
+
+      // Find crop bounds (first non-transparent pixels from each edge)
+      let cropLeft = 0, cropRight = SCAN_W - 1, cropTop = 0, cropBottom = SCAN_H - 1
+      outer1: for (let x = 0; x < SCAN_W / 2; x++) {
+        for (let y = 0; y < SCAN_H; y++) {
+          if (data[(y * SCAN_W + x) * 4 + 3] > 10) { cropLeft = Math.max(0, x - 4); break outer1 }
+        }
+      }
+      outer2: for (let x = SCAN_W - 1; x > SCAN_W / 2; x--) {
+        for (let y = 0; y < SCAN_H; y++) {
+          if (data[(y * SCAN_W + x) * 4 + 3] > 10) { cropRight = Math.min(SCAN_W - 1, x + 4); break outer2 }
+        }
+      }
+      outer3: for (let y = 0; y < SCAN_H / 2; y++) {
+        for (let x = 0; x < SCAN_W; x++) {
+          if (data[(y * SCAN_W + x) * 4 + 3] > 10) { cropTop = Math.max(0, y - 4); break outer3 }
+        }
+      }
+      outer4: for (let y = SCAN_H - 1; y > SCAN_H / 2; y--) {
+        for (let x = 0; x < SCAN_W; x++) {
+          if (data[(y * SCAN_W + x) * 4 + 3] > 10) { cropBottom = Math.min(SCAN_H - 1, y + 4); break outer4 }
+        }
+      }
+
+      const cropW = cropRight - cropLeft
+      const cropH = cropBottom - cropTop
+      const PAD = 20
+      const scale = Math.min((FINAL_W - PAD * 2) / cropW, (FINAL_H - PAD * 2) / cropH)
+      const drawW = Math.round(cropW * scale)
+      const drawH = Math.round(cropH * scale)
+      const offX = Math.round((FINAL_W - drawW) / 2)
+      const offY = Math.round((FINAL_H - drawH) / 2)
+
       const canvas = document.createElement('canvas')
       canvas.width = FINAL_W
       canvas.height = FINAL_H
       const ctx = canvas.getContext('2d')!
-      ctx.drawImage(imgEl, 0, 0, FINAL_W, FINAL_H)
+      ctx.drawImage(scanCanvas, cropLeft, cropTop, cropW, cropH, offX, offY, drawW, drawH)
 
       const paddedBlob = await new Promise<Blob>((res, rej) =>
         canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png')

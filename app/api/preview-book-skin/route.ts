@@ -18,19 +18,19 @@ export const dynamic = 'force-dynamic'
 const COVER_CONTEXT = `
 COMPOSITION RULES — follow exactly:
 
-Generate a hardcover book cover illustration. The book is viewed straight-on from the front — perfectly flat, no tilt, no angle, no visible spine or side. The cover face fills the ENTIRE image from edge to edge, top to bottom, left to right. No background, no padding, no empty space around the book.
+Generate a hardcover book cover illustration on a TRANSPARENT background. The image format is RGBA PNG. The area outside the book must be fully transparent (alpha = 0) — no color, no fill, no background at all. Only the book itself should be opaque.
 
-IMPORTANT: Do NOT paint any background, environment, landscape, or scene outside the book cover edges. The book cover IS the full image. There is nothing outside it — no jungle, no sky, no scenery, nothing. The image boundary is the book boundary.
+The book is a flat front-facing hardcover portrait rectangle. It has a slight drop shadow around its edges (semi-transparent dark shadow that fades to transparent — this is the only thing allowed outside the book boundary).
 
-IMPORTANT: Do NOT draw a thick dark book binding or border frame around the outside of the cover. Do NOT draw a black or dark rectangular border/frame that acts like a physical book binding. The very edges of the image are the very edges of the cover face — no thick outer frame, no binding strip, no raised edge. The cover illustration goes all the way to the pixel boundary.
+COVER SURFACE: Rich thematic texture — deeply embossed near the edges, smoother toward the center. A thin ornate gold decorative border runs inside the cover perimeter. The cover material looks like premium cloth or leather hardcover.
 
-COVER SURFACE: Rich thematic texture across the entire surface — deeply embossed feeling near the edges, smoother toward the center. A thin ornate gold decorative border line runs INSIDE the cover (inset from the edges), as part of the cover design. The cover material looks and feels like premium cloth or leather hardcover.
+CORNER DECORATION: Each corner has a dense cluster of 2–4 closely grouped 3D objects forming a small vignette. Objects sit ON the cover surface, casting soft shadows on it. The clusters extend to the very corner edges of the cover.
 
-CORNER DECORATION: Each corner has a dense cluster of 2–4 closely grouped 3D objects forming a small vignette scene. Objects sit ON the cover surface, casting soft shadows onto it. The clusters extend to the very corner edges of the cover.
+CENTER ZONE: Keep the central area (roughly middle 60% width, middle 50% height) plain — just background texture — clear space for title and text overlay.
 
-CENTER ZONE: Keep the central area (roughly middle 60% width, middle 50% height) relatively plain — just the background texture — clear space for title and text overlay.
+DEPTH: Give it physical weight through: edge darkening/vignette on the cover surface itself, embossed border ornaments, realistic material texture.
 
-DEPTH & REALISM: Give it physical weight through: subtle edge darkening/vignette, slight embossing on the decorative border ornaments, realistic material texture.
+TRANSPARENT BACKGROUND: Everything outside the book shape (except the drop shadow) must be fully transparent. No white fill, no color fill, no background.
 
 NO text, letters, numbers, or glyphs anywhere in the image.
 `.trim()
