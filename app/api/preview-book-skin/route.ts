@@ -20,7 +20,7 @@ STRICT RULES for this book cover image — follow exactly:
 
 VIEWPOINT: This is the FRONT FACE of a hardcover book, viewed perfectly flat and straight-on — NO tilt, NO 3D angle, NO visible spine. Think of it as the cover art you would see if you placed the closed book face-up on a flat surface and looked straight down at it. The image fills edge-to-edge.
 
-COVER MATERIAL: The background of the cover should be rich textured hardcover material — dark leather, cloth binding, or premium fabric texture. This gives it the feel of an actual book cover. Deep navy, forest green, midnight purple, or dark burgundy work well.
+COVER MATERIAL: The background of the cover should have a thematic texture — subtle illustrated patterns that hint at the cover's theme (e.g. faint stars and nebula wisps, soft leaf silhouettes, faint rune carvings, underwater caustic light patterns). The texture should be richer and more detailed near the edges/corners and fade to a smooth, plain, uncluttered surface in the center. This gives a book-like feel while keeping the center area clean for text.
 
 STYLE: The decorative elements (themed objects, creatures, plants, etc.) should look like three-dimensional miniature models or highly detailed illustrations physically placed on the book cover — with realistic volume, cast shadows onto the cover surface, specular highlights, and material depth. Full vibrant natural colors: a globe is blue-green with atmosphere; a rocket is silver-white; fire is orange-yellow; gems sparkle in their natural colors. Rich and vivid, not monochrome gold.
 

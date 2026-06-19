@@ -883,16 +883,18 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                         <button
                           onClick={() => {
                             const backgrounds = [
-                              'deep navy blue starry night leather cover',
-                              'forest green moss-textured cloth cover',
-                              'midnight purple cosmic nebula leather cover',
-                              'dark burgundy aged leather cover',
-                              'deep teal ocean leather cover',
-                              'charcoal grey storm clouds cloth cover',
-                              'dark olive green jungle leather cover',
-                              'deep crimson red silk fabric cover',
-                              'slate blue mountain mist leather cover',
-                              'ebony black dragon-scale textured cover',
+                              'starry night sky with soft nebula clouds and tiny distant stars cover texture',
+                              'deep ocean with faint waves, bioluminescent dots and coral silhouettes cover texture',
+                              'enchanted forest with subtle leaf patterns, moss, firefly glows cover texture',
+                              'ancient stone with faint rune carvings and vine patterns cover texture',
+                              'volcanic landscape with glowing lava cracks and ash texture cover',
+                              'arctic tundra with soft snowflake patterns and aurora shimmer cover texture',
+                              'desert dunes with sand ripple patterns and faint star map cover texture',
+                              'underwater coral reef with soft bubble patterns and light caustics cover texture',
+                              'stormy sky with subtle lightning and cloud swirls cover texture',
+                              'magical forest floor with faint mushroom rings and glowing spores cover texture',
+                              'medieval parchment with faint map lines, compass rose, aged spots cover texture',
+                              'cherry blossom garden with soft falling petals and light mist cover texture',
                             ]
                             const gadgets = [
                               'corner gadgets: blue-green Earth globe, silver-white rocket with orange flame, brass telescope, grey Moon sphere',
@@ -918,12 +920,12 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {[
-                          'Deep navy blue starry leather cover, corner gadgets: blue-green Earth globe, silver rocket with orange flame, brass telescope, grey Moon',
-                          'Forest green cloth cover, corner gadgets: red apple, green potion bottle, brown compass, orange salamander',
-                          'Midnight purple leather cover, corner gadgets: purple wizard hat, blue crystal wand, green cauldron, silver star',
-                          'Dark burgundy leather cover, corner gadgets: grey chess knight, red cardinal, brown hourglass, blue quill inkwell',
-                          'Deep teal ocean leather cover, corner gadgets: silver microscope, blue beaker, green seedling pot, orange bunsen flame',
-                          'Charcoal grey cloth cover, corner gadgets: yellow lightning bolt, blue storm cloud, silver robot head, green circuit board',
+                          'Starry night sky with nebula clouds cover texture, corner gadgets: blue-green Earth globe, silver rocket with orange flame, brass telescope, grey Moon',
+                          'Enchanted forest with leaf patterns and firefly glows cover, corner gadgets: red apple, green potion bottle, brown compass, orange salamander',
+                          'Ancient stone with rune carvings and vines cover texture, corner gadgets: purple wizard hat, blue crystal wand, green cauldron, silver star',
+                          'Medieval parchment with map lines and compass rose cover, corner gadgets: grey chess knight, red cardinal bird, brown hourglass, blue quill inkwell',
+                          'Deep ocean with wave patterns and bioluminescent dots cover, corner gadgets: silver microscope, blue beaker, green seedling pot, orange bunsen flame',
+                          'Stormy sky with lightning and cloud swirls cover texture, corner gadgets: yellow lightning bolt, blue storm cloud, silver robot head, green circuit board',
                         ].map(ex => (
                           <button key={ex} onClick={() => setGenPrompt(ex)}
                             className="text-[11px] px-2.5 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium transition-colors text-left leading-snug border border-amber-200">
