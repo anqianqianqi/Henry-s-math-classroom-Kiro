@@ -64,6 +64,19 @@ function getKeyframes(id: string, zone: AnimZone): string {
           100% { opacity: 1; }
         }
       `
+    case 'bling':
+      // Rainbow hue-shift — cycles through the full color wheel
+      // Combined with brightness pulse for a sparkling jewel effect
+      return `
+        @keyframes anim_${id} {
+          0%   { filter: hue-rotate(0deg) brightness(1); }
+          20%  { filter: hue-rotate(${s * 72}deg) brightness(${1 + s * 0.4}); }
+          40%  { filter: hue-rotate(${s * 144}deg) brightness(1); }
+          60%  { filter: hue-rotate(${s * 216}deg) brightness(${1 + s * 0.5}); }
+          80%  { filter: hue-rotate(${s * 288}deg) brightness(1); }
+          100% { filter: hue-rotate(${s * 360}deg) brightness(1); }
+        }
+      `
   }
 }
 
@@ -78,9 +91,10 @@ function getAnimStyle(id: string, zone: AnimZone): React.CSSProperties {
     animationIterationCount: 'infinite',
     // alternate = plays forward then backward → perfectly smooth loop with no stutter
     // sway and float both benefit from alternate direction
-    animationDirection: (zone.animation === 'shimmer' || zone.animation === 'float' || zone.animation === 'sway') ? 'alternate' : 'normal',
+    // bling uses normal (full 360° hue cycle is already seamless at endpoints)
+    animationDirection: zone.animation === 'bling' ? 'normal' : (zone.animation === 'shimmer' || zone.animation === 'float' || zone.animation === 'sway') ? 'alternate' : 'normal',
     transformOrigin: `${pxv}% ${pyv}%`,
-    willChange: 'transform, opacity',
+    willChange: zone.animation === 'bling' ? 'filter' : 'transform, opacity',
   }
 }
 

@@ -24,7 +24,7 @@ export interface AnimZone {
   id: string
   polygon: AnimPoint[]
   pivot: AnimPoint
-  animation: 'sway' | 'float' | 'shimmer' | 'flicker'
+  animation: 'sway' | 'float' | 'shimmer' | 'flicker' | 'bling'
   intensity: number
   speed: number
   containOverflow?: boolean  // when true, static layer fills polygon so overflow is hidden behind static background
@@ -35,6 +35,7 @@ const ANIM_OPTIONS: { value: AnimZone['animation']; label: string; desc: string 
   { value: 'float', label: '✨ Float', desc: 'Slow up-down float (clouds, dust)' },
   { value: 'shimmer', label: '💧 Shimmer', desc: 'Subtle opacity flicker (water, light)' },
   { value: 'flicker', label: '🕯️ Flicker', desc: 'Random flicker (candles, fire)' },
+  { value: 'bling', label: '💎 Bling', desc: 'Rainbow colour-shift sparkle (jewels, lights)' },
 ]
 
 const ZONE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
