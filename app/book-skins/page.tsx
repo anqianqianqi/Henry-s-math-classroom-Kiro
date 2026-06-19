@@ -205,7 +205,7 @@ export default function BookSkinsUserPage() {
         </div>
 
         {/* Admin shortcut — only visible to admins/teachers */}
-        <AdminUploadBanner />
+        <AdminUploadBanner onSaved={() => loadSkins(userId!, isAdmin)} />
 
         {/* Error / success */}
         {error && (
@@ -528,7 +528,7 @@ async function resizeImageToBlob(file: File, targetW: number, targetH: number): 
   })
 }
 
-function AdminUploadBanner() {
+function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   const supabase = createClient()
   const [isAdmin, setIsAdmin] = useState(false)
   const [checked, setChecked] = useState(false)
@@ -617,6 +617,7 @@ function AdminUploadBanner() {
       setGenSaveOpen(false); setGenSaveName(''); setGenSaveDesc('')
       setSandbox(null); setGenPrompt(''); setRefinePrompt('')
       setUploadSuccess('✅ Book cover saved!')
+      onSaved?.()
     } catch (err: any) { setGenSaveError(err.message) }
     finally { setGenSaving(false) }
   }
@@ -702,6 +703,7 @@ function AdminUploadBanner() {
       setSkinName(''); setSkinDesc(''); setFile(null); setPreview(null)
       setSellMode(false); setSellPrice('')
       if (fileInputRef.current) fileInputRef.current.value = ''
+      onSaved?.()
     } catch (err: any) {
       setUploadError(err.message)
     } finally {
