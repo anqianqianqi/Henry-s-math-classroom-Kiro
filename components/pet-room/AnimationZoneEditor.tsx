@@ -76,6 +76,9 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   // Eyedropper state — when set, next canvas click samples pixel and sets fillColor on that zone
   const [eyedropperZoneId, setEyedropperZoneId] = useState<string | null>(null)
 
+  // Pivot drag state — when dragging a pivot dot
+  const [pivotDragZoneId, setPivotDragZoneId] = useState<string | null>(null)
+
   // Preview modal
   const [showPreview, setShowPreview] = useState(false)
 
@@ -264,10 +267,31 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
       const pt = getRelPct(e)
       setZoomDragStart(pt)
       setZoomDragCurrent(pt)
+      return
+    }
+    // Check if clicking near a pivot dot to start dragging it
+    if (!drawing && !eyedropperZoneId) {
+      const pt = getRelPct(e)
+      const vp = viewport ?? { x0: 0, y0: 0, x1: 100, y1: 100 }
+      const vpW = vp.x1 - vp.x0
+      const threshold = vpW * 0.03  // 3% of viewport width
+      for (const zone of zones) {
+        const dist = Math.hypot(pt.x - zone.pivot.x, pt.y - zone.pivot.y)
+        if (dist < threshold) {
+          e.preventDefault()
+          setPivotDragZoneId(zone.id)
+          setSelectedZone(zone.id)
+          return
+        }
+      }
     }
   }
 
   function handleCanvasMouseUp(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (pivotDragZoneId) {
+      setPivotDragZoneId(null)
+      return
+    }
     if (zoomMode === 'selecting' && zoomDragStart && zoomDragCurrent) {
       e.preventDefault()
       const x0 = Math.min(zoomDragStart.x, zoomDragCurrent.x)
@@ -330,6 +354,12 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   }
 
   function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    // Pivot drag
+    if (pivotDragZoneId) {
+      const pt = getRelPct(e)
+      updateZone(pivotDragZoneId, { pivot: pt })
+      return
+    }
     // Update zoom drag rectangle
     if (zoomMode === 'selecting' && zoomDragStart) {
       setZoomDragCurrent(getRelPct(e))
@@ -388,13 +418,13 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
           ? 'Drag a rectangle on the image to zoom into that area. Release to commit.'
           : drawing
           ? `${currentPoints.length} point${currentPoints.length !== 1 ? 's' : ''} placed — click to add more, click near ● to close, or press Esc to cancel`
-          : 'Click anywhere on the image to start drawing a zone. Use 🔍 below to zoom in for precision.'
+          : 'Click anywhere on the image to start drawing a zone. Drag the ● pivot dot to set the sway anchor. Use 🔍 below to zoom in for precision.'
         }
       </div>
 
       {/* Canvas */}
       <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden border border-gray-200"
-        style={{ cursor: eyedropperZoneId ? 'crosshair' : zoomMode === 'selecting' ? 'crosshair' : drawing ? 'crosshair' : 'default' }}>
+        style={{ cursor: eyedropperZoneId ? 'crosshair' : zoomMode === 'selecting' ? 'crosshair' : drawing ? 'crosshair' : pivotDragZoneId ? 'grabbing' : 'default' }}>
         <canvas
           ref={canvasRef}
           onClick={handleCanvasClick}
@@ -531,8 +561,8 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
                       <div
                         className="w-4 h-4 rounded border border-gray-300 shrink-0"
                         style={{ background: zone.fillColor }}
-                        title={zone.fillColor}
                       />
+                      <span className="text-[10px] text-gray-500 font-mono">{zone.fillColor}</span>
                       <button
                         onClick={() => updateZone(zone.id, { fillColor: undefined })}
                         className="text-[10px] text-gray-400 hover:text-red-500 leading-none"
