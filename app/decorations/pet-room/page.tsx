@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -77,6 +77,13 @@ export default function PetRoomPage() {
 
   // Purchased room IDs for non-admin users (shows "🛒 Owned" badge)
   const [purchasedIds, setPurchasedIds] = useState<Set<string>>(new Set())
+
+  // Frame slot editor
+  const [frameSlotEditor, setFrameSlotEditor] = useState<PetRoomBackground | null>(null)
+  const [editingSlot, setEditingSlot] = useState<{ x: number; y: number; w: number; h: number }>({ x: 62, y: 8, w: 18, h: 28 })
+  const [slotSaving, setSlotSaving] = useState(false)
+  const frameEditorRef = useRef<HTMLDivElement>(null)
+  const dragState = useRef<{ type: 'move' | 'resize'; startX: number; startY: number; startSlot: typeof editingSlot } | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -249,6 +256,50 @@ export default function PetRoomPage() {
       await loadBgs(userId ?? undefined, isAdmin)
     } catch (err: any) { setUploadError(err.message) }
     finally { setUploading(false) }
+  }
+
+  // ── Frame slot editor helpers ─────────────────────────────────────────────
+  function getRelativePercent(e: React.MouseEvent, el: HTMLDivElement): { px: number; py: number } {
+    const rect = el.getBoundingClientRect()
+    return {
+      px: ((e.clientX - rect.left) / rect.width) * 100,
+      py: ((e.clientY - rect.top) / rect.height) * 100,
+    }
+  }
+
+  function onSlotMouseDown(e: React.MouseEvent, type: 'move' | 'resize') {
+    e.preventDefault()
+    e.stopPropagation()
+    dragState.current = { type, startX: e.clientX, startY: e.clientY, startSlot: { ...editingSlot } }
+    const up = () => { dragState.current = null; window.removeEventListener('mouseup', up); window.removeEventListener('mousemove', move) }
+    const move = (me: MouseEvent) => {
+      if (!dragState.current || !frameEditorRef.current) return
+      const rect = frameEditorRef.current.getBoundingClientRect()
+      const dxPct = ((me.clientX - dragState.current.startX) / rect.width) * 100
+      const dyPct = ((me.clientY - dragState.current.startY) / rect.height) * 100
+      const s = dragState.current.startSlot
+      if (dragState.current.type === 'move') {
+        setEditingSlot({ x: Math.max(0, Math.min(100 - s.w, s.x + dxPct)), y: Math.max(0, Math.min(100 - s.h, s.y + dyPct)), w: s.w, h: s.h })
+      } else {
+        setEditingSlot({ x: s.x, y: s.y, w: Math.max(5, Math.min(100 - s.x, s.w + dxPct)), h: Math.max(5, Math.min(100 - s.y, s.h + dyPct)) })
+      }
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
+
+  async function handleSaveFrameSlot() {
+    if (!frameSlotEditor) return
+    setSlotSaving(true)
+    const { error } = await supabase
+      .from('pet_room_backgrounds')
+      .update({ frame_slot: editingSlot })
+      .eq('id', frameSlotEditor.id)
+    setSlotSaving(false)
+    if (!error) {
+      setFrameSlotEditor(null)
+      await loadBgs(userId ?? undefined, isAdmin)
+    }
   }
 
   // ── Select room (user action) ─────────────────────────────────────────────
@@ -646,6 +697,17 @@ export default function PetRoomPage() {
                   {actionBg.is_active ? 'Deactivate' : 'Activate'}
                 </button>
 
+                {/* Adjust frame slot */}
+                <button onClick={() => {
+                  const existing = (actionBg as any).frame_slot
+                  setEditingSlot(existing ?? { x: 62, y: 8, w: 18, h: 28 })
+                  setFrameSlotEditor(actionBg)
+                  setActionBg(null)
+                }} disabled={actionWorking}
+                  className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-40 transition-colors">
+                  📐 Adjust Frame
+                </button>
+
                 {/* Sell in shop */}
                 {!actionBg.shop_item_id ? (
                   <button onClick={() => setShowSellInput(v => !v)} disabled={actionWorking}
@@ -686,6 +748,76 @@ export default function PetRoomPage() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Frame slot editor modal */}
+      {frameSlotEditor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <div className="font-bold text-gray-900">📐 Adjust Frame Slot — {frameSlotEditor.name}</div>
+                <div className="text-xs text-gray-400 mt-0.5">Drag to move · drag corner ↘ to resize · saved as the photo area rule for this room</div>
+              </div>
+              <button onClick={() => setFrameSlotEditor(null)} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              {/* Image with draggable slot overlay */}
+              <div
+                ref={frameEditorRef}
+                className="relative w-full rounded-xl overflow-hidden border border-gray-200 select-none"
+                style={{ aspectRatio: '3/2', cursor: 'default' }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={frameSlotEditor.image_url} alt={frameSlotEditor.name} className="w-full h-full object-cover" draggable={false} />
+
+                {/* Slot rectangle overlay */}
+                <div
+                  className="absolute border-2 border-blue-500 bg-blue-400/20 cursor-move"
+                  style={{
+                    left: `${editingSlot.x}%`,
+                    top: `${editingSlot.y}%`,
+                    width: `${editingSlot.w}%`,
+                    height: `${editingSlot.h}%`,
+                  }}
+                  onMouseDown={e => onSlotMouseDown(e, 'move')}
+                >
+                  {/* Label */}
+                  <div className="absolute top-1 left-1 text-[10px] font-bold text-blue-700 bg-white/80 px-1 rounded leading-none select-none pointer-events-none">
+                    📷 Photo area
+                  </div>
+                  {/* Resize handle — bottom-right corner */}
+                  <div
+                    className="absolute bottom-0 right-0 w-5 h-5 bg-blue-500 cursor-se-resize flex items-center justify-center"
+                    style={{ borderRadius: '3px 0 6px 0' }}
+                    onMouseDown={e => onSlotMouseDown(e, 'resize')}
+                  >
+                    <span className="text-white text-[10px] select-none">↘</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Current values */}
+              <div className="text-xs text-gray-500 flex gap-4">
+                <span>x: {Math.round(editingSlot.x)}%</span>
+                <span>y: {Math.round(editingSlot.y)}%</span>
+                <span>w: {Math.round(editingSlot.w)}%</span>
+                <span>h: {Math.round(editingSlot.h)}%</span>
+              </div>
+
+              <p className="text-xs text-gray-400">
+                The blue rectangle defines exactly where the user's blindbox photo will be placed inside the frame. Any photo will be cropped and scaled to fit this area. Adjust it to cover the empty space inside the frame border.
+              </p>
+
+              <div className="flex gap-3">
+                <button onClick={() => setFrameSlotEditor(null)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm">Cancel</button>
+                <button onClick={handleSaveFrameSlot} disabled={slotSaving}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold rounded-xl text-sm">
+                  {slotSaving ? '⏳ Saving…' : '💾 Save Frame Slot'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
