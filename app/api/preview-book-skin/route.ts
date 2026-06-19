@@ -17,12 +17,22 @@ export const dynamic = 'force-dynamic'
 // Injected into every book cover generation prompt
 const COVER_CONTEXT = `
 STRICT RULES for this book cover image — follow exactly:
-1. Portrait orientation, 2:3 aspect ratio (taller than wide), 1024×1536 pixels.
-2. The CENTER of the cover (roughly middle 40% width, middle 50% height) must be LEFT CLEAN AND CLEAR — a smooth, lightly textured background only. No illustrations, decorations, or text should overlap this zone. This space will show the book title and an "Open the Book" button overlay.
-3. Place decorative illustrations, gadgets, and themed artwork ONLY in the four corners and along the borders/edges of the cover. The center must stay empty.
-4. Include an ornate decorative border or frame around the entire cover edge.
-5. The style should be rich, illustrated, and thematic — like a premium children's book or collectible hardcover.
-6. No text, words, or typography anywhere on the image.
+
+COMPOSITION: This is a CLOSED HARDCOVER BOOK viewed from the FRONT at a very slight angle (3/4 perspective), so you can see a narrow spine/binding on the left edge of the cover. The book should look like a real physical object — show the book's thickness, the spine with gold lettering edge, slight shadow underneath, and the texture of the cloth or leather cover material. The cover fills most of the image but there is a narrow left spine visible.
+
+COVER SURFACE: The main cover face should have a dark, rich, textured background (leather, cloth, or premium hardcover material). The surface should look physically real — not a digital illustration.
+
+CENTER ZONE: The middle area of the cover face (roughly 30–70% width, 25–75% height) must be LEFT COMPLETELY CLEAR — smooth background texture only, no illustrations or decorations overlapping this zone. This space will show the book title and an "Open the Book" button.
+
+CORNER DECORATIONS: Place rich, three-dimensional illustrated objects ONLY in the four corners of the cover face. These objects should look like they are PHYSICALLY RESTING ON or EMBOSSED INTO the book cover — with proper cast shadows, depth, and materiality (gold, bronze, gemstones, etc.). They should protrude slightly from the cover surface. NOT flat 2D artwork — truly 3D sculptural elements.
+
+BORDER: Include a thin, ornate gold or metallic decorative border/frame around the edges of the cover face.
+
+LIGHTING: Directional lighting from upper-left, creating realistic shadows and highlights that reinforce the book as a physical 3D object sitting in space.
+
+ASPECT RATIO: Portrait, taller than wide (approximately 2:3). The full image should show the book cover as the main subject with dark/shadowed background.
+
+NO TEXT anywhere on the image. No words, titles, or labels.
 `.trim()
 
 async function callGenerations(apiKey: string, prompt: string): Promise<string> {
@@ -89,7 +99,7 @@ export async function POST(request: Request) {
 
     if (sourceImageUrl && changePrompt?.trim()) {
       // Refine mode
-      const editPrompt = `${changePrompt.trim()}\n\nKeep the center of the cover completely clear — no illustrations in the middle zone. All artwork stays in corners and edges only. No text anywhere.`
+      const editPrompt = `${changePrompt.trim()}\n\nPreserve the physical book appearance: the 3/4 angle showing the spine on the left, the cover texture and depth, the ornate gold border, and the clear center zone. Corner decorations should remain 3D and sculptural. No text anywhere.`
       finalB64 = await callEdit(apiKey, sourceImageUrl, editPrompt)
       const base = prompt?.trim() ?? ''
       accumulatedPrompt = base ? `${base}\n\n[Refinement] ${changePrompt.trim()}` : changePrompt.trim()

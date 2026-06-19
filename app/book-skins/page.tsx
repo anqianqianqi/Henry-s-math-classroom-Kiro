@@ -865,7 +865,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
             {adminTab === 'generate' && (
               <div className="space-y-4">
                 <p className="text-xs text-amber-700">
-                  💡 AI will generate a portrait book cover with clear center space for the title and decorative artwork in the corners.
+                  💡 AI generates a physical hardcover book viewed at a slight angle — with visible spine, textured cover, clear center space, and 3D sculptural corner ornaments matching your theme.
                 </p>
 
                 {!sandbox ? (
@@ -883,36 +883,35 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                         <button
                           onClick={() => {
                             const themes = [
-                              'enchanted forest with glowing mushrooms and fireflies',
-                              'deep ocean with bioluminescent creatures and treasure',
-                              'ancient Egyptian mythology with hieroglyphs and golden artifacts',
-                              'steampunk clockwork city with gears and airships',
-                              'cherry blossom garden with koi fish and lanterns',
-                              'arctic tundra with aurora borealis and polar bears',
-                              'magical library with floating books and starlight',
-                              'volcanic island with lava dragons and gemstone caves',
-                              'pirate adventure with maps, compasses, and treasure chests',
-                              'medieval kingdom with castles, knights, and dragons',
-                              'underwater city of atlantis with merfolk and coral',
-                              'haunted mansion with ghosts, candles, and old portraits',
+                              'space exploration — globe, rocket, telescope as gold 3D ornaments',
+                              'enchanted forest — crystal mushrooms, owl, compass as bronze ornaments',
+                              'deep ocean — coral, anchor, submarine periscope as silver ornaments',
+                              'ancient Egypt — scarab, pyramid, ankh as gilded 3D ornaments',
+                              'steampunk — clockwork gears, goggles, airship as brass ornaments',
+                              'cherry blossom — lantern, koi fish, fan as jade and gold ornaments',
+                              'arctic — polar bear, snowflake, aurora borealis as crystal ornaments',
+                              'pirate — compass, treasure chest, ship wheel as aged bronze ornaments',
+                              'medieval knight — sword, shield, castle as silver relief ornaments',
+                              'wizard — crystal ball, potions, wand as gem-encrusted ornaments',
+                              'underwater — starfish, seahorse, shell as pearl and gold ornaments',
+                              'volcano — dragon, lava gem, obsidian crystal as molten gold ornaments',
                             ]
-                            const accents = [
-                              'gold and deep blue color palette',
-                              'rich jewel tones — emerald, sapphire and ruby',
-                              'warm sepia and antique parchment tones',
-                              'midnight purple and silver starlight',
-                              'forest green and copper accents',
-                              'crimson red and black with gold trim',
+                            const covers = [
+                              'deep navy blue leather cover',
+                              'dark emerald green cloth cover',
+                              'burgundy leather with gold tooling',
+                              'midnight black cover with silver edge',
+                              'deep purple velvet-look cover',
+                              'dark brown worn leather cover',
                             ]
-                            const corners = [
-                              'ornate illustrated corner decorations',
-                              'mythical creature motifs in the corners',
-                              'botanical flourishes and vines in corners',
-                              'geometric mandala patterns in each corner',
-                              'celestial symbols — stars, moons, suns — in corners',
+                            const borders = [
+                              'thin ornate gold filigree border',
+                              'gilded geometric corner frame',
+                              'engraved gold vine border',
+                              'raised gold relief border pattern',
                             ]
                             const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)]
-                            setGenPrompt(`${pick(themes)}, ${pick(accents)}, ${pick(corners)}`)
+                            setGenPrompt(`A physical hardcover book, ${pick(covers)}, ${pick(borders)}, with ${pick(themes)} in the four corners`)
                           }}
                           className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors border border-amber-600"
                         >
@@ -921,16 +920,16 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {[
-                          'Space exploration with planets, rockets and gold star constellations; deep navy blue',
-                          'Enchanted forest with glowing mushrooms, fireflies, jewel tones',
-                          'Ancient Egyptian mythology, hieroglyphs, golden artifacts on black',
-                          'Pirate adventure with treasure maps, compass rose, antique parchment tones',
-                          'Cherry blossom garden with koi fish and paper lanterns, soft pink and gold',
-                          'Magical library with floating books and starlight, midnight purple',
+                          'Deep navy leather book, gold border, space exploration — globe, rocket, telescope as gold 3D corner ornaments',
+                          'Dark emerald cloth book, engraved border, enchanted forest — owl, mushroom, crystal as bronze corner ornaments',
+                          'Burgundy leather book, gilded frame, ancient Egypt — scarab, ankh, pyramid as gold corner ornaments',
+                          'Midnight black book, silver frame, steampunk — gears, airship, compass as brass 3D corner pieces',
+                          'Deep purple book, ornate gold border, wizard — crystal ball, wand, potion as gem-encrusted corners',
+                          'Dark brown leather, gold vines border, pirate adventure — compass, chest, wheel as aged bronze corners',
                         ].map(ex => (
                           <button key={ex} onClick={() => setGenPrompt(ex)}
                             className="text-[11px] px-2.5 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium transition-colors text-left leading-snug border border-amber-200">
-                            {ex.length > 48 ? ex.slice(0, 48) + '…' : ex}
+                            {ex.length > 52 ? ex.slice(0, 52) + '…' : ex}
                           </button>
                         ))}
                       </div>
