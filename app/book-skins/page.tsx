@@ -967,36 +967,107 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                         <span className="text-[11px] text-amber-600 font-medium">Examples:</span>
                         <button
                           onClick={() => {
-                            const backgrounds = [
-                              'starry night sky with soft nebula clouds and tiny distant stars cover texture',
-                              'deep ocean with faint waves, bioluminescent dots and coral silhouettes cover texture',
-                              'enchanted forest with subtle leaf patterns, moss, firefly glows cover texture',
-                              'ancient stone with faint rune carvings and vine patterns cover texture',
-                              'volcanic landscape with glowing lava cracks and ash texture cover',
-                              'arctic tundra with soft snowflake patterns and aurora shimmer cover texture',
-                              'desert dunes with sand ripple patterns and faint star map cover texture',
-                              'underwater coral reef with soft bubble patterns and light caustics cover texture',
-                              'stormy sky with subtle lightning and cloud swirls cover texture',
-                              'magical forest floor with faint mushroom rings and glowing spores cover texture',
-                              'medieval parchment with faint map lines, compass rose, aged spots cover texture',
-                              'cherry blossom garden with soft falling petals and light mist cover texture',
-                            ]
-                            const gadgets = [
-                              'corner clusters: [globe on stand + stacked books + compass] [rocket + smoke cloud + fuel canisters] [telescope + star chart + magnifying glass] [moon sphere + meteor + orbit ring]',
-                              'corner clusters: [red apple + leaf branch + honey jar] [green potion + cork + herb bundle] [compass + aged map roll + wax seal] [orange salamander + mushrooms + dewdrops]',
-                              'corner clusters: [tabby cat + yarn ball + small books] [emerald gem shard + crystals + glowing dust] [lantern lit + candle stub + wax drips] [acorn + fallen leaves + tiny snail]',
-                              'corner clusters: [sunflower + bee + pollen dust] [blue butterfly + flower bud + dewdrops] [ladybug on oak leaf + acorn cap + berries] [four-leaf clover + dewdrops + beetle]',
-                              'corner clusters: [silver microscope + glass slide + petri dish] [seedling in terracotta pot + soil + trowel] [beaker with bubbling liquid + dropper + vials] [bunsen burner + wire gauze + test tube rack]',
-                              'corner clusters: [snowflake crystal + icicle shards + frost ferns] [penguin + ice block + frozen fish] [wolf paw print + pine needles + snow mound] [aurora crystal + ice gems + frozen droplets]',
-                              'corner clusters: [lightning bolt + dark storm cloud + rain drops] [cloud with crackle + weather vane + barometer] [robot head + gear cogs + circuit fragments] [LED display + fiber optics + data chips]',
-                              'corner clusters: [volcano erupting + lava rocks + ash cloud] [lava gem + ember stones + glowing cracks] [fossil skull + excavation brush + sandy soil] [obsidian crystal + smaller shards + igneous rock]',
-                              'corner clusters: [cherry blossom branch + fallen petals + mist] [koi fish in water + lily pad + water droplets] [jade tea cup + steam + bamboo sprig] [paper fan + silk ribbon + incense stick]',
-                              'corner clusters: [wizard hat + sparkle stars + spell smoke] [salamander + glowing mushrooms + firefly] [crystal wand + rune stones + smoke wisps] [cauldron bubbling + floating herbs + smoke]',
-                              'corner clusters: [chess knight on board + dice + game pieces] [cardinal bird on branch + berries + nest twigs] [hourglass + pocket watch + quill] [inkwell + feather quill + wax seal stamp]',
-                              'corner clusters: [robot head + gear cogs + circuit board] [holographic chip + LED lights + fiber optics] [digital display + blinking lights + data chips] [copper gear + wrench + steam pipe]',
+                            // Themed prompt database: each entry has a background + matching corner clusters
+                            // Background and corners are deliberately chosen to reinforce the same theme
+                            const themes = [
+                              // ── Nature & Seasons ──
+                              {
+                                bg: 'cherry blossom garden with soft falling pink petals, light mist and gentle watercolor wash',
+                                corners: '[koi fish leaping + lily pad + water ripples] [jade tea cup + steam wisps + bamboo sprig] [paper fan + silk ribbon + fallen petals] [stone lantern + moss + incense smoke]',
+                              },
+                              {
+                                bg: 'enchanted autumn forest with amber and crimson leaves, golden light rays through canopy, soft forest floor',
+                                corners: '[fox curled on leaf pile + acorns + fallen oak leaves] [red mushroom + dewdrops + tiny snail] [hedgehog + pine cones + berries] [lantern lit + autumn leaf wreath + cobweb]',
+                              },
+                              {
+                                bg: 'arctic tundra with soft snowflake patterns, aurora shimmer and frost crystal texture',
+                                corners: '[polar bear cub + snow mound + snowflake crystal] [penguin + ice block + frozen fish] [wolf footprint + pine branch + icicle shards] [aurora crystal + ice gems + frozen droplets]',
+                              },
+                              {
+                                bg: 'tropical jungle with dense leaves, hanging vines, humid mist and dappled sunlight',
+                                corners: '[toucan on branch + tropical flowers + leaves] [tree frog + exotic berries + broad leaf] [butterfly + orchid blossom + dewdrop] [coconut halves + palm seeds + vine curl]',
+                              },
+                              {
+                                bg: 'underwater coral reef with soft bubble patterns, light caustics, bioluminescent dots and ocean blue gradients',
+                                corners: '[seahorse + coral branch + bubbles] [clownfish + sea anemone + sand pebbles] [starfish + shell + kelp strand] [treasure chest ajar + gold coins + pearl]',
+                              },
+                              // ── Science & Exploration ──
+                              {
+                                bg: 'starry night sky with deep navy, soft nebula clouds, faint constellation lines and distant galaxies',
+                                corners: '[globe on mahogany stand + stacked books + compass] [rocket launch + smoke cloud + fuel canisters] [telescope + unrolled star chart + magnifying glass] [moon sphere + meteor fragment + orbit ring]',
+                              },
+                              {
+                                bg: 'science laboratory with faint circuit line patterns, blue glow and microscopic texture',
+                                corners: '[silver microscope + glass slide + petri dish] [beaker with bubbling blue liquid + dropper + vials] [seedling in terracotta pot + soil + trowel] [bunsen burner + wire gauze + test tube rack]',
+                              },
+                              {
+                                bg: 'deep ocean abyss with bioluminescent glowing dots, dark teal gradients and pressure wave ripples',
+                                corners: '[diving helmet + air hose + barnacles] [submarine porthole + pressure gauge + chains] [anglerfish glowing lure + dark coral + small bones] [submarine periscope + bubbles + seaweed]',
+                              },
+                              {
+                                bg: 'alien planet surface with purple sky, strange rock formations and twin moon silhouettes',
+                                corners: '[alien crystal spire + glowing dust + meteor shards] [space suit helmet + oxygen gauge + stars] [robot explorer + gear treads + circuit sparks] [strange plant + luminous spores + rocky soil]',
+                              },
+                              // ── Magic & Fantasy ──
+                              {
+                                bg: 'ancient stone grimoire with faint rune carvings, vine patterns and aged spell residue',
+                                corners: '[wizard hat + sparkle stars + spell smoke puff] [crystal wand + rune stones + smoke wisps] [cauldron bubbling + floating herbs + vapor cloud] [owl on branch + moon sliver + scroll roll]',
+                              },
+                              {
+                                bg: 'mystical forest clearing with glowing mushrooms, firefly lights and purple moonbeam shafts',
+                                corners: '[fairy door on oak stump + moss + acorn cap] [glowing potion bottle + spell components + tiny flower] [spider web with dewdrops + forest berries + fern curl] [crystal cluster + smaller gem shards + firefly]',
+                              },
+                              {
+                                bg: 'dragon lair cavern with rough stone walls, glowing embers, smoke wisps and gold treasure glint',
+                                corners: '[dragon egg + glowing cracks + ember stones] [dragon scale + bone fragment + gem shard] [gold coin stack + jeweled crown + red gem] [torch bracket + fire sparks + soot marks]',
+                              },
+                              {
+                                bg: 'enchanted library with books glowing softly, floating dust motes and magical constellation ceiling',
+                                corners: '[open book with glowing pages + quill + inkwell] [hourglass + pocket watch + sealed letter] [key on ribbon + wax seal + folded map] [candle stub + wax drips + spectacles]',
+                              },
+                              // ── History & Culture ──
+                              {
+                                bg: 'medieval parchment with faint map lines, compass rose, aged amber spots and torn edges',
+                                corners: '[chess knight on stone board + dice + carved pieces] [cardinal bird on branch + wax-sealed letter + quill] [hourglass + pocket watch + ink-stained ribbon] [shield crest + sword pommel + chain mail ring]',
+                              },
+                              {
+                                bg: 'ancient Egypt desert with hieroglyph carvings, sand dune ripples and amber torchlight glow',
+                                corners: '[scarab beetle + eye of horus amulet + gold beads] [clay canopic jar + papyrus roll + reed pen] [golden ankh + lotus flower + desert sand] [pharaoh mask + cobra serpent + lapis jewel]',
+                              },
+                              {
+                                bg: 'feudal Japan with ink wash bamboo silhouettes, koi pond reflections and misty mountain outline',
+                                corners: '[katana + silk sash + cherry blossom petal] [origami crane + calligraphy brush + ink stone] [teapot + matcha bowl + bamboo whisk] [torii gate miniature + stone lantern + lotus]',
+                              },
+                              // ── Seasons & Weather ──
+                              {
+                                bg: 'volcanic landscape with dark obsidian texture, glowing lava crack veins and ash cloud wisps',
+                                corners: '[volcano erupting + lava rocks + ash plume cloud] [lava gem + ember stones + glowing cracks] [fossil skull + excavation brush + sandy soil] [obsidian crystal shard + smaller shards + igneous rock]',
+                              },
+                              {
+                                bg: 'stormy sky with subtle lightning silhouettes, rolling cloud swirls and electric blue glow',
+                                corners: '[weather vane rooster + barometer + raindrops] [storm lantern lit + rope coil + compass] [lightning rod + spark fragments + rain puddle] [dark cloud with crackle + hail stones + wind whirl]',
+                              },
+                              {
+                                bg: 'cozy winter cabin interior with wood grain texture, frost window patterns and warm amber glow',
+                                corners: '[mug of hot cocoa + mini marshmallows + cinnamon stick] [knit wool mittens + pinecone + holly sprig] [gift box tied with ribbon + snowflake tag] [candle in jar + dried orange slices + star anise]',
+                              },
+                              // ── Everyday & Whimsy ──
+                              {
+                                bg: 'storybook pastel meadow with soft watercolor wildflower patterns and gentle watercolor paper grain',
+                                corners: '[tabby cat with yarn ball + small open book] [strawberries + polka dot teacup + biscuit] [ladybug on oak leaf + acorn cap + berries] [four-leaf clover + dewdrops + golden beetle]',
+                              },
+                              {
+                                bg: 'steampunk clockwork with interlocking copper gear patterns, steam pipe texture and aged brass',
+                                corners: '[pocket watch open + gear cogs + mainspring] [copper steam pipe + pressure gauge + rivets] [dirigible goggles + leather strap + compass] [clockwork bird + key + gear teeth]',
+                              },
+                              {
+                                bg: 'retro gaming arcade with pixel grid pattern, neon grid lines and scan-line overlay texture',
+                                corners: '[8-bit joystick + pixel coins + power-up star] [game controller + cartridge + blinking LED] [pixel sword + shield + health heart] [trophy cup + laurel wreath + pixel confetti]',
+                              },
                             ]
                             const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)]
-                            setGenPrompt(`${pick(backgrounds)}, ${pick(gadgets)}`)
+                            const t = pick(themes)
+                            setGenPrompt(`${t.bg}, corner clusters: ${t.corners}`)
                           }}
                           className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors border border-amber-600"
                         >
@@ -1005,12 +1076,12 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {[
-                          'Starry night sky with nebula clouds cover, corner clusters: [globe+books+compass] [rocket+smoke+canisters] [telescope+star chart] [moon+meteor+orbit ring]',
-                          'Enchanted forest with firefly glows cover, corner clusters: [red apple+honey jar+leaves] [potion+herbs+cork] [compass+map roll] [salamander+mushrooms+dewdrops]',
-                          'Ancient stone with rune carvings cover, corner clusters: [wizard hat+spell smoke+stars] [crystal wand+rune stone] [cauldron+herbs+smoke] [salamander+mushrooms+firefly]',
-                          'Medieval parchment with compass rose cover, corner clusters: [chess knight+dice+pieces] [cardinal bird+berries+nest] [hourglass+watch+quill] [inkwell+feather+wax seal]',
-                          'Deep ocean with bioluminescent dots cover, corner clusters: [microscope+petri dish+slides] [seedling pot+trowel+soil] [beaker+dropper+vials] [bunsen+gauze+test tubes]',
-                          'Desert dunes with sand ripples cover, corner clusters: [volcano+lava rocks+ash cloud] [lava gem+ember stones] [fossil skull+brush+soil] [obsidian crystal+shards]',
+                          'Starry night sky with nebula clouds, corner clusters: [globe+books+compass] [rocket+smoke+canisters] [telescope+star chart+magnifier] [moon+meteor+orbit ring]',
+                          'Cherry blossom garden with falling petals and mist, corner clusters: [koi+lily pad+ripples] [tea cup+steam+bamboo] [paper fan+silk ribbon+petals] [stone lantern+moss+incense]',
+                          'Ancient stone with rune carvings and vine patterns, corner clusters: [wizard hat+spell smoke+stars] [crystal wand+rune stones+wisps] [cauldron+herbs+vapor] [owl+moon+scroll]',
+                          'Medieval parchment with compass rose and map lines, corner clusters: [chess knight+dice+pieces] [cardinal bird+wax letter+quill] [hourglass+pocket watch+ribbon] [shield+sword pommel+chain]',
+                          'Underwater coral reef with bioluminescent dots and caustics, corner clusters: [seahorse+coral+bubbles] [clownfish+anemone+pebbles] [starfish+shell+kelp] [treasure chest+coins+pearl]',
+                          'Volcanic obsidian with lava crack veins and ash wisps, corner clusters: [volcano+lava rocks+ash plume] [lava gem+ember stones+cracks] [fossil skull+brush+soil] [obsidian shards+igneous rock]',
                         ].map(ex => (
                           <button key={ex} onClick={() => setGenPrompt(ex)}
                             className="text-[11px] px-2.5 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium transition-colors text-left leading-snug border border-amber-200">

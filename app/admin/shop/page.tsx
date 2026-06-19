@@ -47,6 +47,242 @@ const EMPTY_FORM: ShopItemForm = {
   draws_per_redemption: '1',
 }
 
+// ── Admin Room Browse Modal (with Edit/Off/Delete per item) ───────────────────
+function RoomBrowseAdminModal({
+  roomBgs,
+  items,
+  onClose,
+  onEdit,
+  onDeactivate,
+  onReactivate,
+  onDelete,
+}: {
+  roomBgs: Array<{ id: string; name: string; image_url: string; animation_zones: any[]; shop_item_id: string }>
+  items: ShopItem[]
+  onClose: () => void
+  onEdit: (item: ShopItem) => void
+  onDeactivate: (id: string) => void
+  onReactivate: (id: string) => void
+  onDelete: (id: string) => void
+}) {
+  const [previewBg, setPreviewBg] = useState<typeof roomBgs[0] | null>(null)
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+            <div>
+              <div className="font-bold text-gray-900">🏠 Room Backgrounds ({roomBgs.length})</div>
+              <div className="text-xs text-gray-400 mt-0.5">Click image to preview · Edit/Off/Delete per room</div>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+          </div>
+          <div className="overflow-y-auto p-4 grid grid-cols-2 gap-4">
+            {roomBgs.map(bg => {
+              const shopItem = items.find(i => i.id === bg.shop_item_id)
+              return (
+                <div key={bg.id} className={`bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex flex-col ${shopItem && !shopItem.is_active ? 'opacity-60' : ''}`}>
+                  {/* Image — click to animated preview */}
+                  <div className="relative w-full aspect-video cursor-zoom-in group overflow-hidden"
+                    onClick={() => setPreviewBg(bg)}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={bg.image_url} alt={bg.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                      <span className="bg-black/60 text-white text-xs font-semibold px-2.5 py-1 rounded-full">▶ Preview</span>
+                    </div>
+                    {shopItem && !shopItem.is_active && (
+                      <div className="absolute top-1.5 right-1.5 bg-gray-700/80 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">Inactive</div>
+                    )}
+                    {bg.animation_zones?.length > 0 && (
+                      <div className="absolute top-1.5 left-1.5 bg-black/50 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">✨ Animated</div>
+                    )}
+                  </div>
+                  {/* Card body */}
+                  <div className="p-2.5">
+                    <p className="font-semibold text-gray-900 text-sm truncate mb-0.5">{bg.name}</p>
+                    {shopItem && (
+                      <p className="text-primary-600 font-bold text-xs mb-2">{shopItem.cost} pts</p>
+                    )}
+                    {shopItem && (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => onEdit(shopItem)}
+                          className="flex-1 text-xs font-semibold px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        {shopItem.is_active ? (
+                          <button
+                            onClick={() => onDeactivate(shopItem.id)}
+                            className="text-xs font-semibold px-2 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                          >
+                            Off
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onReactivate(shopItem.id)}
+                            className="text-xs font-semibold px-2 py-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                          >
+                            On
+                          </button>
+                        )}
+                        <button
+                          onClick={() => onDelete(shopItem.id)}
+                          className="text-xs font-semibold px-2 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                          title="Permanently delete shop item"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Animated full-screen preview — stacks on top of browse modal */}
+      {previewBg && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4" onClick={() => setPreviewBg(null)}>
+          <div className="relative w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewBg.image_url} alt={previewBg.name} className="w-full block" draggable={false} />
+            {previewBg.animation_zones?.length > 0 && (
+              <AnimatedRoomLayer imageUrl={previewBg.image_url} zones={previewBg.animation_zones} />
+            )}
+            <button onClick={() => setPreviewBg(null)}
+              className="absolute top-3 right-3 z-10 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full">
+              ✕ Close preview
+            </button>
+            <div className="absolute bottom-3 left-3 bg-black/50 text-white px-3 py-1.5 rounded-xl text-sm font-semibold">
+              {previewBg.name}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ── Admin Book Cover Browse Modal (with Edit/Off/Delete per item) ─────────────
+function BookBrowseAdminModal({
+  bookSkins,
+  items,
+  onClose,
+  onEdit,
+  onDeactivate,
+  onReactivate,
+  onDelete,
+}: {
+  bookSkins: Array<{ id: string; name: string; image_url: string; shop_item_id: string }>
+  items: ShopItem[]
+  onClose: () => void
+  onEdit: (item: ShopItem) => void
+  onDeactivate: (id: string) => void
+  onReactivate: (id: string) => void
+  onDelete: (id: string) => void
+}) {
+  const [previewSkin, setPreviewSkin] = useState<typeof bookSkins[0] | null>(null)
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+            <div>
+              <div className="font-bold text-gray-900">📖 Book Covers ({bookSkins.length})</div>
+              <div className="text-xs text-gray-400 mt-0.5">Click image to zoom preview · Edit/Off/Delete per cover</div>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+          </div>
+          <div className="overflow-y-auto p-4">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+              {bookSkins.map(skin => {
+                const shopItem = items.find(i => i.id === skin.shop_item_id)
+                return (
+                  <div key={skin.id} className={`bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex flex-col ${shopItem && !shopItem.is_active ? 'opacity-60' : ''}`}>
+                    {/* Portrait image — click to zoom */}
+                    <div className="relative cursor-zoom-in group" style={{ aspectRatio: '400/620' }}
+                      onClick={() => setPreviewSkin(skin)}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={skin.image_url} alt={skin.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                        <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">🔍 Zoom</span>
+                      </div>
+                      {shopItem && !shopItem.is_active && (
+                        <div className="absolute top-1 right-1 bg-gray-700/80 text-white text-[9px] font-semibold px-1 py-0.5 rounded-full">Off</div>
+                      )}
+                    </div>
+                    {/* Card body */}
+                    <div className="p-2 flex flex-col flex-1">
+                      <p className="font-semibold text-gray-900 text-xs truncate mb-0.5">{skin.name}</p>
+                      {shopItem && (
+                        <p className="text-primary-600 font-bold text-[10px] mb-1.5">{shopItem.cost} pts</p>
+                      )}
+                      {shopItem && (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => onEdit(shopItem)}
+                            className="flex-1 text-[10px] font-semibold px-1.5 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          {shopItem.is_active ? (
+                            <button
+                              onClick={() => onDeactivate(shopItem.id)}
+                              className="text-[10px] font-semibold px-1.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                            >
+                              Off
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => onReactivate(shopItem.id)}
+                              className="text-[10px] font-semibold px-1.5 py-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                            >
+                              On
+                            </button>
+                          )}
+                          <button
+                            onClick={() => onDelete(shopItem.id)}
+                            className="text-[10px] font-semibold px-1 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                            title="Permanently delete shop item"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Fullscreen zoom preview — stacks on top of browse modal */}
+      {previewSkin && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4" onClick={() => setPreviewSkin(null)}>
+          <div className="relative max-h-full" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewSkin.image_url} alt={previewSkin.name} className="max-h-[85vh] w-auto rounded-xl shadow-2xl" />
+            <button onClick={() => setPreviewSkin(null)}
+              className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full">
+              ✕
+            </button>
+            <div className="absolute bottom-2 left-2 bg-black/50 text-white px-3 py-1 rounded-xl text-xs font-semibold">
+              {previewSkin.name}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 export default function AdminShopPage() {
   const router = useRouter()
   const supabase = createClient()
@@ -742,43 +978,27 @@ export default function AdminShopPage() {
       )}
       {/* ── Room Browse Modal ── */}
       {showRoomBrowse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowRoomBrowse(false)}>
-          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
-              <div className="font-bold text-gray-900">🏠 Room Backgrounds ({roomBgs.length})</div>
-              <button onClick={() => setShowRoomBrowse(false)} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
-            </div>
-            <div className="overflow-y-auto p-4 grid grid-cols-2 gap-4">
-              {roomBgs.map(bg => (
-                <div key={bg.id} className="bg-gray-50 rounded-xl overflow-hidden border cursor-pointer" onClick={() => { setPreviewRoom(bg); setShowRoomBrowse(false) }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={bg.image_url} alt={bg.name} className="w-full aspect-video object-cover" />
-                  <div className="p-2 text-xs font-semibold text-gray-800">{bg.name}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <RoomBrowseAdminModal
+          roomBgs={roomBgs}
+          items={items}
+          onClose={() => setShowRoomBrowse(false)}
+          onEdit={(item) => { setShowRoomBrowse(false); handleEdit(item) }}
+          onDeactivate={async (id) => { await handleDeactivate(id) }}
+          onReactivate={async (id) => { await handleReactivate(id) }}
+          onDelete={async (id) => { await handleDelete(id) }}
+        />
       )}
       {/* ── Book Browse Modal ── */}
       {showBookBrowse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowBookBrowse(false)}>
-          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
-              <div className="font-bold text-gray-900">📖 Book Covers ({bookSkins.length})</div>
-              <button onClick={() => setShowBookBrowse(false)} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
-            </div>
-            <div className="overflow-y-auto p-4 grid grid-cols-3 sm:grid-cols-4 gap-3">
-              {bookSkins.map(s => (
-                <div key={s.id} className="bg-gray-50 rounded-xl overflow-hidden border cursor-pointer" onClick={() => { setPreviewCover(s); setShowBookBrowse(false) }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={s.image_url} alt={s.name} className="w-full object-cover" style={{ aspectRatio: '400/620' }} />
-                  <div className="p-1.5 text-[10px] font-semibold text-gray-800 truncate">{s.name}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <BookBrowseAdminModal
+          bookSkins={bookSkins}
+          items={items}
+          onClose={() => setShowBookBrowse(false)}
+          onEdit={(item) => { setShowBookBrowse(false); handleEdit(item) }}
+          onDeactivate={async (id) => { await handleDeactivate(id) }}
+          onReactivate={async (id) => { await handleReactivate(id) }}
+          onDelete={async (id) => { await handleDelete(id) }}
+        />
       )}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-3">

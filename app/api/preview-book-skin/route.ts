@@ -18,17 +18,17 @@ export const dynamic = 'force-dynamic'
 const COVER_CONTEXT = `
 STRICT COMPOSITION RULES — follow exactly:
 
-This image is a hardcover book cover illustration on a TRANSPARENT background.
+CANVAS: The output image is exactly 1024 pixels wide × 1536 pixels tall. The entire canvas is the book cover — no transparent margins, no padding, no letterboxing. The book cover rectangle fills from pixel 0,0 to pixel 1024,1536 corner to corner.
 
-LAYOUT: The book cover face is a flat, front-facing rectangle that occupies the FULL WIDTH and FULL HEIGHT of the image — edge to edge. There are NO transparent margins. The book cover IS the entire image. Outside the image bounds is irrelevant.
+BOOK COVER SHAPE: Flat, perfectly straight-on front view, no perspective, no tilt, no foreshortening, no visible spine or side. The cover fills the FULL WIDTH of 1024px and the FULL HEIGHT of 1536px — it is NOT narrower than the canvas. Portrait aspect ratio ~2:3. The cover surface has rich thematic texture near the edges, fading to a smoother tone toward the center. An ornate thin metallic border line runs along the inner perimeter edge.
 
-BOOK COVER (full image): Flat, straight-on, no perspective, no tilt, no visible spine. Portrait orientation (taller than wide). The surface has thematic texture richer near edges and fading to plain smooth in the center. An ornate thin gold border line frames the perimeter.
+CORNER CLUSTERS: Each of the four corners contains a DENSE MINI-SCENE — 2–4 closely grouped 3D objects forming a small vignette. The lead object is flanked by smaller props that add context and depth (examples: volcano + lava rocks + ash plume; rocket + launchpad + fuel tank + exhaust smoke; globe + stacked books + compass; crystal + gem shards + glow dust). Clusters are large, richly detailed, with realistic volume, full natural colors, cast shadows on the cover surface, and physically extend past the metallic border frame at the corners.
 
-CORNER OBJECTS: Each of the four corners has a CLUSTERED MINI-SCENE — a group of 2-4 closely arranged 3D objects that form a small vignette. The main focal object is surrounded by smaller supporting props that give it context and make it feel grounded and real (e.g. a volcano with lava rocks and ash clouds around it; a rocket with launch smoke, fuel canisters, and a launch pad base; a globe with stacked books and a compass beside it; a crystal cluster with smaller gem shards and glowing dust scattered around). The cluster fills the corner area richly. Objects are large, detailed, with realistic volume and full natural colors. They cast shadows on the cover surface and visually break the gold border frame edge.
+CENTER ZONE: Keep the central rectangular area (roughly x: 150–870, y: 300–1100) relatively plain and uncluttered — this space is reserved for title and text overlay. Subtle background texture is fine but no objects or large decorations should intrude into this zone.
 
-CENTER ZONE: The inner area (roughly middle 30–60% width, 20–65% height) stays plain and relatively undecorated for text overlay.
+STYLE: Highly detailed digital illustration, photorealistic lighting on objects, vibrant full color, sharp crisp details at every corner. Ultra high detail — every object richly textured and clearly defined.
 
-NO TEXT, letters, words, or typography anywhere.
+ABSOLUTELY NO text, letters, numbers, words, or glyphs anywhere in the image.
 `.trim()
 
 async function callGenerations(apiKey: string, prompt: string): Promise<string> {
@@ -42,6 +42,7 @@ async function callGenerations(apiKey: string, prompt: string): Promise<string> 
       size: '1024x1536',
       output_format: 'png',
       quality: 'high',
+      output_compression: 0,
     }),
   })
   if (!res.ok) throw new Error(`Generation failed (${res.status}): ${(await res.text()).slice(0, 200)}`)
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
 
     if (sourceImageUrl && changePrompt?.trim()) {
       // Refine mode
-      const editPrompt = `${changePrompt.trim()}\n\nPreserve: centered book cover rectangle with transparent margins around it, corner objects overflowing outside the book edges, clear center zone, gold border frame on the book. No text. Background outside the book is fully transparent.`
+      const editPrompt = `${changePrompt.trim()}\n\nPreserve: the book cover fills the FULL WIDTH and FULL HEIGHT of the canvas (1024×1536px), flat front-facing portrait rectangle with no margins or padding, corner cluster objects, clear plain center zone, metallic border frame. No text anywhere.`
       finalB64 = await callEdit(apiKey, sourceImageUrl, editPrompt)
       const base = prompt?.trim() ?? ''
       accumulatedPrompt = base ? `${base}\n\n[Refinement] ${changePrompt.trim()}` : changePrompt.trim()
