@@ -12,7 +12,7 @@
 // Usage:
 //   <AnimatedRoomLayer imageUrl="..." zones={zones} />
 
-import { useId } from 'react'
+import React, { useId } from 'react'
 import type { AnimZone } from './AnimationZoneEditor'
 
 interface Props {
@@ -141,34 +141,35 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
           const animId = `${baseId}_${i}`
 
           if (zone.containOverflow) {
-            // "Contain overflow" mode — three layers:
-            // 1. Static base img inside the clipped div (fills gaps when animated layer moves away)
-            // 2. Animated img on top (moves freely within the clipped window)
-            // The parent div is clipped to the polygon, so nothing shows outside it.
-            // When the animated img shifts left, the right edge shows the static base img.
+            // "Contain overflow" mode:
+            // The problem with putting clipPath on a parent div is that CSS transforms
+            // on children happen AFTER layout — the clip stays fixed while the image
+            // moves, so gaps appear that show the underlying background instead of
+            // the static fill.
+            //
+            // Correct approach: both images get the polygon clipPath directly.
+            // - Layer A (static): always fills the full polygon, never moves.
+            // - Layer B (animated): same polygon clip, animates on top.
+            // Any gap the animated image leaves behind is covered by Layer A.
             return (
-              <div
-                key={clipId}
-                className="absolute inset-0"
-                style={{ clipPath: `url(#${clipId})`, overflow: 'hidden', zIndex: 1 }}
-              >
-                {/* Static base — fills any gaps left by animation */}
+              <React.Fragment key={clipId}>
+                {/* Static base — always fills the polygon, never moves */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl}
                   alt=""
                   className="absolute inset-0 w-full h-full object-cover"
-                  style={{ zIndex: 1 }}
+                  style={{ clipPath: `url(#${clipId})` }}
                 />
-                {/* Animated layer on top — moves freely, shows static when it shifts away */}
+                {/* Animated layer — same clip, moves freely; static shows through any gap */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl}
                   alt=""
                   className="absolute inset-0 w-full h-full object-cover"
-                  style={{ zIndex: 2, ...getAnimStyle(animId, zone) }}
+                  style={{ clipPath: `url(#${clipId})`, ...getAnimStyle(animId, zone) }}
                 />
-              </div>
+              </React.Fragment>
             )
           }
 
