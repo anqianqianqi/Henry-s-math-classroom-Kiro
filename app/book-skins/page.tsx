@@ -603,17 +603,41 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
-      // Fetch the preview image and re-upload to book-skins bucket under permanent path
-      const imgRes = await fetch(sandbox.imageUrl)
-      const imgBlob = await imgRes.blob()
+
+      // Post-process: add transparent padding so corner objects can visually overflow
+      // Stored at 400x620 (COVER_W x COVER_H). Adding 40px padding on each side
+      // gives 480x700 total, with the book face inset — matching Science cover style.
+      const PADDING = 40  // px on each side
+      const finalW = COVER_W + PADDING * 2  // 480
+      const finalH = COVER_H + PADDING * 2  // 700
+      const imgEl = new Image()
+      imgEl.crossOrigin = 'anonymous'
+      const imgLoaded = new Promise<void>((res, rej) => {
+        imgEl.onload = () => res()
+        imgEl.onerror = () => rej(new Error('Image load failed'))
+      })
+      imgEl.src = sandbox.imageUrl
+      await imgLoaded
+
+      const canvas = document.createElement('canvas')
+      canvas.width = finalW
+      canvas.height = finalH
+      const ctx = canvas.getContext('2d')!
+      // Canvas is already transparent by default — draw the AI image inset by PADDING
+      ctx.drawImage(imgEl, PADDING, PADDING, COVER_W, COVER_H)
+
+      const paddedBlob = await new Promise<Blob>((res, rej) =>
+        canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png')
+      )
+
       const fileName = `cover/${user.id}/${Date.now()}.png`
-      const { error: uploadErr } = await supabase.storage.from('book-skins').upload(fileName, imgBlob, { contentType: 'image/png', upsert: false })
+      const { error: uploadErr } = await supabase.storage.from('book-skins').upload(fileName, paddedBlob, { contentType: 'image/png', upsert: false })
       if (uploadErr) throw new Error('Upload failed: ' + uploadErr.message)
       const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(fileName)
       const { error: insertErr } = await supabase.from('book_skins').insert({
         name: genSaveName.trim(), description: genSaveDesc.trim() || null,
         skin_type: 'cover', image_url: publicUrl,
-        width: COVER_W, height: COVER_H,
+        width: finalW, height: finalH,
         created_by: user.id, visibility: genSaveVisibility,
         cover_layout: genCoverLayout,
       })
