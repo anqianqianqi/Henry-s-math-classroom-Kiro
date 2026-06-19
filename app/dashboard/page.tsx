@@ -31,7 +31,7 @@ export default function DashboardPage() {
   const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean; submissionId?: string; hasNewTeacherComment?: boolean }>>([])
   const [petRoomBgUrl, setPetRoomBgUrl] = useState<string | null>(null)
   const [petRoomFrameUrl, setPetRoomFrameUrl] = useState<string | null>(null)
-  const [petRoomFrameSlot, setPetRoomFrameSlot] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  const [petRoomFrameSlot, setPetRoomFrameSlot] = useState<{ x: number; y: number; w: number; h: number; rotate?: number } | null>(null)
   const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null) // latest blindbox image this user owns
   const router = useRouter()
   const supabase = createClient()
@@ -636,7 +636,7 @@ export default function DashboardPage() {
               backgroundPosition: 'center bottom',
             }}
           >
-            {/* User's blindbox photo — clipped to the frame_slot area */}
+            {/* User's blindbox photo — clipped to the frame_slot area, rotated to match frame perspective */}
             {userPhotoUrl && petRoomFrameSlot && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -648,6 +648,8 @@ export default function DashboardPage() {
                   top: `${petRoomFrameSlot.y}%`,
                   width: `${petRoomFrameSlot.w}%`,
                   height: `${petRoomFrameSlot.h}%`,
+                  transform: petRoomFrameSlot.rotate ? `rotate(${petRoomFrameSlot.rotate}deg)` : undefined,
+                  transformOrigin: 'center center',
                   pointerEvents: 'none',
                 }}
               />

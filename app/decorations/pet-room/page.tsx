@@ -80,7 +80,7 @@ export default function PetRoomPage() {
 
   // Frame slot editor
   const [frameSlotEditor, setFrameSlotEditor] = useState<PetRoomBackground | null>(null)
-  const [editingSlot, setEditingSlot] = useState<{ x: number; y: number; w: number; h: number }>({ x: 62, y: 8, w: 18, h: 28 })
+  const [editingSlot, setEditingSlot] = useState<{ x: number; y: number; w: number; h: number; rotate: number }>({ x: 62, y: 8, w: 18, h: 28, rotate: 0 })
   const [slotSaving, setSlotSaving] = useState(false)
   const frameEditorRef = useRef<HTMLDivElement>(null)
   const dragState = useRef<{ type: 'move' | 'resize'; startX: number; startY: number; startSlot: typeof editingSlot } | null>(null)
@@ -682,7 +682,7 @@ export default function PetRoomPage() {
                 {/* Adjust frame slot */}
                 <button onClick={() => {
                   const existing = (actionBg as any).frame_slot
-                  setEditingSlot(existing ?? { x: 62, y: 8, w: 18, h: 28 })
+                  setEditingSlot(existing ?? { x: 62, y: 8, w: 18, h: 28, rotate: 0 })
                   setFrameSlotEditor(actionBg)
                   setActionBg(null)
                 }} disabled={actionWorking}
@@ -763,6 +763,8 @@ export default function PetRoomPage() {
                     top: `${editingSlot.y}%`,
                     width: `${editingSlot.w}%`,
                     height: `${editingSlot.h}%`,
+                    transform: `rotate(${editingSlot.rotate ?? 0}deg)`,
+                    transformOrigin: 'center center',
                   }}
                   onMouseDown={e => onSlotMouseDown(e, 'move')}
                 >
@@ -782,15 +784,38 @@ export default function PetRoomPage() {
               </div>
 
               {/* Current values */}
-              <div className="text-xs text-gray-500 flex gap-4">
+              <div className="text-xs text-gray-500 flex gap-4 flex-wrap">
                 <span>x: {Math.round(editingSlot.x)}%</span>
                 <span>y: {Math.round(editingSlot.y)}%</span>
                 <span>w: {Math.round(editingSlot.w)}%</span>
                 <span>h: {Math.round(editingSlot.h)}%</span>
+                <span>rotate: {Math.round(editingSlot.rotate ?? 0)}°</span>
+              </div>
+
+              {/* Rotation slider */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Tilt / Rotation: {Math.round(editingSlot.rotate ?? 0)}°
+                  <span className="font-normal text-gray-400 ml-1">(drag to match the frame's perspective angle)</span>
+                </label>
+                <input
+                  type="range"
+                  min={-20}
+                  max={20}
+                  step={0.5}
+                  value={editingSlot.rotate ?? 0}
+                  onChange={e => setEditingSlot(s => ({ ...s, rotate: Number(e.target.value) }))}
+                  className="w-full accent-blue-500"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                  <span>-20° (tilt left)</span>
+                  <span>0° (straight)</span>
+                  <span>+20° (tilt right)</span>
+                </div>
               </div>
 
               <p className="text-xs text-gray-400">
-                The blue rectangle defines exactly where the user's blindbox photo will be placed inside the frame. Any photo will be cropped and scaled to fit this area. Adjust it to cover the empty space inside the frame border.
+                The blue rectangle defines where the user's blindbox photo will be placed inside the frame. Drag to position, resize with ↘, and use the rotation slider to match the frame's tilt angle. Any photo will be cropped and rotated to fit.
               </p>
 
               <div className="flex gap-3">
