@@ -7,12 +7,15 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { HomeButton } from '@/components/ui/HomeButton'
+import dynamicImport from 'next/dynamic'
 import {
   computeSpendableBalance,
   isRedeemDisabled,
   sortRedemptionsByRecent,
 } from '@/lib/utils/shop'
 import type { ShopItem, Redemption } from '@/lib/types/shop'
+
+const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/AnimatedRoomLayer'), { ssr: false })
 
 interface ShopItemWithCount extends ShopItem {
   redemption_count: number
@@ -25,6 +28,38 @@ interface RedemptionWithTitle extends Redemption {
   blindbox_image_url?: string | null
   blindbox_image_urls?: string[]
   refunded_at?: string | null
+}
+
+interface PetRoomBg {
+  id: string
+  name: string
+  description: string | null
+  image_url: string
+  animation_zones: any[]
+  shop_item_id: string
+  shopItem?: ShopItemWithCount
+}
+
+// ── Animated Room Preview Modal ───────────────────────────────────────────────
+function RoomPreviewModal({ bg, onClose }: { bg: PetRoomBg; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4" onClick={onClose}>
+      <div className="relative w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={bg.image_url} alt={bg.name} className="w-full block" draggable={false} />
+        {bg.animation_zones?.length > 0 && (
+          <AnimatedRoomLayer imageUrl={bg.image_url} zones={bg.animation_zones} />
+        )}
+        <button onClick={onClose}
+          className="absolute top-3 right-3 z-10 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
+          ✕ Close
+        </button>
+        <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-xl text-sm font-semibold">
+          {bg.name}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ── Blind Box Reveal Modal ────────────────────────────────────────────────────
@@ -359,6 +394,10 @@ export default function ShopPage() {
   // Set of shop_item IDs the user already owns (book skins + pet rooms) — disables re-purchase
   const [ownedItemIds, setOwnedItemIds] = useState<Set<string>>(new Set())
 
+  // Room backgrounds cluster
+  const [roomBgs, setRoomBgs] = useState<PetRoomBg[]>([])
+  const [previewRoom, setPreviewRoom] = useState<PetRoomBg | null>(null)
+
   // Modals
   const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrls: string[]; itemTitle: string; isPhysical?: boolean } | null>(null)
   const [blindboxView, setBlindboxView] = useState<{ imageUrls: string[]; itemTitle: string; isPhysical?: boolean } | null>(null)
@@ -384,6 +423,25 @@ export default function ShopPage() {
       .order('created_at', { ascending: false })
 
     if (itemsError) { setError('Failed to load shop items'); return }
+
+    // Fetch pet room backgrounds available in the shop
+    try {
+      const { data: bgRows } = await supabase
+        .from('pet_room_backgrounds')
+        .select('id, name, description, image_url, animation_zones, shop_item_id')
+        .eq('is_active', true)
+        .not('shop_item_id', 'is', null)
+        .order('created_at', { ascending: false })
+
+      if (bgRows && shopItems) {
+        const shopItemMap: Record<string, any> = {}
+        for (const si of shopItems) shopItemMap[si.id] = si
+        const bgs: PetRoomBg[] = bgRows
+          .filter(bg => shopItemMap[bg.shop_item_id!])
+          .map(bg => ({ ...bg, animation_zones: bg.animation_zones ?? [], shopItem: shopItemMap[bg.shop_item_id!] }))
+        setRoomBgs(bgs)
+      }
+    } catch (_) {}
 
     // Redemption counts
     const { data: redemptionCounts } = await supabase.from('redemptions').select('item_id')
@@ -604,6 +662,9 @@ export default function ShopPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       {/* Modals */}
+      {previewRoom && (
+        <RoomPreviewModal bg={previewRoom} onClose={() => setPreviewRoom(null)} />
+      )}
       {blindboxReveal && (
         <BlindBoxReveal
           imageUrls={blindboxReveal.imageUrls}
