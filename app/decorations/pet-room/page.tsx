@@ -6,10 +6,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/ui/PageHeader'
-import dynamic from 'next/dynamic'
+import dynamicImport from 'next/dynamic'
 import type { AnimZone } from '@/components/pet-room/AnimationZoneEditor'
 
-const AnimationZoneEditor = dynamic(() => import('@/components/pet-room/AnimationZoneEditor'), { ssr: false })
+const AnimationZoneEditor = dynamicImport(() => import('@/components/pet-room/AnimationZoneEditor'), { ssr: false })
 
 interface PetRoomBackground {
   id: string
