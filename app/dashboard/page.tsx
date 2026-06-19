@@ -31,7 +31,7 @@ export default function DashboardPage() {
   const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean; submissionId?: string; hasNewTeacherComment?: boolean }>>([])
   const [petRoomBgUrl, setPetRoomBgUrl] = useState<string | null>(null)
   const [petRoomFrameUrl, setPetRoomFrameUrl] = useState<string | null>(null)
-  const [petRoomFrameSlot, setPetRoomFrameSlot] = useState<{ x: number; y: number; w: number; h: number; rotate?: number } | null>(null)
+  const [petRoomFrameSlot, setPetRoomFrameSlot] = useState<{ x: number; y: number; w: number; h: number; rotate?: number; rotateY?: number; rotateX?: number } | null>(null)
   const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null) // latest blindbox image this user owns
   const router = useRouter()
   const supabase = createClient()
@@ -648,7 +648,12 @@ export default function DashboardPage() {
                   top: `${petRoomFrameSlot.y}%`,
                   width: `${petRoomFrameSlot.w}%`,
                   height: `${petRoomFrameSlot.h}%`,
-                  transform: petRoomFrameSlot.rotate ? `rotate(${petRoomFrameSlot.rotate}deg)` : undefined,
+                  transform: [
+                    (petRoomFrameSlot.rotateY || petRoomFrameSlot.rotateX) ? 'perspective(800px)' : '',
+                    petRoomFrameSlot.rotateY ? `rotateY(${petRoomFrameSlot.rotateY}deg)` : '',
+                    petRoomFrameSlot.rotateX ? `rotateX(${petRoomFrameSlot.rotateX}deg)` : '',
+                    petRoomFrameSlot.rotate ? `rotate(${petRoomFrameSlot.rotate}deg)` : '',
+                  ].filter(Boolean).join(' ') || undefined,
                   transformOrigin: 'center center',
                   pointerEvents: 'none',
                 }}

@@ -80,7 +80,7 @@ export default function PetRoomPage() {
 
   // Frame slot editor
   const [frameSlotEditor, setFrameSlotEditor] = useState<PetRoomBackground | null>(null)
-  const [editingSlot, setEditingSlot] = useState<{ x: number; y: number; w: number; h: number; rotate: number }>({ x: 62, y: 8, w: 18, h: 28, rotate: 0 })
+  const [editingSlot, setEditingSlot] = useState<{ x: number; y: number; w: number; h: number; rotate: number; rotateY: number; rotateX: number }>({ x: 62, y: 8, w: 18, h: 28, rotate: 0, rotateY: 0, rotateX: 0 })
   const [slotSaving, setSlotSaving] = useState(false)
   const frameEditorRef = useRef<HTMLDivElement>(null)
   const dragState = useRef<{ type: 'move' | 'resize'; startX: number; startY: number; startSlot: typeof editingSlot } | null>(null)
@@ -277,9 +277,9 @@ export default function PetRoomPage() {
       const dyPct = ((me.clientY - dragState.current.startY) / rect.height) * 100
       const s = dragState.current.startSlot
       if (dragState.current.type === 'move') {
-        setEditingSlot({ x: Math.max(0, Math.min(100 - s.w, s.x + dxPct)), y: Math.max(0, Math.min(100 - s.h, s.y + dyPct)), w: s.w, h: s.h, rotate: s.rotate })
+        setEditingSlot({ x: Math.max(0, Math.min(100 - s.w, s.x + dxPct)), y: Math.max(0, Math.min(100 - s.h, s.y + dyPct)), w: s.w, h: s.h, rotate: s.rotate, rotateY: s.rotateY, rotateX: s.rotateX })
       } else {
-        setEditingSlot({ x: s.x, y: s.y, w: Math.max(5, Math.min(100 - s.x, s.w + dxPct)), h: Math.max(5, Math.min(100 - s.y, s.h + dyPct)), rotate: s.rotate })
+        setEditingSlot({ x: s.x, y: s.y, w: Math.max(5, Math.min(100 - s.x, s.w + dxPct)), h: Math.max(5, Math.min(100 - s.y, s.h + dyPct)), rotate: s.rotate, rotateY: s.rotateY, rotateX: s.rotateX })
       }
     }
     window.addEventListener('mousemove', move)
@@ -682,7 +682,7 @@ export default function PetRoomPage() {
                 {/* Adjust frame slot */}
                 <button onClick={() => {
                   const existing = (actionBg as any).frame_slot
-                  setEditingSlot(existing ?? { x: 62, y: 8, w: 18, h: 28, rotate: 0 })
+                  setEditingSlot(existing ?? { x: 62, y: 8, w: 18, h: 28, rotate: 0, rotateY: 0, rotateX: 0 })
                   setFrameSlotEditor(actionBg)
                   setActionBg(null)
                 }} disabled={actionWorking}
@@ -763,7 +763,12 @@ export default function PetRoomPage() {
                     top: `${editingSlot.y}%`,
                     width: `${editingSlot.w}%`,
                     height: `${editingSlot.h}%`,
-                    transform: `rotate(${editingSlot.rotate ?? 0}deg)`,
+                    transform: [
+                      `perspective(800px)`,
+                      `rotateY(${editingSlot.rotateY ?? 0}deg)`,
+                      `rotateX(${editingSlot.rotateX ?? 0}deg)`,
+                      editingSlot.rotate ? `rotate(${editingSlot.rotate}deg)` : '',
+                    ].filter(Boolean).join(' '),
                     transformOrigin: 'center center',
                   }}
                   onMouseDown={e => onSlotMouseDown(e, 'move')}
@@ -789,28 +794,47 @@ export default function PetRoomPage() {
                 <span>y: {Math.round(editingSlot.y)}%</span>
                 <span>w: {Math.round(editingSlot.w)}%</span>
                 <span>h: {Math.round(editingSlot.h)}%</span>
-                <span>rotate: {Math.round(editingSlot.rotate ?? 0)}°</span>
+                <span>rotY: {Math.round(editingSlot.rotateY ?? 0)}°</span>
+                <span>rotX: {Math.round(editingSlot.rotateX ?? 0)}°</span>
               </div>
 
-              {/* Rotation slider */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Tilt / Rotation: {Math.round(editingSlot.rotate ?? 0)}°
-                  <span className="font-normal text-gray-400 ml-1">(drag to match the frame's perspective angle)</span>
-                </label>
-                <input
-                  type="range"
-                  min={-20}
-                  max={20}
-                  step={0.5}
-                  value={editingSlot.rotate ?? 0}
-                  onChange={e => setEditingSlot(s => ({ ...s, rotate: Number(e.target.value) }))}
-                  className="w-full accent-blue-500"
-                />
-                <div className="flex justify-between text-xs text-gray-400 mt-0.5">
-                  <span>-20° (tilt left)</span>
-                  <span>0° (straight)</span>
-                  <span>+20° (tilt right)</span>
+              {/* Perspective tilt controls */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Horizontal perspective: {Math.round(editingSlot.rotateY ?? 0)}°
+                    <span className="font-normal text-gray-400 ml-1">(left/right wall angle)</span>
+                  </label>
+                  <input type="range" min={-40} max={40} step={1}
+                    value={editingSlot.rotateY ?? 0}
+                    onChange={e => setEditingSlot(s => ({ ...s, rotateY: Number(e.target.value) }))}
+                    className="w-full accent-blue-500" />
+                  <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                    <span>← left side closer</span><span>right side closer →</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Vertical perspective: {Math.round(editingSlot.rotateX ?? 0)}°
+                    <span className="font-normal text-gray-400 ml-1">(top/bottom tilt)</span>
+                  </label>
+                  <input type="range" min={-30} max={30} step={1}
+                    value={editingSlot.rotateX ?? 0}
+                    onChange={e => setEditingSlot(s => ({ ...s, rotateX: Number(e.target.value) }))}
+                    className="w-full accent-blue-500" />
+                  <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                    <span>↑ top closer</span><span>bottom closer ↓</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    In-plane rotation: {Math.round(editingSlot.rotate ?? 0)}°
+                    <span className="font-normal text-gray-400 ml-1">(flat spin)</span>
+                  </label>
+                  <input type="range" min={-15} max={15} step={0.5}
+                    value={editingSlot.rotate ?? 0}
+                    onChange={e => setEditingSlot(s => ({ ...s, rotate: Number(e.target.value) }))}
+                    className="w-full accent-blue-500" />
                 </div>
               </div>
 
