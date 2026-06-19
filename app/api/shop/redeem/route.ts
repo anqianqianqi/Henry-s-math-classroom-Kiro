@@ -152,7 +152,7 @@ export async function POST(request: Request) {
           .eq('user_id', session.user.id)
           .eq('item_id', body.item_id)
           .is('refunded_at', null)
-          .order('created_at', { ascending: false })
+          .order('redeemed_at', { ascending: false })
           .limit(1)
           .single()
 
