@@ -54,6 +54,11 @@ export default function BookSkinsUserPage() {
   const [sellPrice, setSellPrice] = useState('')
   const [showSellInput, setShowSellInput] = useState(false)
 
+  // Admin: layout editor for existing skins
+  const [layoutEditorSkin, setLayoutEditorSkin] = useState<BookSkin | null>(null)
+  const [editingLayout, setEditingLayout] = useState<CoverLayout>(DEFAULT_LAYOUT)
+  const [layoutSaving, setLayoutSaving] = useState(false)
+
   // ── Load skins + user prefs ─────────────────────────────────────────────────
   async function loadSkins(uid: string, adminRole: boolean) {
     if (adminRole) {
@@ -277,6 +282,48 @@ export default function BookSkinsUserPage() {
         )}
       </main>
 
+      {/* ── Layout editor modal ─────────────────────────────────────────── */}
+      {layoutEditorSkin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => !layoutSaving && setLayoutEditorSkin(null)}>
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
+              <div>
+                <div className="font-bold text-gray-900">🎨 Edit Layout — {layoutEditorSkin.name}</div>
+                <div className="text-xs text-gray-400 mt-0.5">Drag the title and button to reposition. Adjust font size and color.</div>
+              </div>
+              <button onClick={() => !layoutSaving && setLayoutEditorSkin(null)} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
+            </div>
+            <div className="px-5 py-4">
+              <CoverLayoutEditor
+                imageUrl={layoutEditorSkin.image_url}
+                layout={editingLayout}
+                onChange={setEditingLayout}
+              />
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 flex gap-3 sticky bottom-0 bg-white">
+              <button onClick={() => setLayoutEditorSkin(null)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm">
+                Cancel
+              </button>
+              <button
+                disabled={layoutSaving}
+                onClick={async () => {
+                  setLayoutSaving(true)
+                  try {
+                    await supabase.from('book_skins').update({ cover_layout: editingLayout }).eq('id', layoutEditorSkin.id)
+                    await loadSkins(userId!, isAdmin)
+                    setLayoutEditorSkin(null)
+                  } catch (_) {}
+                  setLayoutSaving(false)
+                }}
+                className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-bold rounded-xl text-sm"
+              >
+                {layoutSaving ? '⏳ Saving…' : '💾 Save Layout'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Admin Manage modal ─────────────────────────────────────────────── */}
       {actionSkin && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4" onClick={() => !actionWorking && setActionSkin(null)}>
@@ -333,6 +380,20 @@ export default function BookSkinsUserPage() {
                 <button onClick={() => adminSkinAction(actionSkin, 'delete')} disabled={actionWorking}
                   className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 transition-colors col-span-2">🗑️ Delete</button>
               </div>
+              {/* Layout editor — cover skins only */}
+              {actionSkin.skin_type === 'cover' && (
+                <button
+                  onClick={() => {
+                    const existing = (actionSkin as any).cover_layout
+                    setEditingLayout(existing ?? DEFAULT_LAYOUT)
+                    setLayoutEditorSkin(actionSkin)
+                    setActionSkin(null)
+                  }}
+                  className="w-full py-2 px-3 text-sm font-semibold rounded-xl border-2 border-dashed border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
+                >
+                  🎨 Edit Title &amp; Button Layout
+                </button>
+              )}
               {showSellInput && (
                 <div className="flex gap-2">
                   <input type="number" min={1} value={sellPrice} onChange={e => setSellPrice(e.target.value)}
