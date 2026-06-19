@@ -142,7 +142,7 @@ export default function BookSkinsUserPage() {
           category: 'other', commodity_type: 'standard', draws_per_redemption: 1,
         }).select('id').single()
         if (itemErr || !newItem) throw new Error('Shop item creation failed')
-        await supabase.from('book_skins').update({ shop_item_id: newItem.id, visibility: 'public' }).eq('id', skin.id)
+        await supabase.from('book_skins').update({ shop_item_id: newItem.id, visibility: 'admin_only' }).eq('id', skin.id)
         setShowSellInput(false); setSellPrice('')
       }
       await loadSkins(userId!, isAdmin)

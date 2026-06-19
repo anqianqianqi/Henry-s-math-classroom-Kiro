@@ -392,7 +392,7 @@ export default function PetRoomPage() {
           category: 'other', commodity_type: 'standard', draws_per_redemption: 1,
         }).select('id').single()
         if (itemErr || !newItem) throw new Error('Shop item creation failed')
-        await supabase.from('pet_room_backgrounds').update({ shop_item_id: newItem.id, visibility: 'public' }).eq('id', bg.id)
+        await supabase.from('pet_room_backgrounds').update({ shop_item_id: newItem.id, visibility: 'admin_only' }).eq('id', bg.id)
         setShowSellInput(false); setSellPrice('')
       }
       await loadBgs(userId ?? undefined, isAdmin)
