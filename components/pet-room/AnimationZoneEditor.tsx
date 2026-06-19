@@ -18,6 +18,7 @@
 //   - Multiple zones per image
 
 import { useEffect, useRef, useState } from 'react'
+import AnimatedRoomLayer from './AnimatedRoomLayer'
 
 export interface AnimPoint { x: number; y: number }
 export interface AnimZone {
@@ -75,6 +76,9 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   // Eyedropper state — when set, next canvas click samples pixel and sets fillColor on that zone
   const [eyedropperZoneId, setEyedropperZoneId] = useState<string | null>(null)
 
+  // Preview modal
+  const [showPreview, setShowPreview] = useState(false)
+
   // Load image
   useEffect(() => {
     const img = new Image()
@@ -87,6 +91,7 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
+        if (showPreview) { setShowPreview(false); return }
         if (drawing) cancelDrawing()
         if (zoomMode !== 'none') {
           setZoomMode('none')
@@ -101,7 +106,7 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [drawing, zoomMode, currentPoints, eyedropperZoneId])
+  }, [drawing, zoomMode, currentPoints, eyedropperZoneId, showPreview])
 
   // Draw everything onto canvas
   useEffect(() => {
@@ -433,6 +438,15 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
             Zoomed: {viewport.x0.toFixed(0)}–{viewport.x1.toFixed(0)}% × {viewport.y0.toFixed(0)}–{viewport.y1.toFixed(0)}%
           </span>
         )}
+        {/* Preview button — always visible when there are zones */}
+        {zones.length > 0 && (
+          <button
+            onClick={() => setShowPreview(true)}
+            className="text-xs px-3 py-1.5 font-semibold rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 ml-auto"
+          >
+            ▶ Preview animation
+          </button>
+        )}
       </div>
 
       {/* Controls while drawing */}
@@ -535,6 +549,53 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
           })}
         </div>
       )}
+      {/* ── Fullscreen animation preview modal ─────────────────────────── */}
+      {showPreview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setShowPreview(false)}
+        >
+          <div
+            className="relative w-full max-w-5xl rounded-2xl overflow-hidden shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* The live room — background image + animated zones on top */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageUrl}
+              alt="Room preview"
+              className="w-full block"
+              draggable={false}
+            />
+            <AnimatedRoomLayer imageUrl={imageUrl} zones={zones} />
+
+            {/* Close button */}
+            <button
+              onClick={() => setShowPreview(false)}
+              className="absolute top-3 right-3 z-10 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full backdrop-blur-sm transition-colors"
+            >
+              ✕ Close
+            </button>
+
+            {/* Zone legend */}
+            <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 max-w-[80%]">
+              {zones.map((zone, zi) => (
+                <span
+                  key={zone.id}
+                  className="text-[11px] font-semibold px-2 py-0.5 rounded-full text-white backdrop-blur-sm"
+                  style={{ background: ZONE_COLORS[zi % ZONE_COLORS.length] + 'cc' }}
+                >
+                  {ANIM_OPTIONS.find(o => o.value === zone.animation)?.label ?? zone.animation}
+                </span>
+              ))}
+            </div>
+
+            <p className="absolute bottom-3 right-3 text-[11px] text-white/60">Press Esc or click outside to close</p>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
+
