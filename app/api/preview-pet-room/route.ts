@@ -1,13 +1,21 @@
 // app/api/preview-pet-room/route.ts
 //
-// Generates a pet room image and uploads it to storage but does NOT insert
-// a pet_room_backgrounds row. Returns the public URL so the admin can iterate
-// before deciding to save.
+// Generates a pet room image + matching frame overlay and uploads both to
+// storage. Does NOT insert a pet_room_backgrounds row — returns URLs so the
+// admin can iterate before deciding to save.
 //
 // POST body: { prompt: string, sourceImageUrl?: string, changePrompt?: string }
-//   - prompt only        → fresh generation
-//   - sourceImageUrl + changePrompt → edit/refine existing image
-// Returns: { image_url, prompt: string (accumulated) }
+//   - prompt only                   → fresh generation (room + frame)
+//   - sourceImageUrl + changePrompt → edit/refine room only (frame unchanged)
+// Returns:
+//   { image_url, frame_overlay_url, frame_slot, prompt }
+//
+// The frame overlay is 1536×1024 PNG, white background, decorative picture
+// frame centered in the upper-right wall area. Rendered in the pet area with
+// CSS mix-blend-mode: multiply so white becomes transparent.
+//
+// frame_slot = { x, y, w, h } as percentages of the full image dimensions,
+// defining the inner photo area where the user's blindbox image is placed.
 
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
@@ -15,13 +23,93 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-const PET_AREA_CONTEXT = `
-The image will be used as a background for a pet area on a web dashboard.
-Landscape orientation (wider than tall, 3:2 aspect ratio).
+// ── Frame slot (as % of 1536×1024) ───────────────────────────────────────────
+// Upper-right wall area. Kept consistent across all rooms so compositing is
+// predictable. The actual pixel position for 1536×1024:
+//   x: 60% → 921px from left
+//   y: 6%  → 61px from top
+//   w: 20% → 307px wide
+//   h: 32% → 327px tall  (≈ square inner area after frame border)
+const FRAME_SLOT = { x: 60, y: 6, w: 20, h: 32 }
+
+// ── Room background context ───────────────────────────────────────────────────
+const ROOM_CONTEXT = `
+The image is a background for a pet area on a web dashboard.
+Landscape orientation (wider than tall, 3:2 aspect ratio, 1536x1024 pixels).
 Leave the lower-centre clear — a small cat sits there.
-Wall art / picture frames should be clearly defined rectangular areas.
+On the upper-right area of the wall (approximately 60-80% from the left, 6-38% from the top),
+include a FLAT SOLID LIGHT-COLOURED RECTANGLE on the wall — this is a blank wall space
+where a decorative picture frame will be overlaid. The rectangle should be a uniform colour
+(light beige, cream, or wall colour) with NO detail inside it.
 Style: anime / Studio Ghibli cozy interior.
 `.trim()
+
+// ── Frame overlay prompt ──────────────────────────────────────────────────────
+// The frame is generated separately and composited on top of the room.
+// White background → rendered with mix-blend-mode: multiply at runtime.
+function buildFramePrompt(roomStyle: string): string {
+  return `A single decorative picture frame, anime / Studio Ghibli style matching: ${roomStyle}.
+The frame is centered on a pure white background.
+The frame occupies roughly the centre 40% of the image (both horizontally and vertically).
+The frame has an ornate border — wood, carved, or gilded depending on the room style.
+The inner opening of the frame is pure white (completely empty, no image inside).
+Everything outside the frame border is pure white.
+No shadows, no background room elements, no furniture — only the frame on white.
+The frame opening is approximately square (1:1 ratio).
+Image size: 1536x1024, landscape.`
+}
+
+async function generateImage(
+  apiKey: string,
+  prompt: string,
+  size: string = '1536x1024',
+): Promise<string> {
+  const res = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'gpt-image-1', prompt, n: 1, size, output_format: 'png', quality: 'high' }),
+  })
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Image generation failed (${res.status}): ${err.slice(0, 200)}`)
+  }
+  const data = await res.json()
+  const b64 = data.data?.[0]?.b64_json
+  if (!b64) throw new Error('No image data returned from OpenAI')
+  return b64
+}
+
+async function editImage(
+  apiKey: string,
+  sourceUrl: string,
+  prompt: string,
+): Promise<string> {
+  const imgRes = await fetch(sourceUrl)
+  if (!imgRes.ok) throw new Error('Could not fetch source image')
+  const imgBuffer = await imgRes.arrayBuffer()
+  const imgBlob = new Blob([imgBuffer], { type: 'image/png' })
+
+  const formData = new FormData()
+  formData.append('model', 'gpt-image-1')
+  formData.append('image', imgBlob, 'source.png')
+  formData.append('prompt', prompt)
+  formData.append('n', '1')
+  formData.append('size', '1536x1024')
+
+  const res = await fetch('https://api.openai.com/v1/images/edits', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}` },
+    body: formData,
+  })
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Image edit failed (${res.status}): ${err.slice(0, 200)}`)
+  }
+  const data = await res.json()
+  const b64 = data.data?.[0]?.b64_json
+  if (!b64) throw new Error('No image data from OpenAI edit')
+  return b64
+}
 
 export async function POST(request: Request) {
   try {
@@ -43,75 +131,66 @@ export async function POST(request: Request) {
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 })
 
-    let b64: string
+    const uid = session.user.id
+    const ts = Date.now()
+    let roomB64: string
+    let frameB64: string | null = null
     let accumulatedPrompt: string
 
     if (sourceImageUrl && changePrompt?.trim()) {
-      // ── Refine mode: images.edit ────────────────────────────────────────
-      if (!changePrompt.trim()) return NextResponse.json({ error: 'changePrompt required for refinement' }, { status: 400 })
-
-      const imgRes = await fetch(sourceImageUrl)
-      if (!imgRes.ok) return NextResponse.json({ error: 'Could not fetch source image' }, { status: 502 })
-      const imgBuffer = await imgRes.arrayBuffer()
-      const imgBlob = new Blob([imgBuffer], { type: 'image/png' })
-
-      const editPrompt = `${changePrompt.trim()}\n\nPreserve:\n${PET_AREA_CONTEXT}`
-      const formData = new FormData()
-      formData.append('model', 'gpt-image-1')
-      formData.append('image', imgBlob, 'source.png')
-      formData.append('prompt', editPrompt)
-      formData.append('n', '1')
-      formData.append('size', '1536x1024')
-
-      const editRes = await fetch('https://api.openai.com/v1/images/edits', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}` },
-        body: formData,
-      })
-      if (!editRes.ok) {
-        const errText = await editRes.text()
-        console.error('[preview-pet-room] edit error:', errText)
-        return NextResponse.json({ error: `Image edit failed: ${editRes.status}` }, { status: 502 })
-      }
-      const editData = await editRes.json()
-      b64 = editData.data?.[0]?.b64_json
-      if (!b64) return NextResponse.json({ error: 'No image data from OpenAI' }, { status: 502 })
-
+      // ── Refine mode: edit room only, reuse existing frame ─────────────────
+      const editPrompt = `${changePrompt.trim()}\n\nPreserve:\n${ROOM_CONTEXT}`
+      roomB64 = await editImage(apiKey, sourceImageUrl, editPrompt)
       const base = prompt?.trim() ?? ''
       accumulatedPrompt = base ? `${base}\n\n[Refinement] ${changePrompt.trim()}` : changePrompt.trim()
-
+      // Don't regenerate frame on refinements — caller passes existing frame_overlay_url
     } else {
-      // ── Generate from scratch ────────────────────────────────────────────
+      // ── Fresh generation: room + frame ────────────────────────────────────
       if (!prompt?.trim()) return NextResponse.json({ error: 'prompt required' }, { status: 400 })
 
-      const fullPrompt = `${prompt.trim()}\n\n${PET_AREA_CONTEXT}`
-      const genRes = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'gpt-image-1', prompt: fullPrompt, n: 1, size: '1536x1024', output_format: 'png', quality: 'high' }),
-      })
-      if (!genRes.ok) {
-        const errText = await genRes.text()
-        console.error('[preview-pet-room] gen error:', errText)
-        return NextResponse.json({ error: `Generation failed: ${genRes.status}` }, { status: 502 })
-      }
-      const genData = await genRes.json()
-      b64 = genData.data?.[0]?.b64_json
-      if (!b64) return NextResponse.json({ error: 'No image data from OpenAI' }, { status: 502 })
+      const roomPrompt = `${prompt.trim()}\n\n${ROOM_CONTEXT}`
+      const framePrompt = buildFramePrompt(prompt.trim())
+
+      // Generate room and frame in parallel
+      const [rb64, fb64] = await Promise.all([
+        generateImage(apiKey, roomPrompt),
+        generateImage(apiKey, framePrompt),
+      ])
+      roomB64 = rb64
+      frameB64 = fb64
       accumulatedPrompt = prompt.trim()
     }
 
-    // Upload to storage (user-prefixed path, not saved to DB)
-    const buffer = Buffer.from(b64, 'base64')
-    const fileName = `${session.user.id}/pet-room-preview-${Date.now()}.png`
-    const { error: uploadErr } = await supabase.storage
+    // ── Upload room background ────────────────────────────────────────────
+    const roomBuf = Buffer.from(roomB64, 'base64')
+    const roomFile = `${uid}/pet-room-preview-${ts}.png`
+    const { error: roomUploadErr } = await supabase.storage
       .from('challenge-images')
-      .upload(fileName, buffer, { contentType: 'image/png', upsert: false })
-    if (uploadErr) return NextResponse.json({ error: 'Storage upload failed: ' + uploadErr.message }, { status: 500 })
+      .upload(roomFile, roomBuf, { contentType: 'image/png', upsert: false })
+    if (roomUploadErr) return NextResponse.json({ error: 'Room upload failed: ' + roomUploadErr.message }, { status: 500 })
+    const { data: { publicUrl: roomUrl } } = supabase.storage.from('challenge-images').getPublicUrl(roomFile)
 
-    const { data: { publicUrl } } = supabase.storage.from('challenge-images').getPublicUrl(fileName)
+    // ── Upload frame overlay (fresh generation only) ──────────────────────
+    let frameOverlayUrl: string | null = null
+    if (frameB64) {
+      const frameBuf = Buffer.from(frameB64, 'base64')
+      const frameFile = `${uid}/pet-room-frame-${ts}.png`
+      const { error: frameUploadErr } = await supabase.storage
+        .from('challenge-images')
+        .upload(frameFile, frameBuf, { contentType: 'image/png', upsert: false })
+      if (!frameUploadErr) {
+        const { data: { publicUrl } } = supabase.storage.from('challenge-images').getPublicUrl(frameFile)
+        frameOverlayUrl = publicUrl
+      }
+      // Frame upload failure is non-fatal — room still usable without frame
+    }
 
-    return NextResponse.json({ image_url: publicUrl, prompt: accumulatedPrompt })
+    return NextResponse.json({
+      image_url: roomUrl,
+      frame_overlay_url: frameOverlayUrl,
+      frame_slot: frameOverlayUrl ? FRAME_SLOT : null,
+      prompt: accumulatedPrompt,
+    })
   } catch (err: any) {
     console.error('[preview-pet-room] error:', err)
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })

@@ -30,6 +30,9 @@ export default function DashboardPage() {
   })
   const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean; submissionId?: string; hasNewTeacherComment?: boolean }>>([])
   const [petRoomBgUrl, setPetRoomBgUrl] = useState<string | null>(null)
+  const [petRoomFrameUrl, setPetRoomFrameUrl] = useState<string | null>(null)
+  const [petRoomFrameSlot, setPetRoomFrameSlot] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null) // latest blindbox image this user owns
   const router = useRouter()
   const supabase = createClient()
 
@@ -114,11 +117,50 @@ export default function DashboardPage() {
       if (bgId) {
         const { data: bg } = await supabase
           .from('pet_room_backgrounds')
-          .select('image_url, is_active')
+          .select('image_url, is_active, frame_overlay_url, frame_slot')
           .eq('id', bgId)
           .maybeSingle()
         // Only show if the room is still active — deactivated rooms are hidden even for owners
-        if (bg?.image_url && bg.is_active) setPetRoomBgUrl(bg.image_url)
+        if (bg?.image_url && bg.is_active) {
+          setPetRoomBgUrl(bg.image_url)
+          setPetRoomFrameUrl(bg.frame_overlay_url ?? null)
+          setPetRoomFrameSlot(bg.frame_slot ?? null)
+        }
+      }
+
+      // Load user's most recent blindbox image for the wall frame
+      try {
+        const { data: latestBlindbox } = await supabase
+          .from('redemptions')
+          .select('blindbox_image_url:item_id(image_url)')
+          .eq('user_id', user.id)
+          .is('refunded_at', null)
+          .not('blindbox_image_url', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        // Also check blindbox_draws for the actual drawn image
+        const { data: latestDraw } = await supabase
+          .from('redemptions')
+          .select('id, item_id, created_at')
+          .eq('user_id', user.id)
+          .is('refunded_at', null)
+          .order('created_at', { ascending: false })
+          .limit(5)
+        // Find latest redemption with a blindbox image
+        if (latestDraw && latestDraw.length > 0) {
+          const redemptionIds = latestDraw.map((r: any) => r.id)
+          const { data: draws } = await supabase
+            .from('blindbox_draws')
+            .select('image_url')
+            .in('redemption_id', redemptionIds)
+            .order('drawn_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if ((draws as any)?.image_url) setUserPhotoUrl((draws as any).image_url)
+        }
+      } catch (_) {
+        // blindbox_draws may not exist — ignore
       }
     } catch (_) {
       // pet_room_backgrounds table may not exist yet — ignore
@@ -583,7 +625,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Right half: pet area — shows selected room background */}
+          {/* Right half: pet area — shows selected room background + frame overlay */}
           <div
             id="pet-area"
             className="flex-1 min-w-0 self-start rounded-3xl overflow-hidden relative"
@@ -594,6 +636,34 @@ export default function DashboardPage() {
               backgroundPosition: 'center bottom',
             }}
           >
+            {/* User's blindbox photo — clipped to the frame_slot area, below the frame overlay */}
+            {userPhotoUrl && petRoomFrameSlot && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={userPhotoUrl}
+                alt="Wall photo"
+                className="absolute object-cover"
+                style={{
+                  left: `${petRoomFrameSlot.x}%`,
+                  top: `${petRoomFrameSlot.y}%`,
+                  width: `${petRoomFrameSlot.w}%`,
+                  height: `${petRoomFrameSlot.h}%`,
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
+
+            {/* Frame overlay — on top of photo, mix-blend-mode: multiply makes white transparent */}
+            {petRoomFrameUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={petRoomFrameUrl}
+                alt="Frame overlay"
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                style={{ mixBlendMode: 'multiply' }}
+              />
+            )}
+
             <InlinePet />
           </div>
         </div>

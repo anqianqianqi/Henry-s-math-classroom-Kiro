@@ -23,6 +23,8 @@ interface PetRoomBackground {
 // ── Sandbox state for the AI generator ───────────────────────────────────────
 interface SandboxState {
   imageUrl: string
+  frameOverlayUrl: string | null   // frame PNG on white bg — overlaid with mix-blend-mode: multiply
+  frameSlot: { x: number; y: number; w: number; h: number } | null  // photo area as %
   prompt: string      // accumulated full prompt history
   iteration: number
 }
@@ -166,7 +168,13 @@ export default function PetRoomPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
-      setSandbox({ imageUrl: data.image_url, prompt: data.prompt, iteration: 1 })
+      setSandbox({
+        imageUrl: data.image_url,
+        frameOverlayUrl: data.frame_overlay_url ?? null,
+        frameSlot: data.frame_slot ?? null,
+        prompt: data.prompt,
+        iteration: 1,
+      })
       setRefinePrompt('')
     } catch (err: any) { setGenError(err.message) }
     finally { setGenerating(false) }
@@ -183,7 +191,14 @@ export default function PetRoomPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
-      setSandbox({ imageUrl: data.image_url, prompt: data.prompt, iteration: sandbox.iteration + 1 })
+      setSandbox({
+        imageUrl: data.image_url,
+        // Keep existing frame on refinement (frame not regenerated)
+        frameOverlayUrl: data.frame_overlay_url ?? sandbox.frameOverlayUrl,
+        frameSlot: data.frame_slot ?? sandbox.frameSlot,
+        prompt: data.prompt,
+        iteration: sandbox.iteration + 1,
+      })
       setRefinePrompt('')
     } catch (err: any) { setGenError(err.message) }
     finally { setGenerating(false) }
@@ -198,8 +213,12 @@ export default function PetRoomPage() {
       const { error: insertErr } = await supabase.from('pet_room_backgrounds').insert({
         name: saveName.trim(), description: saveDesc.trim() || null,
         image_url: sandbox.imageUrl, prompt: sandbox.prompt,
+        frame_overlay_url: sandbox.frameOverlayUrl ?? null,
+        frame_slot: sandbox.frameSlot ?? null,
         is_default: saveSetDefault, is_active: true, visibility: 'admin_only', created_by: userId,
-        frame_slots: [{ id: 'wall_frame', x: 60, y: 6, w: 20, h: 30, z_index: 2, label: 'Wall Picture', default_image_url: null }],
+        frame_slots: sandbox.frameSlot
+          ? [{ id: 'wall_frame', x: sandbox.frameSlot.x, y: sandbox.frameSlot.y, w: sandbox.frameSlot.w, h: sandbox.frameSlot.h, z_index: 2, label: 'Wall Picture', default_image_url: null }]
+          : [{ id: 'wall_frame', x: 60, y: 6, w: 20, h: 32, z_index: 2, label: 'Wall Picture', default_image_url: null }],
       })
       if (insertErr) throw new Error(insertErr.message)
       setSaveOpen(false); setSaveName(''); setSaveDesc(''); setSaveSetDefault(false)
@@ -346,10 +365,32 @@ export default function PetRoomPage() {
                           className="text-xs text-gray-400 hover:text-gray-600">✕ Start over</button>
                       </div>
 
-                      {/* Preview */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={sandbox.imageUrl} alt="Preview" className="w-full rounded-xl border border-amber-200 cursor-zoom-in"
-                        onClick={() => setLightbox(sandbox.imageUrl)} />
+                      {/* Preview — room + frame overlay */}
+                      <div className="relative w-full rounded-xl overflow-hidden border border-amber-200 cursor-zoom-in"
+                        onClick={() => setLightbox(sandbox.imageUrl)}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={sandbox.imageUrl} alt="Preview" className="w-full" />
+                        {/* Frame overlay rendered with mix-blend-mode: multiply */}
+                        {sandbox.frameOverlayUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={sandbox.frameOverlayUrl}
+                            alt="Frame overlay"
+                            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                            style={{ mixBlendMode: 'multiply' }}
+                          />
+                        )}
+                      </div>
+
+                      {sandbox.frameOverlayUrl && (
+                        <div className="flex items-center gap-2 text-xs text-amber-600">
+                          <span>🖼️ Frame overlay generated</span>
+                          <button
+                            onClick={() => setLightbox(sandbox.frameOverlayUrl!)}
+                            className="underline hover:text-amber-800"
+                          >preview frame</button>
+                        </div>
+                      )}
 
                       {/* Prompt history */}
                       <details className="text-xs text-amber-600">
