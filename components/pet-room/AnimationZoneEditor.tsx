@@ -210,6 +210,7 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
       animation: newAnim,
       intensity: newIntensity,
       speed: newSpeed,
+      containOverflow: newAnim === 'float',  // auto-contain for float
     }
     onChange([...zones, newZone])
     setDrawing(false)
@@ -290,7 +291,14 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
               >
                 <div className="w-4 h-4 rounded-full shrink-0" style={{ background: color }} />
                 <select value={zone.animation}
-                  onChange={e => updateZone(zone.id, { animation: e.target.value as AnimZone['animation'] })}
+                  onChange={e => {
+                    const anim = e.target.value as AnimZone['animation']
+                    updateZone(zone.id, {
+                      animation: anim,
+                      // Float moves the image vertically — auto-enable containOverflow to avoid gaps
+                      containOverflow: anim === 'float' ? true : zone.containOverflow,
+                    })
+                  }}
                   onClick={e => e.stopPropagation()}
                   className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white">
                   {ANIM_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
