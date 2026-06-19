@@ -612,7 +612,6 @@ function AdminUploadBanner() {
         skin_type: 'cover', image_url: publicUrl,
         width: COVER_W, height: COVER_H,
         created_by: user.id, visibility: genSaveVisibility,
-        prompt: sandbox.prompt,
       })
       if (insertErr) throw new Error(insertErr.message)
       setGenSaveOpen(false); setGenSaveName(''); setGenSaveDesc('')
