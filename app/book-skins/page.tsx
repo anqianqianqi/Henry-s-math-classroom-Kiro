@@ -665,10 +665,11 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Post-process: scale the AI image (1024×1536) to 400×620 (cover face size)
-      // and save directly — no padding needed since the book cover fills edge to edge.
-      const COVER_W = 400
-      const COVER_H = 620
+      // Post-process: scale the AI image (1024×1536) to 480×700 canvas,
+      // then flood-fill the background (from all 4 corners) with transparency.
+      // This removes the dark binding / white background the AI adds outside the book.
+      const FINAL_W = 480
+      const FINAL_H = 700
       const imgEl = new Image()
       imgEl.crossOrigin = 'anonymous'
       const imgLoaded = new Promise<void>((res, rej) => {
@@ -679,11 +680,59 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       await imgLoaded
 
       const canvas = document.createElement('canvas')
-      canvas.width = COVER_W
-      canvas.height = COVER_H
+      canvas.width = FINAL_W
+      canvas.height = FINAL_H
       const ctx = canvas.getContext('2d')!
-      // Scale the AI image directly to cover dimensions — no padding
-      ctx.drawImage(imgEl, 0, 0, COVER_W, COVER_H)
+      ctx.drawImage(imgEl, 0, 0, FINAL_W, FINAL_H)
+
+      // Flood-fill background removal: sample the corner pixel color, then
+      // replace all connected pixels within a tolerance with transparency.
+      const imageData = ctx.getImageData(0, 0, FINAL_W, FINAL_H)
+      const data = imageData.data
+
+      function colorDistance(idx: number, tr: number, tg: number, tb: number): number {
+        const r = data[idx], g = data[idx + 1], b = data[idx + 2]
+        return Math.sqrt((r - tr) ** 2 + (g - tg) ** 2 + (b - tb) ** 2)
+      }
+
+      function floodFill(startX: number, startY: number, tolerance: number) {
+        const idx = (startY * FINAL_W + startX) * 4
+        const tr = data[idx], tg = data[idx + 1], tb = data[idx + 2]
+        const visited = new Uint8Array(FINAL_W * FINAL_H)
+        const queue: number[] = [startY * FINAL_W + startX]
+        visited[startY * FINAL_W + startX] = 1
+        while (queue.length > 0) {
+          const pos = queue.pop()!
+          const x = pos % FINAL_W
+          const y = Math.floor(pos / FINAL_W)
+          const i = pos * 4
+          if (data[i + 3] === 0) continue  // already transparent
+          if (colorDistance(i, tr, tg, tb) <= tolerance) {
+            data[i + 3] = 0  // make transparent
+            const neighbors = [
+              x > 0 ? pos - 1 : -1,
+              x < FINAL_W - 1 ? pos + 1 : -1,
+              y > 0 ? pos - FINAL_W : -1,
+              y < FINAL_H - 1 ? pos + FINAL_W : -1,
+            ]
+            for (const n of neighbors) {
+              if (n >= 0 && !visited[n]) {
+                visited[n] = 1
+                queue.push(n)
+              }
+            }
+          }
+        }
+      }
+
+      // Fill from all 4 corners with tolerance 40 (handles dark and light backgrounds)
+      const TOLERANCE = 40
+      floodFill(0, 0, TOLERANCE)
+      floodFill(FINAL_W - 1, 0, TOLERANCE)
+      floodFill(0, FINAL_H - 1, TOLERANCE)
+      floodFill(FINAL_W - 1, FINAL_H - 1, TOLERANCE)
+
+      ctx.putImageData(imageData, 0, 0)
 
       const paddedBlob = await new Promise<Blob>((res, rej) =>
         canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png')
@@ -696,7 +745,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       const { error: insertErr } = await supabase.from('book_skins').insert({
         name: genSaveName.trim(), description: genSaveDesc.trim() || null,
         skin_type: 'cover', image_url: publicUrl,
-        width: COVER_W, height: COVER_H,
+        width: FINAL_W, height: FINAL_H,
         created_by: user.id, visibility: genSaveVisibility,
         cover_layout: genCoverLayout,
       })
