@@ -18,22 +18,19 @@ export const dynamic = 'force-dynamic'
 const COVER_CONTEXT = `
 STRICT RULES for this book cover image — follow exactly:
 
-VIEWPOINT: The book cover is viewed PERFECTLY FLAT and STRAIGHT-ON, facing directly toward the camera with NO angle, NO perspective distortion, and NO visible spine. The cover fills the entire image edge-to-edge. You are looking at the front face of the book head-on, as if the book were lying flat on a scanner. Absolutely no 3/4 angle.
+VIEWPOINT: This is the FRONT FACE of a hardcover book, viewed perfectly flat and straight-on — NO tilt, NO 3D angle, NO visible spine. Think of it as the cover art you would see if you placed the closed book face-up on a flat surface and looked straight down at it. The image fills edge-to-edge.
 
-BACKGROUND: The background outside the book cover boundary must be FULLY TRANSPARENT. The book cover edges go all the way to the image borders — the entire image IS the book cover face, with no margins, no shadow, no background color.
+COVER MATERIAL: The background of the cover should be rich textured hardcover material — dark leather, cloth binding, or premium fabric texture. This gives it the feel of an actual book cover. Deep navy, forest green, midnight purple, or dark burgundy work well.
 
-COVER MATERIAL: Rich textured hardcover material (leather, cloth, or premium binding) covering the entire image. The cover fills edge-to-edge.
+STYLE: The decorative elements (themed objects, creatures, plants, etc.) should look like three-dimensional miniature models or highly detailed illustrations physically placed on the book cover — with realistic volume, cast shadows onto the cover surface, specular highlights, and material depth. Full vibrant natural colors: a globe is blue-green with atmosphere; a rocket is silver-white; fire is orange-yellow; gems sparkle in their natural colors. Rich and vivid, not monochrome gold.
 
-CENTER ZONE: The middle area of the cover (roughly 30–70% width, 25–75% height) must be LEFT COMPLETELY CLEAR — smooth background texture only, no illustrations overlapping this zone. This space will show the book title and "Open the Book" button as overlays.
+BORDER DECORATIONS: Fill ALL FOUR EDGES and CORNERS with richly illustrated, layered themed elements. Many overlapping items per corner, atmospheric effects (nebula, mist, sparkle, glowing light, floating particles), lush and dense. Elements should feel like they sit on top of and emerge from the textured cover surface.
 
-CORNER DECORATIONS: Place rich, THREE-DIMENSIONAL sculptural objects ONLY in the four corners of the cover. These should look physically real — like miniature bronze, gold, or pewter figurines bolted onto the cover surface, with proper shadows cast onto the cover, depth, and material texture. They should appear raised above the cover surface. NOT flat 2D artwork.
+THIN GOLD FRAME: An ornate thin gold decorative line frame runs around the entire perimeter of the cover. This is a classic book cover design element.
 
-BORDER: Thin ornate gold or metallic decorative border/frame around the entire edge of the cover.
+CENTER ZONE: Relatively clear area in the center (roughly middle 35–65% width, 20–70% height) for book title text overlay. Border art may softly bleed in but center stays mostly clear.
 
-LIGHTING: Soft directional lighting from above to give the 3D corner objects depth and shadow while keeping the cover face flat and front-facing.
-
-NO TEXT, words, or typography anywhere on the image.
-NO BACKGROUND — fully transparent outside the cover boundaries.
+NO TEXT, letters, words, or typography anywhere on the image.
 `.trim()
 
 async function callGenerations(apiKey: string, prompt: string): Promise<string> {
