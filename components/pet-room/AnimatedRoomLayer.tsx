@@ -153,19 +153,15 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
           // rotates or translates, nothing can paint outside the polygon.
 
           // Static fill layer (color or image copy) — always the full unmoving polygon
+          // Fill color: use a solid-color div clipped to the same polygon — no SVG coordinate
+          // mapping issues, just a hard-clipped box with background color.
+          // containOverflow fallback: static image copy clipped to polygon.
           const staticFill = zone.fillColor ? (
-            <svg
+            <div
               key={`${clipId}_fill`}
-              className="absolute inset-0 w-full h-full"
-              style={{ overflow: 'visible' }}
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-            >
-              <polygon
-                points={zone.polygon.map(p => `${p.x},${p.y}`).join(' ')}
-                fill={zone.fillColor}
-              />
-            </svg>
+              className="absolute inset-0"
+              style={{ clipPath: `url(#${clipId})`, backgroundColor: zone.fillColor }}
+            />
           ) : zone.containOverflow ? (
             // Static image copy fills gaps left by the animated layer
             // eslint-disable-next-line @next/next/no-img-element
