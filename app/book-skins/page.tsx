@@ -547,6 +547,81 @@ function AdminUploadBanner() {
   const [sellPrice, setSellPrice] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // ── AI generation tab state ────────────────────────────────────────────────
+  const [adminTab, setAdminTab] = useState<'upload' | 'generate'>('upload')
+  // sandbox = { imageUrl, prompt, iteration }
+  const [genPrompt, setGenPrompt] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
+  const [sandbox, setSandbox] = useState<{ imageUrl: string; prompt: string; iteration: number } | null>(null)
+  const [refinePrompt, setRefinePrompt] = useState('')
+  const [genSaveOpen, setGenSaveOpen] = useState(false)
+  const [genSaveName, setGenSaveName] = useState('')
+  const [genSaveDesc, setGenSaveDesc] = useState('')
+  const [genSaveVisibility, setGenSaveVisibility] = useState<'admin_only' | 'public'>('admin_only')
+  const [genSaving, setGenSaving] = useState(false)
+  const [genSaveError, setGenSaveError] = useState<string | null>(null)
+
+  async function handleGenerate() {
+    if (!genPrompt.trim()) { setGenError('Enter a description.'); return }
+    setGenError(null); setGenerating(true)
+    try {
+      const res = await fetch('/api/preview-book-skin', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: genPrompt.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
+      setSandbox({ imageUrl: data.image_url, prompt: data.prompt, iteration: 1 })
+      setRefinePrompt('')
+    } catch (err: any) { setGenError(err.message) }
+    finally { setGenerating(false) }
+  }
+
+  async function handleRefine() {
+    if (!sandbox || !refinePrompt.trim()) return
+    setGenError(null); setGenerating(true)
+    try {
+      const res = await fetch('/api/preview-book-skin', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: sandbox.prompt, sourceImageUrl: sandbox.imageUrl, changePrompt: refinePrompt.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
+      setSandbox({ imageUrl: data.image_url, prompt: data.prompt, iteration: sandbox.iteration + 1 })
+      setRefinePrompt('')
+    } catch (err: any) { setGenError(err.message) }
+    finally { setGenerating(false) }
+  }
+
+  async function handleGenSave() {
+    if (!sandbox || !genSaveName.trim()) { setGenSaveError('Enter a name.'); return }
+    setGenSaveError(null); setGenSaving(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+      // Fetch the preview image and re-upload to book-skins bucket under permanent path
+      const imgRes = await fetch(sandbox.imageUrl)
+      const imgBlob = await imgRes.blob()
+      const fileName = `cover/${user.id}/${Date.now()}.png`
+      const { error: uploadErr } = await supabase.storage.from('book-skins').upload(fileName, imgBlob, { contentType: 'image/png', upsert: false })
+      if (uploadErr) throw new Error('Upload failed: ' + uploadErr.message)
+      const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(fileName)
+      const { error: insertErr } = await supabase.from('book_skins').insert({
+        name: genSaveName.trim(), description: genSaveDesc.trim() || null,
+        skin_type: 'cover', image_url: publicUrl,
+        width: COVER_W, height: COVER_H,
+        created_by: user.id, visibility: genSaveVisibility,
+        prompt: sandbox.prompt,
+      })
+      if (insertErr) throw new Error(insertErr.message)
+      setGenSaveOpen(false); setGenSaveName(''); setGenSaveDesc('')
+      setSandbox(null); setGenPrompt(''); setRefinePrompt('')
+      setUploadSuccess('✅ Book cover saved!')
+    } catch (err: any) { setGenSaveError(err.message) }
+    finally { setGenSaving(false) }
+  }
+
   useEffect(() => {
     async function check() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -642,8 +717,8 @@ function AdminUploadBanner() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">🔧</span>
             <div>
-              <div className="font-bold text-amber-800 text-sm">Admin: Upload New Book Skin</div>
-              <div className="text-xs text-amber-600">Set visibility, sell in shop</div>
+              <div className="font-bold text-amber-800 text-sm">Admin: New Book Skin</div>
+              <div className="text-xs text-amber-600">Upload image or Generate with AI</div>
             </div>
           </div>
           <span className="text-amber-600 font-bold text-lg">{open ? '▲' : '▼'}</span>
@@ -651,10 +726,29 @@ function AdminUploadBanner() {
 
         {open && (
           <div className="mt-4 space-y-4">
-            {uploadError && (
+            {/* Tab switcher */}
+            <div className="flex gap-2">
+              <button onClick={() => setAdminTab('upload')}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border-2 transition-colors ${adminTab === 'upload' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50'}`}>
+                ⬆️ Upload Image
+              </button>
+              <button onClick={() => setAdminTab('generate')}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border-2 transition-colors ${adminTab === 'generate' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50'}`}>
+                ✨ Generate with AI
+              </button>
+            </div>
+
+            {/* Shared banners */}
+            {uploadError && adminTab === 'upload' && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex justify-between">
                 <span>{uploadError}</span>
                 <button onClick={() => setUploadError(null)} className="font-bold ml-3">✕</button>
+              </div>
+            )}
+            {genError && adminTab === 'generate' && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex justify-between">
+                <span>{genError}</span>
+                <button onClick={() => setGenError(null)} className="font-bold ml-3">✕</button>
               </div>
             )}
             {uploadSuccess && (
@@ -664,6 +758,8 @@ function AdminUploadBanner() {
               </div>
             )}
 
+            {/* ── Upload tab ─────────────────────────────────────────────────── */}
+            {adminTab === 'upload' && (
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-3">
                 {/* Type */}
@@ -757,6 +853,164 @@ function AdminUploadBanner() {
                 </div>
               </div>
             </div>
+            )} {/* end adminTab === 'upload' */}
+
+            {/* ── Generate with AI tab ────────────────────────────────────── */}
+            {adminTab === 'generate' && (
+              <div className="space-y-4">
+                <p className="text-xs text-amber-700">
+                  💡 AI will generate a portrait book cover with clear center space for the title and decorative artwork in the corners.
+                </p>
+
+                {!sandbox ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-amber-800 mb-1">Describe the cover theme *</label>
+                      <textarea value={genPrompt} onChange={e => setGenPrompt(e.target.value)}
+                        placeholder="e.g. space exploration with planets, rockets and stars; deep navy background with gold accents"
+                        rows={3} className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl text-sm focus:border-amber-400 bg-white resize-none" />
+                    </div>
+                    {/* Quick examples + randomize */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-amber-600 font-medium">Examples:</span>
+                        <button
+                          onClick={() => {
+                            const themes = [
+                              'enchanted forest with glowing mushrooms and fireflies',
+                              'deep ocean with bioluminescent creatures and treasure',
+                              'ancient Egyptian mythology with hieroglyphs and golden artifacts',
+                              'steampunk clockwork city with gears and airships',
+                              'cherry blossom garden with koi fish and lanterns',
+                              'arctic tundra with aurora borealis and polar bears',
+                              'magical library with floating books and starlight',
+                              'volcanic island with lava dragons and gemstone caves',
+                              'pirate adventure with maps, compasses, and treasure chests',
+                              'medieval kingdom with castles, knights, and dragons',
+                              'underwater city of atlantis with merfolk and coral',
+                              'haunted mansion with ghosts, candles, and old portraits',
+                            ]
+                            const accents = [
+                              'gold and deep blue color palette',
+                              'rich jewel tones — emerald, sapphire and ruby',
+                              'warm sepia and antique parchment tones',
+                              'midnight purple and silver starlight',
+                              'forest green and copper accents',
+                              'crimson red and black with gold trim',
+                            ]
+                            const corners = [
+                              'ornate illustrated corner decorations',
+                              'mythical creature motifs in the corners',
+                              'botanical flourishes and vines in corners',
+                              'geometric mandala patterns in each corner',
+                              'celestial symbols — stars, moons, suns — in corners',
+                            ]
+                            const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)]
+                            setGenPrompt(`${pick(themes)}, ${pick(accents)}, ${pick(corners)}`)
+                          }}
+                          className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors border border-amber-600"
+                        >
+                          🎲 Randomize
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          'Space exploration with planets, rockets and gold star constellations; deep navy blue',
+                          'Enchanted forest with glowing mushrooms, fireflies, jewel tones',
+                          'Ancient Egyptian mythology, hieroglyphs, golden artifacts on black',
+                          'Pirate adventure with treasure maps, compass rose, antique parchment tones',
+                          'Cherry blossom garden with koi fish and paper lanterns, soft pink and gold',
+                          'Magical library with floating books and starlight, midnight purple',
+                        ].map(ex => (
+                          <button key={ex} onClick={() => setGenPrompt(ex)}
+                            className="text-[11px] px-2.5 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium transition-colors text-left leading-snug border border-amber-200">
+                            {ex.length > 48 ? ex.slice(0, 48) + '…' : ex}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <button onClick={handleGenerate} disabled={generating || !genPrompt.trim()}
+                      className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-semibold rounded-xl text-sm transition-colors">
+                      {generating ? '⏳ Generating… (~15s)' : '✨ Generate Cover'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-amber-700">Iteration #{sandbox.iteration}</span>
+                      <button onClick={() => { setSandbox(null); setGenPrompt(''); setRefinePrompt('') }}
+                        className="text-xs text-gray-400 hover:text-gray-600">✕ Start over</button>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="flex justify-center">
+                      <div className="rounded-xl overflow-hidden border-2 border-amber-200 shadow-lg" style={{ width: 160, height: 248 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={sandbox.imageUrl} alt="Generated cover" className="w-full h-full object-cover" />
+                      </div>
+                    </div>
+
+                    {/* Refine */}
+                    <div>
+                      <label className="block text-xs font-semibold text-amber-800 mb-1">What to change?</label>
+                      <div className="flex gap-2">
+                        <input type="text" value={refinePrompt} onChange={e => setRefinePrompt(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && !generating && refinePrompt.trim() && handleRefine()}
+                          placeholder="e.g. make the background darker, add more stars"
+                          className="flex-1 px-3 py-2 border-2 border-amber-200 rounded-xl text-sm focus:border-amber-400 bg-white" />
+                        <button onClick={handleRefine} disabled={generating || !refinePrompt.trim()}
+                          className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-semibold rounded-xl text-sm whitespace-nowrap">
+                          {generating ? '⏳' : '✨ Refine'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Save */}
+                    {!genSaveOpen ? (
+                      <button onClick={() => { setGenSaveName(''); setGenSaveDesc(''); setGenSaveError(null); setGenSaveOpen(true) }}
+                        className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-sm">
+                        💾 Save to Collection
+                      </button>
+                    ) : (
+                      <div className="space-y-3 border border-amber-200 rounded-xl p-3 bg-white">
+                        {genSaveError && <p className="text-xs text-red-600">{genSaveError}</p>}
+                        <div>
+                          <label className="block text-xs font-semibold text-amber-800 mb-1">Name *</label>
+                          <input type="text" value={genSaveName} onChange={e => setGenSaveName(e.target.value)}
+                            placeholder='e.g. "Space Explorer"'
+                            className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl text-sm bg-white" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-amber-800 mb-1">Description</label>
+                          <input type="text" value={genSaveDesc} onChange={e => setGenSaveDesc(e.target.value)}
+                            placeholder="Optional"
+                            className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl text-sm bg-white" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-amber-800 mb-1">Visibility</label>
+                          <div className="flex gap-2">
+                            {(['admin_only', 'public'] as const).map(v => (
+                              <button key={v} onClick={() => setGenSaveVisibility(v)}
+                                className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-semibold border-2 transition-colors ${genSaveVisibility === v ? (v === 'public' ? 'bg-green-600 text-white border-green-600' : 'bg-gray-700 text-white border-gray-700') : 'bg-white text-gray-600 border-gray-200'}`}>
+                                {v === 'public' ? '👥 Public' : '🔒 Admin only'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => setGenSaveOpen(false)} className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm">Cancel</button>
+                          <button onClick={handleGenSave} disabled={genSaving || !genSaveName.trim()}
+                            className="flex-1 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-bold rounded-xl text-sm">
+                            {genSaving ? '⏳ Saving…' : '💾 Save'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )} {/* end adminTab === 'generate' */}
+
           </div>
         )}
       </Card.Body>
