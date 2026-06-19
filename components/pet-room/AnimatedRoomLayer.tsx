@@ -32,10 +32,8 @@ function getKeyframes(id: string, zone: AnimZone): string {
     case 'sway':
       return `
         @keyframes anim_${id} {
-          0%   { transform: rotate(0deg); }
-          25%  { transform: rotate(${s * 3}deg); }
-          75%  { transform: rotate(${-s * 3}deg); }
-          100% { transform: rotate(0deg); }
+          0%   { transform: rotate(${-s * 3}deg); }
+          100% { transform: rotate(${s * 3}deg); }
         }
       `
     case 'float':
@@ -78,7 +76,9 @@ function getAnimStyle(id: string, zone: AnimZone): React.CSSProperties {
     animationDuration: `${duration}s`,
     animationTimingFunction: zone.animation === 'flicker' ? 'steps(1)' : 'ease-in-out',
     animationIterationCount: 'infinite',
-    animationDirection: zone.animation === 'shimmer' || zone.animation === 'float' ? 'alternate' : 'normal',
+    // alternate = plays forward then backward → perfectly smooth loop with no stutter
+    // sway and float both benefit from alternate direction
+    animationDirection: (zone.animation === 'shimmer' || zone.animation === 'float' || zone.animation === 'sway') ? 'alternate' : 'normal',
     transformOrigin: `${pxv}% ${pyv}%`,
     willChange: 'transform, opacity',
   }
