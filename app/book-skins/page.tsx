@@ -665,14 +665,10 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Post-process: scale the AI image (1024×1536) to 400×620 (COVER_W × COVER_H),
-      // then place centered on a 480×700 transparent canvas with 40px padding on each side.
-      // This matches exactly how the Default/Science cover was created.
+      // Post-process: scale the AI image (1024×1536) to 400×620 (cover face size)
+      // and save directly — no padding needed since the book cover fills edge to edge.
       const COVER_W = 400
       const COVER_H = 620
-      const PADDING = 40
-      const FINAL_W = COVER_W + PADDING * 2  // 480
-      const FINAL_H = COVER_H + PADDING * 2  // 700
       const imgEl = new Image()
       imgEl.crossOrigin = 'anonymous'
       const imgLoaded = new Promise<void>((res, rej) => {
@@ -683,11 +679,11 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       await imgLoaded
 
       const canvas = document.createElement('canvas')
-      canvas.width = FINAL_W
-      canvas.height = FINAL_H
+      canvas.width = COVER_W
+      canvas.height = COVER_H
       const ctx = canvas.getContext('2d')!
-      // Canvas is transparent — draw the AI image scaled to cover face, inset by padding
-      ctx.drawImage(imgEl, PADDING, PADDING, COVER_W, COVER_H)
+      // Scale the AI image directly to cover dimensions — no padding
+      ctx.drawImage(imgEl, 0, 0, COVER_W, COVER_H)
 
       const paddedBlob = await new Promise<Blob>((res, rej) =>
         canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png')
@@ -700,7 +696,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       const { error: insertErr } = await supabase.from('book_skins').insert({
         name: genSaveName.trim(), description: genSaveDesc.trim() || null,
         skin_type: 'cover', image_url: publicUrl,
-        width: FINAL_W, height: FINAL_H,
+        width: COVER_W, height: COVER_H,
         created_by: user.id, visibility: genSaveVisibility,
         cover_layout: genCoverLayout,
       })
