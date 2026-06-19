@@ -42,7 +42,6 @@ async function callGenerations(apiKey: string, prompt: string): Promise<string> 
       size: '1024x1536',
       output_format: 'png',
       quality: 'high',
-      output_compression: 0,
     }),
   })
   if (!res.ok) throw new Error(`Generation failed (${res.status}): ${(await res.text()).slice(0, 200)}`)
