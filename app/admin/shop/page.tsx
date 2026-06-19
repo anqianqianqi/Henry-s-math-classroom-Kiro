@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { HomeButton } from '@/components/ui/HomeButton'
+import dynamicImport from 'next/dynamic'
 import {
   validateShopItemForm,
   buildShopItemInsert,
@@ -19,6 +20,8 @@ import type {
   StudentBalance,
   BlindboxSet,
 } from '@/lib/types/shop'
+
+const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/AnimatedRoomLayer'), { ssr: false })
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Teacher Admin Shop Page
@@ -79,6 +82,17 @@ export default function AdminShopPage() {
 
   const [physicalBlindboxInventory, setPhysicalBlindboxInventory] = useState<Record<string, { total: number; remaining: number }>>({})
 
+  // Room backgrounds + book skins cluster (same as user shop)
+  interface RoomBg { id: string; name: string; image_url: string; animation_zones: any[]; shop_item_id: string }
+  interface BookSkin { id: string; name: string; image_url: string; shop_item_id: string }
+  const [roomBgs, setRoomBgs] = useState<RoomBg[]>([])
+  const [bookSkins, setBookSkins] = useState<BookSkin[]>([])
+  const [showRoomBrowse, setShowRoomBrowse] = useState(false)
+  const [showBookBrowse, setShowBookBrowse] = useState(false)
+  // Preview states for clicking individual images
+  const [previewRoom, setPreviewRoom] = useState<RoomBg | null>(null)
+  const [previewCover, setPreviewCover] = useState<BookSkin | null>(null))
+
   const loadData = useCallback(async () => {
     try {
     // Fetch all shop items (active + inactive) — hide pet categories on main
@@ -93,6 +107,27 @@ export default function AdminShopPage() {
       return
     }
     setItems(shopItems ?? [])
+
+    // Fetch room backgrounds and book skins with shop_item_id for cluster display
+    try {
+      const shopItemMap: Record<string, any> = {}
+      for (const si of shopItems ?? []) shopItemMap[si.id] = si
+
+      const { data: bgRows } = await supabase
+        .from('pet_room_backgrounds')
+        .select('id, name, image_url, animation_zones, shop_item_id')
+        .eq('is_active', true)
+        .not('shop_item_id', 'is', null)
+      if (bgRows) setRoomBgs(bgRows.filter((bg: any) => shopItemMap[bg.shop_item_id]).map((bg: any) => ({ ...bg, animation_zones: bg.animation_zones ?? [] })))
+
+      const { data: skinRows } = await supabase
+        .from('book_skins')
+        .select('id, name, image_url, shop_item_id')
+        .eq('is_active', true)
+        .eq('skin_type', 'cover')
+        .not('shop_item_id', 'is', null)
+      if (skinRows) setBookSkins(skinRows.filter((s: any) => shopItemMap[s.shop_item_id]))
+    } catch (_) {}
 
     // Fetch inventory for physical_blindbox items (set quantities)
     const physicalBoxIds = (shopItems ?? [])
@@ -683,6 +718,68 @@ export default function AdminShopPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
+      {/* ── Preview Modals ── */}
+      {previewRoom && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4" onClick={() => setPreviewRoom(null)}>
+          <div className="relative w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewRoom.image_url} alt={previewRoom.name} className="w-full block" />
+            {previewRoom.animation_zones?.length > 0 && <AnimatedRoomLayer imageUrl={previewRoom.image_url} zones={previewRoom.animation_zones} />}
+            <button onClick={() => setPreviewRoom(null)} className="absolute top-3 right-3 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full">✕</button>
+            <div className="absolute bottom-3 left-3 bg-black/50 text-white px-3 py-1.5 rounded-xl text-sm font-semibold">{previewRoom.name}</div>
+          </div>
+        </div>
+      )}
+      {previewCover && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4" onClick={() => setPreviewCover(null)}>
+          <div className="relative max-h-full" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewCover.image_url} alt={previewCover.name} className="max-h-[85vh] w-auto rounded-xl shadow-2xl" />
+            <button onClick={() => setPreviewCover(null)} className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full">✕</button>
+            <div className="absolute bottom-2 left-2 bg-black/50 text-white px-3 py-1 rounded-xl text-xs font-semibold">{previewCover.name}</div>
+          </div>
+        </div>
+      )}
+      {/* ── Room Browse Modal ── */}
+      {showRoomBrowse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowRoomBrowse(false)}>
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+              <div className="font-bold text-gray-900">🏠 Room Backgrounds ({roomBgs.length})</div>
+              <button onClick={() => setShowRoomBrowse(false)} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+            </div>
+            <div className="overflow-y-auto p-4 grid grid-cols-2 gap-4">
+              {roomBgs.map(bg => (
+                <div key={bg.id} className="bg-gray-50 rounded-xl overflow-hidden border cursor-pointer" onClick={() => { setPreviewRoom(bg); setShowRoomBrowse(false) }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={bg.image_url} alt={bg.name} className="w-full aspect-video object-cover" />
+                  <div className="p-2 text-xs font-semibold text-gray-800">{bg.name}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── Book Browse Modal ── */}
+      {showBookBrowse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowBookBrowse(false)}>
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+              <div className="font-bold text-gray-900">📖 Book Covers ({bookSkins.length})</div>
+              <button onClick={() => setShowBookBrowse(false)} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+            </div>
+            <div className="overflow-y-auto p-4 grid grid-cols-3 sm:grid-cols-4 gap-3">
+              {bookSkins.map(s => (
+                <div key={s.id} className="bg-gray-50 rounded-xl overflow-hidden border cursor-pointer" onClick={() => { setPreviewCover(s); setShowBookBrowse(false) }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={s.image_url} alt={s.name} className="w-full object-cover" style={{ aspectRatio: '400/620' }} />
+                  <div className="p-1.5 text-[10px] font-semibold text-gray-800 truncate">{s.name}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-3">
           <HomeButton noSlash />
@@ -1119,7 +1216,43 @@ export default function AdminShopPage() {
             </Card>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
-              {items.map((item) => {
+              {/* ── Room Backgrounds cluster card ── */}
+              {roomBgs.length > 0 && (
+                <div className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:border-primary-200 cursor-pointer flex flex-col"
+                  onClick={() => setShowRoomBrowse(true)}>
+                  <div className="relative w-full aspect-square bg-gray-50 overflow-hidden">
+                    <div className="grid grid-cols-2 w-full h-full">
+                      {roomBgs.slice(0, 4).map((bg, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} src={bg.image_url} alt={bg.name} className="w-full h-full object-cover" />
+                      ))}
+                    </div>
+                    <div className="absolute top-1.5 left-1.5 bg-white/90 text-primary-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">🏠 {roomBgs.length}</div>
+                  </div>
+                  <div className="p-2"><p className="font-semibold text-xs">Room Backgrounds</p><p className="text-gray-400 text-[10px]">Click to browse</p></div>
+                </div>
+              )}
+              {/* ── Book Covers cluster card ── */}
+              {bookSkins.length > 0 && (
+                <div className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:border-amber-200 cursor-pointer flex flex-col"
+                  onClick={() => setShowBookBrowse(true)}>
+                  <div className="relative w-full aspect-square bg-amber-50 overflow-hidden">
+                    <div className="grid grid-cols-2 w-full h-full">
+                      {bookSkins.slice(0, 4).map((s, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} src={s.image_url} alt={s.name} className="w-full h-full object-cover" />
+                      ))}
+                    </div>
+                    <div className="absolute top-1.5 left-1.5 bg-white/90 text-amber-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">📖 {bookSkins.length}</div>
+                  </div>
+                  <div className="p-2"><p className="font-semibold text-xs">Book Covers</p><p className="text-gray-400 text-[10px]">Click to browse</p></div>
+                </div>
+              )}
+              {items.filter(item => {
+                const roomIds = new Set(roomBgs.map(bg => bg.shop_item_id))
+                const bookIds = new Set(bookSkins.map(s => s.shop_item_id))
+                return !roomIds.has(item.id) && !bookIds.has(item.id)
+              }).map((item) => {
                 const isBlindbox = item.commodity_type === 'blindbox' || item.commodity_type === 'physical_blindbox'
                 const isPhysical = item.commodity_type === 'physical'
                 const isPhysicalBlindbox = item.commodity_type === 'physical_blindbox'
