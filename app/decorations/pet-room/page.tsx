@@ -456,24 +456,68 @@ export default function PetRoomPage() {
                           rows={3} className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl text-sm focus:border-amber-400 bg-white resize-none" />
                         <p className="text-xs text-amber-500 mt-1">💡 I'll add: 1536×1024 landscape, clear lower-centre for pet, wall frame, anime/Ghibli style.</p>
 
-                        {/* Quick example prompts */}
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {[
-                            'A cozy anime bedroom at night, moonlight through the window, warm lamp, bookshelves',
-                            'A magical library with glowing lanterns and floating books',
-                            'A space-themed room with a telescope, star maps on the wall',
-                            'A Japanese-style tatami room with paper screens and cherry blossoms outside',
-                            'A sunny afternoon living room with plants, a sofa, and a round rug',
-                            'A wizard\'s study with candles, potion bottles, and stone walls',
-                          ].map(example => (
+                        {/* Quick example prompts + 🎲 Randomize */}
+                        <div className="mt-2 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-amber-600 font-medium">Examples:</span>
                             <button
-                              key={example}
-                              onClick={() => setGenPrompt(example)}
-                              className="text-[11px] px-2.5 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium transition-colors text-left leading-snug border border-amber-200"
+                              onClick={() => {
+                                const settings = [
+                                  'a cozy anime bedroom', 'a Japanese-style tatami room', 'a magical library',
+                                  'a wizard\'s study', 'a space-themed room', 'a sunny living room',
+                                  'a treehouse bedroom', 'a greenhouse studio', 'an underwater observatory',
+                                  'a cloud castle room', 'a forest cabin interior', 'a rooftop garden terrace',
+                                  'a medieval stone chamber', 'a futuristic capsule room', 'a cozy tea house',
+                                ]
+                                const times = [
+                                  'at night', 'at golden hour', 'on a rainy afternoon', 'at dawn',
+                                  'on a snowy evening', 'in soft morning light', 'at dusk', 'in warm lamplight',
+                                ]
+                                const moods = [
+                                  'warm and cozy', 'magical and dreamy', 'serene and peaceful',
+                                  'mysterious and moody', 'bright and cheerful', 'soft and pastel',
+                                  'dramatic and cinematic', 'whimsical and playful',
+                                ]
+                                const details = [
+                                  'moonlight through the window, bookshelves, warm lamp',
+                                  'glowing lanterns, floating books, soft candlelight',
+                                  'cherry blossoms visible outside, paper screens, tatami mat',
+                                  'potted plants, a cozy sofa, patterned rug',
+                                  'telescope by the window, star maps on the wall, constellation ceiling',
+                                  'potion bottles on shelves, stone walls, flickering candles',
+                                  'vines and fairy lights, wooden furniture, open window',
+                                  'waterfall view outside, crystals on the shelf, soft glow',
+                                  'neon signs, city view, modern minimalist decor',
+                                  'fireplace with crackling fire, armchair, stacked books',
+                                  'hanging plants, sunlight streaming in, linen curtains',
+                                  'antique clock, velvet curtains, dusty bookshelves',
+                                ]
+                                const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)]
+                                setGenPrompt(`${pick(settings)} ${pick(times)}, ${pick(moods)}, ${pick(details)}`)
+                              }}
+                              className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors border border-amber-600 flex items-center gap-1"
                             >
-                              {example.length > 50 ? example.slice(0, 50) + '…' : example}
+                              🎲 Randomize
                             </button>
-                          ))}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[
+                              'A cozy anime bedroom at night, moonlight through the window, warm lamp, bookshelves',
+                              'A magical library with glowing lanterns and floating books',
+                              'A space-themed room with a telescope, star maps on the wall',
+                              'A Japanese-style tatami room with paper screens and cherry blossoms outside',
+                              'A sunny afternoon living room with plants, a sofa, and a round rug',
+                              'A wizard\'s study with candles, potion bottles, and stone walls',
+                            ].map(example => (
+                              <button
+                                key={example}
+                                onClick={() => setGenPrompt(example)}
+                                className="text-[11px] px-2.5 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium transition-colors text-left leading-snug border border-amber-200"
+                              >
+                                {example.length > 50 ? example.slice(0, 50) + '…' : example}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
                       <button onClick={handleGenerate} disabled={generating || !genPrompt.trim()}
