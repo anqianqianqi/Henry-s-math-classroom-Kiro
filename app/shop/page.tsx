@@ -430,6 +430,7 @@ export default function ShopPage() {
         .from('pet_room_backgrounds')
         .select('id, name, description, image_url, animation_zones, shop_item_id')
         .eq('is_active', true)
+        .eq('visibility', 'public')
         .not('shop_item_id', 'is', null)
         .order('created_at', { ascending: false })
 
@@ -714,6 +715,73 @@ export default function ShopPage() {
           <p className="text-white/70 text-sm mt-1">points available to spend</p>
         </div>
 
+        {/* ── Room Backgrounds cluster ─────────────────────────────── */}
+        {roomBgs.length > 0 && (
+          <div className="mb-10">
+            <h2 className="text-xl font-bold text-gray-900 mb-1">🏠 Room Backgrounds</h2>
+            <p className="text-sm text-gray-500 mb-4">Click any room to preview it with animations. Purchase to unlock.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {roomBgs.map(bg => {
+                const si = bg.shopItem
+                if (!si) return null
+                const isOwned = ownedItemIds.has(si.id)
+                const canAfford = balance >= si.cost
+                const disabled = isOwned || !canAfford
+                return (
+                  <div key={bg.id} className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col">
+                    {/* Image — click to preview */}
+                    <div className="relative w-full aspect-video bg-gray-100 cursor-zoom-in overflow-hidden"
+                      onClick={() => setPreviewRoom(bg)}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={bg.image_url} alt={bg.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                        <span className="bg-black/60 text-white text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-sm">
+                          ▶ Preview
+                        </span>
+                      </div>
+                      {isOwned && (
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                          <span className="bg-green-500 text-white text-xs font-semibold px-3 py-1 rounded-full">✓ Owned</span>
+                        </div>
+                      )}
+                      {bg.animation_zones?.length > 0 && (
+                        <div className="absolute top-2 left-2 bg-black/50 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                          ✨ Animated
+                        </div>
+                      )}
+                    </div>
+                    {/* Card body */}
+                    <div className="p-3 flex flex-col flex-1">
+                      <h3 className="font-semibold text-gray-900 text-sm mb-0.5 line-clamp-1">{bg.name}</h3>
+                      {bg.description && <p className="text-gray-500 text-xs line-clamp-2 mb-2">{bg.description}</p>}
+                      <div className="mt-auto flex items-center justify-between gap-2">
+                        <span className="text-primary-600 font-bold text-base">
+                          {si.cost}<span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
+                        </span>
+                        <button
+                          disabled={disabled || redeeming === si.id}
+                          onClick={() => handleRedeem(si)}
+                          className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                            disabled || redeeming === si.id
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-primary-600 text-white hover:bg-primary-700 active:scale-95'
+                          }`}
+                        >
+                          {redeeming === si.id ? '…' : isOwned ? '✓ Owned' : !canAfford ? 'Not enough pts' : 'Buy'}
+                        </button>
+                      </div>
+                      {redeemErrors[si.id] && (
+                        <p className="text-red-500 text-xs mt-1">{redeemErrors[si.id]}</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Items Grid */}
         <h2 className="text-xl font-bold text-gray-900 mb-3">Available Rewards</h2>
 
@@ -746,7 +814,10 @@ export default function ShopPage() {
             <p className="text-sm mt-1">Check back soon!</p>
           </div>
         ) : (() => {
+          const roomBgItemIds = new Set(roomBgs.map(bg => bg.shop_item_id))
           const filteredItems = items.filter(item => {
+            // Exclude room background items — they appear in the dedicated cluster above
+            if (roomBgItemIds.has(item.id)) return false
             if (activeTab === 'all') return true
             // 'rewards' = everything (pet categories already excluded at query level)
             return true
