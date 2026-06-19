@@ -62,6 +62,117 @@ function RoomPreviewModal({ bg, onClose }: { bg: PetRoomBg; onClose: () => void 
   )
 }
 
+// ── Room Browse Modal ─────────────────────────────────────────────────────────
+// Single entry point: browse all available rooms, click image to preview animated,
+// click Buy to purchase that specific room.
+function RoomBrowseModal({
+  rooms,
+  ownedItemIds,
+  balance,
+  redeeming,
+  redeemErrors,
+  onRedeem,
+  onClose,
+}: {
+  rooms: PetRoomBg[]
+  ownedItemIds: Set<string>
+  balance: number
+  redeeming: string | null
+  redeemErrors: Record<string, string>
+  onRedeem: (item: any) => void
+  onClose: () => void
+}) {
+  const [previewBg, setPreviewBg] = useState<PetRoomBg | null>(null)
+
+  return (
+    <>
+      {/* Browse modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+            <div>
+              <div className="font-bold text-gray-900 text-lg">🏠 Room Backgrounds</div>
+              <div className="text-xs text-gray-400 mt-0.5">Click an image to preview with animations · Buy to unlock</div>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
+          </div>
+          <div className="overflow-y-auto p-4">
+            <div className="grid grid-cols-2 gap-4">
+              {rooms.map(bg => {
+                const si = bg.shopItem
+                if (!si) return null
+                const isOwned = ownedItemIds.has(si.id)
+                const canAfford = balance >= si.cost
+                return (
+                  <div key={bg.id} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100 hover:border-primary-300 transition-colors">
+                    {/* Image — click to animate preview */}
+                    <div className="relative w-full aspect-video cursor-zoom-in group overflow-hidden"
+                      onClick={() => setPreviewBg(bg)}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={bg.image_url} alt={bg.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                        <span className="bg-black/60 text-white text-xs font-semibold px-2.5 py-1 rounded-full">▶ Preview</span>
+                      </div>
+                      {isOwned && (
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                          <span className="bg-green-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">✓ Owned</span>
+                        </div>
+                      )}
+                      {bg.animation_zones?.length > 0 && (
+                        <div className="absolute top-1.5 left-1.5 bg-black/50 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">✨</div>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <p className="font-semibold text-gray-900 text-sm truncate">{bg.name}</p>
+                      {bg.description && <p className="text-gray-400 text-xs line-clamp-1 mb-2">{bg.description}</p>}
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <span className="text-primary-600 font-bold">{si.cost}<span className="text-gray-400 font-normal text-xs ml-0.5">pts</span></span>
+                        <button
+                          disabled={isOwned || !canAfford || redeeming === si.id}
+                          onClick={() => onRedeem(si)}
+                          className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                            isOwned || !canAfford || redeeming === si.id
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-primary-600 text-white hover:bg-primary-700'
+                          }`}
+                        >
+                          {redeeming === si.id ? '…' : isOwned ? '✓ Owned' : !canAfford ? 'Too costly' : 'Buy'}
+                        </button>
+                      </div>
+                      {redeemErrors[si.id] && <p className="text-red-500 text-xs mt-1">{redeemErrors[si.id]}</p>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Animated full-screen preview — on top of the browse modal */}
+      {previewBg && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4" onClick={() => setPreviewBg(null)}>
+          <div className="relative w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewBg.image_url} alt={previewBg.name} className="w-full block" draggable={false} />
+            {previewBg.animation_zones?.length > 0 && (
+              <AnimatedRoomLayer imageUrl={previewBg.image_url} zones={previewBg.animation_zones} />
+            )}
+            <button onClick={() => setPreviewBg(null)}
+              className="absolute top-3 right-3 z-10 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
+              ✕ Close preview
+            </button>
+            <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-xl text-sm font-semibold">
+              {previewBg.name}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 // ── Blind Box Reveal Modal ────────────────────────────────────────────────────
 function BlindBoxReveal({
   imageUrls,
@@ -396,7 +507,7 @@ export default function ShopPage() {
 
   // Room backgrounds cluster
   const [roomBgs, setRoomBgs] = useState<PetRoomBg[]>([])
-  const [previewRoom, setPreviewRoom] = useState<PetRoomBg | null>(null)
+  const [showRoomBrowse, setShowRoomBrowse] = useState(false)
 
   // Modals
   const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrls: string[]; itemTitle: string; isPhysical?: boolean } | null>(null)
@@ -663,8 +774,16 @@ export default function ShopPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       {/* Modals */}
-      {previewRoom && (
-        <RoomPreviewModal bg={previewRoom} onClose={() => setPreviewRoom(null)} />
+      {showRoomBrowse && roomBgs.length > 0 && (
+        <RoomBrowseModal
+          rooms={roomBgs}
+          ownedItemIds={ownedItemIds}
+          balance={balance}
+          redeeming={redeeming}
+          redeemErrors={redeemErrors}
+          onRedeem={handleRedeem}
+          onClose={() => setShowRoomBrowse(false)}
+        />
       )}
       {blindboxReveal && (
         <BlindBoxReveal
@@ -715,73 +834,6 @@ export default function ShopPage() {
           <p className="text-white/70 text-sm mt-1">points available to spend</p>
         </div>
 
-        {/* ── Room Backgrounds cluster ─────────────────────────────── */}
-        {roomBgs.length > 0 && (
-          <div className="mb-10">
-            <h2 className="text-xl font-bold text-gray-900 mb-1">🏠 Room Backgrounds</h2>
-            <p className="text-sm text-gray-500 mb-4">Click any room to preview it with animations. Purchase to unlock.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {roomBgs.map(bg => {
-                const si = bg.shopItem
-                if (!si) return null
-                const isOwned = ownedItemIds.has(si.id)
-                const canAfford = balance >= si.cost
-                const disabled = isOwned || !canAfford
-                return (
-                  <div key={bg.id} className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col">
-                    {/* Image — click to preview */}
-                    <div className="relative w-full aspect-video bg-gray-100 cursor-zoom-in overflow-hidden"
-                      onClick={() => setPreviewRoom(bg)}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={bg.image_url} alt={bg.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                        <span className="bg-black/60 text-white text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-sm">
-                          ▶ Preview
-                        </span>
-                      </div>
-                      {isOwned && (
-                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                          <span className="bg-green-500 text-white text-xs font-semibold px-3 py-1 rounded-full">✓ Owned</span>
-                        </div>
-                      )}
-                      {bg.animation_zones?.length > 0 && (
-                        <div className="absolute top-2 left-2 bg-black/50 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                          ✨ Animated
-                        </div>
-                      )}
-                    </div>
-                    {/* Card body */}
-                    <div className="p-3 flex flex-col flex-1">
-                      <h3 className="font-semibold text-gray-900 text-sm mb-0.5 line-clamp-1">{bg.name}</h3>
-                      {bg.description && <p className="text-gray-500 text-xs line-clamp-2 mb-2">{bg.description}</p>}
-                      <div className="mt-auto flex items-center justify-between gap-2">
-                        <span className="text-primary-600 font-bold text-base">
-                          {si.cost}<span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
-                        </span>
-                        <button
-                          disabled={disabled || redeeming === si.id}
-                          onClick={() => handleRedeem(si)}
-                          className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-                            disabled || redeeming === si.id
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                              : 'bg-primary-600 text-white hover:bg-primary-700 active:scale-95'
-                          }`}
-                        >
-                          {redeeming === si.id ? '…' : isOwned ? '✓ Owned' : !canAfford ? 'Not enough pts' : 'Buy'}
-                        </button>
-                      </div>
-                      {redeemErrors[si.id] && (
-                        <p className="text-red-500 text-xs mt-1">{redeemErrors[si.id]}</p>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Items Grid */}
         <h2 className="text-xl font-bold text-gray-900 mb-3">Available Rewards</h2>
 
@@ -829,6 +881,46 @@ export default function ShopPage() {
             </div>
           ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 mb-10">
+            {/* ── Room Backgrounds entry card ── */}
+            {roomBgs.length > 0 && (
+              <div
+                className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:border-primary-200 transition-all cursor-pointer flex flex-col"
+                onClick={() => setShowRoomBrowse(true)}
+              >
+                <div className="relative w-full aspect-square bg-gray-50 overflow-hidden">
+                  {/* Mosaic of first 4 room thumbnails */}
+                  <div className="grid grid-cols-2 w-full h-full">
+                    {roomBgs.slice(0, 4).map((bg, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={i} src={bg.image_url} alt={bg.name} className="w-full h-full object-cover" />
+                    ))}
+                    {roomBgs.length < 4 && Array.from({ length: 4 - roomBgs.length }).map((_, i) => (
+                      <div key={i} className="w-full h-full bg-gradient-to-br from-primary-100 to-primary-200" />
+                    ))}
+                  </div>
+                  <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-white text-sm font-bold">Browse Rooms</span>
+                    <span className="text-white/80 text-xs mt-0.5">{roomBgs.length} available</span>
+                  </div>
+                  <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-primary-700 text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm">
+                    🏠 {roomBgs.length} rooms
+                  </div>
+                </div>
+                <div className="p-3 flex flex-col flex-1">
+                  <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Room Backgrounds</h3>
+                  <p className="text-gray-500 text-xs line-clamp-2 mb-auto">Unlock a themed room for your pet. Tap to browse all styles.</p>
+                  <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
+                    <span className="text-primary-600 font-bold text-sm">
+                      from {Math.min(...roomBgs.map(bg => bg.shopItem?.cost ?? 999))}
+                      <span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
+                    </span>
+                    <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary-600 text-white group-hover:bg-primary-700 transition-colors">
+                      Browse
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
             {filteredItems.map((item) => {
               const commodityType = item.commodity_type ?? 'standard'
               const isBlindbox = commodityType === 'blindbox' || commodityType === 'physical_blindbox'
