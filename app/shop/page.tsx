@@ -40,6 +40,118 @@ interface PetRoomBg {
   shopItem?: ShopItemWithCount
 }
 
+interface BookSkinItem {
+  id: string
+  name: string
+  description: string | null
+  image_url: string
+  skin_type: 'cover' | 'page'
+  shop_item_id: string
+  shopItem?: ShopItemWithCount
+}
+
+// ── Book Cover Browse Modal ───────────────────────────────────────────────────
+function BookCoverBrowseModal({
+  skins,
+  ownedItemIds,
+  balance,
+  redeeming,
+  redeemErrors,
+  onRedeem,
+  onClose,
+}: {
+  skins: BookSkinItem[]
+  ownedItemIds: Set<string>
+  balance: number
+  redeeming: string | null
+  redeemErrors: Record<string, string>
+  onRedeem: (item: any) => void
+  onClose: () => void
+}) {
+  const [previewSkin, setPreviewSkin] = useState<BookSkinItem | null>(null)
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+            <div>
+              <div className="font-bold text-gray-900 text-lg">📖 Book Covers</div>
+              <div className="text-xs text-gray-400 mt-0.5">Click an image to zoom preview · Buy to unlock</div>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
+          </div>
+          <div className="overflow-y-auto p-4">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+              {skins.map(skin => {
+                const si = skin.shopItem
+                if (!si) return null
+                const isOwned = ownedItemIds.has(si.id)
+                const canAfford = balance >= si.cost
+                return (
+                  <div key={skin.id} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100 hover:border-amber-300 transition-colors flex flex-col">
+                    {/* Portrait image — click to zoom preview */}
+                    <div className="relative cursor-zoom-in group" style={{ aspectRatio: '400/620' }}
+                      onClick={() => setPreviewSkin(skin)}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={skin.image_url} alt={skin.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                        <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">🔍 Zoom</span>
+                      </div>
+                      {isOwned && (
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                          <span className="bg-green-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">✓ Owned</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-2 flex flex-col flex-1">
+                      <p className="font-semibold text-gray-900 text-xs truncate">{skin.name}</p>
+                      <div className="flex items-center justify-between gap-1 mt-1">
+                        <span className="text-primary-600 font-bold text-xs">{si.cost}<span className="text-gray-400 font-normal ml-0.5">pts</span></span>
+                        <button
+                          disabled={isOwned || !canAfford || redeeming === si.id}
+                          onClick={() => onRedeem(si)}
+                          className={`text-[10px] font-semibold px-2 py-1 rounded-lg transition-colors ${
+                            isOwned || !canAfford || redeeming === si.id
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-amber-600 text-white hover:bg-amber-700'
+                          }`}
+                        >
+                          {redeeming === si.id ? '…' : isOwned ? '✓' : !canAfford ? '×' : 'Buy'}
+                        </button>
+                      </div>
+                      {redeemErrors[si.id] && <p className="text-red-500 text-[10px] mt-0.5">{redeemErrors[si.id]}</p>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Fullscreen zoom preview — portrait aspect */}
+      {previewSkin && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4" onClick={() => setPreviewSkin(null)}>
+          <div className="relative max-h-full" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewSkin.image_url} alt={previewSkin.name}
+              className="max-h-[85vh] w-auto rounded-xl shadow-2xl" />
+            <button onClick={() => setPreviewSkin(null)}
+              className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
+              ✕
+            </button>
+            <div className="absolute bottom-2 left-2 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-xl text-xs font-semibold">
+              {previewSkin.name} — {previewSkin.shopItem?.cost} pts
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 // ── Animated Room Preview Modal ───────────────────────────────────────────────
 function RoomPreviewModal({ bg, onClose }: { bg: PetRoomBg; onClose: () => void }) {
   return (
@@ -509,6 +621,10 @@ export default function ShopPage() {
   const [roomBgs, setRoomBgs] = useState<PetRoomBg[]>([])
   const [showRoomBrowse, setShowRoomBrowse] = useState(false)
 
+  // Book covers cluster
+  const [bookSkins, setBookSkins] = useState<BookSkinItem[]>([])
+  const [showBookBrowse, setShowBookBrowse] = useState(false)
+
   // Modals
   const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrls: string[]; itemTitle: string; isPhysical?: boolean } | null>(null)
   const [blindboxView, setBlindboxView] = useState<{ imageUrls: string[]; itemTitle: string; isPhysical?: boolean } | null>(null)
@@ -552,6 +668,27 @@ export default function ShopPage() {
           .filter(bg => shopItemMap[bg.shop_item_id!])
           .map(bg => ({ ...bg, animation_zones: bg.animation_zones ?? [], shopItem: shopItemMap[bg.shop_item_id!] }))
         setRoomBgs(bgs)
+      }
+    } catch (_) {}
+
+    // Fetch book skins available in the shop
+    try {
+      const { data: skinRows } = await supabase
+        .from('book_skins')
+        .select('id, name, description, image_url, skin_type, shop_item_id')
+        .eq('is_active', true)
+        .eq('visibility', 'public')
+        .eq('skin_type', 'cover')
+        .not('shop_item_id', 'is', null)
+        .order('created_at', { ascending: false })
+
+      if (skinRows && shopItems) {
+        const shopItemMap: Record<string, any> = {}
+        for (const si of shopItems) shopItemMap[si.id] = si
+        const skins: BookSkinItem[] = skinRows
+          .filter((s: any) => shopItemMap[s.shop_item_id!])
+          .map((s: any) => ({ ...s, shopItem: shopItemMap[s.shop_item_id!] }))
+        setBookSkins(skins)
       }
     } catch (_) {}
 
@@ -785,6 +922,17 @@ export default function ShopPage() {
           onClose={() => setShowRoomBrowse(false)}
         />
       )}
+      {showBookBrowse && bookSkins.length > 0 && (
+        <BookCoverBrowseModal
+          skins={bookSkins}
+          ownedItemIds={ownedItemIds}
+          balance={balance}
+          redeeming={redeeming}
+          redeemErrors={redeemErrors}
+          onRedeem={handleRedeem}
+          onClose={() => setShowBookBrowse(false)}
+        />
+      )}
       {blindboxReveal && (
         <BlindBoxReveal
           imageUrls={blindboxReveal.imageUrls}
@@ -867,9 +1015,11 @@ export default function ShopPage() {
           </div>
         ) : (() => {
           const roomBgItemIds = new Set(roomBgs.map(bg => bg.shop_item_id))
+          const bookSkinItemIds = new Set(bookSkins.map(s => s.shop_item_id))
           const filteredItems = items.filter(item => {
-            // Exclude room background items — they appear in the dedicated cluster above
+            // Exclude room background and book skin items — they appear in dedicated cluster cards
             if (roomBgItemIds.has(item.id)) return false
+            if (bookSkinItemIds.has(item.id)) return false
             if (activeTab === 'all') return true
             // 'rewards' = everything (pet categories already excluded at query level)
             return true
@@ -915,6 +1065,46 @@ export default function ShopPage() {
                       <span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
                     </span>
                     <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary-600 text-white group-hover:bg-primary-700 transition-colors">
+                      Browse
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* ── Book Covers entry card ── */}
+            {bookSkins.length > 0 && (
+              <div
+                className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:border-amber-200 transition-all cursor-pointer flex flex-col"
+                onClick={() => setShowBookBrowse(true)}
+              >
+                <div className="relative w-full aspect-square bg-amber-50 overflow-hidden">
+                  {/* Mosaic of first 4 book cover thumbnails (portrait ratio scaled to fit) */}
+                  <div className="grid grid-cols-2 w-full h-full">
+                    {bookSkins.slice(0, 4).map((s, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={i} src={s.image_url} alt={s.name} className="w-full h-full object-cover" />
+                    ))}
+                    {bookSkins.length < 4 && Array.from({ length: 4 - bookSkins.length }).map((_, i) => (
+                      <div key={i} className="w-full h-full bg-gradient-to-br from-amber-100 to-amber-200" />
+                    ))}
+                  </div>
+                  <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-white text-sm font-bold">Browse Covers</span>
+                    <span className="text-white/80 text-xs mt-0.5">{bookSkins.length} available</span>
+                  </div>
+                  <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm">
+                    📖 {bookSkins.length} covers
+                  </div>
+                </div>
+                <div className="p-3 flex flex-col flex-1">
+                  <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Book Covers</h3>
+                  <p className="text-gray-500 text-xs line-clamp-2 mb-auto">Personalise your challenge book cover. Tap to browse all designs.</p>
+                  <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
+                    <span className="text-amber-600 font-bold text-sm">
+                      from {Math.min(...bookSkins.map(s => s.shopItem?.cost ?? 999))}
+                      <span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
+                    </span>
+                    <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-600 text-white group-hover:bg-amber-700 transition-colors">
                       Browse
                     </span>
                   </div>
