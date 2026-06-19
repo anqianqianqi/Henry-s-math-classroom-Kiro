@@ -24,7 +24,7 @@ LAYOUT: The book cover face is a flat, front-facing rectangle that occupies the 
 
 BOOK COVER (full image): Flat, straight-on, no perspective, no tilt, no visible spine. Portrait orientation (taller than wide). The surface has thematic texture richer near edges and fading to plain smooth in the center. An ornate thin gold border line frames the perimeter.
 
-CORNER OBJECTS: Large, richly detailed 3D objects sit at each of the four corners. They are large enough that they visually "break" the gold border frame edge — appearing to sit on top of and slightly overflow the book's surface. They have full natural colors, realistic volume, cast shadows on the cover surface.
+CORNER OBJECTS: Each of the four corners has a CLUSTERED MINI-SCENE — a group of 2-4 closely arranged 3D objects that form a small vignette. The main focal object is surrounded by smaller supporting props that give it context and make it feel grounded and real (e.g. a volcano with lava rocks and ash clouds around it; a rocket with launch smoke, fuel canisters, and a launch pad base; a globe with stacked books and a compass beside it; a crystal cluster with smaller gem shards and glowing dust scattered around). The cluster fills the corner area richly. Objects are large, detailed, with realistic volume and full natural colors. They cast shadows on the cover surface and visually break the gold border frame edge.
 
 CENTER ZONE: The inner area (roughly middle 30–60% width, 20–65% height) stays plain and relatively undecorated for text overlay.
 

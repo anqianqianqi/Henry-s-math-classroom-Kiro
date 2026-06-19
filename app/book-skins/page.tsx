@@ -897,18 +897,18 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                               'cherry blossom garden with soft falling petals and light mist cover texture',
                             ]
                             const gadgets = [
-                              'corner gadgets: blue-green Earth globe, silver-white rocket with orange flame, brass telescope, grey Moon sphere',
-                              'corner gadgets: red apple, green potion bottle, blue globe on stand, purple potion flask',
-                              'corner gadgets: orange tabby cat, green emerald gem cluster, brown compass, red ruby crystal',
-                              'corner gadgets: golden sunflower, blue butterfly, brown acorn, green four-leaf clover',
-                              'corner gadgets: silver microscope, green seedling in pot, blue beaker, orange bunsen flame',
-                              'corner gadgets: white snowflake crystal, blue penguin, grey wolf, silver icicle',
-                              'corner gadgets: yellow lightning bolt, blue storm cloud, silver stopwatch, green circuit board',
-                              'corner gadgets: red volcano, orange lava gem, brown fossil skull, grey rock crystal',
-                              'corner gadgets: pink cherry blossom branch, orange koi fish, jade tea cup, cream paper fan',
-                              'corner gadgets: purple wizard hat, orange salamander, blue crystal wand, green cauldron',
-                              'corner gadgets: grey chess knight, red cardinal bird, brown hourglass, blue inkwell with quill',
-                              'corner gadgets: silver robot head, blue circuit chip, green LED display, orange gear cog',
+                              'corner clusters: [globe on stand + stacked books + compass] [rocket + smoke cloud + fuel canisters] [telescope + star chart + magnifying glass] [moon sphere + meteor + orbit ring]',
+                              'corner clusters: [red apple + leaf branch + honey jar] [green potion + cork + herb bundle] [compass + aged map roll + wax seal] [orange salamander + mushrooms + dewdrops]',
+                              'corner clusters: [tabby cat + yarn ball + small books] [emerald gem shard + crystals + glowing dust] [lantern lit + candle stub + wax drips] [acorn + fallen leaves + tiny snail]',
+                              'corner clusters: [sunflower + bee + pollen dust] [blue butterfly + flower bud + dewdrops] [ladybug on oak leaf + acorn cap + berries] [four-leaf clover + dewdrops + beetle]',
+                              'corner clusters: [silver microscope + glass slide + petri dish] [seedling in terracotta pot + soil + trowel] [beaker with bubbling liquid + dropper + vials] [bunsen burner + wire gauze + test tube rack]',
+                              'corner clusters: [snowflake crystal + icicle shards + frost ferns] [penguin + ice block + frozen fish] [wolf paw print + pine needles + snow mound] [aurora crystal + ice gems + frozen droplets]',
+                              'corner clusters: [lightning bolt + dark storm cloud + rain drops] [cloud with crackle + weather vane + barometer] [robot head + gear cogs + circuit fragments] [LED display + fiber optics + data chips]',
+                              'corner clusters: [volcano erupting + lava rocks + ash cloud] [lava gem + ember stones + glowing cracks] [fossil skull + excavation brush + sandy soil] [obsidian crystal + smaller shards + igneous rock]',
+                              'corner clusters: [cherry blossom branch + fallen petals + mist] [koi fish in water + lily pad + water droplets] [jade tea cup + steam + bamboo sprig] [paper fan + silk ribbon + incense stick]',
+                              'corner clusters: [wizard hat + sparkle stars + spell smoke] [salamander + glowing mushrooms + firefly] [crystal wand + rune stones + smoke wisps] [cauldron bubbling + floating herbs + smoke]',
+                              'corner clusters: [chess knight on board + dice + game pieces] [cardinal bird on branch + berries + nest twigs] [hourglass + pocket watch + quill] [inkwell + feather quill + wax seal stamp]',
+                              'corner clusters: [robot head + gear cogs + circuit board] [holographic chip + LED lights + fiber optics] [digital display + blinking lights + data chips] [copper gear + wrench + steam pipe]',
                             ]
                             const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)]
                             setGenPrompt(`${pick(backgrounds)}, ${pick(gadgets)}`)
@@ -920,12 +920,12 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {[
-                          'Starry night sky with nebula clouds cover texture, corner gadgets: blue-green Earth globe, silver rocket with orange flame, brass telescope, grey Moon',
-                          'Enchanted forest with leaf patterns and firefly glows cover, corner gadgets: red apple, green potion bottle, brown compass, orange salamander',
-                          'Ancient stone with rune carvings and vines cover texture, corner gadgets: purple wizard hat, blue crystal wand, green cauldron, silver star',
-                          'Medieval parchment with map lines and compass rose cover, corner gadgets: grey chess knight, red cardinal bird, brown hourglass, blue quill inkwell',
-                          'Deep ocean with wave patterns and bioluminescent dots cover, corner gadgets: silver microscope, blue beaker, green seedling pot, orange bunsen flame',
-                          'Stormy sky with lightning and cloud swirls cover texture, corner gadgets: yellow lightning bolt, blue storm cloud, silver robot head, green circuit board',
+                          'Starry night sky with nebula clouds cover, corner clusters: [globe+books+compass] [rocket+smoke+canisters] [telescope+star chart] [moon+meteor+orbit ring]',
+                          'Enchanted forest with firefly glows cover, corner clusters: [red apple+honey jar+leaves] [potion+herbs+cork] [compass+map roll] [salamander+mushrooms+dewdrops]',
+                          'Ancient stone with rune carvings cover, corner clusters: [wizard hat+spell smoke+stars] [crystal wand+rune stone] [cauldron+herbs+smoke] [salamander+mushrooms+firefly]',
+                          'Medieval parchment with compass rose cover, corner clusters: [chess knight+dice+pieces] [cardinal bird+berries+nest] [hourglass+watch+quill] [inkwell+feather+wax seal]',
+                          'Deep ocean with bioluminescent dots cover, corner clusters: [microscope+petri dish+slides] [seedling pot+trowel+soil] [beaker+dropper+vials] [bunsen+gauze+test tubes]',
+                          'Desert dunes with sand ripples cover, corner clusters: [volcano+lava rocks+ash cloud] [lava gem+ember stones] [fossil skull+brush+soil] [obsidian crystal+shards]',
                         ].map(ex => (
                           <button key={ex} onClick={() => setGenPrompt(ex)}
                             className="text-[11px] px-2.5 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium transition-colors text-left leading-snug border border-amber-200">
