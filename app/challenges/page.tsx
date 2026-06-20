@@ -630,14 +630,18 @@ export default function ChallengesPage() {
         }
       }
 
-      // Update the local grid immediately
-      setWeekGrid(prev => ({
-        ...prev,
-        [pickTarget.classId]: {
-          ...(prev[pickTarget.classId] || {}),
-          [pickTarget.date]: { id: newChallenge.id, title: bankChallenge.title },
-        },
-      }))
+      // Update the local grid immediately — append to the array for this date
+      setWeekGrid(prev => {
+        const classGrid = prev[pickTarget.classId] || {}
+        const existing = classGrid[pickTarget.date] || []
+        return {
+          ...prev,
+          [pickTarget.classId]: {
+            ...classGrid,
+            [pickTarget.date]: [...existing, { id: newChallenge.id, title: bankChallenge.title }],
+          },
+        }
+      })
 
       setPickTarget(null)
     } catch (err: any) {
