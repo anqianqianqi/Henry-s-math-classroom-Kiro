@@ -48,7 +48,51 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_submissions_challenge_user
   WHERE bank_item_id IS NULL AND challenge_id IS NOT NULL;
 
 -- 4. Backfill bank_item_id for existing submissions where the linked
---    daily_challenge has a source_bank_id
+--    daily_challenge has a source_bank_id.
+--
+-- Handle duplicates: a student may have submitted to multiple daily instances
+-- of the same bank item. We keep the LATEST submission per (bank_item_id, user_id)
+-- and delete the older ones before patching.
+
+-- 4a. Delete older duplicate submissions — keep only the most recent per
+--     (bank_item_id, user_id) pair, looking up bank_item_id via the linked challenge.
+DELETE FROM challenge_submissions
+WHERE id IN (
+  SELECT cs.id
+  FROM challenge_submissions cs
+  JOIN daily_challenges dc ON dc.id = cs.challenge_id
+  WHERE dc.source_bank_id IS NOT NULL
+    AND cs.bank_item_id IS NULL
+    AND EXISTS (
+      -- there is a newer submission for the same (bank_item, user)
+      SELECT 1
+      FROM challenge_submissions cs2
+      JOIN daily_challenges dc2 ON dc2.id = cs2.challenge_id
+      WHERE dc2.source_bank_id = dc.source_bank_id
+        AND cs2.user_id = cs.user_id
+        AND cs2.id <> cs.id
+        AND cs2.submitted_at >= cs.submitted_at
+    )
+);
+
+-- 4b. Also drop duplicates where one copy already has bank_item_id set
+--     (e.g. from a previous partial run) and another copy does not.
+DELETE FROM challenge_submissions
+WHERE id IN (
+  SELECT cs.id
+  FROM challenge_submissions cs
+  JOIN daily_challenges dc ON dc.id = cs.challenge_id
+  WHERE dc.source_bank_id IS NOT NULL
+    AND cs.bank_item_id IS NULL
+    AND EXISTS (
+      SELECT 1
+      FROM challenge_submissions cs2
+      WHERE cs2.bank_item_id = dc.source_bank_id
+        AND cs2.user_id = cs.user_id
+    )
+);
+
+-- 4c. Now safe to patch — no more duplicates
 UPDATE challenge_submissions cs
 SET    bank_item_id = dc.source_bank_id
 FROM   daily_challenges dc
