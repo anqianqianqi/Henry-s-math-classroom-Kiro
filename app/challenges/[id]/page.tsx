@@ -400,7 +400,10 @@ export default function ChallengePage() {
 
     // Load user's submission.
     // For bank-sourced challenges: look up by bank_item_id (survives delete/republish).
-    // For ad-hoc challenges: fall back to challenge_id.
+    // Fallback: if not found by bank_item_id, try challenge_id (for submissions created
+    // before the bank_item_id migration ran). If found via fallback, auto-patch bank_item_id
+    // so future lookups work correctly.
+    // For ad-hoc challenges: look up by challenge_id only.
     let submissionData: any = null
     if (bankItemId) {
       const { data } = await supabase
@@ -410,6 +413,26 @@ export default function ChallengePage() {
         .eq('user_id', user.id)
         .maybeSingle()
       submissionData = data
+
+      // Fallback: old submission that predates the bank_item_id migration
+      if (!submissionData) {
+        const { data: fallback } = await supabase
+          .from('challenge_submissions')
+          .select(`*, profiles!inner(full_name, nickname)`)
+          .eq('challenge_id', params.id)
+          .eq('user_id', user.id)
+          .maybeSingle()
+        if (fallback) {
+          submissionData = fallback
+          // Auto-patch bank_item_id so future lookups don't need the fallback
+          supabase
+            .from('challenge_submissions')
+            .update({ bank_item_id: bankItemId })
+            .eq('id', fallback.id)
+            .then(() => {})
+            .catch(() => {})
+        }
+      }
     } else {
       const { data } = await supabase
         .from('challenge_submissions')

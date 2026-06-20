@@ -323,26 +323,39 @@ export default function ChallengesPage() {
 
       // Load class names and submission data for each challenge
       if (challengesData.length > 0) {
-        // Load student's submissions for all challenges
-        const { data: mySubmissions } = await supabase
-          .from('challenge_submissions')
-          .select('challenge_id, points, is_locked')
-          .eq('user_id', user.id)
-          .in('challenge_id', challengesData.map(c => c.id))
-
-        const subMap = new Map(mySubmissions?.map(s => [s.challenge_id, s]) || [])
-
-        // Also fetch challenges the student has submitted to but are no longer assigned
-        // (e.g. teacher deleted or retired the assignment — student's history must be preserved)
-        const assignedIds = new Set(challengesData.map(c => c.id))
+        // Load student's submissions for all challenges.
+        // Fetch all of the student's submissions at once (by challenge_id and bank_item_id).
         const { data: allMySubmissions } = await supabase
           .from('challenge_submissions')
-          .select('challenge_id, points, is_locked')
+          .select('id, challenge_id, bank_item_id, points, is_locked')
           .eq('user_id', user.id)
-        
+
+        // Build two maps: by challenge_id and by bank_item_id (for republished challenges)
+        const subByChallenge = new Map<string, any>()
+        const subByBankItem = new Map<string, any>()
+        for (const s of allMySubmissions || []) {
+          if (s.challenge_id) subByChallenge.set(s.challenge_id, s)
+          if (s.bank_item_id) subByBankItem.set(s.bank_item_id, s)
+        }
+
+        // Helper: find a submission for a challenge
+        const findSub = (c: any) => {
+          // 1. Direct match by challenge_id
+          const byId = subByChallenge.get(c.id)
+          if (byId) return byId
+          // 2. Match by source_bank_id (submission from a previous instance of this bank item)
+          if (c.source_bank_id) {
+            const byBank = subByBankItem.get(c.source_bank_id)
+            if (byBank) return byBank
+          }
+          return null
+        }
+
+        // Challenges where the student has submitted but is no longer assigned
+        const assignedIds = new Set(challengesData.map(c => c.id))
         const submittedUnassignedIds = (allMySubmissions || [])
           .map(s => s.challenge_id)
-          .filter(id => !assignedIds.has(id))
+          .filter((id): id is string => !!id && !assignedIds.has(id))
 
         let extraChallenges: any[] = []
         if (submittedUnassignedIds.length > 0) {
@@ -352,10 +365,6 @@ export default function ChallengesPage() {
             .in('id', submittedUnassignedIds)
             .order('challenge_date', { ascending: false })
           extraChallenges = extraData || []
-          // Add their submissions to the map
-          for (const s of allMySubmissions || []) {
-            if (!subMap.has(s.challenge_id)) subMap.set(s.challenge_id, s)
-          }
         }
 
         const allChallenges = [
@@ -366,7 +375,7 @@ export default function ChallengesPage() {
         const withExtras = await Promise.all(
           allChallenges.map(async (c) => {
             const names = await loadChallengeClasses(c.id)
-            const sub = subMap.get(c.id)
+            const sub = findSub(c)
             return {
               ...c,
               class_names: names,
@@ -609,6 +618,29 @@ export default function ChallengesPage() {
             .eq('challenge_id', oldId)
             .eq('class_id', pickTarget.classId)
         }
+      }
+
+      // ── Backfill bank_item_id on orphaned submissions ──
+      // Submissions created before the bank_item_id migration may have bank_item_id = NULL.
+      // When republishing the same bank item, patch those old submissions now so that
+      // the challenge detail page can surface them via bank_item_id lookup.
+      // We target submissions whose challenge_id is one of the old instances OR whose
+      // challenge_id is now NULL (deleted challenge) but user is in this class.
+      try {
+        // Patch submissions linked to old daily_challenge instances of this bank item
+        if (oldChallengeIds.length > 0) {
+          await supabase
+            .from('challenge_submissions')
+            .update({ bank_item_id: bankChallenge.id })
+            .in('challenge_id', oldChallengeIds)
+            .is('bank_item_id', null)
+        }
+
+        // Also patch orphaned submissions (challenge_id IS NULL) whose user was in this class
+        // at the time — we can't know for certain which bank item they belong to, so we skip
+        // those (the manual SQL fix is the only safe option for them).
+      } catch (_) {
+        // Non-critical: best-effort backfill
       }
 
       // Update the local grid immediately — append to the array for this date
