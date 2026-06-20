@@ -84,8 +84,7 @@ export default function ChallengesPage() {
 
   // Assign-from-bank modal state
   const [pickTarget, setPickTarget] = useState<{ classId: string, className: string, date: string } | null>(null)
-  const [bankChallenges, setBankChallenges] = useState<Array<{id: string, title: string, description: string, tag_ids: string[], image_url?: string | null}>>([])
-  const [bankTagMap, setBankTagMap] = useState<Record<string, string>>({}) // tagId → name
+  const [bankChallenges, setBankChallenges] = useState<Array<{id: string, title: string, description: string, tag_ids: string[], image_url?: string | null, max_points?: number | null}>>([])  const [bankTagMap, setBankTagMap] = useState<Record<string, string>>({}) // tagId → name
   const [bankSearch, setBankSearch] = useState('')
   const [bankLoading, setBankLoading] = useState(false)
   const [assigning, setAssigning] = useState(false)
@@ -93,7 +92,7 @@ export default function ChallengesPage() {
   const [usedBankIds, setUsedBankIds] = useState<Set<string>>(new Set())
   const [showUsed, setShowUsed] = useState(false)
   // Two-step confirm: null = browse, non-null = confirm stage
-  const [pendingChallenge, setPendingChallenge] = useState<{id: string, title: string, description: string, tag_ids: string[], image_url?: string | null} | null>(null)
+  const [pendingChallenge, setPendingChallenge] = useState<{id: string, title: string, description: string, tag_ids: string[], image_url?: string | null, max_points?: number | null} | null>(null)
   // Lightbox for zoomed image preview
   const [imgLightbox, setImgLightbox] = useState<string | null>(null)
   
@@ -452,7 +451,7 @@ export default function ChallengesPage() {
     const [{ data: challenges }, { data: tagsData }] = await Promise.all([
       supabase
         .from('challenge_bank')
-        .select('id, title, description, tag_ids, image_url')
+        .select('id, title, description, tag_ids, image_url, max_points')
         .order('created_at', { ascending: false }),
       supabase
         .from('challenge_tags')
@@ -518,7 +517,19 @@ export default function ChallengesPage() {
     setBankLoading(false)
   }
 
-  async function handleAssignFromBank(bankChallenge: { id: string; title: string; description: string; tag_ids: string[] }) {
+  async function handleUnassignChallenge(challengeId: string, classId: string) {
+    if (!confirm('Remove this challenge from the schedule? This will delete the assignment for this class.')) return
+    // Remove the class assignment
+    await supabase
+      .from('challenge_assignments')
+      .delete()
+      .eq('challenge_id', challengeId)
+      .eq('class_id', classId)
+    // Refresh the week grid
+    await loadChallenges()
+  }
+
+  async function handleAssignFromBank(bankChallenge: { id: string; title: string; description: string; tag_ids: string[]; image_url?: string | null; max_points?: number | null }) {
     if (!pickTarget) return
     setAssigning(true)
     try {
@@ -553,6 +564,9 @@ export default function ChallengesPage() {
           challenge_date: pickTarget.date,
           created_by: user.id,
           source_bank_id: bankChallenge.id,
+          tag_ids: bankChallenge.tag_ids || [],
+          image_url: bankChallenge.image_url || null,
+          max_points: bankChallenge.max_points ?? 100,
         })
         .select('id')
         .single()
@@ -1018,13 +1032,22 @@ export default function ChallengesPage() {
                             className={`px-2 py-2 text-center align-middle ${isToday ? 'bg-primary-50/40' : ''}`}
                           >
                             {entry ? (
-                              <a
-                                href={`/challenges/${entry.id}`}
-                                className="inline-block w-full px-2 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-800 text-xs font-medium hover:bg-green-100 hover:border-green-400 transition-colors leading-tight"
-                                title={entry.title}
-                              >
-                                <span className="line-clamp-2">{entry.title}</span>
-                              </a>
+                              <div className="flex flex-col gap-1 w-full">
+                                <a
+                                  href={`/challenges/${entry.id}`}
+                                  className="inline-block w-full px-2 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-800 text-xs font-medium hover:bg-green-100 hover:border-green-400 transition-colors leading-tight"
+                                  title={entry.title}
+                                >
+                                  <span className="line-clamp-2">{entry.title}</span>
+                                </a>
+                                <button
+                                  onClick={() => handleUnassignChallenge(entry.id, cls.id)}
+                                  className="inline-flex items-center justify-center w-full px-1 py-0.5 rounded text-[10px] text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                  title="Remove from schedule"
+                                >
+                                  ✕ Remove
+                                </button>
+                              </div>
                             ) : (
                               <button
                                 onClick={() => openPickModal(cls.id, cls.name, d)}

@@ -936,9 +936,7 @@ export default function ChallengePage() {
     setDeleting(true)
 
     try {
-      // Remove class assignments so the challenge is hidden from unsubmitted students.
-      // We do NOT delete the challenge row or submissions — students who already
-      // submitted must always be able to see their work in their challenge history.
+      // Remove class assignments
       const { error: assignErr } = await supabase
         .from('challenge_assignments')
         .delete()
@@ -956,6 +954,22 @@ export default function ChallengePage() {
         .from('challenge_student_assignments')
         .delete()
         .eq('challenge_id', params.id)
+
+      // Delete the daily_challenge row itself so it no longer appears in the
+      // teacher's challenge list. Students who already submitted can still see
+      // their own submission in their challenge history via challenge_submissions.
+      // We only delete if there are no submissions (preserve student work).
+      const { count: subCount } = await supabase
+        .from('challenge_submissions')
+        .select('id', { count: 'exact', head: true })
+        .eq('challenge_id', params.id)
+
+      if ((subCount ?? 0) === 0) {
+        await supabase
+          .from('daily_challenges')
+          .delete()
+          .eq('id', params.id)
+      }
 
       // Success! Redirect to challenges list
       router.push('/challenges')
