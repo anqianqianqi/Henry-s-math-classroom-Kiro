@@ -793,22 +793,37 @@ export default function ShopPage() {
 
     // ── Owned items (book skins + pet rooms) — disable re-purchase in shop ──
     // Build a set of shop_item IDs this user already owns via redemptions.
-    // We check both book_skin_id and pet_room_background_id columns.
+    // Strategy: check both book_skin_id/pet_room_background_id columns AND
+    // direct item_id match against book_skins/pet_room_backgrounds shop_item_id
+    // (handles purchases made before the backfill columns were set).
     try {
-      const { data: ownedRedemptions } = await supabase
+      const { data: allUserRedemptions } = await supabase
         .from('redemptions')
         .select('item_id, book_skin_id, pet_room_background_id')
         .eq('user_id', userId)
         .is('refunded_at', null)
-        .or('book_skin_id.not.is.null,pet_room_background_id.not.is.null')
 
       const owned = new Set<string>()
-      for (const r of ownedRedemptions ?? []) {
-        // An item is "owned" if this redemption is for a book skin or pet room
+
+      // Method 1: via backfilled columns
+      for (const r of allUserRedemptions ?? []) {
         if (r.book_skin_id || r.pet_room_background_id) {
           owned.add(r.item_id)
         }
       }
+
+      // Method 2: check if any redeemed item_id matches a book skin or pet room's shop_item_id
+      const redeemedIds = (allUserRedemptions ?? []).map(r => r.item_id)
+      if (redeemedIds.length > 0) {
+        const [{ data: bySkinShopId }, { data: byRoomShopId }] = await Promise.all([
+          supabase.from('book_skins').select('shop_item_id').in('shop_item_id', redeemedIds).not('shop_item_id', 'is', null),
+          supabase.from('pet_room_backgrounds').select('shop_item_id').in('shop_item_id', redeemedIds).not('shop_item_id', 'is', null),
+        ])
+        for (const r of [...(bySkinShopId ?? []), ...(byRoomShopId ?? [])]) {
+          if (r.shop_item_id) owned.add(r.shop_item_id)
+        }
+      }
+
       setOwnedItemIds(owned)
     } catch (_) {
       // Non-fatal — ownership check failure just shows the buy button normally

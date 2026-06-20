@@ -76,18 +76,41 @@ export default function BookSkinsUserPage() {
         .eq('visibility', 'public')
         .order('is_default', { ascending: false })
 
-      const { data: purchasedSkins } = await supabase
+      // Fetch purchased skins two ways:
+      // 1. Via book_skin_id on the redemption (set by the backfill in the API route)
+      // 2. Via item_id on the redemption matching shop_item_id on book_skins (always reliable)
+      const { data: purchasedByBookSkinId } = await supabase
         .from('redemptions')
         .select('book_skin_id, book_skins:book_skin_id(id, name, description, skin_type, image_url, is_default, is_active, visibility, shop_item_id)')
         .eq('user_id', uid)
         .is('refunded_at', null)
         .not('book_skin_id', 'is', null)
 
+      // Also find skins owned via item_id → shop_item_id link (handles all past purchases where book_skin_id was never set)
+      const { data: redemptionsByItemId } = await supabase
+        .from('redemptions')
+        .select('item_id')
+        .eq('user_id', uid)
+        .is('refunded_at', null)
+
+      const redeemedItemIds = (redemptionsByItemId ?? []).map((r: any) => r.item_id)
+      let purchasedByItemId: any[] = []
+      if (redeemedItemIds.length > 0) {
+        const { data: skinsByShopItem } = await supabase
+          .from('book_skins')
+          .select('id, name, description, skin_type, image_url, is_default, is_active, visibility, shop_item_id')
+          .in('shop_item_id', redeemedItemIds)
+          .eq('is_active', true)
+        purchasedByItemId = skinsByShopItem ?? []
+      }
+
       const publicIds = new Set((skins ?? []).map((s: any) => s.id))
-      const purchasedRows = (purchasedSkins ?? [])
+      const purchasedRows1 = (purchasedByBookSkinId ?? [])
         .map((r: any) => r.book_skins)
         .filter((s: any) => s && !publicIds.has(s.id))
-      setAllSkins([...(skins ?? []), ...purchasedRows] as BookSkin[])
+      const alreadyIncluded = new Set([...Array.from(publicIds), ...purchasedRows1.map((s: any) => s.id)])
+      const purchasedRows2 = purchasedByItemId.filter((s: any) => !alreadyIncluded.has(s.id))
+      setAllSkins([...(skins ?? []), ...purchasedRows1, ...purchasedRows2] as BookSkin[])
     }
   }
 
