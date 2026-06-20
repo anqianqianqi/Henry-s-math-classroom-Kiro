@@ -956,20 +956,14 @@ export default function ChallengePage() {
         .eq('challenge_id', params.id)
 
       // Delete the daily_challenge row itself so it no longer appears in the
-      // teacher's challenge list. Students who already submitted can still see
-      // their own submission in their challenge history via challenge_submissions.
-      // We only delete if there are no submissions (preserve student work).
-      const { count: subCount } = await supabase
-        .from('challenge_submissions')
-        .select('id', { count: 'exact', head: true })
-        .eq('challenge_id', params.id)
-
-      if ((subCount ?? 0) === 0) {
-        await supabase
-          .from('daily_challenges')
-          .delete()
-          .eq('id', params.id)
-      }
+      // teacher's challenge list. Student submissions are preserved in
+      // challenge_submissions linked by challenge_id — their history is safe.
+      // If this challenge is republished later, the same bank item will create
+      // a new daily_challenge row (different id), so old submissions won't carry over.
+      await supabase
+        .from('daily_challenges')
+        .delete()
+        .eq('id', params.id)
 
       // Success! Redirect to challenges list
       router.push('/challenges')
@@ -1789,12 +1783,12 @@ export default function ChallengePage() {
             </Card.Header>
             <Card.Body>
               <p className="text-gray-700 mb-4">
-                Are you sure you want to remove this challenge from all class assignments? Students who haven&apos;t submitted yet will no longer see it. Students who already submitted will keep their submission in their history.
+                Are you sure you want to delete this challenge? It will be removed from the teacher view and all class assignments. Student submissions are preserved in their history — if you republish the same bank item later, old submissions won&apos;t carry over.
               </p>
               {submissionCount > 0 && (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl mb-4">
                   <p className="text-sm text-amber-800">
-                    <strong>Note:</strong> {submissionCount} student{submissionCount !== 1 ? 's have' : ' has'} already submitted — their work is preserved and will remain visible to them.
+                    <strong>⚠️ {submissionCount} student{submissionCount !== 1 ? 's have' : ' has'} submitted.</strong> Their submissions are preserved in their personal history, but this challenge will no longer be visible in the teacher dashboard.
                   </p>
                 </div>
               )}

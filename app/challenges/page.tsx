@@ -535,18 +535,12 @@ export default function ChallengesPage() {
       .eq('challenge_id', challengeId)
 
     if ((remainingAssignments ?? 0) === 0) {
-      // Only delete if no submissions exist (preserve student work)
-      const { count: subCount } = await supabase
-        .from('challenge_submissions')
-        .select('id', { count: 'exact', head: true })
-        .eq('challenge_id', challengeId)
-
-      if ((subCount ?? 0) === 0) {
-        await supabase
-          .from('daily_challenges')
-          .delete()
-          .eq('id', challengeId)
-      }
+      // Delete the daily_challenge row so it disappears from the teacher list
+      // (student submissions are preserved by challenge_id in challenge_submissions)
+      await supabase
+        .from('daily_challenges')
+        .delete()
+        .eq('id', challengeId)
     }
 
     // Refresh the week grid and challenge list
