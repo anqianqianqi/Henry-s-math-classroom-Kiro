@@ -78,7 +78,7 @@ export default function ChallengesPage() {
   const ITEMS_PER_PAGE = 10
 
   // Week grid (teacher only) — map of classId → (dateStr → {id, title})
-  const [weekGrid, setWeekGrid] = useState<Record<string, Record<string, {id: string, title: string}>>>({})
+  const [weekGrid, setWeekGrid] = useState<Record<string, Record<string, {id: string, title: string}[]>>>({})
   const [weekGridClasses, setWeekGridClasses] = useState<Array<{id: string, name: string}>>([])
   const [weekDates, setWeekDates] = useState<string[]>([])
 
@@ -688,15 +688,18 @@ export default function ChallengesPage() {
       (challengesInRange || []).map(c => [c.id, c])
     )
 
-    // Build grid: classId → dateStr → {id, title}
-    const grid: Record<string, Record<string, {id: string, title: string}>> = {}
+    // Build grid: classId → dateStr → [{id, title}, ...]
+    const grid: Record<string, Record<string, {id: string, title: string}[]>> = {}
     for (const cls of classList) {
       grid[cls.id] = {}
     }
     for (const a of assignments) {
       const ch = challengeMap.get(a.challenge_id)
       if (ch && grid[a.class_id] !== undefined) {
-        grid[a.class_id][ch.challenge_date] = { id: ch.id, title: ch.title }
+        if (!grid[a.class_id][ch.challenge_date]) {
+          grid[a.class_id][ch.challenge_date] = []
+        }
+        grid[a.class_id][ch.challenge_date].push({ id: ch.id, title: ch.title })
       }
     }
     setWeekGrid(grid)
@@ -1025,30 +1028,31 @@ export default function ChallengesPage() {
                       </td>
                       {weekDates.map(d => {
                         const isToday = d === localDateString()
-                        const entry = weekGrid[cls.id]?.[d]
+                        const entries = weekGrid[cls.id]?.[d] ?? []
                         return (
                           <td
                             key={d}
-                            className={`px-2 py-2 text-center align-middle ${isToday ? 'bg-primary-50/40' : ''}`}
+                            className={`px-2 py-2 text-center align-top ${isToday ? 'bg-primary-50/40' : ''}`}
                           >
-                            {entry ? (
-                              <div className="flex flex-col gap-1 w-full">
-                                <a
-                                  href={`/challenges/${entry.id}`}
-                                  className="inline-block w-full px-2 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-800 text-xs font-medium hover:bg-green-100 hover:border-green-400 transition-colors leading-tight"
-                                  title={entry.title}
-                                >
-                                  <span className="line-clamp-2">{entry.title}</span>
-                                </a>
-                                <button
-                                  onClick={() => handleUnassignChallenge(entry.id, cls.id)}
-                                  className="inline-flex items-center justify-center w-full px-1 py-0.5 rounded text-[10px] text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                  title="Remove from schedule"
-                                >
-                                  ✕ Remove
-                                </button>
-                              </div>
-                            ) : (
+                            <div className="flex flex-col gap-1 w-full">
+                              {entries.map(entry => (
+                                <div key={entry.id} className="flex flex-col gap-0.5">
+                                  <a
+                                    href={`/challenges/${entry.id}`}
+                                    className="inline-block w-full px-2 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-800 text-xs font-medium hover:bg-green-100 hover:border-green-400 transition-colors leading-tight"
+                                    title={entry.title}
+                                  >
+                                    <span className="line-clamp-2">{entry.title}</span>
+                                  </a>
+                                  <button
+                                    onClick={() => handleUnassignChallenge(entry.id, cls.id)}
+                                    className="inline-flex items-center justify-center w-full px-1 py-0.5 rounded text-[10px] text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                    title="Remove from schedule"
+                                  >
+                                    ✕ Remove
+                                  </button>
+                                </div>
+                              ))}
                               <button
                                 onClick={() => openPickModal(cls.id, cls.name, d)}
                                 className="inline-flex items-center justify-center gap-1 w-full px-2 py-1.5 rounded-lg border border-dashed border-gray-300 text-gray-400 text-xs hover:border-primary-400 hover:text-primary-500 hover:bg-primary-50 transition-colors"
@@ -1056,7 +1060,7 @@ export default function ChallengesPage() {
                                 <span>+</span>
                                 <span>Add</span>
                               </button>
-                            )}
+                            </div>
                           </td>
                         )
                       })}
