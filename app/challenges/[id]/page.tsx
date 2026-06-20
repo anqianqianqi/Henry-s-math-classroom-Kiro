@@ -425,12 +425,12 @@ export default function ChallengePage() {
         if (fallback) {
           submissionData = fallback
           // Auto-patch bank_item_id so future lookups don't need the fallback
-          supabase
-            .from('challenge_submissions')
-            .update({ bank_item_id: bankItemId })
-            .eq('id', fallback.id)
-            .then(() => {})
-            .catch(() => {})
+          void Promise.resolve(
+            supabase
+              .from('challenge_submissions')
+              .update({ bank_item_id: bankItemId })
+              .eq('id', fallback.id)
+          )
         }
       }
     } else {
