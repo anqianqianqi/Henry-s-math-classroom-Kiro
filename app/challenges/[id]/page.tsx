@@ -396,7 +396,10 @@ export default function ChallengePage() {
     }
 
     // Determine the bank_item_id for this challenge (if it was published from the bank)
-    const bankItemId: string | null = challengeData?.source_bank_id ?? null
+    // When viewing a bank item directly (is_bank_item = true), the item itself is the bank id.
+    const bankItemId: string | null = challengeData?.is_bank_item
+      ? (params.id as string)
+      : (challengeData?.source_bank_id ?? null)
 
     // Load user's submission.
     // For bank-sourced challenges: look up by bank_item_id (survives delete/republish).
@@ -454,8 +457,9 @@ export default function ChallengePage() {
       await loadCommentsForSubmissions([submissionData.id])
     }
 
-    // Teachers always see all submissions, students only after submitting
-    if (teacherRole) {
+    // Teachers always see all submissions; for bank items (viewed directly from bank),
+    // also always load all submissions since that's the whole point of this view.
+    if (teacherRole || challengeData?.is_bank_item) {
       await loadOtherSubmissions(user.id, true, bankItemId)
       
       // Get total number of students in classes this challenge is assigned to
