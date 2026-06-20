@@ -25,7 +25,7 @@ export interface AnimZone {
   id: string
   polygon: AnimPoint[]
   pivot: AnimPoint
-  animation: 'sway' | 'float' | 'shimmer' | 'flicker' | 'bling' | 'glow'
+  animation: 'sway' | 'float' | 'shimmer' | 'flicker' | 'bling' | 'glow' | 'wind'
   intensity: number
   speed: number
   containOverflow?: boolean  // when true, strictly clip animation to original polygon
@@ -40,6 +40,7 @@ const ANIM_OPTIONS: { value: AnimZone['animation']; label: string; desc: string 
   { value: 'flicker', label: '🕯️ Flicker', desc: 'Random flicker (candles, fire)' },
   { value: 'bling', label: '💎 Bling', desc: 'Rainbow colour-shift sparkle (jewels, lights)' },
   { value: 'glow', label: '🌟 Glow', desc: 'Pulsing brightness without colour change (embers, lamps)' },
+  { value: 'wind', label: '🌬️ Wind', desc: 'Blown by wind — skew + shift (blankets, curtains, fabric)' },
 ]
 
 const ZONE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
@@ -54,6 +55,7 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLImageElement | null>(null)
+  const justDraggedRef = useRef(false)  // suppresses click immediately after a drag ends
   const [imgLoaded, setImgLoaded] = useState(false)
 
   // Drawing state
@@ -321,10 +323,12 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   function handleCanvasMouseUp(e: React.MouseEvent<HTMLCanvasElement>) {
     if (vertexDrag) {
       setVertexDrag(null)
+      justDraggedRef.current = true
       return
     }
     if (pivotDragZoneId) {
       setPivotDragZoneId(null)
+      justDraggedRef.current = true
       return
     }
     if (zoomMode === 'selecting' && zoomDragStart && zoomDragCurrent) {
@@ -344,6 +348,11 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   }
 
   function handleCanvasClick(e: React.MouseEvent<HTMLCanvasElement>) {
+    // Suppress click that immediately follows a vertex/pivot drag end
+    if (justDraggedRef.current) {
+      justDraggedRef.current = false
+      return
+    }
     // In zoom-select mode clicks are handled by mousedown/up
     if (zoomMode === 'selecting') return
 

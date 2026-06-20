@@ -182,6 +182,19 @@ function getCssKeyframes(id: string, zone: AnimZone): string {
       return `@keyframes anim_${id}{0%{filter:hue-rotate(0deg) brightness(1)}20%{filter:hue-rotate(${s*72}deg) brightness(${1+s*0.4})}40%{filter:hue-rotate(${s*144}deg) brightness(1)}60%{filter:hue-rotate(${s*216}deg) brightness(${1+s*0.5})}80%{filter:hue-rotate(${s*288}deg) brightness(1)}100%{filter:hue-rotate(${s*360}deg) brightness(1)}}`
     case 'glow':
       return `@keyframes anim_${id}{0%{filter:brightness(1)}100%{filter:brightness(${1+s*0.8})}}`
+    case 'wind': {
+      // Blown-by-wind: skewX + translateX anchored at top, fabric billows left
+      const deg = s * 6    // max skew degrees
+      const px  = s * 14   // max translate pixels
+      return `@keyframes anim_${id}{
+        0%  {transform:skewX(0deg)   translateX(0px)    scaleX(1)}
+        25% {transform:skewX(${-deg*0.6}deg) translateX(${-px*0.5}px) scaleX(${1-s*0.02})}
+        50% {transform:skewX(${-deg}deg)     translateX(${-px}px)     scaleX(${1-s*0.05})}
+        65% {transform:skewX(${-deg*0.4}deg) translateX(${-px*0.3}px) scaleX(${1-s*0.02})}
+        80% {transform:skewX(${deg*0.15}deg) translateX(${px*0.1}px)  scaleX(1)}
+        100%{transform:skewX(0deg)   translateX(0px)    scaleX(1)}
+      }`
+    }
     default:
       return ''
   }
@@ -199,6 +212,17 @@ function getCssAnimStyle(id: string, zone: AnimZone): React.CSSProperties {
       animationDirection: 'normal',
       background: `linear-gradient(105deg, transparent 40%, rgba(255,255,255,${s * 0.35}) 50%, transparent 60%)`,
       backgroundSize: '200% 100%',
+    }
+  }
+  if (zone.animation === 'wind') {
+    return {
+      animationName: `anim_${id}`,
+      animationDuration: `${(3.5 / zone.speed).toFixed(2)}s`,
+      animationTimingFunction: 'ease-in-out',
+      animationIterationCount: 'infinite',
+      animationDirection: 'normal',
+      transformOrigin: 'top center',
+      willChange: 'transform',
     }
   }
   return {
@@ -299,7 +323,7 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
             )
           }
 
-          // glow / bling: apply filter on the image copy
+          // glow / bling / wind: apply transform/filter on the image copy
           return (
             <div key={zone.id} className="absolute inset-0" style={{ clipPath: poly }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
