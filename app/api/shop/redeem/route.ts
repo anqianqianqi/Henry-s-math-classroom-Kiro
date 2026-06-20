@@ -126,49 +126,71 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
-    // If this shop item is linked to a pet_room_background, backfill pet_room_background_id
-    // on the freshly-inserted redemption row so ownership queries work correctly.
-    // Also handle book_skin_id for book cover/page skins.
-    try {
-      // Check pet room link
-      const { data: linkedBg } = await supabase
-        .from('pet_room_backgrounds')
-        .select('id')
-        .eq('shop_item_id', body.item_id)
-        .maybeSingle()
+    // If this shop item is linked to a pet_room_background or book_skin, patch
+    // the freshly-inserted redemption row with those IDs so collection queries work.
+    // The RPC now returns redemption_id directly — use it to avoid a fragile lookup.
+    const redemptionId = (data as any)?.redemption_id as string | undefined
 
-      // Check book skin link
-      const { data: linkedSkin } = await supabase
-        .from('book_skins')
-        .select('id')
-        .eq('shop_item_id', body.item_id)
-        .maybeSingle()
+    if (redemptionId) {
+      try {
+        const [{ data: linkedBg, error: bgErr }, { data: linkedSkin, error: skinErr }] = await Promise.all([
+          supabase.from('pet_room_backgrounds').select('id').eq('shop_item_id', body.item_id).maybeSingle(),
+          supabase.from('book_skins').select('id').eq('shop_item_id', body.item_id).maybeSingle(),
+        ])
 
-      if (linkedBg?.id || linkedSkin?.id) {
-        // Find the newest redemption for this user + item (just inserted)
-        const { data: newRedemption } = await supabase
-          .from('redemptions')
-          .select('id')
-          .eq('user_id', session.user.id)
-          .eq('item_id', body.item_id)
-          .is('refunded_at', null)
-          .order('redeemed_at', { ascending: false })
-          .limit(1)
-          .single()
+        if (bgErr) console.error('[shop/redeem] pet_room_backgrounds lookup error:', bgErr)
+        if (skinErr) console.error('[shop/redeem] book_skins lookup error:', skinErr)
 
-        if (newRedemption?.id) {
-          const update: Record<string, string> = {}
-          if (linkedBg?.id)   update.pet_room_background_id = linkedBg.id
-          if (linkedSkin?.id) update.book_skin_id = linkedSkin.id
+        const update: Record<string, string> = {}
+        if (linkedBg?.id)   update.pet_room_background_id = linkedBg.id
+        if (linkedSkin?.id) update.book_skin_id = linkedSkin.id
 
-          await supabase
+        if (Object.keys(update).length > 0) {
+          const { error: updateErr } = await supabase
             .from('redemptions')
             .update(update)
-            .eq('id', newRedemption.id)
+            .eq('id', redemptionId)
+          if (updateErr) console.error('[shop/redeem] backfill update error:', updateErr)
         }
+      } catch (backfillErr) {
+        console.error('[shop/redeem] backfill failed:', backfillErr)
       }
-    } catch (_) {
-      // Non-fatal — ownership backfill failure shouldn't fail the purchase
+    } else {
+      // Fallback: RPC didn't return redemption_id (older version), try lookup
+      try {
+        const [{ data: linkedBg }, { data: linkedSkin }] = await Promise.all([
+          supabase.from('pet_room_backgrounds').select('id').eq('shop_item_id', body.item_id).maybeSingle(),
+          supabase.from('book_skins').select('id').eq('shop_item_id', body.item_id).maybeSingle(),
+        ])
+
+        if (linkedBg?.id || linkedSkin?.id) {
+          const { data: newRedemption, error: lookupErr } = await supabase
+            .from('redemptions')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .eq('item_id', body.item_id)
+            .is('refunded_at', null)
+            .order('redeemed_at', { ascending: false })
+            .limit(1)
+            .single()
+
+          if (lookupErr) console.error('[shop/redeem] redemption lookup error:', lookupErr)
+
+          if (newRedemption?.id) {
+            const update: Record<string, string> = {}
+            if (linkedBg?.id)   update.pet_room_background_id = linkedBg.id
+            if (linkedSkin?.id) update.book_skin_id = linkedSkin.id
+
+            const { error: updateErr } = await supabase
+              .from('redemptions')
+              .update(update)
+              .eq('id', newRedemption.id)
+            if (updateErr) console.error('[shop/redeem] fallback backfill error:', updateErr)
+          }
+        }
+      } catch (backfillErr) {
+        console.error('[shop/redeem] fallback backfill failed:', backfillErr)
+      }
     }
 
     return NextResponse.json({
