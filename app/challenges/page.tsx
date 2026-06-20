@@ -171,6 +171,7 @@ export default function ChallengesPage() {
       const { data: challengesData } = await supabase
         .from('daily_challenges')
         .select('*')
+        .eq('is_hidden', false)
         .order('challenge_date', { ascending: false })
 
       if (challengesData) {
@@ -299,6 +300,7 @@ export default function ChallengesPage() {
               .from('daily_challenges')
               .select('*')
               .in('id', windowIds)
+              .eq('is_hidden', false)
               .lte('challenge_date', localDateString())
               .gte('challenge_date', tenDaysAgoStr)
               .order('challenge_date', { ascending: false })
@@ -308,6 +310,7 @@ export default function ChallengesPage() {
               .from('daily_challenges')
               .select('*')
               .in('id', noWindowIds)
+              .eq('is_hidden', false)
               .lte('challenge_date', localDateString())
               .order('challenge_date', { ascending: false })
           : Promise.resolve({ data: [] }),
@@ -544,11 +547,11 @@ export default function ChallengesPage() {
       .eq('challenge_id', challengeId)
 
     if ((remainingAssignments ?? 0) === 0) {
-      // Delete the daily_challenge row so it disappears from the teacher list
-      // (student submissions are preserved by challenge_id in challenge_submissions)
+      // Soft-delete: mark hidden so it disappears from teacher view and Today's Challenges,
+      // but the row is preserved so students can still see their date history.
       await supabase
         .from('daily_challenges')
-        .delete()
+        .update({ is_hidden: true })
         .eq('id', challengeId)
     }
 
@@ -700,6 +703,7 @@ export default function ChallengesPage() {
       .from('daily_challenges')
       .select('id, title, challenge_date')
       .in('id', challengeIds)
+      .eq('is_hidden', false)
       .gte('challenge_date', dates[0])
       .lte('challenge_date', dates[dates.length - 1])
 

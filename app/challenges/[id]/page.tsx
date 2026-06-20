@@ -1000,14 +1000,12 @@ export default function ChallengePage() {
         .delete()
         .eq('challenge_id', params.id)
 
-      // Delete the daily_challenge row itself so it no longer appears in the
-      // teacher's challenge list. Student submissions are preserved in
-      // challenge_submissions linked by challenge_id — their history is safe.
-      // If this challenge is republished later, the same bank item will create
-      // a new daily_challenge row (different id), so old submissions won't carry over.
+      // Soft-delete: mark hidden so it disappears from teacher list, weekly grid,
+      // and Today's Challenges. The row is preserved so students keep their date
+      // history for this problem. challenge_id on submissions stays valid.
       await supabase
         .from('daily_challenges')
-        .delete()
+        .update({ is_hidden: true })
         .eq('id', params.id)
 
       // Success! Redirect to challenges list
