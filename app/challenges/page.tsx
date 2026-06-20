@@ -612,14 +612,30 @@ export default function ChallengesPage() {
 
       // ── Remove old assignments for this bank item from this class ──
       // Submissions are now tied to bank_item_id, so they survive automatically.
-      // We only need to hide the old daily_challenge from the class view.
+      // Soft-hide the old daily_challenge shells so they don't appear as duplicates
+      // in the teacher's list, but they remain in the DB for student date history.
       if (oldChallengeIds.length > 0) {
         for (const oldId of oldChallengeIds) {
+          // Remove the class assignment
           await supabase
             .from('challenge_assignments')
             .delete()
             .eq('challenge_id', oldId)
             .eq('class_id', pickTarget.classId)
+
+          // Check if this old shell is still assigned to any other class.
+          // If not, soft-hide it so it doesn't clutter the teacher's list.
+          const { count: remainingAssignments } = await supabase
+            .from('challenge_assignments')
+            .select('challenge_id', { count: 'exact', head: true })
+            .eq('challenge_id', oldId)
+
+          if ((remainingAssignments ?? 0) === 0) {
+            await supabase
+              .from('daily_challenges')
+              .update({ is_hidden: true })
+              .eq('id', oldId)
+          }
         }
       }
 
