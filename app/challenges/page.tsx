@@ -526,7 +526,30 @@ export default function ChallengesPage() {
       .delete()
       .eq('challenge_id', challengeId)
       .eq('class_id', classId)
-    // Refresh the week grid
+
+    // If no other class assignments remain for this challenge, delete the daily_challenge row
+    // so it no longer appears in Today's Challenges (same behaviour as the Delete button)
+    const { count: remainingAssignments } = await supabase
+      .from('challenge_assignments')
+      .select('challenge_id', { count: 'exact', head: true })
+      .eq('challenge_id', challengeId)
+
+    if ((remainingAssignments ?? 0) === 0) {
+      // Only delete if no submissions exist (preserve student work)
+      const { count: subCount } = await supabase
+        .from('challenge_submissions')
+        .select('id', { count: 'exact', head: true })
+        .eq('challenge_id', challengeId)
+
+      if ((subCount ?? 0) === 0) {
+        await supabase
+          .from('daily_challenges')
+          .delete()
+          .eq('id', challengeId)
+      }
+    }
+
+    // Refresh the week grid and challenge list
     await loadChallenges()
   }
 
@@ -786,7 +809,20 @@ export default function ChallengesPage() {
 
   const today = localDateString()
   const displayChallenges = filteredChallenges.length > 0 ? filteredChallenges : challenges
-  const todayChallenges = displayChallenges.filter(c => c.challenge_date === today)
+  // For teachers: deduplicate by source_bank_id so the same bank item published
+  // to multiple classes only appears once in Today's Challenges
+  const deduplicateForTeacher = (list: typeof displayChallenges) => {
+    if (!isTeacher) return list
+    const seenBankIds = new Set<string>()
+    return list.filter(c => {
+      const bankId = (c as any).source_bank_id
+      if (!bankId) return true  // no bank source — always show
+      if (seenBankIds.has(bankId)) return false
+      seenBankIds.add(bankId)
+      return true
+    })
+  }
+  const todayChallenges = deduplicateForTeacher(displayChallenges.filter(c => c.challenge_date === today))
   const upcomingChallenges = displayChallenges.filter(c => c.challenge_date && c.challenge_date > today)
   const pastChallenges = displayChallenges.filter(c => c.challenge_date && c.challenge_date < today)
 
