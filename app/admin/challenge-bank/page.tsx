@@ -355,7 +355,39 @@ export default function ChallengeBankPage() {
     setDeletingTemplate(null)
   }
 
-  const filteredTemplates = templates.filter(t =>
+  const [submissionsModal, setSubmissionsModal] = useState<{ challengeId: string; title: string } | null>(null)
+  const [submissionsData, setSubmissionsData] = useState<Array<{
+    id: string
+    student: string
+    content: string
+    image_url: string | null
+    points: number | null
+    is_locked: boolean
+    submitted_at: string
+  }>>([])
+  const [submissionsLoading, setSubmissionsLoading] = useState(false)
+
+  async function openSubmissions(bankId: string, title: string) {
+    setSubmissionsModal({ challengeId: bankId, title })
+    setSubmissionsLoading(true)
+    const { data } = await supabase
+      .from('challenge_submissions')
+      .select('id, content, image_url, points, is_locked, submitted_at, profiles!inner(nickname, full_name)')
+      .eq('bank_item_id', bankId)
+      .order('submitted_at', { ascending: false })
+    setSubmissionsData(
+      (data || []).map((s: any) => ({
+        id: s.id,
+        student: s.profiles?.nickname || s.profiles?.full_name || 'Unknown',
+        content: s.content,
+        image_url: s.image_url,
+        points: s.points,
+        is_locked: s.is_locked,
+        submitted_at: s.submitted_at,
+      }))
+    )
+    setSubmissionsLoading(false)
+  }
     !templateSearch.trim() ||
     t.title_template.toLowerCase().includes(templateSearch.toLowerCase())
   )
@@ -590,6 +622,9 @@ export default function ChallengeBankPage() {
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => setPreviewChallenge(challenge)}>
                             👁 Preview
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => openSubmissions(challenge.id, challenge.title)}>
+                            📋 Submissions
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => router.push(`/challenges/${challenge.id}/edit`)}>
                             Edit
@@ -917,6 +952,79 @@ export default function ChallengeBankPage() {
           >
             ×
           </button>
+        </div>
+      )}
+
+      {/* ── Submissions Modal ── */}
+      {submissionsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh]">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between gap-3 shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Student Submissions</h2>
+                <p className="text-xs text-gray-500 mt-0.5 truncate max-w-sm">{submissionsModal.title}</p>
+              </div>
+              <button
+                onClick={() => { setSubmissionsModal(null); setSubmissionsData([]) }}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none shrink-0"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {submissionsLoading ? (
+                <div className="text-center py-12 text-gray-400">Loading...</div>
+              ) : submissionsData.length === 0 ? (
+                <div className="text-center py-12 text-gray-400">
+                  <div className="text-4xl mb-3">📭</div>
+                  <p>No submissions yet for this problem.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500 font-medium">{submissionsData.length} submission{submissionsData.length !== 1 ? 's' : ''}</p>
+                  {submissionsData.map(s => (
+                    <div key={s.id} className="border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors">
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-900 text-sm">{s.student}</span>
+                          {s.is_locked && <span className="text-gray-400 text-xs">🔒</span>}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {s.points != null ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-primary-100 text-primary-700">
+                              {s.points} pts
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                              ⏳ Ungraded
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-400">
+                            {new Date(s.submitted_at).toLocaleDateString('en-US', {
+                              month: 'short', day: 'numeric', year: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-4">{s.content}</p>
+                      {s.image_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={s.image_url}
+                          alt="Submission"
+                          className="mt-2 max-h-32 rounded-lg object-contain border border-gray-100 cursor-pointer"
+                          onClick={() => setPreviewImgLightbox(s.image_url)}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
