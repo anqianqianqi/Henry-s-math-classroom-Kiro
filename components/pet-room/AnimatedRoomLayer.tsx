@@ -174,9 +174,10 @@ function getCssKeyframes(id: string, zone: AnimZone): string {
   const s = zone.intensity
   switch (zone.animation) {
     case 'shimmer':
-      return `@keyframes anim_${id}{0%{opacity:1}50%{opacity:${1-s*0.3}}100%{opacity:1}}`
+      // Traveling highlight band across the zone — looks like light on water
+      return `@keyframes anim_${id}{0%{background-position:-200% 0}100%{background-position:200% 0}}`
     case 'flicker':
-      return `@keyframes anim_${id}{0%{opacity:1}10%{opacity:${1-s*0.4}}20%{opacity:1}50%{opacity:${1-s*0.2}}60%{opacity:1}90%{opacity:${1-s*0.5}}100%{opacity:1}}`
+      return `@keyframes anim_${id}{0%{opacity:1}10%{opacity:${1-s*0.5}}12%{opacity:1}40%{opacity:${1-s*0.3}}42%{opacity:1}70%{opacity:${1-s*0.6}}72%{opacity:1}90%{opacity:${1-s*0.4}}100%{opacity:1}}`
     case 'bling':
       return `@keyframes anim_${id}{0%{filter:hue-rotate(0deg) brightness(1)}20%{filter:hue-rotate(${s*72}deg) brightness(${1+s*0.4})}40%{filter:hue-rotate(${s*144}deg) brightness(1)}60%{filter:hue-rotate(${s*216}deg) brightness(${1+s*0.5})}80%{filter:hue-rotate(${s*288}deg) brightness(1)}100%{filter:hue-rotate(${s*360}deg) brightness(1)}}`
     case 'glow':
@@ -187,6 +188,19 @@ function getCssKeyframes(id: string, zone: AnimZone): string {
 }
 
 function getCssAnimStyle(id: string, zone: AnimZone): React.CSSProperties {
+  if (zone.animation === 'shimmer') {
+    // Shimmer uses a gradient overlay — styles go on the wrapper div itself
+    const s = zone.intensity
+    return {
+      animationName: `anim_${id}`,
+      animationDuration: `${(2.5 / zone.speed).toFixed(2)}s`,
+      animationTimingFunction: 'linear',
+      animationIterationCount: 'infinite',
+      animationDirection: 'normal',
+      background: `linear-gradient(105deg, transparent 40%, rgba(255,255,255,${s * 0.35}) 50%, transparent 60%)`,
+      backgroundSize: '200% 100%',
+    }
+  }
   return {
     animationName: `anim_${id}`,
     animationDuration: `${(3 / zone.speed).toFixed(2)}s`,
@@ -248,14 +262,36 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
         {cssZones.map((zone, i) => {
           const id = `${baseId}_${i}`
           const poly = `polygon(${zone.polygon.map(p => `${p.x.toFixed(3)}% ${p.y.toFixed(3)}%`).join(', ')})`
+
+          if (zone.animation === 'shimmer') {
+            // Shimmer: clip a semi-transparent animated gradient overlay to the polygon
+            // The base image shows through at full brightness; the gradient band sweeps over it
+            return (
+              <div
+                key={zone.id}
+                className="absolute inset-0"
+                style={{ clipPath: poly, ...getCssAnimStyle(id, zone) }}
+              />
+            )
+          }
+
+          if (zone.animation === 'flicker') {
+            // Flicker: clip the image copy and animate its opacity so it dims against the base
+            return (
+              <div key={zone.id} className="absolute inset-0" style={{ clipPath: poly, ...getCssAnimStyle(id, zone) }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover"
+                  style={{ mixBlendMode: 'multiply' }} />
+              </div>
+            )
+          }
+
+          // glow / bling: apply filter on the image copy
           return (
-            <div
-              key={zone.id}
-              className="absolute inset-0"
-              style={{ clipPath: poly, ...getCssAnimStyle(id, zone) }}
-            >
+            <div key={zone.id} className="absolute inset-0" style={{ clipPath: poly }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover"
+                style={getCssAnimStyle(id, zone)} />
             </div>
           )
         })}
