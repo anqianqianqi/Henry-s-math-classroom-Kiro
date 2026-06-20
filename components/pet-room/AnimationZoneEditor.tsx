@@ -25,7 +25,7 @@ export interface AnimZone {
   id: string
   polygon: AnimPoint[]
   pivot: AnimPoint
-  animation: 'sway' | 'float' | 'shimmer' | 'flicker' | 'bling' | 'glow'
+  animation: 'sway' | 'float' | 'shimmer' | 'flicker' | 'bling' | 'glow' | 'wind'
   intensity: number
   speed: number
   containOverflow?: boolean  // when true, strictly clip animation to original polygon
@@ -40,6 +40,7 @@ const ANIM_OPTIONS: { value: AnimZone['animation']; label: string; desc: string 
   { value: 'flicker', label: '🕯️ Flicker', desc: 'Random flicker (candles, fire)' },
   { value: 'bling', label: '💎 Bling', desc: 'Rainbow colour-shift sparkle (jewels, lights)' },
   { value: 'glow', label: '🌟 Glow', desc: 'Pulsing brightness without colour change (embers, lamps)' },
+  { value: 'wind', label: '🌬️ Wind', desc: 'Blown by wind — skew + shift (blankets, curtains, fabric)' },
 ]
 
 const ZONE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
