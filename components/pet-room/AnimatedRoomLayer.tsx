@@ -276,13 +276,26 @@ export default function AnimatedRoomLayer({ imageUrl, zones, className = '' }: P
           }
 
           if (zone.animation === 'flicker') {
-            // Flicker: clip the image copy and animate its opacity so it dims against the base
+            // Flicker: animate a dark overlay on top of the zone.
+            // When overlay is opaque, region darkens. When transparent, full brightness.
+            // This is always visible regardless of what's underneath.
+            const s = zone.intensity
+            const flickerKeyframes = `@keyframes flicker_${id}{0%{opacity:0}10%{opacity:${s*0.6}}12%{opacity:0}40%{opacity:${s*0.35}}42%{opacity:0}70%{opacity:${s*0.7}}72%{opacity:0}90%{opacity:${s*0.4}}100%{opacity:0}}`
+            const flickerStyle: React.CSSProperties = {
+              animationName: `flicker_${id}`,
+              animationDuration: `${(2 / zone.speed).toFixed(2)}s`,
+              animationTimingFunction: 'steps(1)',
+              animationIterationCount: 'infinite',
+              animationDirection: 'normal',
+              background: 'rgba(0,0,0,1)',
+            }
             return (
-              <div key={zone.id} className="absolute inset-0" style={{ clipPath: poly, ...getCssAnimStyle(id, zone) }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover"
-                  style={{ mixBlendMode: 'multiply' }} />
-              </div>
+              <React.Fragment key={zone.id}>
+                <style dangerouslySetInnerHTML={{ __html: flickerKeyframes }} />
+                <div className="absolute inset-0" style={{ clipPath: poly }}>
+                  <div className="absolute inset-0" style={flickerStyle} />
+                </div>
+              </React.Fragment>
             )
           }
 
