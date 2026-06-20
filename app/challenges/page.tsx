@@ -23,6 +23,9 @@ interface Challenge {
   total_students?: number
   completion_rate?: number
   class_names?: string[]
+  source_bank_id?: string | null
+  // All dates this bank item was assigned (for student history view)
+  assignment_dates?: string[]
   // Student-specific
   my_points?: number | null
   my_is_locked?: boolean
@@ -375,13 +378,47 @@ export default function ChallengesPage() {
           ...extraChallenges.filter(c => !assignedIds.has(c.id)),
         ]
 
+        // Build a map of source_bank_id → all challenge_dates (for history display)
+        const bankIdToDates = new Map<string, string[]>()
+        for (const c of allChallenges) {
+          if (c.source_bank_id && c.challenge_date) {
+            const existing = bankIdToDates.get(c.source_bank_id) || []
+            if (!existing.includes(c.challenge_date)) {
+              existing.push(c.challenge_date)
+            }
+            bankIdToDates.set(c.source_bank_id, existing)
+          }
+        }
+
+        // Deduplicate by source_bank_id for student view:
+        // keep only the most recent shell per bank item (for navigation/display),
+        // but attach all assignment dates so history is complete.
+        const seenBankIds = new Set<string>()
+        const deduped: typeof allChallenges = []
+        // Sort most-recent first so we keep the latest shell
+        const sorted = [...allChallenges].sort((a, b) =>
+          (b.challenge_date || '').localeCompare(a.challenge_date || '')
+        )
+        for (const c of sorted) {
+          const bankId = c.source_bank_id
+          if (bankId) {
+            if (seenBankIds.has(bankId)) continue
+            seenBankIds.add(bankId)
+          }
+          deduped.push(c)
+        }
+
         const withExtras = await Promise.all(
-          allChallenges.map(async (c) => {
+          deduped.map(async (c) => {
             const names = await loadChallengeClasses(c.id)
             const sub = findSub(c)
+            const allDates = c.source_bank_id
+              ? (bankIdToDates.get(c.source_bank_id) || [c.challenge_date]).sort()
+              : [c.challenge_date]
             return {
               ...c,
               class_names: names,
+              assignment_dates: allDates,
               my_submitted: !!sub,
               my_points: sub?.points ?? null,
               my_is_locked: sub?.is_locked ?? false,
@@ -1250,6 +1287,56 @@ export default function ChallengesPage() {
           </Card>
         )}
 
+        {/* ── Score Summary (students only) ── */}
+        {!isTeacher && challenges.length > 0 && (() => {
+          const graded = challenges.filter(c => c.my_points != null)
+          const pending = challenges.filter(c => c.my_submitted && c.my_points == null)
+          const notSubmitted = challenges.filter(c => !c.my_submitted)
+          const totalEarned = graded.reduce((sum, c) => sum + (c.my_points || 0), 0)
+          const totalPossible = graded.reduce((sum, c) => sum + (c.max_points || 100), 0)
+          return (
+            <Card className="mb-6 bg-gradient-to-r from-primary-50 to-accent-blue/10 border-primary-200">
+              <Card.Body>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">📊 My Score Summary</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary-600">
+                      {graded.length > 0 ? `${totalEarned}/${totalPossible}` : '—'}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">Total Points</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{graded.length}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Graded</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-500">{pending.length}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Pending Grade</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-gray-400">{notSubmitted.length}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Not Submitted</div>
+                  </div>
+                </div>
+                {graded.length > 0 && totalPossible > 0 && (
+                  <div className="mt-3">
+                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>Score rate</span>
+                      <span>{Math.round((totalEarned / totalPossible) * 100)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      <div
+                        className="bg-primary-500 h-1.5 rounded-full transition-all"
+                        style={{ width: `${Math.round((totalEarned / totalPossible) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </Card.Body>
+            </Card>
+          )
+        })()}
+
         {/* Past Challenges */}
         {(upcomingChallenges.length > 0 || pastChallenges.length > 0) && (
           <>
@@ -1283,16 +1370,13 @@ export default function ChallengesPage() {
                                 year: 'numeric'
                               })}
                             </p>
-                            
                             {/* Stats for teachers */}
                             {isTeacher && challenge.submission_count !== undefined && (
                               <div className="flex items-center gap-4 text-xs text-gray-600">
                                 <span>📊 {challenge.submission_count}/{challenge.total_students}</span>
                                 <span className="text-primary-600 font-semibold">{challenge.completion_rate}%</span>
                                 {challenge.class_names && challenge.class_names.length > 0 && (
-                                  <span className="text-gray-500">
-                                    {challenge.class_names.join(', ')}
-                                  </span>
+                                  <span className="text-gray-500">{challenge.class_names.join(', ')}</span>
                                 )}
                               </div>
                             )}
@@ -1317,14 +1401,8 @@ export default function ChallengesPage() {
                       </Card.Body>
                     </Card>
                   ))}
-                  
-                  {/* Show More Button */}
                   {upcomingChallenges.length > ITEMS_PER_PAGE && !showAllUpcoming && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowAllUpcoming(true)}
-                      fullWidth
-                    >
+                    <Button variant="outline" onClick={() => setShowAllUpcoming(true)} fullWidth>
                       Show More ({upcomingChallenges.length - ITEMS_PER_PAGE} more)
                     </Button>
                   )}
@@ -1355,29 +1433,50 @@ export default function ChallengesPage() {
                             <p className="text-sm text-gray-600 line-clamp-1 mb-2">
                               {challenge.description}
                             </p>
-                            <p className="text-xs text-gray-500 mb-2">
-                              {new Date(challenge.challenge_date + 'T12:00:00').toLocaleDateString('en-US', {
-                                month: 'long',
-                                day: 'numeric',
-                                year: 'numeric'
-                              })}
-                            </p>
-                            
+
+                            {/* Assignment date history */}
+                            {!isTeacher && challenge.assignment_dates && challenge.assignment_dates.length > 0 ? (
+                              <div className="mb-2">
+                                {challenge.assignment_dates.length === 1 ? (
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(challenge.assignment_dates[0] + 'T12:00:00').toLocaleDateString('en-US', {
+                                      month: 'long', day: 'numeric', year: 'numeric'
+                                    })}
+                                  </p>
+                                ) : (
+                                  <div className="flex flex-wrap gap-1">
+                                    {challenge.assignment_dates.map(d => (
+                                      <span key={d} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs">
+                                        {new Date(d + 'T12:00:00').toLocaleDateString('en-US', {
+                                          month: 'short', day: 'numeric', year: 'numeric'
+                                        })}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-500 mb-2">
+                                {challenge.challenge_date && new Date(challenge.challenge_date + 'T12:00:00').toLocaleDateString('en-US', {
+                                  month: 'long', day: 'numeric', year: 'numeric'
+                                })}
+                              </p>
+                            )}
+
                             {/* Stats for teachers */}
                             {isTeacher && challenge.submission_count !== undefined && (
                               <div className="flex items-center gap-4 text-xs text-gray-600">
                                 <span>📊 {challenge.submission_count}/{challenge.total_students}</span>
                                 <span className="text-primary-600 font-semibold">{challenge.completion_rate}%</span>
                                 {challenge.class_names && challenge.class_names.length > 0 && (
-                                  <span className="text-gray-500">
-                                    {challenge.class_names.join(', ')}
-                                  </span>
+                                  <span className="text-gray-500">{challenge.class_names.join(', ')}</span>
                                 )}
                               </div>
                             )}
+
                             {/* Grade for students */}
                             {!isTeacher && (
-                              <div className="flex items-center gap-2 text-xs">
+                              <div className="flex items-center gap-2 text-xs mt-1">
                                 {challenge.my_submitted ? (
                                   <>
                                     <span className="text-green-600">✅ Submitted</span>
@@ -1397,6 +1496,7 @@ export default function ChallengesPage() {
                                 )}
                               </div>
                             )}
+
                             {/* Tags */}
                             {challenge.tag_ids && challenge.tag_ids.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-2">
@@ -1413,14 +1513,8 @@ export default function ChallengesPage() {
                       </Card.Body>
                     </Card>
                   ))}
-                  
-                  {/* Show More Button */}
                   {pastChallenges.length > ITEMS_PER_PAGE && !showAllPast && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowAllPast(true)}
-                      fullWidth
-                    >
+                    <Button variant="outline" onClick={() => setShowAllPast(true)} fullWidth>
                       Show More ({pastChallenges.length - ITEMS_PER_PAGE} more)
                     </Button>
                   )}
