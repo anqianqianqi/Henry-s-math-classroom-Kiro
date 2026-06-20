@@ -55,6 +55,7 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLImageElement | null>(null)
+  const justDraggedRef = useRef(false)  // suppresses click immediately after a drag ends
   const [imgLoaded, setImgLoaded] = useState(false)
 
   // Drawing state
@@ -322,10 +323,12 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   function handleCanvasMouseUp(e: React.MouseEvent<HTMLCanvasElement>) {
     if (vertexDrag) {
       setVertexDrag(null)
+      justDraggedRef.current = true
       return
     }
     if (pivotDragZoneId) {
       setPivotDragZoneId(null)
+      justDraggedRef.current = true
       return
     }
     if (zoomMode === 'selecting' && zoomDragStart && zoomDragCurrent) {
@@ -345,6 +348,11 @@ export default function AnimationZoneEditor({ imageUrl, zones, onChange }: Props
   }
 
   function handleCanvasClick(e: React.MouseEvent<HTMLCanvasElement>) {
+    // Suppress click that immediately follows a vertex/pivot drag end
+    if (justDraggedRef.current) {
+      justDraggedRef.current = false
+      return
+    }
     // In zoom-select mode clicks are handled by mousedown/up
     if (zoomMode === 'selecting') return
 
