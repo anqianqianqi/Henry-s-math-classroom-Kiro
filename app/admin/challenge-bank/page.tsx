@@ -388,6 +388,8 @@ export default function ChallengeBankPage() {
     )
     setSubmissionsLoading(false)
   }
+
+  const filteredTemplates = templates.filter(t =>
     !templateSearch.trim() ||
     t.title_template.toLowerCase().includes(templateSearch.toLowerCase())
   )
