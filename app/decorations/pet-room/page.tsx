@@ -169,20 +169,48 @@ export default function PetRoomPage() {
         .eq('visibility', 'public')
         .order('created_at', { ascending: false })
 
-      // Rooms this user purchased via redemptions — only if still active
-      // (deactivated rooms are hidden even for owners; private rooms still show for owners)
-      const { data: purchased } = targetUid ? await supabase
+      const publicIds = new Set((bgs ?? []).map((b: any) => b.id))
+
+      // Rooms this user purchased via redemptions — check both:
+      // 1. pet_room_background_id on redemption (set by backfill, may be null)
+      // 2. item_id matching shop_item_id on pet_room_backgrounds (always reliable)
+      const { data: allRedemptions } = targetUid ? await supabase
         .from('redemptions')
-        .select('pet_room_background_id, pet_room_backgrounds:pet_room_background_id(*)')
+        .select('item_id, pet_room_background_id')
         .eq('user_id', targetUid)
         .is('refunded_at', null)
-        .not('pet_room_background_id', 'is', null)
         : { data: [] }
 
-      const publicIds = new Set((bgs ?? []).map((b: any) => b.id))
-      const purchasedRows = (purchased ?? [])
-        .map((r: any) => r.pet_room_backgrounds)
-        .filter((b: any) => b && b.is_active && !publicIds.has(b.id))  // must be active + not already in public list
+      const redeemedItemIds = (allRedemptions ?? []).map((r: any) => r.item_id)
+
+      // Method 1: via backfilled pet_room_background_id
+      const bgIdsByBackfill = (allRedemptions ?? [])
+        .filter((r: any) => r.pet_room_background_id)
+        .map((r: any) => r.pet_room_background_id)
+
+      // Method 2: via shop_item_id matching redeemed item_ids
+      let bgIdsByShopItem: string[] = []
+      if (redeemedItemIds.length > 0) {
+        const { data: matched } = await supabase
+          .from('pet_room_backgrounds')
+          .select('id, shop_item_id')
+          .in('shop_item_id', redeemedItemIds)
+          .not('shop_item_id', 'is', null)
+        bgIdsByShopItem = (matched ?? []).map((b: any) => b.id)
+      }
+
+      const allOwnedBgIds = [...new Set([...bgIdsByBackfill, ...bgIdsByShopItem])]
+
+      let purchasedRows: PetRoomBackground[] = []
+      if (allOwnedBgIds.length > 0) {
+        const { data: purchasedBgs } = await supabase
+          .from('pet_room_backgrounds')
+          .select('*')
+          .in('id', allOwnedBgIds)
+          .eq('is_active', true)
+        purchasedRows = ((purchasedBgs ?? []) as PetRoomBackground[])
+          .filter((b: any) => !publicIds.has(b.id))
+      }
 
       const allBgs = [...(bgs ?? []), ...purchasedRows] as PetRoomBackground[]
       setBackgrounds(allBgs)
