@@ -100,7 +100,7 @@ export default function BookSkinsUserPage() {
           .from('book_skins')
           .select('id, name, description, skin_type, image_url, is_default, is_active, visibility, shop_item_id')
           .in('shop_item_id', redeemedItemIds)
-          .eq('is_active', true)
+          // No is_active filter — show deactivated owned skins as greyed-out
         purchasedByItemId = skinsByShopItem ?? []
       }
 
@@ -566,7 +566,7 @@ function SkinOption({
         {badge && !isSelected && (
           <div className="absolute top-1.5 left-1.5 text-sm leading-none">{badge}</div>
         )}
-        {isInactive && <div className="absolute inset-0 bg-gray-900/30 flex items-center justify-center"><span className="text-white text-xs font-bold bg-gray-800/60 px-1.5 py-0.5 rounded">Inactive</span></div>}
+        {isInactive && <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center"><span className="text-white text-xs font-bold bg-gray-800/70 px-2 py-1 rounded-lg">⚠️ Unavailable</span></div>}
         {isPrivate && !isInactive && <div className="absolute bottom-1 left-1 text-xs bg-gray-800/60 text-white px-1.5 py-0.5 rounded">🔒</div>}
       </div>
       <div className={`px-2 py-2 text-xs font-semibold truncate ${isSelected ? 'text-amber-700 bg-amber-50' : 'text-gray-700 bg-white'}`}>

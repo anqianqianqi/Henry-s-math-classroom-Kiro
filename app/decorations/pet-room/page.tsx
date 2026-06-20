@@ -207,7 +207,7 @@ export default function PetRoomPage() {
           .from('pet_room_backgrounds')
           .select('*')
           .in('id', allOwnedBgIds)
-          .eq('is_active', true)
+          // No is_active filter — show deactivated owned rooms as greyed-out
         purchasedRows = ((purchasedBgs ?? []) as PetRoomBackground[])
           .filter((b: any) => !publicIds.has(b.id))
       }
@@ -684,7 +684,7 @@ export default function PetRoomPage() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={bg.image_url} alt={bg.name} className="w-full h-full object-cover"
                       onClick={e => { e.stopPropagation(); setLightbox(bg.image_url) }} />
-                    {isInactive && <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center"><span className="text-white text-xs font-bold bg-gray-800/70 px-2 py-1 rounded">Inactive</span></div>}
+                  {isInactive && <div className="absolute inset-0 bg-gray-900/50 flex flex-col items-center justify-center gap-1"><span className="text-2xl">⚠️</span><span className="text-white text-xs font-bold bg-gray-900/70 px-2 py-1 rounded-lg">Unavailable</span></div>}
                     {!isPublic && isAdmin && <div className="absolute top-2 left-2 text-xs bg-gray-800/70 text-white px-2 py-0.5 rounded font-semibold">🔒 Admin only</div>}
                     {isOwned && !isAdmin && <div className="absolute top-2 left-2 text-xs bg-purple-600/80 text-white px-2 py-0.5 rounded font-semibold">🛒 Owned</div>}
                   </div>
