@@ -1062,20 +1062,20 @@ export default function ChallengesPage() {
                           >
                             <div className="flex flex-col gap-1 w-full">
                               {entries.map(entry => (
-                                <div key={entry.id} className="flex flex-col gap-0.5">
+                                <div key={entry.id} className="flex items-center gap-1">
                                   <a
                                     href={`/challenges/${entry.id}`}
-                                    className="inline-block w-full px-2 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-800 text-xs font-medium hover:bg-green-100 hover:border-green-400 transition-colors leading-tight"
+                                    className="flex-1 px-2 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-800 text-xs font-medium hover:bg-green-100 hover:border-green-400 transition-colors leading-tight truncate"
                                     title={entry.title}
                                   >
-                                    <span className="line-clamp-2">{entry.title}</span>
+                                    {entry.title}
                                   </a>
                                   <button
                                     onClick={() => handleUnassignChallenge(entry.id, cls.id)}
-                                    className="inline-flex items-center justify-center w-full px-1 py-0.5 rounded text-[10px] text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                    className="shrink-0 text-red-400 hover:text-red-600 text-[10px] font-semibold px-1 py-1 rounded hover:bg-red-50 transition-colors"
                                     title="Remove from schedule"
                                   >
-                                    ✕ Remove
+                                    ✕
                                   </button>
                                 </div>
                               ))}
