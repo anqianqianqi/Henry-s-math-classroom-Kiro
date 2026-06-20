@@ -598,47 +598,11 @@ export default function ChallengesPage() {
         assigned_by: user.id,
       })
 
-      // ── Retire old instances ──
+      // ── Remove old assignments for this bank item from this class ──
+      // Submissions are now tied to bank_item_id, so they survive automatically.
+      // We only need to hide the old daily_challenge from the class view.
       if (oldChallengeIds.length > 0) {
-        // Get all submissions for old instances
-        const { data: oldSubs } = await supabase
-          .from('challenge_submissions')
-          .select('id, user_id, content, image_url, points, is_locked')
-          .in('challenge_id', oldChallengeIds)
-
-        const submittedUserIds = new Set((oldSubs || []).map((s: any) => s.user_id))
-
         for (const oldId of oldChallengeIds) {
-          const subsForOld = (oldSubs || []).filter((s: any) => s.challenge_id === oldId)
-
-          if (subsForOld.length > 0) {
-            // Copy each submission to the new challenge instance (if not already there)
-            const { data: existingNewSubs } = await supabase
-              .from('challenge_submissions')
-              .select('user_id')
-              .eq('challenge_id', newChallenge.id)
-              .in('user_id', subsForOld.map((s: any) => s.user_id))
-
-            const alreadyCopied = new Set((existingNewSubs || []).map((s: any) => s.user_id))
-
-            const toInsert = subsForOld
-              .filter((s: any) => !alreadyCopied.has(s.user_id))
-              .map((s: any) => ({
-                challenge_id: newChallenge.id,
-                user_id: s.user_id,
-                content: s.content,
-                image_url: s.image_url ?? null,
-                points: s.points ?? null,
-                is_locked: s.is_locked ?? false,
-              }))
-
-            if (toInsert.length > 0) {
-              await supabase.from('challenge_submissions').insert(toInsert)
-            }
-          }
-
-          // Remove old class assignment so it disappears from student challenge pages
-          // (keep the challenge row itself and any submissions for record keeping)
           await supabase
             .from('challenge_assignments')
             .delete()

@@ -126,12 +126,14 @@ export default function ChallengePage() {
     const interval = setInterval(async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data } = await supabase
-        .from('challenge_submissions')
-        .select('points, is_locked')
-        .eq('challenge_id', params.id)
-        .eq('user_id', user.id)
-        .maybeSingle()
+      // Poll by bank_item_id when available (survives challenge republishing)
+      const bankItemId = challenge && (challenge as any).source_bank_id
+        ? (challenge as any).source_bank_id as string
+        : null
+      const query = bankItemId
+        ? supabase.from('challenge_submissions').select('points, is_locked').eq('bank_item_id', bankItemId).eq('user_id', user.id).maybeSingle()
+        : supabase.from('challenge_submissions').select('points, is_locked').eq('challenge_id', params.id).eq('user_id', user.id).maybeSingle()
+      const { data } = await query
       if (data && userSubmission) {
         if (data.points !== userSubmission.points || data.is_locked !== userSubmission.is_locked) {
           setUserSubmission(prev => prev ? { ...prev, points: data.points, is_locked: data.is_locked } : prev)
@@ -139,7 +141,7 @@ export default function ChallengePage() {
       }
     }, 30000)
     return () => clearInterval(interval)
-  }, [isTeacher, userSubmission?.id])
+  }, [isTeacher, userSubmission?.id, challenge])
 
   async function loadStudentList() {
     console.log('loadStudentList called')
@@ -393,16 +395,30 @@ export default function ChallengePage() {
       }
     }
 
-    // Load user's submission (for both students and teachers)
-    const { data: submissionData } = await supabase
-      .from('challenge_submissions')
-      .select(`
-        *,
-        profiles!inner(full_name, nickname)
-      `)
-      .eq('challenge_id', params.id)
-      .eq('user_id', user.id)
-      .maybeSingle()
+    // Determine the bank_item_id for this challenge (if it was published from the bank)
+    const bankItemId: string | null = challengeData?.source_bank_id ?? null
+
+    // Load user's submission.
+    // For bank-sourced challenges: look up by bank_item_id (survives delete/republish).
+    // For ad-hoc challenges: fall back to challenge_id.
+    let submissionData: any = null
+    if (bankItemId) {
+      const { data } = await supabase
+        .from('challenge_submissions')
+        .select(`*, profiles!inner(full_name, nickname)`)
+        .eq('bank_item_id', bankItemId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      submissionData = data
+    } else {
+      const { data } = await supabase
+        .from('challenge_submissions')
+        .select(`*, profiles!inner(full_name, nickname)`)
+        .eq('challenge_id', params.id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      submissionData = data
+    }
 
     if (submissionData) {
       setUserSubmission(submissionData)
@@ -417,7 +433,7 @@ export default function ChallengePage() {
 
     // Teachers always see all submissions, students only after submitting
     if (teacherRole) {
-      await loadOtherSubmissions(user.id, true)
+      await loadOtherSubmissions(user.id, true, bankItemId)
       
       // Get total number of students in classes this challenge is assigned to
       const { data: assignments } = await supabase
@@ -425,12 +441,8 @@ export default function ChallengePage() {
         .select('class_id')
         .eq('challenge_id', params.id)
 
-      console.log('Challenge assignments:', assignments)
-
       if (assignments && assignments.length > 0) {
         const classIds = assignments.map(a => a.class_id)
-        
-        console.log('Class IDs:', classIds)
         
         const { data: memberData } = await supabase
           .from('class_members')
@@ -448,7 +460,6 @@ export default function ChallengePage() {
         individualAssignments?.forEach(a => uniqueStudents.add(a.student_id))
         setTotalStudents(uniqueStudents.size)
       } else {
-        // Check if there are only individual assignments
         const { data: individualAssignments } = await supabase
           .from('challenge_student_assignments')
           .select('student_id')
@@ -459,14 +470,15 @@ export default function ChallengePage() {
         }
       }
     } else if (submissionData) {
-      await loadOtherSubmissions(user.id, false)
+      await loadOtherSubmissions(user.id, false, bankItemId)
     }
 
-    // Load total submission count for all users (for the locked message)
-    const { count: totalCount } = await supabase
-      .from('challenge_submissions')
-      .select('*', { count: 'exact', head: true })
-      .eq('challenge_id', params.id)
+    // Load total submission count.
+    // For bank-sourced challenges count by bank_item_id (all instances combined).
+    const countQuery = bankItemId
+      ? supabase.from('challenge_submissions').select('*', { count: 'exact', head: true }).eq('bank_item_id', bankItemId)
+      : supabase.from('challenge_submissions').select('*', { count: 'exact', head: true }).eq('challenge_id', params.id)
+    const { count: totalCount } = await countQuery
     
     setTotalSubmissionCount(totalCount || 0)
 
@@ -485,15 +497,20 @@ export default function ChallengePage() {
     }
   }
 
-  async function loadOtherSubmissions(currentUserId: string, isTeacher: boolean = false) {
-    const query = supabase
-      .from('challenge_submissions')
-      .select(`
-        *,
-        profiles!inner(full_name, nickname)
-      `)
-      .eq('challenge_id', params.id)
-      .order('submitted_at', { ascending: false })
+  async function loadOtherSubmissions(currentUserId: string, isTeacher: boolean = false, bankItemId: string | null = null) {
+    // For bank-sourced challenges: query across all instances via bank_item_id
+    // For ad-hoc challenges: query by challenge_id as before
+    const query = bankItemId
+      ? supabase
+          .from('challenge_submissions')
+          .select(`*, profiles!inner(full_name, nickname)`)
+          .eq('bank_item_id', bankItemId)
+          .order('submitted_at', { ascending: false })
+      : supabase
+          .from('challenge_submissions')
+          .select(`*, profiles!inner(full_name, nickname)`)
+          .eq('challenge_id', params.id)
+          .order('submitted_at', { ascending: false })
 
     // Teachers see ALL submissions, students see others' submissions
     if (!isTeacher) {
@@ -807,7 +824,12 @@ export default function ChallengePage() {
         const insertData: any = {
           challenge_id: params.id,
           user_id: userId,
-          content: solution
+          content: solution,
+          // Tie to bank item when this challenge was published from the bank.
+          // This persists the submission across delete/republish cycles.
+          ...(challenge && (challenge as any).source_bank_id
+            ? { bank_item_id: (challenge as any).source_bank_id }
+            : {}),
         }
         if (imageUrl) insertData.image_url = imageUrl
 
