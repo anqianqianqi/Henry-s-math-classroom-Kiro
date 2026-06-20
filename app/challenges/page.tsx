@@ -84,7 +84,8 @@ export default function ChallengesPage() {
 
   // Assign-from-bank modal state
   const [pickTarget, setPickTarget] = useState<{ classId: string, className: string, date: string } | null>(null)
-  const [bankChallenges, setBankChallenges] = useState<Array<{id: string, title: string, description: string, tag_ids: string[], image_url?: string | null, max_points?: number | null}>>([])  const [bankTagMap, setBankTagMap] = useState<Record<string, string>>({}) // tagId → name
+  const [bankChallenges, setBankChallenges] = useState<Array<{id: string, title: string, description: string, tag_ids: string[], image_url?: string | null, max_points?: number | null}>>([])
+  const [bankTagMap, setBankTagMap] = useState<Record<string, string>>({}) // tagId → name
   const [bankSearch, setBankSearch] = useState('')
   const [bankLoading, setBankLoading] = useState(false)
   const [assigning, setAssigning] = useState(false)
