@@ -625,6 +625,8 @@ export default function ChallengesPage() {
       })
 
       setPickTarget(null)
+      // Refresh the full challenge list so Today's Challenges updates
+      await loadChallenges()
     } catch (err: any) {
       alert('Failed to assign: ' + (err?.message || err))
     } finally {
@@ -768,17 +770,42 @@ export default function ChallengesPage() {
   const today = localDateString()
   const displayChallenges = filteredChallenges.length > 0 ? filteredChallenges : challenges
   // For teachers: deduplicate by source_bank_id so the same bank item published
-  // to multiple classes only appears once in Today's Challenges
+  // to multiple classes only appears once in Today's Challenges.
+  // The kept entry gets ALL class names merged from the duplicates.
   const deduplicateForTeacher = (list: typeof displayChallenges) => {
     if (!isTeacher) return list
-    const seenBankIds = new Set<string>()
-    return list.filter(c => {
+    const bankIdMap = new Map<string, typeof displayChallenges[0]>()
+    const result: typeof displayChallenges = []
+    for (const c of list) {
       const bankId = (c as any).source_bank_id
-      if (!bankId) return true  // no bank source — always show
-      if (seenBankIds.has(bankId)) return false
-      seenBankIds.add(bankId)
-      return true
-    })
+      if (!bankId) {
+        result.push(c)
+        continue
+      }
+      if (bankIdMap.has(bankId)) {
+        // Merge class names into the existing entry
+        const existing = bankIdMap.get(bankId)!
+        const merged = [
+          ...new Set([...(existing.class_names || []), ...(c.class_names || [])])
+        ]
+        const mergedSubs = (existing.submission_count || 0) + (c.submission_count || 0)
+        const mergedStudents = (existing.total_students || 0) + (c.total_students || 0)
+        const mergedRate = mergedStudents > 0
+          ? Math.round((mergedSubs / mergedStudents) * 100)
+          : 0
+        Object.assign(existing, {
+          class_names: merged,
+          submission_count: mergedSubs,
+          total_students: mergedStudents,
+          completion_rate: mergedRate,
+        })
+      } else {
+        const copy = { ...c }
+        bankIdMap.set(bankId, copy)
+        result.push(copy)
+      }
+    }
+    return result
   }
   const todayChallenges = deduplicateForTeacher(displayChallenges.filter(c => c.challenge_date === today))
   const upcomingChallenges = displayChallenges.filter(c => c.challenge_date && c.challenge_date > today)
