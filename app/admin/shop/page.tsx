@@ -45,6 +45,7 @@ const EMPTY_FORM: ShopItemForm = {
   food_xp: '',
   target_species: '',
   draws_per_redemption: '1',
+  music_file: '',
 }
 
 // ── Admin Room Browse Modal (with Edit/Off/Delete per item) ───────────────────
@@ -652,6 +653,7 @@ export default function AdminShopPage() {
             food_xp: form.category === 'food' ? parseInt(form.food_xp, 10) : null,
             target_species: form.category === 'pet' ? form.target_species || null : null,
             draws_per_redemption: Math.max(1, Math.min(20, parseInt(form.draws_per_redemption || '1', 10) || 1)),
+            music_file: form.commodity_type === 'music_track' ? (form.music_file.trim() || null) : null,
           })
           .eq('id', editingId)
 
@@ -742,6 +744,7 @@ export default function AdminShopPage() {
           image_url: finalImageUrl,
           details: form.details.trim() || null,
           commodity_type: form.commodity_type || 'standard',
+          music_file: form.commodity_type === 'music_track' ? (form.music_file.trim() || null) : null,
           ...(newItemQuantity !== undefined ? { quantity: newItemQuantity } : {}),
         }
         const { data: newItem, error: insertError } = await supabase
@@ -821,6 +824,7 @@ export default function AdminShopPage() {
       food_xp: item.food_xp !== null ? String(item.food_xp) : '',
       target_species: item.target_species ?? '',
       draws_per_redemption: String(item.draws_per_redemption ?? 1),
+      music_file: (item as any).music_file ?? '',
     })
     setImageFile(null)
     setImagePreview(item.image_url ?? null)
@@ -1088,7 +1092,7 @@ export default function AdminShopPage() {
                     Commodity Type
                   </label>
                   <div className="grid grid-cols-3 gap-2">
-                    {(['standard', 'blindbox', 'physical', 'physical_blindbox'] as const).map((type) => (
+                    {(['standard', 'blindbox', 'physical', 'physical_blindbox', 'music_track'] as const).map((type) => (
                       <button
                         key={type}
                         type="button"
@@ -1098,6 +1102,7 @@ export default function AdminShopPage() {
                             ? type === 'blindbox' ? 'border-purple-500 bg-purple-50 text-purple-700'
                               : type === 'physical' ? 'border-amber-500 bg-amber-50 text-amber-700'
                               : type === 'physical_blindbox' ? 'border-rose-500 bg-rose-50 text-rose-700'
+                              : type === 'music_track' ? 'border-yellow-600 bg-yellow-50 text-yellow-800'
                               : 'border-primary-500 bg-primary-50 text-primary-700'
                             : 'border-gray-200 text-gray-500 hover:border-gray-300'
                         }`}
@@ -1105,6 +1110,7 @@ export default function AdminShopPage() {
                         {type === 'standard' ? '🎁 Standard'
                           : type === 'blindbox' ? '🎲 Blind Box'
                           : type === 'physical' ? '📦 Physical'
+                          : type === 'music_track' ? '🎵 Music Track'
                           : '📦🎲 Physical Box'}
                       </button>
                     ))}
@@ -1117,6 +1123,23 @@ export default function AdminShopPage() {
                   )}
                   {form.commodity_type === 'physical_blindbox' && (
                     <p className="text-xs text-rose-600 mt-1">Student gets a random image from the pool (each claimed once) AND you get notified to ship the physical item.</p>
+                  )}
+                  {/* Music file field */}
+                  {form.commodity_type === 'music_track' && (
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Music Filename <span className="text-red-500">*</span>
+                        <span className="text-gray-400 font-normal ml-1">(file must exist in /public/music/)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={form.music_file}
+                        onChange={e => handleFormChange('music_file', e.target.value)}
+                        className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        placeholder="e.g. chill-beats.mp3"
+                      />
+                      <p className="text-xs text-amber-600 mt-1">Students who buy this track will hear it in their music player. Upload the MP3 to /public/music/ first.</p>
+                    </div>
                   )}
                 </div>
 
