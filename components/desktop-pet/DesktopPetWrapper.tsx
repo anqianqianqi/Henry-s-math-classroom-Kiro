@@ -14,37 +14,42 @@ import MusicPlayer from './MusicPlayer'
 const DesktopPet = dynamic(() => import('./DesktopPet'), { ssr: false })
 
 // ── Shared draggable group container ─────────────────────────────────────────
-// Wraps Didi + music pill in a single fixed element so they always move together.
-function FloatingGroup({ children }: { children: React.ReactNode }) {
+// Wraps Didi in a single fixed element. Music pill is rendered separately but
+// docked to this container's position via the onMove callback.
+function FloatingGroup({ children, onMove }: { children: React.ReactNode; onMove?: (x: number, y: number) => void }) {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
   const dragOffset = useRef({ x: 0, y: 0 })
   const moved      = useRef(false)
 
   useEffect(() => {
-    setPos({ x: window.innerWidth - 320, y: window.innerHeight - 160 })
+    const x = window.innerWidth - 180
+    const y = window.innerHeight - 200
+    setPos({ x, y })
+    onMove?.(x, y)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button, input, [role="button"]')) return
     e.preventDefault()
     moved.current = false
-    const cur = pos ?? { x: window.innerWidth - 320, y: window.innerHeight - 160 }
+    const cur = pos ?? { x: window.innerWidth - 180, y: window.innerHeight - 200 }
     dragOffset.current = { x: e.clientX - cur.x, y: e.clientY - cur.y }
 
-    const onMove = (ev: MouseEvent) => {
+    const onMoveFn = (ev: MouseEvent) => {
       moved.current = true
-      setPos({
-        x: Math.max(0, Math.min(window.innerWidth  - 50, ev.clientX - dragOffset.current.x)),
-        y: Math.max(0, Math.min(window.innerHeight - 50, ev.clientY - dragOffset.current.y)),
-      })
+      const nx = Math.max(0, Math.min(window.innerWidth  - 50, ev.clientX - dragOffset.current.x))
+      const ny = Math.max(0, Math.min(window.innerHeight - 50, ev.clientY - dragOffset.current.y))
+      setPos({ x: nx, y: ny })
+      onMove?.(nx, ny)
     }
     const onUp = () => {
-      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mousemove', onMoveFn)
       window.removeEventListener('mouseup',   onUp)
     }
-    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mousemove', onMoveFn)
     window.addEventListener('mouseup',   onUp)
-  }, [pos])
+  }, [pos, onMove])
 
   if (!pos) return null
 
@@ -56,9 +61,6 @@ function FloatingGroup({ children }: { children: React.ReactNode }) {
         left: pos.x,
         top:  pos.y,
         zIndex: 9998,
-        display: 'flex',
-        alignItems: 'flex-end',
-        gap: 4,
         cursor: 'grab',
         userSelect: 'none',
       }}
@@ -84,6 +86,7 @@ export default function DesktopPetWrapper() {
   const [cracking, setCracking] = useState(false)
   const [crackError, setCrackError] = useState<string | null>(null)
   const [xpGainToast, setXpGainToast] = useState<number | null>(null)
+  const [groupPos, setGroupPos] = useState<{ left: number; top: number } | null>(null)
   const xpGranted = useRef(false)
   const initialFetchDone = useRef(false)
   const prevXp = useRef<number | null>(null)
@@ -245,42 +248,51 @@ export default function DesktopPetWrapper() {
 
   const showPet = status !== null && !isDashboard && status.hasPet
 
+  // Compute dock position: pill sits below Didi (groupPos.top + ~160px for Didi height)
+  const dockPos = groupPos ? { left: groupPos.left, top: groupPos.top + 160 } : null
+
   // Dashboard or no pet — just music player standalone
   if (!showPet) return <MusicPlayer />
 
+  const handleGroupMove = (x: number, y: number) => setGroupPos({ left: x, top: y })
+
   if (status!.isEgg) {
     return (
-      <FloatingGroup>
-        <MusicPlayer groupMode />
-        <DesktopPet
-          petStage="egg"
-          petName={status!.petName ?? undefined}
-          isEgg
-          xp={status!.xp ?? undefined}
-          xpGainToast={xpGainToast ?? undefined}
-          onHatch={hatchEgg}
-          cracking={cracking}
-          crackError={crackError ?? undefined}
-          groupMode
-        />
-      </FloatingGroup>
+      <>
+        <MusicPlayer dockPos={dockPos} />
+        <FloatingGroup onMove={handleGroupMove}>
+          <DesktopPet
+            petStage="egg"
+            petName={status!.petName ?? undefined}
+            isEgg
+            xp={status!.xp ?? undefined}
+            xpGainToast={xpGainToast ?? undefined}
+            onHatch={hatchEgg}
+            cracking={cracking}
+            crackError={crackError ?? undefined}
+            groupMode
+          />
+        </FloatingGroup>
+      </>
     )
   }
 
   const stage = (status!.stage ?? 'adult') as DidiStage
   return (
-    <FloatingGroup>
-      <MusicPlayer groupMode />
-      <DesktopPet
-        petStage={stage}
-        petName={status!.petName ?? undefined}
-        happiness={status!.happiness ?? undefined}
-        hunger={status!.hunger ?? undefined}
-        streak={status!.streak ?? undefined}
-        xp={status!.xp ?? undefined}
-        xpGainToast={xpGainToast ?? undefined}
-        groupMode
-      />
-    </FloatingGroup>
+    <>
+      <MusicPlayer dockPos={dockPos} />
+      <FloatingGroup onMove={handleGroupMove}>
+        <DesktopPet
+          petStage={stage}
+          petName={status!.petName ?? undefined}
+          happiness={status!.happiness ?? undefined}
+          hunger={status!.hunger ?? undefined}
+          streak={status!.streak ?? undefined}
+          xp={status!.xp ?? undefined}
+          xpGainToast={xpGainToast ?? undefined}
+          groupMode
+        />
+      </FloatingGroup>
+    </>
   )
 }
