@@ -214,7 +214,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
 
   if (!mounted || !pillPos) return <style>{STYLES}</style>
 
-  const PILL_H = 36
+  const PILL_H = 48
 
   // Compute expanded panel position: anchors to pill's bottom edge, grows upward
   const panelLeft   = Math.max(8, Math.min(pillPos.left, window.innerWidth - 232))
@@ -246,20 +246,21 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
           }}>♪</div>
         )}
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 36, height: 36, borderRadius: '50%',
-          background: isPlaying
-            ? 'linear-gradient(135deg,#92400e,#78350f)'
-            : 'linear-gradient(135deg,#d97706,#b45309)',
-          border: '2px solid rgba(255,255,255,0.25)',
+          width: 48, height: 48, borderRadius: '50%',
+          position: 'relative',
+          overflow: 'hidden',
           boxShadow: isPlaying
             ? '0 0 10px rgba(146,64,14,0.5), 0 2px 6px rgba(0,0,0,0.3)'
             : '0 2px 6px rgba(0,0,0,0.25)',
-          transition: 'all 0.2s',
-          animation: isPlaying ? 'mp-disc-spin 6s linear infinite' : 'none',
+          transition: 'box-shadow 0.2s',
+          background: '#111',
         }}>
-          <span style={{ fontSize: 16, filter: 'brightness(0) invert(1)' }}>🎵</span>
-          {isPlaying && <span style={{ fontSize: 9, animation: 'mp-disc-spin 1.5s linear infinite', display: 'inline-block' }}>◎</span>}
+          {/* Layer 1: wooden base — static */}
+          <img src="/music/bottom.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'screen', pointerEvents: 'none' }} />
+          {/* Layer 2: vinyl disc — spins when playing */}
+          <img src="/music/circle.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'screen', pointerEvents: 'none', animation: isPlaying ? 'mp-disc-spin 4s linear infinite' : 'none', transformOrigin: 'center' }} />
+          {/* Layer 3: needle/tonearm — static on top */}
+          <img src="/music/needle.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'screen', pointerEvents: 'none' }} />
         </div>
       </div>
 
