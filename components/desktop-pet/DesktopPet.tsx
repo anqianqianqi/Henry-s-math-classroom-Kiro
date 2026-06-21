@@ -291,17 +291,16 @@ export default function DesktopPet({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [xpGainToast])
 
-  // ── One-time music hint on challenges pages ───────────────────────────────
+  // ── Music hint on challenges pages — once per session ────────────────────
+  const musicHintShownRef = useRef(false)
   useEffect(() => {
     if (!mounted || isEgg) return
     if (!pathname?.startsWith('/challenges')) return
-    try {
-      if (localStorage.getItem('didi-music-hint-shown')) return
-    } catch { return }
+    if (musicHintShownRef.current) return
+    musicHintShownRef.current = true
     const t = setTimeout(() => {
       say('🎵 Try music while studying!')
-      try { localStorage.setItem('didi-music-hint-shown', '1') } catch {}
-    }, 3000)
+    }, 2500)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, mounted, isEgg])
