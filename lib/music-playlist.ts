@@ -13,4 +13,6 @@ export const PLAYLIST: Track[] = [
   { file: 'alex-morgan-study-lofi-music-548638.mp3', title: 'Study Lofi' },
   { file: 'the_mountain-study-vibe-136087.mp3', title: 'Study Vibe' },
   { file: 'the_mountain-geography-study-141463.mp3', title: 'Geography Study' },
+  { file: 'jazzy.mp3', title: 'Jazzy' },
+  { file: 'relaxing jazz.mp3', title: 'Relaxing Jazz' },
 ]
