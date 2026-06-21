@@ -207,6 +207,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
       {/* ── Pill ── */}
       <div
         ref={pillRef}
+        data-no-drag
         onMouseDown={handleDragStart}
         onClick={() => { if (!dragMoved.current) setCollapsed(c => !c) }}
         style={{

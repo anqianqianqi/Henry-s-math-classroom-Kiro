@@ -30,7 +30,7 @@ function FloatingGroup({ children, onMove }: { children: React.ReactNode; onMove
   }, [])
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button, input, [role="button"]')) return
+    if ((e.target as HTMLElement).closest('button, input, [role="button"], [data-no-drag]')) return
     e.preventDefault()
     moved.current = false
     const cur = pos ?? { x: window.innerWidth - 180, y: window.innerHeight - 200 }
