@@ -15,6 +15,22 @@ import { createPortal } from 'react-dom'
 import { usePathname } from 'next/navigation'
 import { PLAYLIST } from '@/lib/music-playlist'
 
+// Theme colors — match the app's primary green palette
+const C = {
+  idle:      '#16a34a',  // primary-600
+  idleLight: '#dcfce7',  // primary-100
+  idleBorder:'#86efac',  // primary-300
+  playGrad:  'linear-gradient(135deg,#22c55e,#16a34a)',
+  playBorder:'#16a34a',
+  accent:    '#16a34a',
+  panel:     '#f0fdf4',  // primary-50
+  panelBorder:'#86efac',
+  track:     '#bbf7d0',  // primary-200 — progress bar bg
+  progressFill:'#16a34a',
+  text:      '#14532d',  // primary-900
+  subtext:   '#166534',  // primary-800
+}
+
 const STYLES = `
 @keyframes mp-disc-spin {
   from { transform: rotate(0deg); }
@@ -222,16 +238,16 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
         {isPlaying && (
           <div key={noteKey} style={{
             position: 'absolute', top: -18, left: 14, fontSize: 13,
-            pointerEvents: 'none', animation: 'mp-note-float 1.4s ease-out forwards', color: '#7c3aed',
+            pointerEvents: 'none', animation: 'mp-note-float 1.4s ease-out forwards', color: C.accent,
           }}>♪</div>
         )}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          background: isPlaying ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'rgba(255,255,255,0.97)',
-          border: isPlaying ? '2px solid #7c3aed' : '2px solid #d8b4fe',
+          background: isPlaying ? C.playGrad : 'rgba(255,255,255,0.97)',
+          border: `2px solid ${isPlaying ? C.playBorder : C.idleBorder}`,
           borderRadius: 24, padding: '5px 12px 5px 10px',
-          boxShadow: isPlaying ? '0 0 12px rgba(124,58,237,0.4),0 2px 8px rgba(0,0,0,0.15)' : '0 2px 8px rgba(0,0,0,0.15)',
-          fontSize: 12, fontWeight: 700, color: isPlaying ? 'white' : '#7c3aed',
+          boxShadow: isPlaying ? `0 0 12px rgba(22,163,74,0.4),0 2px 8px rgba(0,0,0,0.15)` : '0 2px 8px rgba(0,0,0,0.15)',
+          fontSize: 12, fontWeight: 700, color: isPlaying ? 'white' : C.idle,
           fontFamily: 'system-ui,sans-serif', whiteSpace: 'nowrap', transition: 'all 0.2s',
         }}>
           <span style={{ fontSize: 15 }}>🎵</span>
@@ -252,7 +268,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
             left:   panelLeft,
             bottom: panelBottom,
             width: 224, zIndex: 99999,
-            background: 'white', border: '2px solid #e9d5ff',
+            background: 'white', border: `2px solid ${C.panelBorder}`,
             borderRadius: 18, boxShadow: '0 8px 28px rgba(124,58,237,0.18)',
             fontFamily: 'system-ui,sans-serif', overflow: 'hidden',
             animation: 'mp-pop-in 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards',
@@ -261,16 +277,16 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
           {/* Header / drag handle */}
           <div style={{
             cursor: 'default',
-            background: isPlaying ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'linear-gradient(135deg,#f5f0ff,#ede9fe)',
+            background: isPlaying ? C.playGrad : `linear-gradient(135deg,${C.panel},${C.idleLight})`,
             padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 15 }}>🎵</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: isPlaying ? 'white' : '#7c3aed' }}>Study Music</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: isPlaying ? 'white' : C.idle }}>Study Music</span>
               {isPlaying && <span style={{ fontSize: 10, animation: 'mp-disc-spin 1.5s linear infinite', display: 'inline-block', color: 'white' }}>◎</span>}
             </div>
             <button onClick={() => setCollapsed(true)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0, color: isPlaying ? 'rgba(255,255,255,0.8)' : '#a07060' }}>×</button>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0, color: isPlaying ? 'rgba(255,255,255,0.8)' : C.subtext }}>×</button>
           </div>
 
           <div style={{ padding: '10px 14px 12px', overflow: 'hidden' }}>
@@ -280,42 +296,42 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
               </div>
             ) : (
               <>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#5c3d2e', textAlign: 'center', marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.text, textAlign: 'center', marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {currentTrack?.title ?? '—'}
-                  <span style={{ fontSize: 10, color: '#a07060', fontWeight: 400, marginLeft: 4 }}>{trackIndex + 1}/{PLAYLIST.length}</span>
+                  <span style={{ fontSize: 10, color: C.subtext, fontWeight: 400, marginLeft: 4 }}>{trackIndex + 1}/{PLAYLIST.length}</span>
                 </div>
-                <div onClick={seek} style={{ height: 5, background: '#f0e6d3', borderRadius: 3, marginBottom: 4, cursor: 'pointer', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${progress * 100}%`, background: '#7c3aed', borderRadius: 3, transition: 'width 0.3s' }} />
+                <div onClick={seek} style={{ height: 5, background: C.track, borderRadius: 3, marginBottom: 4, cursor: 'pointer', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${progress * 100}%`, background: C.progressFill, borderRadius: 3, transition: 'width 0.3s' }} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#a07060', marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: C.subtext, marginBottom: 10 }}>
                   <span>{fmt(progress * duration)}</span><span>{fmt(duration)}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 10 }}>
-                  <button onClick={prevTrack} disabled={PLAYLIST.length < 2} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#7c3aed', padding: 2 }}>⏮</button>
-                  <button onClick={togglePlay} style={{ background: '#7c3aed', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 14, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(124,58,237,0.4)' }}>
+                  <button onClick={prevTrack} disabled={PLAYLIST.length < 2} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.idle, padding: 2 }}>⏮</button>
+                  <button onClick={togglePlay} style={{ background: C.idle, border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 14, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 2px 8px rgba(22,163,74,0.4)` }}>
                     {isPlaying ? '⏸' : '▶'}
                   </button>
-                  <button onClick={nextTrack} disabled={PLAYLIST.length < 2} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#7c3aed', padding: 2 }}>⏭</button>
+                  <button onClick={nextTrack} disabled={PLAYLIST.length < 2} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.idle, padding: 2 }}>⏭</button>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, overflow: 'hidden' }}>
                   <span style={{ fontSize: 12, flexShrink: 0 }}>🔈</span>
                   <input type="range" min={0} max={1} step={0.05} value={volume} onChange={e => setVolume(Number(e.target.value))}
-                    style={{ flex: 1, minWidth: 0, maxWidth: '100%', accentColor: '#7c3aed', cursor: 'pointer' }} />
+                    style={{ flex: 1, minWidth: 0, maxWidth: '100%', accentColor: C.idle, cursor: 'pointer' }} />
                   <span style={{ fontSize: 12, flexShrink: 0 }}>🔊</span>
                 </div>
                 <button onClick={() => setShowPlaylist(p => !p)}
-                  style={{ width: '100%', background: showPlaylist ? '#f5f0ff' : '#faf5ff', border: '1px solid #e9d5ff', borderRadius: 8, fontSize: 11, color: '#7c3aed', fontWeight: 600, padding: '5px 0', cursor: 'pointer', marginBottom: showPlaylist ? 8 : 0 }}>
+                  style={{ width: '100%', background: showPlaylist ? C.idleLight : C.panel, border: `1px solid ${C.idleBorder}`, borderRadius: 8, fontSize: 11, color: C.idle, fontWeight: 600, padding: '5px 0', cursor: 'pointer', marginBottom: showPlaylist ? 8 : 0 }}>
                   {showPlaylist ? '▲ Hide playlist' : '▼ Choose a song'}
                 </button>
                 {showPlaylist && (
-                  <div style={{ maxHeight: 130, overflowY: 'auto', border: '1px solid #f0e6d3', borderRadius: 8, background: '#fffbf7' }}>
+                  <div style={{ maxHeight: 130, overflowY: 'auto', border: `1px solid ${C.idleBorder}`, borderRadius: 8, background: C.panel }}>
                     {PLAYLIST.map((track, idx) => (
                       <div key={idx} onClick={() => playTrack(idx)}
-                        style={{ padding: '7px 10px', fontSize: 11, cursor: 'pointer', fontWeight: idx === trackIndex ? 700 : 400, color: idx === trackIndex ? '#7c3aed' : '#5c3d2e', background: idx === trackIndex ? '#f5f0ff' : 'transparent', display: 'flex', alignItems: 'center', gap: 6, borderBottom: idx < PLAYLIST.length - 1 ? '1px solid #f5ede0' : 'none' }}
-                        onMouseEnter={e => { if (idx !== trackIndex) (e.currentTarget as HTMLDivElement).style.background = '#fdf5ee' }}
+                        style={{ padding: '7px 10px', fontSize: 11, cursor: 'pointer', fontWeight: idx === trackIndex ? 700 : 400, color: idx === trackIndex ? C.idle : C.text, background: idx === trackIndex ? C.idleLight : 'transparent', display: 'flex', alignItems: 'center', gap: 6, borderBottom: idx < PLAYLIST.length - 1 ? `1px solid ${C.idleBorder}` : 'none' }}
+                        onMouseEnter={e => { if (idx !== trackIndex) (e.currentTarget as HTMLDivElement).style.background = C.panel }}
                         onMouseLeave={e => { if (idx !== trackIndex) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
                       >
-                        {idx === trackIndex && isPlaying ? <span>♪</span> : <span style={{ width: 10, color: '#a07060', fontSize: 9 }}>{idx + 1}</span>}
+                        {idx === trackIndex && isPlaying ? <span style={{ color: C.idle }}>♪</span> : <span style={{ width: 10, color: C.subtext, fontSize: 9 }}>{idx + 1}</span>}
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.title}</span>
                       </div>
                     ))}
