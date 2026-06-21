@@ -212,8 +212,18 @@ export default function MusicPlayer() {
     return `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`
   }
 
+  const PLAYER_HEIGHT = 380 // approximate expanded height in px
+
   const handleClick = () => {
     if (dragMoved.current) return
+    if (collapsed) {
+      // When expanding, ensure the player fits on screen — shift up if needed
+      setPos(prev => {
+        if (!prev) return prev
+        const maxTop = window.innerHeight - PLAYER_HEIGHT - 8
+        return { ...prev, y: Math.min(prev.y, Math.max(8, maxTop)) }
+      })
+    }
     setCollapsed(c => !c)
   }
 
@@ -288,7 +298,7 @@ export default function MusicPlayer() {
           position: 'fixed',
           left: pos.x,
           top:  pos.y,
-          zIndex: 9998,
+          zIndex: 99998,
           width: 224,
           background: 'white',
           border: '2px solid #e9d5ff',
