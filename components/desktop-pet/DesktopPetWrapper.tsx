@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import type { DidiStage } from './DidiSvg'
+import MusicPlayer from './MusicPlayer'
 
 const DesktopPet = dynamic(() => import('./DesktopPet'), { ssr: false })
 
@@ -184,40 +185,52 @@ export default function DesktopPetWrapper() {
     }
   }
 
-  // Still loading
-  if (status === null) return null
+  // MusicPlayer is ALWAYS rendered (except auth pages) at a fixed position.
+  // Being at position 0 in every render branch means React never unmounts it
+  // during page navigation — audio continues uninterrupted.
+  if (isAuthPage) return null
 
-  // Don't show on auth pages or dashboard (dashboard has inline pet in pet area)
-  if (isAuthPage || isDashboard) return null
+  const showPet = status !== null && !isDashboard && status.hasPet
 
-  // Not logged in or no pet row
-  if (!status.hasPet) return null
+  const musicBtn = (
+    <div key="music" style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}>
+      <MusicPlayer />
+    </div>
+  )
 
-  if (status.isEgg) {
+  if (!showPet) return musicBtn
+
+  if (status!.isEgg) {
     return (
-      <DesktopPet
-        petStage="egg"
-        petName={status.petName ?? undefined}
-        isEgg
-        xp={status.xp ?? undefined}
-        xpGainToast={xpGainToast ?? undefined}
-        onHatch={hatchEgg}
-        cracking={cracking}
-        crackError={crackError ?? undefined}
-      />
+      <>
+        {musicBtn}
+        <DesktopPet
+          petStage="egg"
+          petName={status!.petName ?? undefined}
+          isEgg
+          xp={status!.xp ?? undefined}
+          xpGainToast={xpGainToast ?? undefined}
+          onHatch={hatchEgg}
+          cracking={cracking}
+          crackError={crackError ?? undefined}
+        />
+      </>
     )
   }
 
-  const stage = (status.stage ?? 'adult') as DidiStage
+  const stage = (status!.stage ?? 'adult') as DidiStage
   return (
-    <DesktopPet
-      petStage={stage}
-      petName={status.petName ?? undefined}
-      happiness={status.happiness ?? undefined}
-      hunger={status.hunger ?? undefined}
-      streak={status.streak ?? undefined}
-      xp={status.xp ?? undefined}
-      xpGainToast={xpGainToast ?? undefined}
-    />
+    <>
+      {musicBtn}
+      <DesktopPet
+        petStage={stage}
+        petName={status!.petName ?? undefined}
+        happiness={status!.happiness ?? undefined}
+        hunger={status!.hunger ?? undefined}
+        streak={status!.streak ?? undefined}
+        xp={status!.xp ?? undefined}
+        xpGainToast={xpGainToast ?? undefined}
+      />
+    </>
   )
 }

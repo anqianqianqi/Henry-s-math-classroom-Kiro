@@ -11,7 +11,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import DidiSvg, { type DidiPose, type DidiStage } from './DidiSvg'
-import MusicPlayer from './MusicPlayer'
 
 // ─── CSS keyframes ────────────────────────────────────────────────────────────
 
@@ -673,11 +672,7 @@ export default function DesktopPet({
             </div>
 
             {/* Gramophone — outside the animated div so it doesn't shake with Didi */}
-            {!isEgg && (
-              <div style={{ position: 'absolute', bottom: 0, left: 0, width: catSize, pointerEvents: 'auto' }}>
-                <MusicPlayer />
-              </div>
-            )}
+            {/* MusicPlayer is now rendered by DesktopPetWrapper so it persists across pages */}
 
             {/* Size slider — moved into popover; keep showSizer for popover toggle */}
 
