@@ -15,24 +15,22 @@ import { createPortal } from 'react-dom'
 import { usePathname } from 'next/navigation'
 import { PLAYLIST } from '@/lib/music-playlist'
 
-// Theme colors — vintage brown palette matching the music icon
+// Theme colors — lighter warm brown palette
 const C = {
-  // Panel / expanded player
-  panel:        '#fdf6ee',  // warm cream background
-  panelBorder:  '#b45309',  // amber-700 border
-  headerIdle:   'linear-gradient(135deg,#d97706,#b45309)',  // amber gradient
-  headerPlaying:'linear-gradient(135deg,#92400e,#78350f)',  // dark brown gradient
-  text:         '#44200a',  // deep brown
-  subtext:      '#78350f',  // amber-800
-  // Progress / controls
-  track:        '#fde68a',  // amber-200
-  progressFill: '#b45309',  // amber-700
-  accent:       '#b45309',
-  idle:         '#92400e',  // amber-800 (for icons/borders when idle)
-  idleLight:    '#fef3c7',  // amber-100
-  idleBorder:   '#fbbf24',  // amber-400
-  playBorder:   '#78350f',
-  playGrad:     'linear-gradient(135deg,#d97706,#b45309)',
+  panel:        '#fff8f0',  // very light warm cream
+  panelBorder:  '#d97706',  // amber-600 (lighter)
+  headerIdle:   'linear-gradient(135deg,#f59e0b,#d97706)',  // lighter amber
+  headerPlaying:'linear-gradient(135deg,#b45309,#92400e)',  // medium brown
+  text:         '#78350f',  // amber-800
+  subtext:      '#a16207',  // amber-700
+  track:        '#fef3c7',  // amber-100
+  progressFill: '#d97706',  // amber-600
+  accent:       '#d97706',
+  idle:         '#b45309',
+  idleLight:    '#fef3c7',
+  idleBorder:   '#fcd34d',  // amber-300
+  playBorder:   '#b45309',
+  playGrad:     'linear-gradient(135deg,#f59e0b,#d97706)',
 }
 
 const STYLES = `
@@ -259,15 +257,15 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
           position: 'relative',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           // Vintage brown outer ring (the 留声机 base/platter edge)
-          background: 'radial-gradient(circle, #8b4513 60%, #5c2a0a 80%, #3d1a06 100%)',
+          background: 'radial-gradient(circle, #c68642 60%, #a0522d 80%, #8b4513 100%)',
           boxShadow: isPlaying
             ? '0 0 10px rgba(139,69,19,0.6), 0 2px 6px rgba(0,0,0,0.4)'
             : '0 2px 6px rgba(0,0,0,0.3)',
           transition: 'box-shadow 0.2s',
         }}>
-          {/* Spinning vinyl disc — 60% of outer size, centered */}
+          {/* Spinning vinyl disc — 68% of outer size, centered */}
           <div style={{
-            width: '60%', height: '60%', borderRadius: '50%',
+            width: '68%', height: '68%', borderRadius: '50%',
             position: 'relative',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: `
