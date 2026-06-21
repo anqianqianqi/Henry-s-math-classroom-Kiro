@@ -260,6 +260,7 @@ export default function DesktopPetWrapper() {
   if (status!.isEgg) {
     return (
       <FloatingGroup onMove={handleGroupMove}>
+        <MusicPlayer groupMode />
         <DesktopPet
           petStage="egg"
           petName={status!.petName ?? undefined}
@@ -271,7 +272,6 @@ export default function DesktopPetWrapper() {
           crackError={crackError ?? undefined}
           groupMode
         />
-        <MusicPlayer groupMode />
       </FloatingGroup>
     )
   }
@@ -279,6 +279,7 @@ export default function DesktopPetWrapper() {
   const stage = (status!.stage ?? 'adult') as DidiStage
   return (
     <FloatingGroup onMove={handleGroupMove}>
+      <MusicPlayer groupMode />
       <DesktopPet
         petStage={stage}
         petName={status!.petName ?? undefined}
@@ -289,7 +290,6 @@ export default function DesktopPetWrapper() {
         xpGainToast={xpGainToast ?? undefined}
         groupMode
       />
-      <MusicPlayer groupMode />
     </FloatingGroup>
   )
 }
