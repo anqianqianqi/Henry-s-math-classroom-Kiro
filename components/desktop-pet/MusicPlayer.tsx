@@ -107,30 +107,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
     if (dockPos) setOwnPos(dockPos)
   }, [dockPos])
 
-  // ── Auto-play on first interaction ────────────────────────────────────────
-  const pathname      = usePathname()
-  const autoPlayedRef = useRef(false)
-
-  useEffect(() => {
-    if (!hasTracks || autoPlayedRef.current) return
-    const go = () => {
-      if (autoPlayedRef.current || isPlaying) return
-      autoPlayedRef.current = true
-      document.removeEventListener('click',   go)
-      document.removeEventListener('keydown', go)
-      const audio = audioRef.current
-      const track = playlist[trackIndex]
-      if (!audio || !track) return
-      if (!audio.src || !audio.src.endsWith(track.file)) { audio.src = `/music/${track.file}`; audio.load() }
-      const play = () => audio.play().then(() => setIsPlaying(true)).catch(() => {})
-      if (audio.readyState >= 3) { play() }
-      else { const onCan = () => { audio.removeEventListener('canplay', onCan); play() }; audio.addEventListener('canplay', onCan) }
-    }
-    document.addEventListener('click',   go)
-    document.addEventListener('keydown', go)
-    return () => { document.removeEventListener('click', go); document.removeEventListener('keydown', go) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, hasTracks])
+  // ── Auto-play removed — user starts music manually by clicking the gramophone ──
 
   // ── Create audio ──────────────────────────────────────────────────────────
   useEffect(() => {

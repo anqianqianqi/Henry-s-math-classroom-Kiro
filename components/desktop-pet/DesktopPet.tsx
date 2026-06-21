@@ -299,19 +299,30 @@ export default function DesktopPet({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [xpGainToast])
 
-  // ── Music hint — once per session on any page ────────────────────────────
-  const musicHintShownRef = useRef(false)
+  // ── Music hints — repeat every few minutes, more variety on challenges pages ─
+  const MUSIC_HINTS = [
+    '🎵 Try music while studying!',
+    '🎶 Music helps focus~',
+    '🎵 Click the gramophone!',
+    '🎶 Study music is on!',
+    '🎵 Soft music = better focus',
+    '🎶 Need some study vibes?',
+  ]
+  const musicHintCountRef = useRef(0)
   useEffect(() => {
-    if (!mounted || isEgg) return
-    if (!pathname) return
-    if (musicHintShownRef.current) return
-    musicHintShownRef.current = true
+    if (!mounted || isEgg || !pathname) return
+    const isChallenge = pathname.startsWith('/challenges')
+    // Show first hint after 2.5s, then repeat every 3min on challenges, 8min elsewhere
+    const repeatMs = isChallenge ? 3 * 60 * 1000 : 8 * 60 * 1000
+    const firstDelay = musicHintCountRef.current === 0 ? 2500 : repeatMs
     const t = setTimeout(() => {
-      say('🎵 Try music while studying!')
-    }, 2500)
+      const hint = MUSIC_HINTS[musicHintCountRef.current % MUSIC_HINTS.length]
+      musicHintCountRef.current++
+      say(hint)
+    }, firstDelay)
     return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, mounted, isEgg])
+  }, [pathname, mounted, isEgg, musicHintCountRef.current])
 
   // ── Advance behavior ─────────────────────────────────────────────────────
   const advance = useCallback((cur: Behavior) => {
