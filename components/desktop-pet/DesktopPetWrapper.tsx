@@ -250,7 +250,7 @@ export default function DesktopPetWrapper() {
 
   // Compute dock position: pill sits to the left of Didi with no overlap
   // Music icon is 44px wide — offset by 44 + 6px gap = 50px to the left
-  const dockPos = groupPos ? { left: groupPos.left - 50, top: groupPos.top - 15 } : null
+  const dockPos = groupPos ? { left: groupPos.left - 50, top: groupPos.top - 4 } : null
 
   // Dashboard or no pet — just music player standalone
   if (!showPet) return <MusicPlayer />
