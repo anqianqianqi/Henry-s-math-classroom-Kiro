@@ -11,6 +11,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import DidiSvg, { type DidiPose, type DidiStage } from './DidiSvg'
+import MusicPlayer from './MusicPlayer'
 
 // ─── CSS keyframes ────────────────────────────────────────────────────────────
 
@@ -645,6 +646,7 @@ export default function DesktopPet({
             {/* Cat image with animation */}
             <div style={{
               ...catAnim,
+              position: 'relative',
               filter: isDragging ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))' : undefined,
               transform: isDragging ? 'scale(1.08)' : undefined,
             }}>
@@ -654,6 +656,10 @@ export default function DesktopPet({
                 size={catSize}
                 facingLeft={behavior.pose === 'walking' ? facingLeft : false}
               />
+              {/* Gramophone music player — only show when not minimized and not egg */}
+              {!isEgg && (
+                <MusicPlayer />
+              )}
             </div>
 
             {/* Size slider — moved into popover; keep showSizer for popover toggle */}
