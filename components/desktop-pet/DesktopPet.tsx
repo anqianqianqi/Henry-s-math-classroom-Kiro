@@ -398,6 +398,8 @@ export default function DesktopPet({
 
   // ── Drag to move ─────────────────────────────────────────────────────────
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // In groupMode, drag is handled by FloatingGroup parent — don't intercept
+    if (groupMode) return
     // Don't drag when clicking the minimize button
     if ((e.target as HTMLElement).closest('button')) return
     e.preventDefault()
