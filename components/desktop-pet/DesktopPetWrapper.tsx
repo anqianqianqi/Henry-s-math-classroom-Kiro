@@ -29,6 +29,7 @@ export default function DesktopPetWrapper() {
   const [cracking, setCracking] = useState(false)
   const [crackError, setCrackError] = useState<string | null>(null)
   const [xpGainToast, setXpGainToast] = useState<number | null>(null)
+  const [petPos, setPetPos] = useState<{ x: number; y: number } | null>(null)
   const xpGranted = useRef(false)
   const initialFetchDone = useRef(false)
   const prevXp = useRef<number | null>(null)
@@ -197,7 +198,7 @@ export default function DesktopPetWrapper() {
   if (status!.isEgg) {
     return (
       <>
-        <MusicPlayer />
+        <MusicPlayer anchorPos={petPos ?? undefined} />
         <DesktopPet
           petStage="egg"
           petName={status!.petName ?? undefined}
@@ -207,6 +208,7 @@ export default function DesktopPetWrapper() {
           onHatch={hatchEgg}
           cracking={cracking}
           crackError={crackError ?? undefined}
+          onPositionChange={(x, y) => setPetPos({ x, y })}
         />
       </>
     )
@@ -215,7 +217,7 @@ export default function DesktopPetWrapper() {
   const stage = (status!.stage ?? 'adult') as DidiStage
   return (
     <>
-      <MusicPlayer />
+      <MusicPlayer anchorPos={petPos ?? undefined} />
       <DesktopPet
         petStage={stage}
         petName={status!.petName ?? undefined}
@@ -224,6 +226,7 @@ export default function DesktopPetWrapper() {
         streak={status!.streak ?? undefined}
         xp={status!.xp ?? undefined}
         xpGainToast={xpGainToast ?? undefined}
+        onPositionChange={(x, y) => setPetPos({ x, y })}
       />
     </>
   )

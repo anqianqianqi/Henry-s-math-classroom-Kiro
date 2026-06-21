@@ -233,6 +233,11 @@ export default function DesktopPet({
     return Math.max(0, window.innerHeight - rect.bottom)
   }
 
+  // ── Notify parent of position changes (for music player grouping) ─────────
+  useEffect(() => {
+    onPositionChange?.(posX, posY, catSize)
+  }, [posX, posY, catSize, onPositionChange])
+
   // ── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
     // Default to bottom-right corner; the dashboard pathname effect will reposition

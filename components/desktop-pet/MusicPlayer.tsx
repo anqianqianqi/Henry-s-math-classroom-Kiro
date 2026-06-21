@@ -34,7 +34,7 @@ const STYLES = `
 }
 `
 
-export default function MusicPlayer() {  // ── Audio engine ─────────────────────────────────────────────────────────
+export default function MusicPlayer({ anchorPos }: { anchorPos?: { x: number; y: number } } = {}) {  // ── Audio engine ─────────────────────────────────────────────────────────
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [trackIndex, setTrackIndex] = useState(0)
   const [isPlaying, setIsPlaying]   = useState(false)
@@ -59,18 +59,28 @@ export default function MusicPlayer() {  // ── Audio engine ─────�
   const currentTrack = hasTracks ? PLAYLIST[trackIndex] : null
 
   // ── Mount ────────────────────────────────────────────────────────────────
+  const userDraggedRef = useRef(false)  // true once user manually drags the pill
+
   useEffect(() => {
     setMounted(true)
-    // Sit immediately to the left of Didi (Didi spawns at right ~160px).
-    // Gap of 4px so they look like a natural pair.
-    const pillWidth = 148
-    const didiWidth = 160
-    const gap = 4
-    setPos({
-      x: window.innerWidth - didiWidth - gap - pillWidth,
-      y: window.innerHeight - 56,
-    })
+    if (!anchorPos) {
+      // Standalone (dashboard): bottom-right, left of where Didi would be
+      setPos({ x: window.innerWidth - 164, y: window.innerHeight - 56 })
+    }
+    // If anchorPos is provided, wait for first anchorPos effect below
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ── Follow Didi's position when user hasn't manually dragged the pill ─────
+  useEffect(() => {
+    if (!anchorPos || userDraggedRef.current) return
+    const PILL_WIDTH = 148
+    const GAP = 4
+    setPos({
+      x: anchorPos.x - PILL_WIDTH - GAP,
+      y: window.innerHeight - anchorPos.y - 56,  // convert bottom→top
+    })
+  }, [anchorPos])
 
   // ── Auto-play on first interaction (any page) ─────────────────────────────
   const pathname       = usePathname()
@@ -151,6 +161,7 @@ export default function MusicPlayer() {  // ── Audio engine ─────�
     e.preventDefault()
     dragMoved.current = false
     isDragging.current = true
+    userDraggedRef.current = true  // user has taken control of position
     const current = pos ?? { x: window.innerWidth - 160, y: window.innerHeight - 56 }
     dragOffset.current = { x: e.clientX - current.x, y: e.clientY - current.y }
 
