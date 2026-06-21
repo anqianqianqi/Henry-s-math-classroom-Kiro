@@ -37,6 +37,7 @@ export default function MusicPlayer() {
   const [open, setOpen] = useState(false)
   const [showPlaylist, setShowPlaylist] = useState(false)
   const [noteKey, setNoteKey] = useState(0)
+  const [popupPos, setPopupPos] = useState<{ bottom: number; left: number } | null>(null)
 
   const hasTracks = PLAYLIST.length > 0
   const currentTrack = hasTracks ? PLAYLIST[trackIndex] : null
@@ -219,7 +220,19 @@ export default function MusicPlayer() {
       {/* ── Gramophone button ── */}
       <button
         ref={btnRef}
-        onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
+        onClick={e => {
+          e.stopPropagation()
+          if (!open) {
+            const rect = btnRef.current?.getBoundingClientRect()
+            if (rect) {
+              setPopupPos({
+                bottom: window.innerHeight - rect.top + 6,
+                left: Math.max(8, rect.right - 220),
+              })
+            }
+          }
+          setOpen(o => !o)
+        }}
         onMouseDown={e => e.stopPropagation()}
         title="Study music 🎵"
         style={{
@@ -268,18 +281,14 @@ export default function MusicPlayer() {
       </button>
 
       {/* ── Mini player popup — fixed to viewport so it doesn't clip ── */}
-      {open && (() => {
-        const rect = btnRef.current?.getBoundingClientRect()
-        const popupLeft = rect ? Math.max(8, rect.right - 220) : 100
-        const popupBottom = rect ? window.innerHeight - rect.top + 6 : 120
-        return (
+      {open && popupPos && (
         <div
           onClick={e => e.stopPropagation()}
           onMouseDown={e => e.stopPropagation()}
           style={{
             position: 'fixed',
-            bottom: popupBottom,
-            left: popupLeft,
+            bottom: popupPos.bottom,
+            left: popupPos.left,
             width: 220,
             background: 'white',
             border: '2px solid #f0e6d3',
@@ -453,8 +462,7 @@ export default function MusicPlayer() {
             </>
           )}
         </div>
-        )
-      })()}
+      )}
     </>
   )
 }
