@@ -256,11 +256,11 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
           background: '#111',
         }}>
           {/* Layer 1: wooden base — static */}
-          <img src="/music/bottom.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'screen', pointerEvents: 'none' }} />
+          <img src="/gramophone/bottom.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'screen', pointerEvents: 'none' }} />
           {/* Layer 2: vinyl disc — spins when playing */}
-          <img src="/music/circle.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'screen', pointerEvents: 'none', animation: isPlaying ? 'mp-disc-spin 4s linear infinite' : 'none', transformOrigin: 'center' }} />
+          <img src="/gramophone/circle.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'screen', pointerEvents: 'none', animation: isPlaying ? 'mp-disc-spin 4s linear infinite' : 'none', transformOrigin: 'center' }} />
           {/* Layer 3: needle/tonearm — static on top */}
-          <img src="/music/needle.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'screen', pointerEvents: 'none' }} />
+          <img src="/gramophone/needle.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'screen', pointerEvents: 'none' }} />
         </div>
       </div>
 
