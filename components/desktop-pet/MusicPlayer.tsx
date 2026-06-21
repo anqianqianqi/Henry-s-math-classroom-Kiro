@@ -54,9 +54,11 @@ interface Props {
   // When provided, the pill snaps to this position (used when docked below Didi).
   // When null/undefined, pill uses its own drag position.
   dockPos?: { left: number; top: number } | null
+  // When true, renders position:relative inside a flex container (FloatingGroup)
+  groupMode?: boolean
 }
 
-export default function MusicPlayer({ dockPos }: Props = {}) {
+export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) {
   // ── Audio ─────────────────────────────────────────────────────────────────
   const audioRef     = useRef<HTMLAudioElement | null>(null)
   const [trackIndex, setTrackIndex] = useState(0)
@@ -201,13 +203,14 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
     return `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`
   }
 
-  if (!mounted || !pillPos) return <style>{STYLES}</style>
+  if (!mounted || (!pillPos && !groupMode)) return <style>{STYLES}</style>
 
   const PILL_H = 44
 
-  // Compute expanded panel position: anchors to pill's bottom edge, grows upward
-  const panelLeft   = Math.max(8, Math.min(pillPos.left, window.innerWidth - 232))
-  const panelBottom = Math.max(8, window.innerHeight - pillPos.top - PILL_H)
+  // Compute expanded panel position
+  const pillRect = pillRef.current?.getBoundingClientRect()
+  const panelLeft   = pillRect ? Math.max(8, Math.min(pillRect.left, window.innerWidth - 232)) : Math.max(8, Math.min((pillPos?.left ?? 0), window.innerWidth - 232))
+  const panelBottom = pillRect ? Math.max(8, window.innerHeight - pillRect.top - PILL_H) : Math.max(8, window.innerHeight - (pillPos?.top ?? 0) - PILL_H)
 
   return (
     <>
@@ -220,11 +223,11 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
         onMouseDown={handleDragStart}
         onClick={() => { if (!dragMoved.current) setCollapsed(c => !c) }}
         style={{
-          position: 'fixed',
-          left: pillPos.left,
-          top:  pillPos.top,
-          zIndex: 10000,  // above FloatingGroup (9998) so clicks always register
-          cursor: dockPos ? 'pointer' : 'grab',
+          position: groupMode ? 'relative' : 'fixed',
+          left: groupMode ? undefined : pillPos?.left,
+          top:  groupMode ? undefined : pillPos?.top,
+          zIndex: groupMode ? undefined : 10000,
+          cursor: (dockPos || groupMode) ? 'pointer' : 'grab',
           userSelect: 'none',
         }}
       >
@@ -330,11 +333,18 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
                   <span>{fmt(progress * duration)}</span><span>{fmt(duration)}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 10 }}>
-                  <button onClick={prevTrack} disabled={playlist.length < 2} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.idle, padding: 2 }}>⏮</button>
-                  <button onClick={togglePlay} style={{ background: C.idle, border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 14, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 2px 8px rgba(122,59,30,0.5)` }}>
-                    {isPlaying ? '⏸' : '▶'}
+                  <button onClick={prevTrack} disabled={playlist.length < 2} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.idle, padding: 2, lineHeight: 1 }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 3h1.5v10H3V3zm2.5 5L12 13V3L5.5 8z"/></svg>
                   </button>
-                  <button onClick={nextTrack} disabled={playlist.length < 2} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.idle, padding: 2 }}>⏭</button>
+                  <button onClick={togglePlay} style={{ background: C.idle, border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 14, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 2px 8px rgba(122,59,30,0.5)` }}>
+                    {isPlaying
+                      ? <svg width="14" height="14" viewBox="0 0 14 14" fill="white"><rect x="2" y="1" width="4" height="12"/><rect x="8" y="1" width="4" height="12"/></svg>
+                      : <svg width="14" height="14" viewBox="0 0 14 14" fill="white"><path d="M3 1l10 6-10 6V1z"/></svg>
+                    }
+                  </button>
+                  <button onClick={nextTrack} disabled={playlist.length < 2} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.idle, padding: 2, lineHeight: 1 }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M11.5 3h1.5v10h-1.5V3zm-8 5L10 3v10L3.5 8z"/></svg>
+                  </button>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, overflow: 'hidden' }}>
                   <span style={{ fontSize: 12, flexShrink: 0 }}>🔈</span>

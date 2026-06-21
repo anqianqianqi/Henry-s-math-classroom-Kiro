@@ -63,6 +63,10 @@ function FloatingGroup({ children, onMove }: { children: React.ReactNode; onMove
         zIndex: 9998,
         cursor: 'grab',
         userSelect: 'none',
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
       }}
     >
       {children}
@@ -248,10 +252,6 @@ export default function DesktopPetWrapper() {
 
   const showPet = status !== null && !isDashboard && status.hasPet
 
-  // Compute dock position: pill sits to the left of Didi with no overlap
-  // Music icon is 44px wide — offset by 44 + 6px gap = 50px to the left
-  const dockPos = groupPos ? { left: groupPos.left - 50, top: groupPos.top - 4 } : null
-
   // Dashboard or no pet — just music player standalone
   if (!showPet) return <MusicPlayer />
 
@@ -259,41 +259,37 @@ export default function DesktopPetWrapper() {
 
   if (status!.isEgg) {
     return (
-      <>
-        <MusicPlayer dockPos={dockPos} />
-        <FloatingGroup onMove={handleGroupMove}>
-          <DesktopPet
-            petStage="egg"
-            petName={status!.petName ?? undefined}
-            isEgg
-            xp={status!.xp ?? undefined}
-            xpGainToast={xpGainToast ?? undefined}
-            onHatch={hatchEgg}
-            cracking={cracking}
-            crackError={crackError ?? undefined}
-            groupMode
-          />
-        </FloatingGroup>
-      </>
+      <FloatingGroup onMove={handleGroupMove}>
+        <DesktopPet
+          petStage="egg"
+          petName={status!.petName ?? undefined}
+          isEgg
+          xp={status!.xp ?? undefined}
+          xpGainToast={xpGainToast ?? undefined}
+          onHatch={hatchEgg}
+          cracking={cracking}
+          crackError={crackError ?? undefined}
+          groupMode
+        />
+        <MusicPlayer groupMode />
+      </FloatingGroup>
     )
   }
 
   const stage = (status!.stage ?? 'adult') as DidiStage
   return (
-    <>
-      <MusicPlayer dockPos={dockPos} />
-      <FloatingGroup onMove={handleGroupMove}>
-        <DesktopPet
-          petStage={stage}
-          petName={status!.petName ?? undefined}
-          happiness={status!.happiness ?? undefined}
-          hunger={status!.hunger ?? undefined}
-          streak={status!.streak ?? undefined}
-          xp={status!.xp ?? undefined}
-          xpGainToast={xpGainToast ?? undefined}
-          groupMode
-        />
-      </FloatingGroup>
-    </>
+    <FloatingGroup onMove={handleGroupMove}>
+      <DesktopPet
+        petStage={stage}
+        petName={status!.petName ?? undefined}
+        happiness={status!.happiness ?? undefined}
+        hunger={status!.hunger ?? undefined}
+        streak={status!.streak ?? undefined}
+        xp={status!.xp ?? undefined}
+        xpGainToast={xpGainToast ?? undefined}
+        groupMode
+      />
+      <MusicPlayer groupMode />
+    </FloatingGroup>
   )
 }
