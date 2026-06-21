@@ -15,22 +15,22 @@ import { createPortal } from 'react-dom'
 import { usePathname } from 'next/navigation'
 import { PLAYLIST } from '@/lib/music-playlist'
 
-// Theme colors — lighter warm brown palette
+// Theme colors — vintage mahogany brown palette
 const C = {
-  panel:        '#fff8f0',  // very light warm cream
-  panelBorder:  '#d97706',  // amber-600 (lighter)
-  headerIdle:   'linear-gradient(135deg,#f59e0b,#d97706)',  // lighter amber
-  headerPlaying:'linear-gradient(135deg,#b45309,#92400e)',  // medium brown
-  text:         '#78350f',  // amber-800
-  subtext:      '#a16207',  // amber-700
-  track:        '#fef3c7',  // amber-100
-  progressFill: '#d97706',  // amber-600
-  accent:       '#d97706',
-  idle:         '#b45309',
-  idleLight:    '#fef3c7',
-  idleBorder:   '#fcd34d',  // amber-300
-  playBorder:   '#b45309',
-  playGrad:     'linear-gradient(135deg,#f59e0b,#d97706)',
+  panel:        '#fdf0e0',  // aged parchment
+  panelBorder:  '#8b5e3c',  // vintage brown border
+  headerIdle:   'linear-gradient(135deg,#a0522d,#7a3b1e)',  // sienna → dark mahogany
+  headerPlaying:'linear-gradient(135deg,#7a3b1e,#5c2a0e)',  // dark mahogany playing
+  text:         '#3d1c08',  // very dark brown text
+  subtext:      '#6b3a1f',  // medium warm brown
+  track:        '#e8c9a0',  // aged parchment track
+  progressFill: '#8b5e3c',
+  accent:       '#8b5e3c',
+  idle:         '#8b5e3c',
+  idleLight:    '#f5e6d0',
+  idleBorder:   '#b8875a',  // warm tan border
+  playBorder:   '#7a3b1e',
+  playGrad:     'linear-gradient(135deg,#a0522d,#7a3b1e)',
 }
 
 const STYLES = `
@@ -257,7 +257,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
           position: 'relative',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           // Vintage brown outer ring (the 留声机 base/platter edge)
-          background: 'radial-gradient(circle, #c68642 60%, #a0522d 80%, #8b4513 100%)',
+          background: 'radial-gradient(circle, #a0622a 55%, #7a3d18 78%, #5c2a0e 100%)',
           boxShadow: isPlaying
             ? '0 0 10px rgba(139,69,19,0.6), 0 2px 6px rgba(0,0,0,0.4)'
             : '0 2px 6px rgba(0,0,0,0.3)',
