@@ -79,8 +79,16 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
   const dragOffset = useRef({ x: 0, y: 0 })
   const dragMoved  = useRef(false)
 
-  const hasTracks    = PLAYLIST.length > 0
-  const currentTrack = hasTracks ? PLAYLIST[trackIndex] : null
+  const hasTracks    = PLAYLIST.length > 0  // Shuffle once on mount so each session gets a different order
+  const [playlist]   = useState<typeof PLAYLIST>(() => {
+    const arr = [...PLAYLIST]
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+    return arr
+  })
+  const currentTrack = hasTracks ? playlist[trackIndex] : null
 
   // The actual pill position — docked wins over own
   const pillPos = dockPos ?? ownPos
@@ -111,7 +119,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
       document.removeEventListener('click',   go)
       document.removeEventListener('keydown', go)
       const audio = audioRef.current
-      const track = PLAYLIST[trackIndex]
+      const track = playlist[trackIndex]
       if (!audio || !track) return
       if (!audio.src || !audio.src.endsWith(track.file)) { audio.src = `/music/${track.file}`; audio.load() }
       const play = () => audio.play().then(() => setIsPlaying(true)).catch(() => {})
@@ -132,8 +140,8 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
     audio.addEventListener('timeupdate',    () => { if (audio.duration > 0) setProgress(audio.currentTime / audio.duration) })
     audio.addEventListener('loadedmetadata', () => setDuration(audio.duration))
     audio.addEventListener('ended',          () => setTrackIndex(p => (p + 1) % PLAYLIST.length))
-    return () => { audio.pause(); audio.src = '' }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // No cleanup: audio intentionally persists for continuous cross-page playback
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── Load on track change ──────────────────────────────────────────────────
