@@ -214,7 +214,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
 
   if (!mounted || !pillPos) return <style>{STYLES}</style>
 
-  const PILL_H = 40
+  const PILL_H = 44
 
   // Compute expanded panel position: anchors to pill's bottom edge, grows upward
   const panelLeft   = Math.max(8, Math.min(pillPos.left, window.innerWidth - 232))
@@ -245,23 +245,21 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
             pointerEvents: 'none', animation: 'mp-note-float 1.4s ease-out forwards', color: C.accent,
           }}>♪</div>
         )}
-        {/* 留声机 — layered gramophone, all images same 1024×1024 canvas */}
+        {/* 留声机 — gramophone assembled from 3 layers */}
         <div style={{
-          width: 40, height: 40, borderRadius: '50%',
+          width: 44, height: 44, borderRadius: '50%',
           position: 'relative',
           overflow: 'hidden',
-          background: '#000',  // black fill so lighten blend works correctly
+          // Use base as CSS background so it fills the full circle with no black gaps
+          backgroundImage: 'url(/gramophone/buttom.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
           boxShadow: isPlaying
             ? '0 0 12px rgba(146,64,14,0.6), 0 3px 8px rgba(0,0,0,0.4)'
             : '0 3px 8px rgba(0,0,0,0.35)',
           transition: 'box-shadow 0.2s',
         }}>
-          {/* Layer 1: wooden base — fully opaque, fills the black container */}
-          <img src="/gramophone/buttom.png" alt="" draggable={false} style={{
-            position: 'absolute', inset: 0, width: '100%', height: '100%',
-            objectFit: 'cover', display: 'block', pointerEvents: 'none',
-          }} />
-          {/* Layer 2: vinyl disc — spins when playing; lighten blends over the base */}
+          {/* Layer 2: vinyl disc — spins when playing */}
           <img src="/gramophone/circle.png" alt="" draggable={false} style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%',
             objectFit: 'cover', display: 'block', pointerEvents: 'none',
@@ -269,7 +267,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
             animation: isPlaying ? 'mp-disc-spin 4s linear infinite' : 'none',
             transformOrigin: 'center',
           }} />
-          {/* Layer 3: needle/tonearm — static; lighten blends over base+disc */}
+          {/* Layer 3: needle/tonearm — static */}
           <img src="/gramophone/neddle.png" alt="" draggable={false} style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%',
             objectFit: 'cover', display: 'block', pointerEvents: 'none',
