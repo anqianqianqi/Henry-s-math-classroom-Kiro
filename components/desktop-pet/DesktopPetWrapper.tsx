@@ -13,6 +13,12 @@ import MusicPlayer from './MusicPlayer'
 
 const DesktopPet = dynamic(() => import('./DesktopPet'), { ssr: false })
 
+// ── Music widget is fully self-contained (drag, collapse, position) ───────────
+// Just render it directly — no outer wrapper needed.
+function DraggableMusicPlayer() {
+  return <MusicPlayer />
+}
+
 interface PetStatus {
   hasPet: boolean
   isEgg?: boolean
@@ -192,18 +198,12 @@ export default function DesktopPetWrapper() {
 
   const showPet = status !== null && !isDashboard && status.hasPet
 
-  const musicBtn = (
-    <div key="music" style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}>
-      <MusicPlayer />
-    </div>
-  )
-
-  if (!showPet) return musicBtn
+  if (!showPet) return <DraggableMusicPlayer />
 
   if (status!.isEgg) {
     return (
       <>
-        {musicBtn}
+        <DraggableMusicPlayer />
         <DesktopPet
           petStage="egg"
           petName={status!.petName ?? undefined}
@@ -221,7 +221,7 @@ export default function DesktopPetWrapper() {
   const stage = (status!.stage ?? 'adult') as DidiStage
   return (
     <>
-      {musicBtn}
+      <DraggableMusicPlayer />
       <DesktopPet
         petStage={stage}
         petName={status!.petName ?? undefined}

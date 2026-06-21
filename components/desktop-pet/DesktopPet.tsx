@@ -173,6 +173,7 @@ export default function DesktopPet({
   onHatch,
   cracking = false,
   crackError,
+  onPositionChange,
 }: {
   petStage?: DidiStage
   petName?: string
@@ -186,6 +187,7 @@ export default function DesktopPet({
   onHatch?: () => void
   cracking?: boolean
   crackError?: string
+  onPositionChange?: (x: number, y: number, size: number) => void
 }) {
   const [mounted,    setMounted]    = useState(false)
   const [minimized,  setMinimized]  = useState(false)
