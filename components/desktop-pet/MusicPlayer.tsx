@@ -234,8 +234,8 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
           position: 'fixed',
           left: pillPos.left,
           top:  pillPos.top,
-          zIndex: 9998,
-          cursor: dockPos ? 'default' : 'grab',
+          zIndex: 10000,  // above FloatingGroup (9998) so clicks always register
+          cursor: dockPos ? 'pointer' : 'grab',
           userSelect: 'none',
         }}
       >
