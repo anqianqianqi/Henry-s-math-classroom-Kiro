@@ -245,34 +245,52 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
             pointerEvents: 'none', animation: 'mp-note-float 1.4s ease-out forwards', color: C.accent,
           }}>♪</div>
         )}
-        {/* 留声机 — gramophone assembled from 3 layers */}
+        {/* CSS-only vinyl record icon — no images */}
         <div style={{
           width: 44, height: 44, borderRadius: '50%',
           position: 'relative',
-          overflow: 'hidden',
-          // Use base as CSS background so it fills the full circle with no black gaps
-          backgroundImage: 'url(/gramophone/buttom.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          // Vintage brown outer ring (the 留声机 base/platter edge)
+          background: 'radial-gradient(circle, #8b4513 60%, #5c2a0a 80%, #3d1a06 100%)',
           boxShadow: isPlaying
-            ? '0 0 12px rgba(146,64,14,0.6), 0 3px 8px rgba(0,0,0,0.4)'
-            : '0 3px 8px rgba(0,0,0,0.35)',
+            ? '0 0 10px rgba(139,69,19,0.6), 0 2px 6px rgba(0,0,0,0.4)'
+            : '0 2px 6px rgba(0,0,0,0.3)',
           transition: 'box-shadow 0.2s',
         }}>
-          {/* Layer 2: vinyl disc — spins when playing */}
-          <img src="/gramophone/circle.png" alt="" draggable={false} style={{
-            position: 'absolute', inset: 0, width: '100%', height: '100%',
-            objectFit: 'cover', display: 'block', pointerEvents: 'none',
-            mixBlendMode: 'lighten',
+          {/* Spinning vinyl disc — 75% of outer size, centered */}
+          <div style={{
+            width: '75%', height: '75%', borderRadius: '50%',
+            position: 'relative',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            // Dark vinyl with concentric groove rings via conic-gradient
+            background: `
+              radial-gradient(circle at center,
+                #2a2a2a 0%, #2a2a2a 15%,
+                #1a1a1a 15%, #1a1a1a 16%,
+                #222 16%, #222 30%,
+                #181818 30%, #181818 31%,
+                #222 31%, #222 50%,
+                #1c1c1c 50%, #1c1c1c 51%,
+                #222 51%, #222 70%,
+                #1a1a1a 70%, #1a1a1a 71%,
+                #222 71%, #222 100%
+              )
+            `,
             animation: isPlaying ? 'mp-disc-spin 4s linear infinite' : 'none',
             transformOrigin: 'center',
-          }} />
-          {/* Layer 3: needle/tonearm — static */}
-          <img src="/gramophone/neddle.png" alt="" draggable={false} style={{
-            position: 'absolute', inset: 0, width: '100%', height: '100%',
-            objectFit: 'cover', display: 'block', pointerEvents: 'none',
-            mixBlendMode: 'lighten',
-          }} />
+            boxShadow: 'inset 0 0 4px rgba(0,0,0,0.5)',
+          }}>
+            {/* Center label — lighter grey circle */}
+            <div style={{
+              width: '32%', height: '32%', borderRadius: '50%',
+              background: 'radial-gradient(circle, #4a4a4a, #333)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              {/* Music note — lighter than the disc */}
+              <span style={{ fontSize: 7, color: '#aaa', lineHeight: 1, userSelect: 'none' }}>♫</span>
+            </div>
+          </div>
         </div>
       </div>
 
