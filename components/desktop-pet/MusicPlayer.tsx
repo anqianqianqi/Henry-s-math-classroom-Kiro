@@ -332,7 +332,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
               {isPlaying && <span style={{ fontSize: 10, animation: 'mp-disc-spin 1.5s linear infinite', display: 'inline-block', color: 'white' }}>◎</span>}
             </div>
             <button onClick={() => setCollapsed(true)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0, color: isPlaying ? 'rgba(255,255,255,0.8)' : C.subtext }}>×</button>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px', color: isPlaying ? 'rgba(255,255,255,0.95)' : '#3d1c08', fontWeight: 700 }}>×</button>
           </div>
 
           <div style={{ padding: '10px 14px 12px', overflow: 'hidden' }}>
@@ -354,7 +354,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 10 }}>
                   <button onClick={prevTrack} disabled={playlist.length < 2} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.idle, padding: 2 }}>⏮</button>
-                  <button onClick={togglePlay} style={{ background: C.idle, border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 14, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 2px 8px rgba(22,163,74,0.4)` }}>
+                  <button onClick={togglePlay} style={{ background: C.idle, border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 14, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 2px 8px rgba(122,59,30,0.5)` }}>
                     {isPlaying ? '⏸' : '▶'}
                   </button>
                   <button onClick={nextTrack} disabled={playlist.length < 2} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.idle, padding: 2 }}>⏭</button>
