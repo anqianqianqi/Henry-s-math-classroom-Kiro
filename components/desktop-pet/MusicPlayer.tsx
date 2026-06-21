@@ -10,6 +10,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { usePathname } from 'next/navigation'
 import { PLAYLIST } from '@/lib/music-playlist'
 
@@ -38,9 +39,13 @@ export default function MusicPlayer() {
   const [showPlaylist, setShowPlaylist] = useState(false)
   const [noteKey, setNoteKey] = useState(0)
   const [popupPos, setPopupPos] = useState<{ bottom: number; left: number } | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
 
   const hasTracks = PLAYLIST.length > 0
   const currentTrack = hasTracks ? PLAYLIST[trackIndex] : null
+
+  // ── Track mount for portal ───────────────────────────────────────────────
+  useEffect(() => { setIsMounted(true) }, [])
 
   // ── Auto-play on first user interaction while on a /challenges page ──────
   const pathname = usePathname()
@@ -222,14 +227,12 @@ export default function MusicPlayer() {
         ref={btnRef}
         onClick={e => {
           e.stopPropagation()
-          if (!open) {
-            const rect = btnRef.current?.getBoundingClientRect()
-            if (rect) {
-              setPopupPos({
-                bottom: window.innerHeight - rect.top + 6,
-                left: Math.max(8, rect.right - 220),
-              })
-            }
+          const rect = btnRef.current?.getBoundingClientRect()
+          if (rect) {
+            setPopupPos({
+              bottom: window.innerHeight - rect.top + 8,
+              left: Math.max(8, rect.left + rect.width / 2 - 110),
+            })
           }
           setOpen(o => !o)
         }}
@@ -280,8 +283,9 @@ export default function MusicPlayer() {
         )}
       </button>
 
-      {/* ── Mini player popup — fixed to viewport so it doesn't clip ── */}
-      {open && popupPos && (
+      {/* ── Mini player popup — rendered in a portal so position:fixed isn't
+             broken by parent CSS animations / transforms ── */}
+      {isMounted && open && popupPos && createPortal(
         <div
           onClick={e => e.stopPropagation()}
           onMouseDown={e => e.stopPropagation()}
@@ -295,7 +299,7 @@ export default function MusicPlayer() {
             borderRadius: 16,
             padding: '12px 14px 10px',
             boxShadow: '0 8px 24px rgba(92,61,46,0.18)',
-            zIndex: 10010,
+            zIndex: 99999,
             fontFamily: 'system-ui, sans-serif',
           }}
         >
@@ -461,7 +465,8 @@ export default function MusicPlayer() {
               )}
             </>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
