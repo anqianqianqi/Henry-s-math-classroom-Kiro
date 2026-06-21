@@ -8,12 +8,70 @@
 //
 // Collapsed: 🎵 pill. Expanded: full player card above the pill.
 // Both use portal so they're never clipped by parent stacking contexts.
+//
+// Audio state lives in module-level singletons so it survives React remounts
+// during page navigation (Next.js layout re-renders).
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { usePathname } from 'next/navigation'
 import { PLAYLIST } from '@/lib/music-playlist'
+
+// ── Module-level singletons — survive remounts/page navigation ────────────
+// Shuffle playlist once per browser session
+function buildShuffledPlaylist() {
+  const arr = [...PLAYLIST]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp
+  }
+  return arr
+}
+
+// These are initialised once and never reset
+let _audio: HTMLAudioElement | null = null
+let _playlist = buildShuffledPlaylist()
+let _trackIndex = 0
+let _isPlaying = false
+let _volume = 0.6
+let _progress = 0
+let _duration = 0
+
+// Listeners so any mounted MusicPlayer instance can react to audio changes
+type Listener = () => void
+const _listeners = new Set<Listener>()
+function notifyAll() { _listeners.forEach(fn => fn()) }
+
+function getOrCreateAudio(): HTMLAudioElement {
+  if (_audio) return _audio
+  const audio = new Audio()
+  audio.loop = false
+  audio.volume = _volume
+  _audio = audio
+
+  audio.addEventListener('timeupdate', () => {
+    if (audio.duration > 0) { _progress = audio.currentTime / audio.duration; notifyAll() }
+  })
+  audio.addEventListener('loadedmetadata', () => { _duration = audio.duration; notifyAll() })
+  audio.addEventListener('play',  () => { _isPlaying = true;  notifyAll() })
+  audio.addEventListener('pause', () => { _isPlaying = false; notifyAll() })
+  audio.addEventListener('ended', () => {
+    _trackIndex = (_trackIndex + 1) % _playlist.length
+    const next = _playlist[_trackIndex]
+    if (next) {
+      audio.src = `/music/${next.file}`
+      audio.load()
+      audio.addEventListener('canplay', function onCan() {
+        audio.removeEventListener('canplay', onCan)
+        audio.play().catch(() => { _isPlaying = false; notifyAll() })
+      })
+    }
+    notifyAll()
+  })
+
+  return audio
+}
+
 
 // Theme colors — vintage mahogany brown palette
 const C = {
@@ -59,15 +117,27 @@ interface Props {
 }
 
 export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) {
-  // ── Audio ─────────────────────────────────────────────────────────────────
-  const audioRef     = useRef<HTMLAudioElement | null>(null)
-  const [trackIndex, setTrackIndex] = useState(0)
-  const [isPlaying,  setIsPlaying]  = useState(false)
-  const [volume,     setVolume]     = useState(0.6)
-  const [progress,   setProgress]   = useState(0)
-  const [duration,   setDuration]   = useState(0)
+  // ── Sync React state from module singletons ───────────────────────────────
+  // A single re-render trigger — whenever audio fires an event, we re-read globals
+  const [, forceUpdate] = useState(0)
+  const rerender = useCallback(() => forceUpdate(n => n + 1), [])
 
-  // ── UI ────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    _listeners.add(rerender)
+    // Init audio on first mount (client-side only)
+    getOrCreateAudio()
+    return () => { _listeners.delete(rerender) }
+  }, [rerender])
+
+  // Read playback state from singletons
+  const isPlaying  = _isPlaying
+  const trackIndex = _trackIndex
+  const progress   = _progress
+  const duration   = _duration
+  const playlist   = _playlist
+
+  // ── Local UI state ────────────────────────────────────────────────────────
+  const [volume,       setVolumeState]  = useState(_volume)
   const [mounted,      setMounted]      = useState(false)
   const [collapsed,    setCollapsed]    = useState(true)
   const [showPlaylist, setShowPlaylist] = useState(false)
@@ -79,21 +149,9 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
   const dragOffset = useRef({ x: 0, y: 0 })
   const dragMoved  = useRef(false)
 
-  const hasTracks = PLAYLIST.length > 0
-
-  // Shuffle once on mount so each session gets a different play order
-  const [playlist] = useState<typeof PLAYLIST>(() => {
-    const arr = [...PLAYLIST]
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp
-    }
-    return arr
-  })
+  const hasTracks   = playlist.length > 0
   const currentTrack = hasTracks ? playlist[trackIndex] : null
-
-  // The actual pill position — docked wins over own
-  const pillPos = dockPos ?? ownPos
+  const pillPos      = dockPos ?? ownPos
 
   // ── Mount ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -104,48 +162,25 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // When dockPos changes, update ownPos fallback (so if docking stops we remember last pos)
-  useEffect(() => {
-    if (dockPos) setOwnPos(dockPos)
-  }, [dockPos])
+  useEffect(() => { if (dockPos) setOwnPos(dockPos) }, [dockPos])
 
-  // ── Auto-play removed — user starts music manually by clicking the gramophone ──
-
-  // ── Create audio ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    const audio = new Audio()
-    audio.loop = false; audio.volume = volume
-    audioRef.current = audio
-    audio.addEventListener('timeupdate',    () => { if (audio.duration > 0) setProgress(audio.currentTime / audio.duration) })
-    audio.addEventListener('loadedmetadata', () => setDuration(audio.duration))
-    audio.addEventListener('ended',          () => setTrackIndex(p => (p + 1) % playlist.length))
-    // No cleanup: audio intentionally persists for continuous cross-page playback
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // ── Load on track change ──────────────────────────────────────────────────
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio || !currentTrack) return
-    const was = isPlaying
-    audio.src = `/music/${currentTrack.file}`; audio.load()
-    if (was) {
-      const onCan = () => { audio.removeEventListener('canplay', onCan); audio.play().catch(() => setIsPlaying(false)) }
-      audio.addEventListener('canplay', onCan)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trackIndex, currentTrack?.file])
-
-  useEffect(() => { if (audioRef.current) audioRef.current.volume = volume }, [volume])
+  // ── Floating note animation while playing ─────────────────────────────────
   useEffect(() => {
     if (!isPlaying) return
     const t = setInterval(() => setNoteKey(k => k + 1), 1400)
     return () => clearInterval(t)
   }, [isPlaying])
 
-  // ── Drag (only when not docked) ───────────────────────────────────────────
+  // ── Volume sync ───────────────────────────────────────────────────────────
+  const setVolume = (v: number) => {
+    _volume = v
+    if (_audio) _audio.volume = v
+    setVolumeState(v)
+  }
+
+  // ── Drag (standalone mode only) ───────────────────────────────────────────
   const handleDragStart = useCallback((e: React.MouseEvent) => {
-    if (dockPos) return  // docked — drag handled by parent
+    if (dockPos) return
     const tag = (e.target as HTMLElement).tagName.toLowerCase()
     if (['button', 'input'].includes(tag)) return
     e.preventDefault()
@@ -164,38 +199,69 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
     window.addEventListener('mouseup',   onUp)
   }, [dockPos, ownPos])
 
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (dockPos || groupMode) return
+    const tag = (e.target as HTMLElement).tagName.toLowerCase()
+    if (['button', 'input'].includes(tag)) return
+    dragMoved.current = false
+    const touch = e.touches[0]
+    const cur = ownPos ?? { left: window.innerWidth - 164, top: window.innerHeight - 56 }
+    dragOffset.current = { x: touch.clientX - cur.left, y: touch.clientY - cur.top }
+    const onMove = (ev: TouchEvent) => {
+      ev.preventDefault()
+      dragMoved.current = true
+      const t = ev.touches[0]
+      setOwnPos({
+        left: Math.max(0, Math.min(window.innerWidth  - 148, t.clientX - dragOffset.current.x)),
+        top:  Math.max(0, Math.min(window.innerHeight - 40,  t.clientY - dragOffset.current.y)),
+      })
+    }
+    const onEnd = () => { window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd) }
+    window.addEventListener('touchmove', onMove, { passive: false })
+    window.addEventListener('touchend',  onEnd)
+  }, [dockPos, groupMode, ownPos])
+
   // ── Playback controls ─────────────────────────────────────────────────────
   const togglePlay = useCallback(() => {
-    const audio = audioRef.current
-    if (!audio || !currentTrack) return
-    if (isPlaying) { audio.pause(); setIsPlaying(false) }
-    else {
-      if (!audio.src || !audio.src.endsWith(currentTrack.file)) { audio.src = `/music/${currentTrack.file}`; audio.load() }
-      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
+    const audio = getOrCreateAudio()
+    if (!currentTrack) return
+    if (_isPlaying) {
+      audio.pause()
+    } else {
+      if (!audio.src || !audio.src.endsWith(currentTrack.file)) {
+        audio.src = `/music/${currentTrack.file}`
+        audio.load()
+      }
+      audio.play().catch(() => { _isPlaying = false; notifyAll() })
     }
-  }, [isPlaying, currentTrack])
-
-  const playlistRef = useRef(playlist)
-  useEffect(() => { playlistRef.current = playlist }, [playlist])
+  }, [currentTrack])
 
   const playTrack = useCallback((idx: number) => {
-    const audio = audioRef.current; if (!audio) return
-    setTrackIndex(idx); setShowPlaylist(false)
-    const track = playlistRef.current[idx]
+    const audio = getOrCreateAudio()
+    _trackIndex = idx
+    setShowPlaylist(false)
+    const track = _playlist[idx]
     if (!track) return
-    audio.src = `/music/${track.file}`; audio.load()
-    const onCan = () => { audio.removeEventListener('canplay', onCan); audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false)) }
+    audio.src = `/music/${track.file}`
+    audio.load()
+    const onCan = () => {
+      audio.removeEventListener('canplay', onCan)
+      audio.play().catch(() => { _isPlaying = false; notifyAll() })
+    }
     audio.addEventListener('canplay', onCan)
+    notifyAll()
   }, [])
 
   const prevTrack = () => playTrack((trackIndex - 1 + playlist.length) % playlist.length)
   const nextTrack = () => playTrack((trackIndex + 1) % playlist.length)
 
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const audio = audioRef.current; if (!audio || !audio.duration) return
+    const audio = _audio; if (!audio || !audio.duration) return
     const rect = e.currentTarget.getBoundingClientRect()
     const ratio = (e.clientX - rect.left) / rect.width
-    audio.currentTime = ratio * audio.duration; setProgress(ratio)
+    audio.currentTime = ratio * audio.duration
+    _progress = ratio
+    notifyAll()
   }
 
   const fmt = (sec: number) => {
@@ -270,7 +336,9 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
               )
             `,
             animation: isPlaying ? 'mp-disc-spin 4s linear infinite' : 'none',
+            animationPlayState: isPlaying ? 'running' : 'paused',
             transformOrigin: 'center',
+            willChange: 'transform',
             boxShadow: 'inset 0 0 4px rgba(0,0,0,0.5)',
           }}>
             {/* Center label — larger, ~50% of disc, with bigger music icon */}

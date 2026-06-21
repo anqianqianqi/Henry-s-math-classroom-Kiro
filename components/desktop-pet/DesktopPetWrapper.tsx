@@ -51,11 +51,36 @@ function FloatingGroup({ children, onMove }: { children: React.ReactNode; onMove
     window.addEventListener('mouseup',   onUp)
   }, [pos, onMove])
 
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest('button, input, [data-no-drag]')) return
+    moved.current = false
+    const touch = e.touches[0]
+    const cur = pos ?? { x: window.innerWidth - 180, y: window.innerHeight - 200 }
+    dragOffset.current = { x: touch.clientX - cur.x, y: touch.clientY - cur.y }
+
+    const onMoveFn = (ev: TouchEvent) => {
+      ev.preventDefault()
+      moved.current = true
+      const t = ev.touches[0]
+      const nx = Math.max(0, Math.min(window.innerWidth  - 50, t.clientX - dragOffset.current.x))
+      const ny = Math.max(0, Math.min(window.innerHeight - 50, t.clientY - dragOffset.current.y))
+      setPos({ x: nx, y: ny })
+      onMove?.(nx, ny)
+    }
+    const onEnd = () => {
+      window.removeEventListener('touchmove', onMoveFn)
+      window.removeEventListener('touchend',  onEnd)
+    }
+    window.addEventListener('touchmove', onMoveFn, { passive: false })
+    window.addEventListener('touchend',  onEnd)
+  }, [pos, onMove])
+
   if (!pos) return null
 
   return (
     <div
       onMouseDown={onMouseDown}
+      onTouchStart={onTouchStart}
       style={{
         position: 'fixed',
         left: pos.x,
@@ -63,6 +88,7 @@ function FloatingGroup({ children, onMove }: { children: React.ReactNode; onMove
         zIndex: 9998,
         cursor: 'grab',
         userSelect: 'none',
+        touchAction: 'none',
         display: 'flex',
         flexDirection: 'row',
         alignItems: 'flex-start',
