@@ -47,13 +47,12 @@ export default function MusicPlayer() {
   // ── Track mount for portal ───────────────────────────────────────────────
   useEffect(() => { setIsMounted(true) }, [])
 
-  // ── Auto-play on first user interaction while on a /challenges page ──────
+  // ── Auto-play on first user interaction on any page ─────────────────────
   const pathname = usePathname()
   const autoPlayedRef = useRef(false)
 
   useEffect(() => {
-    const isChallengePage = pathname?.startsWith('/challenges')
-    if (!isChallengePage || !hasTracks || autoPlayedRef.current) return
+    if (!hasTracks || autoPlayedRef.current) return
 
     const handleFirstInteraction = () => {
       if (autoPlayedRef.current || isPlaying) return
@@ -62,15 +61,22 @@ export default function MusicPlayer() {
       document.removeEventListener('keydown', handleFirstInteraction)
 
       const audio = audioRef.current
-      const track = PLAYLIST[0]
+      const track = PLAYLIST[trackIndex]
       if (!audio || !track) return
-      audio.src = `/music/${track.file}`
-      audio.load()
-      const onCanPlay = () => {
-        audio.removeEventListener('canplay', onCanPlay)
-        audio.play().then(() => setIsPlaying(true)).catch(() => {})
+      if (!audio.src || !audio.src.endsWith(track.file)) {
+        audio.src = `/music/${track.file}`
+        audio.load()
       }
-      audio.addEventListener('canplay', onCanPlay)
+      const tryPlay = () => audio.play().then(() => setIsPlaying(true)).catch(() => {})
+      if (audio.readyState >= 3) {
+        tryPlay()
+      } else {
+        const onCanPlay = () => {
+          audio.removeEventListener('canplay', onCanPlay)
+          tryPlay()
+        }
+        audio.addEventListener('canplay', onCanPlay)
+      }
     }
 
     document.addEventListener('click', handleFirstInteraction)

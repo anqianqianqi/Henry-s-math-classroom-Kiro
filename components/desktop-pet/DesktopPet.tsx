@@ -291,11 +291,11 @@ export default function DesktopPet({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [xpGainToast])
 
-  // ── Music hint on challenges pages — once per session ────────────────────
+  // ── Music hint — once per session on any page ────────────────────────────
   const musicHintShownRef = useRef(false)
   useEffect(() => {
     if (!mounted || isEgg) return
-    if (!pathname?.startsWith('/challenges')) return
+    if (!pathname) return
     if (musicHintShownRef.current) return
     musicHintShownRef.current = true
     const t = setTimeout(() => {
