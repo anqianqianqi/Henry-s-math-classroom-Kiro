@@ -214,7 +214,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
 
   if (!mounted || !pillPos) return <style>{STYLES}</style>
 
-  const PILL_H = 48
+  const PILL_H = 60
 
   // Compute expanded panel position: anchors to pill's bottom edge, grows upward
   const panelLeft   = Math.max(8, Math.min(pillPos.left, window.innerWidth - 232))
@@ -245,22 +245,35 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
             pointerEvents: 'none', animation: 'mp-note-float 1.4s ease-out forwards', color: C.accent,
           }}>♪</div>
         )}
+        {/* 留声机 — layered gramophone, all images same 1024×1024 canvas */}
         <div style={{
-          width: 48, height: 48, borderRadius: '50%',
+          width: 60, height: 60, borderRadius: '50%',
           position: 'relative',
           overflow: 'hidden',
           boxShadow: isPlaying
-            ? '0 0 10px rgba(146,64,14,0.5), 0 2px 6px rgba(0,0,0,0.3)'
-            : '0 2px 6px rgba(0,0,0,0.25)',
+            ? '0 0 12px rgba(146,64,14,0.6), 0 3px 8px rgba(0,0,0,0.4)'
+            : '0 3px 8px rgba(0,0,0,0.35)',
           transition: 'box-shadow 0.2s',
-          background: '#111',
         }}>
-          {/* Layer 1: wooden base — static */}
-          <img src="/gramophone/buttom.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'screen', pointerEvents: 'none' }} />
-          {/* Layer 2: vinyl disc — spins when playing */}
-          <img src="/gramophone/circle.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'screen', pointerEvents: 'none', animation: isPlaying ? 'mp-disc-spin 4s linear infinite' : 'none', transformOrigin: 'center' }} />
-          {/* Layer 3: needle/tonearm — static on top */}
-          <img src="/gramophone/neddle.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'screen', pointerEvents: 'none' }} />
+          {/* Layer 1: base (wooden platter + black rim) — fully opaque, fills container */}
+          <img src="/gramophone/buttom.png" alt="" draggable={false} style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            objectFit: 'cover', display: 'block', pointerEvents: 'none',
+          }} />
+          {/* Layer 2: vinyl disc — spins when playing, blends over base */}
+          <img src="/gramophone/circle.png" alt="" draggable={false} style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            objectFit: 'cover', display: 'block', pointerEvents: 'none',
+            mixBlendMode: 'lighten',
+            animation: isPlaying ? 'mp-disc-spin 4s linear infinite' : 'none',
+            transformOrigin: 'center',
+          }} />
+          {/* Layer 3: needle/tonearm — static, blends over disc */}
+          <img src="/gramophone/neddle.png" alt="" draggable={false} style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            objectFit: 'cover', display: 'block', pointerEvents: 'none',
+            mixBlendMode: 'lighten',
+          }} />
         </div>
       </div>
 
