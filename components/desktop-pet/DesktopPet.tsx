@@ -514,10 +514,10 @@ export default function DesktopPet({
         onMouseDown={handleMouseDown}
         onMouseEnter={() => { handleHover(); setShowSizer(true) }}
         onMouseLeave={handleMouseLeave}
-        role="button"
-        aria-label="Didi — click to interact"
-        tabIndex={0}
-        onKeyDown={e => e.key === 'Enter' && handleClick()}
+        role={groupMode ? undefined : 'button'}
+        aria-label={groupMode ? undefined : 'Didi — click to interact'}
+        tabIndex={groupMode ? undefined : 0}
+        onKeyDown={groupMode ? undefined : (e => e.key === 'Enter' && handleClick())}
       >
         {/* ── Heart on click ── */}
         {showHeart && (
