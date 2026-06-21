@@ -210,7 +210,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
 
   if (!mounted || !pillPos) return <style>{STYLES}</style>
 
-  const PILL_H = 36
+  const PILL_H = 28
 
   // Compute expanded panel position: anchors to pill's bottom edge, grows upward
   const panelLeft   = Math.max(8, Math.min(pillPos.left, window.innerWidth - 232))
@@ -242,19 +242,20 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
           }}>♪</div>
         )}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          background: isPlaying ? C.playGrad : 'rgba(255,255,255,0.97)',
-          border: `2px solid ${isPlaying ? C.playBorder : C.idleBorder}`,
-          borderRadius: 24, padding: '5px 12px 5px 10px',
-          boxShadow: isPlaying ? `0 0 12px rgba(22,163,74,0.4),0 2px 8px rgba(0,0,0,0.15)` : '0 2px 8px rgba(0,0,0,0.15)',
-          fontSize: 12, fontWeight: 700, color: isPlaying ? 'white' : C.idle,
-          fontFamily: 'system-ui,sans-serif', whiteSpace: 'nowrap', transition: 'all 0.2s',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: 36, height: 36, borderRadius: '50%',
+          background: isPlaying
+            ? 'linear-gradient(135deg,#92400e,#78350f)'
+            : 'linear-gradient(135deg,#d97706,#b45309)',
+          border: '2px solid rgba(255,255,255,0.25)',
+          boxShadow: isPlaying
+            ? '0 0 10px rgba(146,64,14,0.5), 0 2px 6px rgba(0,0,0,0.3)'
+            : '0 2px 6px rgba(0,0,0,0.25)',
+          transition: 'all 0.2s',
+          animation: isPlaying ? 'mp-disc-spin 6s linear infinite' : 'none',
         }}>
-          <span style={{ fontSize: 15 }}>🎵</span>
-          <span style={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {isPlaying ? (currentTrack?.title ?? 'Playing') : 'Music'}
-          </span>
-          {isPlaying && <span style={{ fontSize: 11, animation: 'mp-disc-spin 1.5s linear infinite', display: 'inline-block' }}>◎</span>}
+          <span style={{ fontSize: 11 }}>🎵</span>
+          {isPlaying && <span style={{ fontSize: 9, animation: 'mp-disc-spin 1.5s linear infinite', display: 'inline-block' }}>◎</span>}
         </div>
       </div>
 
