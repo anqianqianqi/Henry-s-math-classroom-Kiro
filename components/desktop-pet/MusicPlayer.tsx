@@ -379,7 +379,7 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 15 }}>🎵</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: isPlaying ? 'white' : C.idle }}>Study Music</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'white' }}>Study Music</span>
               {isPlaying && <span style={{ fontSize: 10, animation: 'mp-disc-spin 1.5s linear infinite', display: 'inline-block', color: 'white' }}>◎</span>}
             </div>
             <button onClick={() => setCollapsed(true)}
