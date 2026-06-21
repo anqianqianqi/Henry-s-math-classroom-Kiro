@@ -13,12 +13,6 @@ import MusicPlayer from './MusicPlayer'
 
 const DesktopPet = dynamic(() => import('./DesktopPet'), { ssr: false })
 
-// ── Music widget is fully self-contained (drag, collapse, position) ───────────
-// Just render it directly — no outer wrapper needed.
-function DraggableMusicPlayer() {
-  return <MusicPlayer />
-}
-
 interface PetStatus {
   hasPet: boolean
   isEgg?: boolean
@@ -191,19 +185,19 @@ export default function DesktopPetWrapper() {
     }
   }
 
-  // MusicPlayer is ALWAYS rendered (except auth pages) at a fixed position.
-  // Being at position 0 in every render branch means React never unmounts it
-  // during page navigation — audio continues uninterrupted.
+  // MusicPlayer is ALWAYS rendered (except auth pages) — audio never unmounts.
+  // On pages with Didi, MusicPlayer receives Didi's position and snaps next to it.
+  // On dashboard/no-pet, it floats standalone at bottom-right.
   if (isAuthPage) return null
 
   const showPet = status !== null && !isDashboard && status.hasPet
 
-  if (!showPet) return <DraggableMusicPlayer />
+  if (!showPet) return <MusicPlayer />
 
   if (status!.isEgg) {
     return (
       <>
-        <DraggableMusicPlayer />
+        <MusicPlayer />
         <DesktopPet
           petStage="egg"
           petName={status!.petName ?? undefined}
@@ -221,7 +215,7 @@ export default function DesktopPetWrapper() {
   const stage = (status!.stage ?? 'adult') as DidiStage
   return (
     <>
-      <DraggableMusicPlayer />
+      <MusicPlayer />
       <DesktopPet
         petStage={stage}
         petName={status!.petName ?? undefined}

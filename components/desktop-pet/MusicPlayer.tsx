@@ -34,8 +34,7 @@ const STYLES = `
 }
 `
 
-export default function MusicPlayer() {
-  // ── Audio engine ─────────────────────────────────────────────────────────
+export default function MusicPlayer() {  // ── Audio engine ─────────────────────────────────────────────────────────
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [trackIndex, setTrackIndex] = useState(0)
   const [isPlaying, setIsPlaying]   = useState(false)
@@ -62,11 +61,11 @@ export default function MusicPlayer() {
   // ── Mount ────────────────────────────────────────────────────────────────
   useEffect(() => {
     setMounted(true)
-    // Position to the left of where Didi spawns (Didi is at right ~160px wide).
-    // Music pill is ~148px wide, gap 12px → place at right edge - 160 - 12 - 148
+    // Sit immediately to the left of Didi (Didi spawns at right ~160px).
+    // Gap of 4px so they look like a natural pair.
     const pillWidth = 148
     const didiWidth = 160
-    const gap = 12
+    const gap = 4
     setPos({
       x: window.innerWidth - didiWidth - gap - pillWidth,
       y: window.innerHeight - 56,
