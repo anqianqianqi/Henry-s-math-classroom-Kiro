@@ -27,6 +27,7 @@ const STYLES = `
 
 export default function MusicPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const btnRef = useRef<HTMLButtonElement | null>(null)
 
   const [trackIndex, setTrackIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -217,6 +218,7 @@ export default function MusicPlayer() {
 
       {/* ── Gramophone button ── */}
       <button
+        ref={btnRef}
         onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
         onMouseDown={e => e.stopPropagation()}
         title="Study music 🎵"
@@ -265,22 +267,26 @@ export default function MusicPlayer() {
         )}
       </button>
 
-      {/* ── Mini player popup ── */}
-      {open && (
+      {/* ── Mini player popup — fixed to viewport so it doesn't clip ── */}
+      {open && (() => {
+        const rect = btnRef.current?.getBoundingClientRect()
+        const popupLeft = rect ? Math.max(8, rect.right - 220) : 100
+        const popupBottom = rect ? window.innerHeight - rect.top + 6 : 120
+        return (
         <div
           onClick={e => e.stopPropagation()}
           onMouseDown={e => e.stopPropagation()}
           style={{
-            position: 'absolute',
-            bottom: 26,
-            left: -170,
+            position: 'fixed',
+            bottom: popupBottom,
+            left: popupLeft,
             width: 220,
             background: 'white',
             border: '2px solid #f0e6d3',
             borderRadius: 16,
             padding: '12px 14px 10px',
             boxShadow: '0 8px 24px rgba(92,61,46,0.18)',
-            zIndex: 10005,
+            zIndex: 10010,
             fontFamily: 'system-ui, sans-serif',
           }}
         >
@@ -447,7 +453,8 @@ export default function MusicPlayer() {
             </>
           )}
         </div>
-      )}
+        )
+      })()}
     </>
   )
 }
