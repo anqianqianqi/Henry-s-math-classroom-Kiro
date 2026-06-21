@@ -265,12 +265,11 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
             : '0 2px 6px rgba(0,0,0,0.3)',
           transition: 'box-shadow 0.2s',
         }}>
-          {/* Spinning vinyl disc — 75% of outer size, centered */}
+          {/* Spinning vinyl disc — 60% of outer size, centered */}
           <div style={{
-            width: '75%', height: '75%', borderRadius: '50%',
+            width: '60%', height: '60%', borderRadius: '50%',
             position: 'relative',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            // Dark vinyl with concentric groove rings via conic-gradient
             background: `
               radial-gradient(circle at center,
                 #2a2a2a 0%, #2a2a2a 15%,
@@ -288,15 +287,14 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
             transformOrigin: 'center',
             boxShadow: 'inset 0 0 4px rgba(0,0,0,0.5)',
           }}>
-            {/* Center label — lighter grey circle */}
+            {/* Center label — larger, ~50% of disc, with bigger music icon */}
             <div style={{
-              width: '32%', height: '32%', borderRadius: '50%',
+              width: '50%', height: '50%', borderRadius: '50%',
               background: 'radial-gradient(circle, #4a4a4a, #333)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0,
             }}>
-              {/* Music note — lighter than the disc */}
-              <span style={{ fontSize: 7, color: '#aaa', lineHeight: 1, userSelect: 'none' }}>♫</span>
+              <span style={{ fontSize: 14, color: '#bbb', lineHeight: 1, userSelect: 'none' }}>♫</span>
             </div>
           </div>
         </div>
