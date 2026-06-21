@@ -118,35 +118,60 @@ export default function ChallengeBankPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
 
-    // Load bank challenges from challenge_bank table
-    const { data: challengesData } = await supabase
-      .from('challenge_bank')
-      .select('id, title, description, tag_ids, max_points, image_url, created_at')
-      .order('created_at', { ascending: false })
+    // ── Phase 1: Run all independent queries in parallel ──────────────────
+    const [
+      { data: challengesData },
+      { data: tagsData },
+      { data: classesData },
+      { data: templateData },
+    ] = await Promise.all([
+      supabase.from('challenge_bank')
+        .select('id, title, description, tag_ids, max_points, image_url, created_at')
+        .order('created_at', { ascending: false }),
+      supabase.from('challenge_tags')
+        .select('id, challenge_tag_names(language, name)')
+        .order('created_at'),
+      supabase.from('classes')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name'),
+      supabase.from('challenge_templates')
+        .select('id, title_template, description_template, variables, answer_formula, max_points, tag_ids, created_at')
+        .eq('is_generative', true)
+        .order('created_at', { ascending: false }),
+    ])
 
+    // Set state for everything available immediately
     setChallenges(challengesData || [])
+    setAllTagData(tagsData || [])
+    const tagList = (tagsData || []).map((t: any) => {
+      const en = t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
+      const zh = t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
+      return { id: t.id, name: en || zh || t.id.slice(0, 8) }
+    })
+    setTags(tagList)
+    setClasses(classesData || [])
 
-    // Load publish history: match by source_bank_id OR by title (for older publishes)
+    // ── Phase 2: Load publish history (depends on challengesData) ─────────
+    // Run in background — history is hidden in <details> by default
     if (challengesData && challengesData.length > 0) {
       const bankIds = challengesData.map((c: any) => c.id)
       const bankTitles = challengesData.map((c: any) => c.title)
 
-      // Fetch daily_challenges that either have source_bank_id set OR match a bank title
-      const { data: byBankId } = await supabase
-        .from('daily_challenges')
-        .select('id, challenge_date, source_bank_id, title')
-        .in('source_bank_id', bankIds)
-        .order('challenge_date', { ascending: false })
-
-      const { data: byTitle } = await supabase
-        .from('daily_challenges')
-        .select('id, challenge_date, source_bank_id, title')
-        .in('title', bankTitles)
-        .is('source_bank_id', null)  // only those not already captured by source_bank_id
-        .order('challenge_date', { ascending: false })
+      // Run both daily_challenge queries in parallel
+      const [{ data: byBankId }, { data: byTitle }] = await Promise.all([
+        supabase.from('daily_challenges')
+          .select('id, challenge_date, source_bank_id, title')
+          .in('source_bank_id', bankIds)
+          .order('challenge_date', { ascending: false }),
+        supabase.from('daily_challenges')
+          .select('id, challenge_date, source_bank_id, title')
+          .in('title', bankTitles)
+          .is('source_bank_id', null)
+          .order('challenge_date', { ascending: false }),
+      ])
 
       const published = [...(byBankId || []), ...(byTitle || [])]
-
       const historyMap: Record<string, Array<{ date: string; classNames: string[]; challengeId: string }>> = {}
 
       if (published.length > 0) {
@@ -163,11 +188,8 @@ export default function ChallengeBankPage() {
           if (name) assignmentMap[a.challenge_id].push(name)
         }
 
-        // Build a title → bank id map for matching by title
         const titleToBankId: Record<string, string> = {}
-        for (const c of challengesData) {
-          titleToBankId[c.title] = c.id
-        }
+        for (const c of challengesData) titleToBankId[c.title] = c.id
 
         for (const p of published) {
           const bankId = p.source_bank_id || titleToBankId[p.title]
@@ -183,57 +205,7 @@ export default function ChallengeBankPage() {
       setPublishHistory(historyMap)
     }
 
-    // Load tags
-    const { data: tagsData } = await supabase
-      .from('challenge_tags')
-      .select('id, challenge_tag_names(language, name)')
-      .order('created_at')
-    setAllTagData(tagsData || [])
-    const tagList = (tagsData || []).map((t: any) => {
-      const en = t.challenge_tag_names?.find((n: any) => n.language === 'en')?.name
-      const zh = t.challenge_tag_names?.find((n: any) => n.language === 'zh')?.name
-      return { id: t.id, name: en || zh || t.id.slice(0, 8) }
-    })
-    setTags(tagList)
-    // Load classes
-    const { data: classesData } = await supabase
-      .from('classes')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('name')
-    setClasses(classesData || [])
-
-    // Load students (non-teacher profiles)
-    const { data: profilesData } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name, full_name, email')
-      .order('full_name')
-    const { data: teacherRoles } = await supabase
-      .from('user_roles')
-      .select('user_id, roles!inner(name)')
-      .is('class_id', null)
-    const teacherIds = new Set(
-      (teacherRoles || [])
-        .filter((r: any) => r.roles?.name === 'teacher' || r.roles?.name === 'administrator')
-        .map((r: any) => r.user_id)
-    )
-    const students = (profilesData || [])
-      .filter((p: any) => !teacherIds.has(p.id))
-      .map((p: any) => ({
-        id: p.id,
-        name: p.first_name || p.full_name?.split(' ')[0] || 'Unknown',
-        lastName: p.last_name || p.full_name?.split(' ').slice(1).join(' ') || '',
-        email: p.email || '',
-      }))
-    setAllStudents(students)
-
-    // Load generative templates
-    const { data: templateData } = await supabase
-      .from('challenge_templates')
-      .select('id, title_template, description_template, variables, answer_formula, max_points, tag_ids, created_at')
-      .eq('is_generative', true)
-      .order('created_at', { ascending: false })
-
+    // ── Phase 3: Templates with usage counts ──────────────────────────────
     if (templateData) {
       const templateIds = templateData.map((t: any) => t.id)
       let challengeCounts: Record<string, number> = {}
@@ -254,6 +226,9 @@ export default function ChallengeBankPage() {
       })))
     }
 
+    // ── Students: deferred — only loaded when publish modal opens ─────────
+    // (moved to openPublish function)
+
     setLoading(false)
   }
 
@@ -265,6 +240,28 @@ export default function ChallengeBankPage() {
   function openPublish(challenge: PoolChallenge) {
     const today = localDateString()
     setPublishModal({ challenge, date: today, classIds: [], studentIds: [], studentSearch: '' })
+    // Load students lazily — only when publish modal opens (not at page load)
+    if (allStudents.length === 0) {
+      supabase.from('profiles').select('id, first_name, last_name, full_name, email').order('full_name')
+        .then(async ({ data: profilesData }) => {
+          const { data: teacherRoles } = await supabase
+            .from('user_roles').select('user_id, roles!inner(name)').is('class_id', null)
+          const teacherIds = new Set(
+            (teacherRoles || [])
+              .filter((r: any) => r.roles?.name === 'teacher' || r.roles?.name === 'administrator')
+              .map((r: any) => r.user_id)
+          )
+          const students = (profilesData || [])
+            .filter((p: any) => !teacherIds.has(p.id))
+            .map((p: any) => ({
+              id: p.id,
+              name: p.first_name || p.full_name?.split(' ')[0] || 'Unknown',
+              lastName: p.last_name || p.full_name?.split(' ').slice(1).join(' ') || '',
+              email: p.email || '',
+            }))
+          setAllStudents(students)
+        })
+    }
   }
 
   async function handlePublish() {

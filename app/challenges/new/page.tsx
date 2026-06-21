@@ -76,92 +76,55 @@ export default function NewChallengePage() {
       return
     }
 
-    console.log('User ID:', user.id)
     setUserId(user.id)
 
-    // Check if user is teacher
-    const { data: roles } = await supabase
+    // Check if user is teacher — use a single joined query instead of two sequential ones
+    const { data: roleCheck } = await supabase
       .from('user_roles')
-      .select('role_id')
+      .select('roles!inner(name)')
       .eq('user_id', user.id)
       .is('class_id', null)
 
-    console.log('User roles:', roles)
+    const hasTeacherRole = (roleCheck as any[])?.some(
+      (r: any) => r.roles?.name === 'teacher' || r.roles?.name === 'administrator'
+    )
 
-    if (roles && roles.length > 0) {
-      const { data: roleData } = await supabase
-        .from('roles')
-        .select('name')
-        .in('id', roles.map((r: any) => r.role_id))
-
-      console.log('Role data:', roleData)
-
-      const hasTeacherRole = roleData?.some((r: any) => r.name === 'teacher')
-      
-      if (!hasTeacherRole) {
-        router.push('/dashboard')
-        return
-      }
-    } else {
+    if (!hasTeacherRole) {
       router.push('/dashboard')
       return
     }
 
-    // Load ALL active classes (simplified query to avoid RLS issues)
-    const { data: classesData, error: classesError } = await supabase
-      .from('classes')
-      .select('id, name, created_by, is_active')
-      .eq('is_active', true)
-      .order('name')
-
-    console.log('Classes query result:', { classesData, classesError })
-    console.log('Number of classes found:', classesData?.length || 0)
+    // ── Run all independent queries in parallel ───────────────────────────
+    const [
+      { data: classesData },
+      { data: tagsData },
+      { data: groupsData },
+      { data: genTemplates },
+    ] = await Promise.all([
+      supabase.from('classes')
+        .select('id, name, created_by, is_active')
+        .eq('is_active', true)
+        .order('name'),
+      supabase.from('challenge_tags')
+        .select('id, challenge_tag_names(language, name)')
+        .order('created_at'),
+      supabase.from('tag_groups')
+        .select('id, tag_group_names(language, name), tag_group_members(tag_id)')
+        .order('created_at'),
+      supabase.from('challenge_templates')
+        .select('id, title_template, description_template, variables, answer_formula, max_points, tag_ids')
+        .eq('is_generative', true)
+        .order('created_at', { ascending: false }),
+    ])
 
     setClasses(classesData || [])
-    
-    // Load all students (profiles that are not teachers)
-    const { data: profilesData } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name, full_name')
-      .order('full_name')
-    
-    // Get teacher/admin user IDs to exclude
-    const { data: teacherRoles } = await supabase
-      .from('user_roles')
-      .select('user_id, roles!inner(name)')
-      .is('class_id', null)
-    
-    const teacherIds = new Set(
-      (teacherRoles || [])
-        .filter((r: any) => r.roles?.name === 'teacher' || r.roles?.name === 'administrator')
-        .map((r: any) => r.user_id)
-    )
-    
-    const students = (profilesData || [])
-      .filter((p: any) => !teacherIds.has(p.id))
-      .map((p: any) => ({
-        id: p.id,
-        name: [p.first_name, p.last_name].filter(Boolean).join(' ') || p.full_name || 'Unknown'
-      }))
-    setAllStudents(students)
 
-    // Load existing tags with names
-    const { data: tagsData } = await supabase
-      .from('challenge_tags')
-      .select('id, challenge_tag_names(language, name)')
-      .order('created_at')
-    
     const tagOptions: TagOption[] = (tagsData || []).map((t: any) => {
       const names = t.challenge_tag_names || []
       return { id: t.id, name: t.id.slice(0, 8), _names: names }
     })
     setAvailableTags(tagOptions as any)
 
-    // Load tag groups
-    const { data: groupsData } = await supabase
-      .from('tag_groups')
-      .select('id, tag_group_names(language, name), tag_group_members(tag_id)')
-      .order('created_at')
     setAllTagGroupData(groupsData || [])
     const groupsList = (groupsData || []).map((g: any) => {
       const name = g.tag_group_names?.find((n: any) => n.language === tagLang)?.name
@@ -172,13 +135,10 @@ export default function NewChallengePage() {
     })
     setTagGroups(groupsList)
 
-    // Load generative templates
-    const { data: genTemplates } = await supabase
-      .from('challenge_templates')
-      .select('id, title_template, description_template, variables, answer_formula, max_points, tag_ids')
-      .eq('is_generative', true)
-      .order('created_at', { ascending: false })
     setGenerativeTemplates(genTemplates || [])
+
+    // ── Students: deferred — only load when user expands individual assignment ──
+    // (loaded lazily in the UI when needed)
 
     // Set default date to today (only if not saving to bank)
     if (!fromBank) {
@@ -187,6 +147,27 @@ export default function NewChallengePage() {
     }
     
     setLoading(false)
+  }
+
+  // Lazy-load students only when the individual assignment section is expanded
+  async function loadStudentsIfNeeded() {
+    if (allStudents.length > 0) return
+    const [{ data: profilesData }, { data: teacherRoles }] = await Promise.all([
+      supabase.from('profiles').select('id, first_name, last_name, full_name').order('full_name'),
+      supabase.from('user_roles').select('user_id, roles!inner(name)').is('class_id', null),
+    ])
+    const teacherIds = new Set(
+      (teacherRoles || [])
+        .filter((r: any) => r.roles?.name === 'teacher' || r.roles?.name === 'administrator')
+        .map((r: any) => r.user_id)
+    )
+    const students = (profilesData || [])
+      .filter((p: any) => !teacherIds.has(p.id))
+      .map((p: any) => ({
+        id: p.id,
+        name: [p.first_name, p.last_name].filter(Boolean).join(' ') || p.full_name || 'Unknown'
+      }))
+    setAllStudents(students)
   }
 
   function toggleClass(classId: string) {
@@ -980,7 +961,8 @@ export default function NewChallengePage() {
                 <input
                   type="text"
                   value={studentSearch}
-                  onChange={e => setStudentSearch(e.target.value)}
+                  onChange={e => { setStudentSearch(e.target.value); loadStudentsIfNeeded() }}
+                  onFocus={() => loadStudentsIfNeeded()}
                   placeholder="Search students by name..."
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl 
                            focus:border-primary-500 focus:ring-2 focus:ring-primary-100
