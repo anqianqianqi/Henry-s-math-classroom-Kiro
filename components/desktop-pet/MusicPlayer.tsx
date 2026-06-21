@@ -10,6 +10,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { PLAYLIST } from '@/lib/music-playlist'
 
 const STYLES = `
@@ -38,6 +39,41 @@ export default function MusicPlayer() {
 
   const hasTracks = PLAYLIST.length > 0
   const currentTrack = hasTracks ? PLAYLIST[trackIndex] : null
+
+  // ── Auto-play on first user interaction while on a /challenges page ──────
+  const pathname = usePathname()
+  const autoPlayedRef = useRef(false)
+
+  useEffect(() => {
+    const isChallengePage = pathname?.startsWith('/challenges')
+    if (!isChallengePage || !hasTracks || autoPlayedRef.current) return
+
+    const handleFirstInteraction = () => {
+      if (autoPlayedRef.current || isPlaying) return
+      autoPlayedRef.current = true
+      document.removeEventListener('click', handleFirstInteraction)
+      document.removeEventListener('keydown', handleFirstInteraction)
+
+      const audio = audioRef.current
+      const track = PLAYLIST[0]
+      if (!audio || !track) return
+      audio.src = `/music/${track.file}`
+      audio.load()
+      const onCanPlay = () => {
+        audio.removeEventListener('canplay', onCanPlay)
+        audio.play().then(() => setIsPlaying(true)).catch(() => {})
+      }
+      audio.addEventListener('canplay', onCanPlay)
+    }
+
+    document.addEventListener('click', handleFirstInteraction)
+    document.addEventListener('keydown', handleFirstInteraction)
+    return () => {
+      document.removeEventListener('click', handleFirstInteraction)
+      document.removeEventListener('keydown', handleFirstInteraction)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, hasTracks])
 
   // ── Create audio element once ────────────────────────────────────────────
   useEffect(() => {
