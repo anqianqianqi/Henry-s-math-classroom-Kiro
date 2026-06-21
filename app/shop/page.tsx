@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -601,6 +601,91 @@ function CommodityBadge({ type }: { type: string }) {
   return null
 }
 
+// ── Music Track Browse Modal ──────────────────────────────────────────────────
+function MusicBrowseModal({
+  tracks,
+  ownedItemIds,
+  balance,
+  redeeming,
+  redeemErrors,
+  previewingTrack,
+  onPreview,
+  onRedeem,
+  onClose,
+}: {
+  tracks: ShopItemWithCount[]
+  ownedItemIds: Set<string>
+  balance: number
+  redeeming: string | null
+  redeemErrors: Record<string, string>
+  previewingTrack: string | null
+  onPreview: (file: string | null) => void
+  onRedeem: (item: any) => void
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+          <div>
+            <div className="font-bold text-gray-900 text-lg">🎵 Music Tracks</div>
+            <div className="text-xs text-gray-400 mt-0.5">Preview a track · Buy to unlock it in your music player</div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
+        </div>
+        <div className="overflow-y-auto p-4 flex flex-col gap-3">
+          {tracks.map(item => {
+            const isOwned = ownedItemIds.has(item.id)
+            const canAfford = balance >= item.cost
+            const isPreviewing = previewingTrack === (item as any).music_file
+            return (
+              <div key={item.id} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                {/* Vinyl icon */}
+                <div className="shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-amber-700 to-amber-900 flex items-center justify-center shadow-md">
+                  <span className="text-xl">🎵</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm truncate">{item.title}</p>
+                  {item.description && <p className="text-gray-400 text-xs truncate">{item.description}</p>}
+                </div>
+                {/* Preview button */}
+                {(item as any).music_file && (
+                  <button
+                    onClick={() => onPreview(isPreviewing ? null : (item as any).music_file)}
+                    className={`shrink-0 text-xs font-semibold px-2 py-1.5 rounded-lg transition-colors ${
+                      isPreviewing
+                        ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    {isPreviewing ? '⏹ Stop' : '▶ Preview'}
+                  </button>
+                )}
+                {/* Price + Buy */}
+                <div className="shrink-0 flex flex-col items-end gap-1">
+                  <span className="text-amber-700 font-bold text-sm">{item.cost}<span className="text-gray-400 font-normal text-xs ml-0.5">pts</span></span>
+                  <button
+                    disabled={isOwned || !canAfford || redeeming === item.id}
+                    onClick={() => onRedeem(item)}
+                    className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                      isOwned ? 'bg-green-100 text-green-700 cursor-default'
+                      : !canAfford || redeeming === item.id ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-amber-700 text-white hover:bg-amber-800'
+                    }`}
+                  >
+                    {redeeming === item.id ? '…' : isOwned ? '✓ Owned' : !canAfford ? 'Too costly' : 'Buy'}
+                  </button>
+                  {redeemErrors[item.id] && <p className="text-red-500 text-[10px]">{redeemErrors[item.id]}</p>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ShopPage() {
   const router = useRouter()
@@ -624,6 +709,12 @@ export default function ShopPage() {
   // Book covers cluster
   const [bookSkins, setBookSkins] = useState<BookSkinItem[]>([])
   const [showBookBrowse, setShowBookBrowse] = useState(false)
+
+  // Music tracks cluster
+  const [musicTracks, setMusicTracks] = useState<ShopItemWithCount[]>([])
+  const [showMusicBrowse, setShowMusicBrowse] = useState(false)
+  const [previewingTrack, setPreviewingTrack] = useState<string | null>(null) // filename
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null)
 
   // Modals
   const [blindboxReveal, setBlindboxReveal] = useState<{ imageUrls: string[]; itemTitle: string; isPhysical?: boolean } | null>(null)
@@ -688,6 +779,12 @@ export default function ShopPage() {
           .map((s: any) => ({ ...s, shopItem: shopItemMap[s.shop_item_id!] }))
         setBookSkins(skins)
       }
+    } catch (_) {}
+
+    // Fetch music tracks available in the shop
+    try {
+      const musicItems = (shopItems ?? []).filter((i: any) => i.commodity_type === 'music_track' && i.is_active)
+      setMusicTracks(musicItems.map((i: any) => ({ ...i, redemption_count: countMap[i.id] ?? 0 })))
     } catch (_) {}
 
     // Redemption counts
@@ -824,6 +921,15 @@ export default function ShopPage() {
         }
       }
 
+      // Method 3: music tracks unlocked via user_unlocked_tracks
+      const { data: unlockedTracks } = await supabase
+        .from('user_unlocked_tracks')
+        .select('item_id')
+        .eq('user_id', userId)
+      for (const r of unlockedTracks ?? []) {
+        owned.add(r.item_id)
+      }
+
       setOwnedItemIds(owned)
     } catch (_) {
       // Non-fatal — ownership check failure just shows the buy button normally
@@ -897,6 +1003,12 @@ export default function ShopPage() {
         } else if (data.commodity_type === 'physical_blindbox' && (data.image_urls?.length || data.image_url)) {
           const urls: string[] = data.image_urls?.length ? data.image_urls : [data.image_url]
           setBlindboxReveal({ imageUrls: urls, itemTitle: item.title, isPhysical: true })
+        } else if (data.commodity_type === 'music_track') {
+          // Track is now unlocked — force MusicPlayer to re-fetch
+          // by resetting the singleton fetch flag
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('music-tracks-updated'))
+          }
         } else if (data.commodity_type === 'physical') {
           setPhysicalConfirm({ itemTitle: item.title })
         }
@@ -907,6 +1019,27 @@ export default function ShopPage() {
       setRedeeming(null)
     }
   }
+
+  // Music preview handlers
+  function handlePreviewTrack(file: string | null) {
+    // Stop any existing preview
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause()
+      previewAudioRef.current = null
+    }
+    if (!file) { setPreviewingTrack(null); return }
+    const audio = new Audio(`/music/${file}`)
+    audio.volume = 0.5
+    audio.play().catch(() => {})
+    audio.addEventListener('ended', () => setPreviewingTrack(null))
+    previewAudioRef.current = audio
+    setPreviewingTrack(file)
+  }
+
+  // Clean up preview audio on unmount
+  useEffect(() => {
+    return () => { previewAudioRef.current?.pause() }
+  }, [])
 
   if (loading) {
     return (
@@ -933,6 +1066,19 @@ export default function ShopPage() {
           redeemErrors={redeemErrors}
           onRedeem={handleRedeem}
           onClose={() => setShowRoomBrowse(false)}
+        />
+      )}
+      {showMusicBrowse && musicTracks.length > 0 && (
+        <MusicBrowseModal
+          tracks={musicTracks}
+          ownedItemIds={ownedItemIds}
+          balance={balance}
+          redeeming={redeeming}
+          redeemErrors={redeemErrors}
+          previewingTrack={previewingTrack}
+          onPreview={handlePreviewTrack}
+          onRedeem={item => { handlePreviewTrack(null); handleRedeem(item) }}
+          onClose={() => { handlePreviewTrack(null); setShowMusicBrowse(false) }}
         />
       )}
       {showBookBrowse && bookSkins.length > 0 && (
@@ -1029,10 +1175,12 @@ export default function ShopPage() {
         ) : (() => {
           const roomBgItemIds = new Set(roomBgs.map(bg => bg.shop_item_id))
           const bookSkinItemIds = new Set(bookSkins.map(s => s.shop_item_id))
+          const musicTrackItemIds = new Set(musicTracks.map(t => t.id))
           const filteredItems = items.filter(item => {
-            // Exclude room background and book skin items — they appear in dedicated cluster cards
+            // Exclude room background, book skin, and music track items — they appear in dedicated cluster cards
             if (roomBgItemIds.has(item.id)) return false
             if (bookSkinItemIds.has(item.id)) return false
+            if (musicTrackItemIds.has(item.id)) return false
             if (activeTab === 'all') return true
             // 'rewards' = everything (pet categories already excluded at query level)
             return true
@@ -1044,6 +1192,46 @@ export default function ShopPage() {
             </div>
           ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 mb-10">
+            {/* ── Music Tracks entry card ── */}
+            {musicTracks.length > 0 && (
+              <div
+                className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:border-amber-300 transition-all cursor-pointer flex flex-col"
+                onClick={() => setShowMusicBrowse(true)}
+              >
+                <div className="relative w-full aspect-square bg-gradient-to-br from-amber-800 to-amber-950 flex items-center justify-center overflow-hidden">
+                  {/* Vinyl record CSS art */}
+                  <div className="relative w-24 h-24">
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-700 via-amber-900 to-stone-900 shadow-2xl group-hover:scale-110 transition-transform duration-300" />
+                    <div className="absolute inset-3 rounded-full bg-stone-900" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center">
+                        <span className="text-sm">🎵</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-amber-800 text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm">
+                    🎵 {musicTracks.length} tracks
+                  </div>
+                  <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-white text-sm font-bold">Browse Music</span>
+                    <span className="text-white/80 text-xs mt-0.5">{musicTracks.length} available</span>
+                  </div>
+                </div>
+                <div className="p-3 flex flex-col flex-1">
+                  <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Music Tracks</h3>
+                  <p className="text-gray-500 text-xs line-clamp-2 mb-auto">Unlock premium study music for your player. Preview before buying.</p>
+                  <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
+                    <span className="text-amber-700 font-bold text-sm">
+                      from {Math.min(...musicTracks.map(t => t.cost))}
+                      <span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
+                    </span>
+                    <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-700 text-white group-hover:bg-amber-800 transition-colors">
+                      Browse
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* ── Room Backgrounds entry card ── */}
             {roomBgs.length > 0 && (
               <div

@@ -6,7 +6,7 @@
 import type { Species } from './pet'
 
 export type ShopItemCategory = 'food' | 'accessory' | 'pet' | 'other'
-export type CommodityType = 'standard' | 'blindbox' | 'physical' | 'physical_blindbox'
+export type CommodityType = 'standard' | 'blindbox' | 'physical' | 'physical_blindbox' | 'music_track'
 
 export interface ShopItem {
   id: string
@@ -23,6 +23,7 @@ export interface ShopItem {
   commodity_type: CommodityType
   food_xp: number | null        // only set when category = 'food'
   target_species: Species | null  // only set when category = 'pet'
+  music_file: string | null          // filename in /public/music/ (music_track type only)
   draws_per_redemption: number  // how many images per blind box draw (default 1)
   // Computed client-side for display:
   redemption_count?: number     // how many times this item has been redeemed
@@ -67,6 +68,7 @@ export interface ShopItemForm {
   food_xp: string             // empty string = not applicable; parsed to int for food items
   target_species: string      // '' | 'dragon' | 'fox' | 'cat'
   draws_per_redemption: string  // number of images per blind box draw; default '1'
+  music_file: string            // filename for music_track type
 }
 
 export interface ValidationResult {
@@ -87,6 +89,7 @@ export interface ShopItemInsert {
   commodity_type: CommodityType
   food_xp: number | null      // only set when category = 'food'
   target_species: Species | null  // only set when category = 'pet'
+  music_file: string | null      // filename for music_track type
   draws_per_redemption: number  // images per blind box draw
 }
 

@@ -72,8 +72,25 @@ function getOrCreateAudio(): HTMLAudioElement {
   return audio
 }
 
+// Fetch unlocked tracks from server and merge into playlist (runs once per session)
+let _unlockedFetched = false
+function fetchAndMergeUnlockedTracks() {
+  _unlockedFetched = true
+  fetch('/api/music/unlocked')
+    .then(r => r.json())
+    .then(({ tracks }: { tracks: { file: string; title: string }[] }) => {
+      if (!tracks?.length) return
+      // Add tracks that aren't already in the playlist (by filename)
+      const existing = new Set(_playlist.map(t => t.file))
+      const newTracks = tracks.filter(t => !existing.has(t.file))
+      if (!newTracks.length) return
+      _playlist = [..._playlist, ...newTracks]
+      notifyAll()
+    })
+    .catch(() => { /* silent — user may not be logged in */ })
+}
 
-// Theme colors — vintage mahogany brown palette
+
 const C = {
   panel:        '#fdf0e0',  // aged parchment
   panelBorder:  '#8b5e3c',  // vintage brown border
@@ -126,7 +143,15 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
     _listeners.add(rerender)
     // Init audio on first mount (client-side only)
     getOrCreateAudio()
-    return () => { _listeners.delete(rerender) }
+    // Fetch unlocked tracks and merge into playlist
+    fetchAndMergeUnlockedTracks()
+    // Re-fetch when a new track is purchased from the shop
+    const onUpdate = () => { _unlockedFetched = false; fetchAndMergeUnlockedTracks() }
+    window.addEventListener('music-tracks-updated', onUpdate)
+    return () => {
+      _listeners.delete(rerender)
+      window.removeEventListener('music-tracks-updated', onUpdate)
+    }
   }, [rerender])
 
   // Read playback state from singletons
