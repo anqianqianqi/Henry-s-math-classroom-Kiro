@@ -656,11 +656,14 @@ export default function DesktopPet({
                 size={catSize}
                 facingLeft={behavior.pose === 'walking' ? facingLeft : false}
               />
-              {/* Gramophone music player — only show when not minimized and not egg */}
-              {!isEgg && (
-                <MusicPlayer />
-              )}
             </div>
+
+            {/* Gramophone — outside the animated div so it doesn't shake with Didi */}
+            {!isEgg && (
+              <div style={{ position: 'absolute', bottom: 0, left: 0, width: catSize, pointerEvents: 'auto' }}>
+                <MusicPlayer />
+              </div>
+            )}
 
             {/* Size slider — moved into popover; keep showSizer for popover toggle */}
 

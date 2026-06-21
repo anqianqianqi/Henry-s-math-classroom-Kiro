@@ -75,7 +75,11 @@ export default function MusicPlayer() {
     audio.src = `/music/${currentTrack.file}`
     audio.load()
     if (wasPlaying) {
-      audio.play().catch(() => setIsPlaying(false))
+      const onCanPlay = () => {
+        audio.removeEventListener('canplay', onCanPlay)
+        audio.play().catch(() => setIsPlaying(false))
+      }
+      audio.addEventListener('canplay', onCanPlay)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trackIndex, currentTrack?.file])
@@ -99,11 +103,17 @@ export default function MusicPlayer() {
       audio.pause()
       setIsPlaying(false)
     } else {
-      if (!audio.src || audio.src === window.location.href) {
-        audio.src = `/music/${currentTrack.file}`
+      // Always ensure src is set before playing
+      const expectedSrc = `/music/${currentTrack.file}`
+      // Use endsWith to handle both relative and absolute URLs
+      if (!audio.src || !audio.src.endsWith(currentTrack.file)) {
+        audio.src = expectedSrc
         audio.load()
       }
-      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
+      audio.play().then(() => setIsPlaying(true)).catch((err) => {
+        console.error('[MusicPlayer] play failed:', err)
+        setIsPlaying(false)
+      })
     }
   }, [isPlaying, currentTrack])
 
@@ -115,7 +125,14 @@ export default function MusicPlayer() {
     const track = PLAYLIST[idx]
     audio.src = `/music/${track.file}`
     audio.load()
-    audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
+    const onCanPlay = () => {
+      audio.removeEventListener('canplay', onCanPlay)
+      audio.play().then(() => setIsPlaying(true)).catch((err) => {
+        console.error('[MusicPlayer] playTrack failed:', err)
+        setIsPlaying(false)
+      })
+    }
+    audio.addEventListener('canplay', onCanPlay)
   }, [])
 
   const prevTrack = () => {
