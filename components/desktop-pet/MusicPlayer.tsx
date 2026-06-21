@@ -15,20 +15,24 @@ import { createPortal } from 'react-dom'
 import { usePathname } from 'next/navigation'
 import { PLAYLIST } from '@/lib/music-playlist'
 
-// Theme colors — match the app's primary green palette
+// Theme colors — vintage brown palette matching the music icon
 const C = {
-  idle:      '#16a34a',  // primary-600
-  idleLight: '#dcfce7',  // primary-100
-  idleBorder:'#86efac',  // primary-300
-  playGrad:  'linear-gradient(135deg,#22c55e,#16a34a)',
-  playBorder:'#16a34a',
-  accent:    '#16a34a',
-  panel:     '#f0fdf4',  // primary-50
-  panelBorder:'#86efac',
-  track:     '#bbf7d0',  // primary-200 — progress bar bg
-  progressFill:'#16a34a',
-  text:      '#14532d',  // primary-900
-  subtext:   '#166534',  // primary-800
+  // Panel / expanded player
+  panel:        '#fdf6ee',  // warm cream background
+  panelBorder:  '#b45309',  // amber-700 border
+  headerIdle:   'linear-gradient(135deg,#d97706,#b45309)',  // amber gradient
+  headerPlaying:'linear-gradient(135deg,#92400e,#78350f)',  // dark brown gradient
+  text:         '#44200a',  // deep brown
+  subtext:      '#78350f',  // amber-800
+  // Progress / controls
+  track:        '#fde68a',  // amber-200
+  progressFill: '#b45309',  // amber-700
+  accent:       '#b45309',
+  idle:         '#92400e',  // amber-800 (for icons/borders when idle)
+  idleLight:    '#fef3c7',  // amber-100
+  idleBorder:   '#fbbf24',  // amber-400
+  playBorder:   '#78350f',
+  playGrad:     'linear-gradient(135deg,#d97706,#b45309)',
 }
 
 const STYLES = `
@@ -210,7 +214,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
 
   if (!mounted || !pillPos) return <style>{STYLES}</style>
 
-  const PILL_H = 28
+  const PILL_H = 36
 
   // Compute expanded panel position: anchors to pill's bottom edge, grows upward
   const panelLeft   = Math.max(8, Math.min(pillPos.left, window.innerWidth - 232))
@@ -254,7 +258,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
           transition: 'all 0.2s',
           animation: isPlaying ? 'mp-disc-spin 6s linear infinite' : 'none',
         }}>
-          <span style={{ fontSize: 11 }}>🎵</span>
+          <span style={{ fontSize: 16, filter: 'brightness(0) invert(1)' }}>🎵</span>
           {isPlaying && <span style={{ fontSize: 9, animation: 'mp-disc-spin 1.5s linear infinite', display: 'inline-block' }}>◎</span>}
         </div>
       </div>
@@ -278,7 +282,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
           {/* Header / drag handle */}
           <div style={{
             cursor: 'default',
-            background: isPlaying ? C.playGrad : `linear-gradient(135deg,${C.panel},${C.idleLight})`,
+            background: isPlaying ? C.headerPlaying : C.headerIdle,
             padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
