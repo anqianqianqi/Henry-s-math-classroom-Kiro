@@ -77,8 +77,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
   const dragOffset = useRef({ x: 0, y: 0 })
   const dragMoved  = useRef(false)
 
-  const hasTracks    = PLAYLIST.length > 0  // Shuffle once on mount so each session gets a different order
-  const [playlist]   = useState<typeof PLAYLIST>(() => {
+  const hasTracks    = PLAYLIST.length > 0  // Shuffle once on mount so each session gets a different order  const [playlist]   = useState<typeof PLAYLIST>(() => {
     const arr = [...PLAYLIST]
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -137,7 +136,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
     audioRef.current = audio
     audio.addEventListener('timeupdate',    () => { if (audio.duration > 0) setProgress(audio.currentTime / audio.duration) })
     audio.addEventListener('loadedmetadata', () => setDuration(audio.duration))
-    audio.addEventListener('ended',          () => setTrackIndex(p => (p + 1) % PLAYLIST.length))
+    audio.addEventListener('ended',          () => setTrackIndex(p => (p + 1) % playlist.length))
     // No cleanup: audio intentionally persists for continuous cross-page playback
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -197,14 +196,14 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
   const playTrack = useCallback((idx: number) => {
     const audio = audioRef.current; if (!audio) return
     setTrackIndex(idx); setShowPlaylist(false)
-    const track = PLAYLIST[idx]
+    const track = playlist[idx]
     audio.src = `/music/${track.file}`; audio.load()
     const onCan = () => { audio.removeEventListener('canplay', onCan); audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false)) }
     audio.addEventListener('canplay', onCan)
   }, [])
 
-  const prevTrack = () => playTrack((trackIndex - 1 + PLAYLIST.length) % PLAYLIST.length)
-  const nextTrack = () => playTrack((trackIndex + 1) % PLAYLIST.length)
+  const prevTrack = () => playTrack((trackIndex - 1 + playlist.length) % playlist.length)
+  const nextTrack = () => playTrack((trackIndex + 1) % playlist.length)
 
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
     const audio = audioRef.current; if (!audio || !audio.duration) return
@@ -338,7 +337,7 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
               <>
                 <div style={{ fontSize: 12, fontWeight: 700, color: C.text, textAlign: 'center', marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {currentTrack?.title ?? '—'}
-                  <span style={{ fontSize: 10, color: C.subtext, fontWeight: 400, marginLeft: 4 }}>{trackIndex + 1}/{PLAYLIST.length}</span>
+                  <span style={{ fontSize: 10, color: C.subtext, fontWeight: 400, marginLeft: 4 }}>{trackIndex + 1}/{playlist.length}</span>
                 </div>
                 <div onClick={seek} style={{ height: 5, background: C.track, borderRadius: 3, marginBottom: 4, cursor: 'pointer', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${progress * 100}%`, background: C.progressFill, borderRadius: 3, transition: 'width 0.3s' }} />
@@ -347,11 +346,11 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
                   <span>{fmt(progress * duration)}</span><span>{fmt(duration)}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 10 }}>
-                  <button onClick={prevTrack} disabled={PLAYLIST.length < 2} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.idle, padding: 2 }}>⏮</button>
+                  <button onClick={prevTrack} disabled={playlist.length < 2} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.idle, padding: 2 }}>⏮</button>
                   <button onClick={togglePlay} style={{ background: C.idle, border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 14, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 2px 8px rgba(22,163,74,0.4)` }}>
                     {isPlaying ? '⏸' : '▶'}
                   </button>
-                  <button onClick={nextTrack} disabled={PLAYLIST.length < 2} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.idle, padding: 2 }}>⏭</button>
+                  <button onClick={nextTrack} disabled={playlist.length < 2} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: C.idle, padding: 2 }}>⏭</button>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, overflow: 'hidden' }}>
                   <span style={{ fontSize: 12, flexShrink: 0 }}>🔈</span>
@@ -365,9 +364,9 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
                 </button>
                 {showPlaylist && (
                   <div style={{ maxHeight: 130, overflowY: 'auto', border: `1px solid ${C.idleBorder}`, borderRadius: 8, background: C.panel }}>
-                    {PLAYLIST.map((track, idx) => (
+                    {playlist.map((track, idx) => (
                       <div key={idx} onClick={() => playTrack(idx)}
-                        style={{ padding: '7px 10px', fontSize: 11, cursor: 'pointer', fontWeight: idx === trackIndex ? 700 : 400, color: idx === trackIndex ? C.idle : C.text, background: idx === trackIndex ? C.idleLight : 'transparent', display: 'flex', alignItems: 'center', gap: 6, borderBottom: idx < PLAYLIST.length - 1 ? `1px solid ${C.idleBorder}` : 'none' }}
+                        style={{ padding: '7px 10px', fontSize: 11, cursor: 'pointer', fontWeight: idx === trackIndex ? 700 : 400, color: idx === trackIndex ? C.idle : C.text, background: idx === trackIndex ? C.idleLight : 'transparent', display: 'flex', alignItems: 'center', gap: 6, borderBottom: idx < playlist.length - 1 ? `1px solid ${C.idleBorder}` : 'none' }}
                         onMouseEnter={e => { if (idx !== trackIndex) (e.currentTarget as HTMLDivElement).style.background = C.panel }}
                         onMouseLeave={e => { if (idx !== trackIndex) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
                       >
