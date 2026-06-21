@@ -280,12 +280,23 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
 
   if (!mounted || (!pillPos && !groupMode)) return <style>{STYLES}</style>
 
-  const PILL_H = 44
+  const PANEL_W = 224
+  // Panel height estimate: ~320px max (with playlist open). Use actual rect when available.
+  const PANEL_H_EST = 340
 
-  // Compute expanded panel position
+  // Compute expanded panel position — clamp all 4 edges so panel stays fully on screen
   const pillRect = pillRef.current?.getBoundingClientRect()
-  const panelLeft   = pillRect ? Math.max(8, Math.min(pillRect.left, window.innerWidth - 232)) : Math.max(8, Math.min((pillPos?.left ?? 0), window.innerWidth - 232))
-  const panelBottom = pillRect ? Math.max(8, window.innerHeight - pillRect.top - PILL_H) : Math.max(8, window.innerHeight - (pillPos?.top ?? 0) - PILL_H)
+  const vw = typeof window !== 'undefined' ? document.documentElement.clientWidth  : 400
+  const vh = typeof window !== 'undefined' ? document.documentElement.clientHeight : 800
+
+  // Anchor panel left-edge to pill left, but clamp so right edge stays on screen
+  const rawPanelLeft = pillRect ? pillRect.left : (pillPos?.left ?? 0)
+  const panelLeft = Math.max(8, Math.min(rawPanelLeft, vw - PANEL_W - 8))
+
+  // Anchor panel bottom to just above the pill, but clamp so top edge stays on screen
+  const pillTop = pillRect ? pillRect.top : (pillPos?.top ?? vh - 60)
+  const rawPanelBottom = vh - pillTop + 8  // distance from bottom of viewport to top of pill + gap
+  const panelBottom = Math.max(8, Math.min(rawPanelBottom, vh - PANEL_H_EST - 8))
 
   return (
     <>
@@ -375,10 +386,12 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
             position: 'fixed',
             left:   panelLeft,
             bottom: panelBottom,
-            width: 224, zIndex: 99999,
+            width: PANEL_W, zIndex: 99999,
+            maxHeight: `calc(100dvh - ${panelBottom + 8}px)`,
             background: 'white', border: `2px solid ${C.panelBorder}`,
             borderRadius: 18, boxShadow: '0 8px 28px rgba(124,58,237,0.18)',
             fontFamily: 'system-ui,sans-serif', overflow: 'hidden',
+            display: 'flex', flexDirection: 'column',
             animation: 'mp-pop-in 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards',
           }}
         >
@@ -397,7 +410,7 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px', color: isPlaying ? 'rgba(255,255,255,0.95)' : '#3d1c08', fontWeight: 700 }}>×</button>
           </div>
 
-          <div style={{ padding: '10px 14px 12px', overflow: 'hidden' }}>
+          <div style={{ padding: '10px 14px 12px', overflow: 'auto', flex: 1 }}>
             {!hasTracks ? (
               <div style={{ fontSize: 11, color: '#a07060', textAlign: 'center', padding: '8px 0', lineHeight: 1.6 }}>
                 No tracks yet. Add MP3s to <code style={{ background: '#f5f5f5', padding: '1px 4px', borderRadius: 4 }}>/public/music/</code>
