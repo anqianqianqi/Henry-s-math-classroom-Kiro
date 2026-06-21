@@ -223,10 +223,10 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
         onMouseDown={handleDragStart}
         onClick={() => { if (!dragMoved.current) setCollapsed(c => !c) }}
         style={{
-          position: groupMode ? 'absolute' : 'fixed',
+          position: groupMode ? 'relative' : 'fixed',
           right: groupMode ? undefined : undefined,
-          left: groupMode ? -22 : pillPos?.left,
-          top: groupMode ? -22 : undefined,
+          left: groupMode ? undefined : pillPos?.left,
+          top: groupMode ? undefined : undefined,
           ...((!groupMode && pillPos) && { top: pillPos.top }),
           zIndex: groupMode ? 10001 : 10000,
           cursor: (dockPos || groupMode) ? 'pointer' : 'grab',

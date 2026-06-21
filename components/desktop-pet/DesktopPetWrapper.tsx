@@ -63,6 +63,10 @@ function FloatingGroup({ children, onMove }: { children: React.ReactNode; onMove
         zIndex: 9998,
         cursor: 'grab',
         userSelect: 'none',
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        gap: 6,
       }}
     >
       {children}
