@@ -359,6 +359,7 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
         <div
           onClick={e => e.stopPropagation()}
           onMouseDown={e => e.stopPropagation()}
+          onTouchStart={e => e.stopPropagation()}
           style={{
             position: 'fixed',
             left:   panelLeft,
@@ -427,7 +428,7 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
                   {showPlaylist ? '▲ Hide playlist' : '▼ Choose a song'}
                 </button>
                 {showPlaylist && (
-                  <div style={{ maxHeight: 130, overflowY: 'auto', border: `1px solid ${C.idleBorder}`, borderRadius: 8, background: C.panel }}>
+                  <div style={{ maxHeight: 130, overflowY: 'auto', border: `1px solid ${C.idleBorder}`, borderRadius: 8, background: C.panel, touchAction: 'pan-y' }}>
                     {playlist.map((track, idx) => (
                       <div key={idx} onClick={() => playTrack(idx)}
                         style={{ padding: '7px 10px', fontSize: 11, cursor: 'pointer', fontWeight: idx === trackIndex ? 700 : 400, color: idx === trackIndex ? C.idle : C.text, background: idx === trackIndex ? C.idleLight : 'transparent', display: 'flex', alignItems: 'center', gap: 6, borderBottom: idx < playlist.length - 1 ? `1px solid ${C.idleBorder}` : 'none' }}
