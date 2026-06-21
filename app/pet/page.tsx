@@ -468,12 +468,6 @@ export default function PetPage() {
       <main className="max-w-2xl mx-auto px-4 py-8 sm:px-6">
         {/* Header row: back button + title */}
         <div className="flex items-center gap-3 mb-4">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"
-          >
-            ← Dashboard
-          </button>
           <HomeButton />
           <h1 className="text-2xl font-bold text-gray-900">My Pet 🐾</h1>
         </div>

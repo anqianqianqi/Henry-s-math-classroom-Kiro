@@ -245,13 +245,6 @@ export default function ExploreClassesPage() {
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 py-10">
           <div className="flex items-center gap-2 mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push('/dashboard')}
-            >
-              ← Back
-            </Button>
             <HomeButton />
           </div>
           
