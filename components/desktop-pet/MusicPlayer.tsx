@@ -34,7 +34,7 @@ const STYLES = `
 }
 `
 
-export default function MusicPlayer({ anchorPos }: { anchorPos?: { x: number; y: number } } = {}) {  // ── Audio engine ─────────────────────────────────────────────────────────
+export default function MusicPlayer({ anchorPos, groupMode = false }: { anchorPos?: { x: number; y: number }; groupMode?: boolean } = {}) {  // ── Audio engine ─────────────────────────────────────────────────────────
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [trackIndex, setTrackIndex] = useState(0)
   const [isPlaying, setIsPlaying]   = useState(false)
@@ -246,18 +246,17 @@ export default function MusicPlayer({ anchorPos }: { anchorPos?: { x: number; y:
         <style>{STYLES}</style>
         <div
           ref={containerRef}
-          onMouseDown={handleDragStart}
+          onMouseDown={groupMode ? undefined : handleDragStart}
           onClick={handleClick}
           style={{
-            position: 'fixed',
-            left: pos.x,
-            top:  pos.y,
-            zIndex: 9998,
-            cursor: 'grab',
+            position: groupMode ? 'relative' : 'fixed',
+            left: groupMode ? undefined : pos.x,
+            top:  groupMode ? undefined : pos.y,
+            zIndex: groupMode ? undefined : 9998,
+            cursor: 'pointer',
             userSelect: 'none',
             animation: 'mp-pop-in 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards',
-          }}
-        >
+          }}        >
           {/* Floating note */}
           {isPlaying && (
             <div key={noteKey} style={{
@@ -305,15 +304,16 @@ export default function MusicPlayer({ anchorPos }: { anchorPos?: { x: number; y:
   const pillBottom = pos ? window.innerHeight - pos.y - PILL_HEIGHT : 0
   const playerLeft = pos ? Math.min(pos.x, window.innerWidth - 228) : 0
 
-  return (
+  // In groupMode, wrap in a relative container so the absolute panel pops above the pill
+  const expandedContent = (
     <>
       <style>{STYLES}</style>
       <div
         ref={containerRef}
         style={{
-          position: 'fixed',
-          left: Math.max(8, playerLeft),
-          bottom: Math.max(8, pillBottom),
+          position: groupMode ? 'absolute' : 'fixed',
+          left:   groupMode ? 0 : Math.max(8, playerLeft),
+          bottom: groupMode ? PILL_HEIGHT + 4 : Math.max(8, pillBottom),
           zIndex: 99998,
           width: 224,
           background: 'white',
@@ -477,4 +477,13 @@ export default function MusicPlayer({ anchorPos }: { anchorPos?: { x: number; y:
       </div>
     </>
   )
+
+  if (groupMode) {
+    return (
+      <div style={{ position: 'relative' }}>
+        {expandedContent}
+      </div>
+    )
+  }
+  return expandedContent
 }

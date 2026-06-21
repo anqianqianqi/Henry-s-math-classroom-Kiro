@@ -6,12 +6,67 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import type { DidiStage } from './DidiSvg'
 import MusicPlayer from './MusicPlayer'
 
 const DesktopPet = dynamic(() => import('./DesktopPet'), { ssr: false })
+
+// ── Shared draggable group container ─────────────────────────────────────────
+// Wraps Didi + music pill in a single fixed element so they always move together.
+function FloatingGroup({ children }: { children: React.ReactNode }) {
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
+  const dragOffset = useRef({ x: 0, y: 0 })
+  const moved      = useRef(false)
+
+  useEffect(() => {
+    setPos({ x: window.innerWidth - 320, y: window.innerHeight - 160 })
+  }, [])
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button, input, [role="button"]')) return
+    e.preventDefault()
+    moved.current = false
+    const cur = pos ?? { x: window.innerWidth - 320, y: window.innerHeight - 160 }
+    dragOffset.current = { x: e.clientX - cur.x, y: e.clientY - cur.y }
+
+    const onMove = (ev: MouseEvent) => {
+      moved.current = true
+      setPos({
+        x: Math.max(0, Math.min(window.innerWidth  - 50, ev.clientX - dragOffset.current.x)),
+        y: Math.max(0, Math.min(window.innerHeight - 50, ev.clientY - dragOffset.current.y)),
+      })
+    }
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup',   onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup',   onUp)
+  }, [pos])
+
+  if (!pos) return null
+
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      style={{
+        position: 'fixed',
+        left: pos.x,
+        top:  pos.y,
+        zIndex: 9998,
+        display: 'flex',
+        alignItems: 'flex-end',
+        gap: 4,
+        cursor: 'grab',
+        userSelect: 'none',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
 
 interface PetStatus {
   hasPet: boolean
@@ -29,7 +84,6 @@ export default function DesktopPetWrapper() {
   const [cracking, setCracking] = useState(false)
   const [crackError, setCrackError] = useState<string | null>(null)
   const [xpGainToast, setXpGainToast] = useState<number | null>(null)
-  const [petPos, setPetPos] = useState<{ x: number; y: number } | null>(null)
   const xpGranted = useRef(false)
   const initialFetchDone = useRef(false)
   const prevXp = useRef<number | null>(null)
@@ -187,18 +241,17 @@ export default function DesktopPetWrapper() {
   }
 
   // MusicPlayer is ALWAYS rendered (except auth pages) — audio never unmounts.
-  // On pages with Didi, MusicPlayer receives Didi's position and snaps next to it.
-  // On dashboard/no-pet, it floats standalone at bottom-right.
   if (isAuthPage) return null
 
   const showPet = status !== null && !isDashboard && status.hasPet
 
+  // Dashboard or no pet — just music player standalone
   if (!showPet) return <MusicPlayer />
 
   if (status!.isEgg) {
     return (
-      <>
-        <MusicPlayer anchorPos={petPos ?? undefined} />
+      <FloatingGroup>
+        <MusicPlayer groupMode />
         <DesktopPet
           petStage="egg"
           petName={status!.petName ?? undefined}
@@ -208,16 +261,16 @@ export default function DesktopPetWrapper() {
           onHatch={hatchEgg}
           cracking={cracking}
           crackError={crackError ?? undefined}
-          onPositionChange={(x, y) => setPetPos({ x, y })}
+          groupMode
         />
-      </>
+      </FloatingGroup>
     )
   }
 
   const stage = (status!.stage ?? 'adult') as DidiStage
   return (
-    <>
-      <MusicPlayer anchorPos={petPos ?? undefined} />
+    <FloatingGroup>
+      <MusicPlayer groupMode />
       <DesktopPet
         petStage={stage}
         petName={status!.petName ?? undefined}
@@ -226,8 +279,8 @@ export default function DesktopPetWrapper() {
         streak={status!.streak ?? undefined}
         xp={status!.xp ?? undefined}
         xpGainToast={xpGainToast ?? undefined}
-        onPositionChange={(x, y) => setPetPos({ x, y })}
+        groupMode
       />
-    </>
+    </FloatingGroup>
   )
 }

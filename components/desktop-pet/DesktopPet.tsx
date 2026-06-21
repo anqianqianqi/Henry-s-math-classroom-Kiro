@@ -174,6 +174,7 @@ export default function DesktopPet({
   cracking = false,
   crackError,
   onPositionChange,
+  groupMode = false,
 }: {
   petStage?: DidiStage
   petName?: string
@@ -188,6 +189,7 @@ export default function DesktopPet({
   cracking?: boolean
   crackError?: string
   onPositionChange?: (x: number, y: number, size: number) => void
+  groupMode?: boolean  // when true, outer div is position:relative (parent handles fixed positioning)
 }) {
   const [mounted,    setMounted]    = useState(false)
   const [minimized,  setMinimized]  = useState(false)
@@ -486,13 +488,13 @@ export default function DesktopPet({
 
       <div
         style={{
-          position: 'fixed',
-          bottom: posY,
-          left: posX,
-          zIndex: 9999,
+          position: groupMode ? 'relative' : 'fixed',
+          bottom: groupMode ? undefined : posY,
+          left:   groupMode ? undefined : posX,
+          zIndex: groupMode ? undefined : 9999,
           cursor: isDragging ? 'grabbing' : 'grab',
           userSelect: 'none',
-          transition: (isDragging || behavior.pose === 'walking' || suppressTransition) ? 'none' : 'left 0.4s cubic-bezier(0.34,1.56,0.64,1), bottom 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+          transition: groupMode ? undefined : ((isDragging || behavior.pose === 'walking' || suppressTransition) ? 'none' : 'left 0.4s cubic-bezier(0.34,1.56,0.64,1), bottom 0.4s cubic-bezier(0.34,1.56,0.64,1)'),
           animation: popIn && !isDragging ? 'didi-pop-in 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards' : undefined,
         }}
         onClick={handleClick}
