@@ -62,8 +62,15 @@ export default function MusicPlayer() {
   // ── Mount ────────────────────────────────────────────────────────────────
   useEffect(() => {
     setMounted(true)
-    // Default: bottom-right, just above viewport floor
-    setPos({ x: window.innerWidth - 160, y: window.innerHeight - 56 })
+    // Position to the left of where Didi spawns (Didi is at right ~160px wide).
+    // Music pill is ~148px wide, gap 12px → place at right edge - 160 - 12 - 148
+    const pillWidth = 148
+    const didiWidth = 160
+    const gap = 12
+    setPos({
+      x: window.innerWidth - didiWidth - gap - pillWidth,
+      y: window.innerHeight - 56,
+    })
   }, [])
 
   // ── Auto-play on first interaction (any page) ─────────────────────────────
