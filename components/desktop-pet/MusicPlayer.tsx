@@ -287,6 +287,7 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
         ref={pillRef}
         data-no-drag
         onMouseDown={handleDragStart}
+        onTouchStart={handleTouchStart}
         onClick={() => { if (!dragMoved.current) setCollapsed(c => !c) }}
         style={{
           position: groupMode ? 'relative' : 'fixed',
@@ -297,6 +298,7 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
           zIndex: groupMode ? 10001 : 10000,
           cursor: (dockPos || groupMode) ? 'pointer' : 'grab',
           userSelect: 'none',
+          touchAction: (dockPos || groupMode) ? 'auto' : 'none',
         }}
       >
         {isPlaying && (
