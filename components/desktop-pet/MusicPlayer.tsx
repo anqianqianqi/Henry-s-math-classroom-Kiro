@@ -220,17 +220,10 @@ export default function MusicPlayer() {
   }
 
   const PLAYER_HEIGHT = 380 // approximate expanded height in px
+  const PILL_HEIGHT   = 36
 
   const handleClick = () => {
     if (dragMoved.current) return
-    if (collapsed) {
-      // When expanding, ensure the player fits on screen — shift up if needed
-      setPos(prev => {
-        if (!prev) return prev
-        const maxTop = window.innerHeight - PLAYER_HEIGHT - 8
-        return { ...prev, y: Math.min(prev.y, Math.max(8, maxTop)) }
-      })
-    }
     setCollapsed(c => !c)
   }
 
@@ -296,6 +289,12 @@ export default function MusicPlayer() {
   }
 
   // ── Expanded player ───────────────────────────────────────────────────────
+  // Anchors to the pill's position but grows upward so it never appears far away.
+  // We compute where the pill's bottom edge is in viewport coords, then use that
+  // as the bottom anchor for the expanded panel.
+  const pillBottom = pos ? window.innerHeight - pos.y - PILL_HEIGHT : 0
+  const playerLeft = pos ? Math.min(pos.x, window.innerWidth - 228) : 0
+
   return (
     <>
       <style>{STYLES}</style>
@@ -303,8 +302,8 @@ export default function MusicPlayer() {
         ref={containerRef}
         style={{
           position: 'fixed',
-          left: pos.x,
-          top:  pos.y,
+          left: Math.max(8, playerLeft),
+          bottom: Math.max(8, pillBottom),
           zIndex: 99998,
           width: 224,
           background: 'white',
@@ -356,7 +355,7 @@ export default function MusicPlayer() {
         </div>
 
         {/* ── Player body ── */}
-        <div style={{ padding: '10px 14px 12px' }}>
+        <div style={{ padding: '10px 14px 12px', overflow: 'hidden' }}>
           {!hasTracks ? (
             <div style={{ fontSize: 11, color: '#a07060', textAlign: 'center', padding: '8px 0', lineHeight: 1.6 }}>
               No tracks yet.<br />
@@ -414,12 +413,12 @@ export default function MusicPlayer() {
               </div>
 
               {/* Volume */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                <span style={{ fontSize: 12 }}>🔈</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, overflow: 'hidden' }}>
+                <span style={{ fontSize: 12, flexShrink: 0 }}>🔈</span>
                 <input type="range" min={0} max={1} step={0.05} value={volume}
                   onChange={e => setVolume(Number(e.target.value))}
-                  style={{ flex: 1, accentColor: '#7c3aed', cursor: 'pointer' }} />
-                <span style={{ fontSize: 12 }}>🔊</span>
+                  style={{ flex: 1, minWidth: 0, maxWidth: '100%', accentColor: '#7c3aed', cursor: 'pointer' }} />
+                <span style={{ fontSize: 12, flexShrink: 0 }}>🔊</span>
               </div>
 
               {/* Playlist toggle */}
