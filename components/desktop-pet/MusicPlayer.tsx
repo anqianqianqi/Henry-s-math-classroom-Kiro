@@ -196,10 +196,14 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
     }
   }, [isPlaying, currentTrack])
 
+  const playlistRef = useRef(playlist)
+  useEffect(() => { playlistRef.current = playlist }, [playlist])
+
   const playTrack = useCallback((idx: number) => {
     const audio = audioRef.current; if (!audio) return
     setTrackIndex(idx); setShowPlaylist(false)
-    const track = playlist[idx]
+    const track = playlistRef.current[idx]
+    if (!track) return
     audio.src = `/music/${track.file}`; audio.load()
     const onCan = () => { audio.removeEventListener('canplay', onCan); audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false)) }
     audio.addEventListener('canplay', onCan)
