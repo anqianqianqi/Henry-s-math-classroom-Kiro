@@ -77,11 +77,14 @@ export default function MusicPlayer({ dockPos }: Props = {}) {
   const dragOffset = useRef({ x: 0, y: 0 })
   const dragMoved  = useRef(false)
 
-  const hasTracks    = PLAYLIST.length > 0  // Shuffle once on mount so each session gets a different order  const [playlist]   = useState<typeof PLAYLIST>(() => {
+  const hasTracks = PLAYLIST.length > 0
+
+  // Shuffle once on mount so each session gets a different play order
+  const [playlist] = useState<typeof PLAYLIST>(() => {
     const arr = [...PLAYLIST]
     for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]]
+      const j = Math.floor(Math.random() * (i + 1))
+      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp
     }
     return arr
   })
