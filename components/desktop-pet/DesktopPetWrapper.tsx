@@ -251,7 +251,7 @@ export default function DesktopPetWrapper() {
   // Compute dock position: pill sits at top-left of Didi
   // groupPos is the top-left of the FloatingGroup container
   // Music icon: offset left by ~icon width + small gap, and align to Didi's top
-  const dockPos = groupPos ? { left: groupPos.left - 20, top: groupPos.top } : null
+  const dockPos = groupPos ? { left: groupPos.left - 20, top: groupPos.top - 15 } : null
 
   // Dashboard or no pet — just music player standalone
   if (!showPet) return <MusicPlayer />
