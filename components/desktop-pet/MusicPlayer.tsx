@@ -166,39 +166,50 @@ export default function MusicPlayer() {
       <button
         onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
         onMouseDown={e => e.stopPropagation()}
-        title={hasTracks ? 'Study music 🎵' : 'Add music to /public/music/ to enable player'}
+        title="Study music 🎵"
         style={{
           position: 'absolute',
-          bottom: -4,
-          left: -28,
-          width: 26,
-          height: 26,
-          borderRadius: '50%',
-          background: isPlaying ? '#7c3aed' : 'rgba(255,255,255,0.95)',
-          border: isPlaying ? '2px solid #7c3aed' : '1.5px solid #e8d5c0',
-          cursor: hasTracks ? 'pointer' : 'not-allowed',
-          padding: 0,
+          bottom: -6,
+          left: -38,
+          height: 32,
+          borderRadius: 16,
+          background: isPlaying
+            ? 'linear-gradient(135deg, #7c3aed, #a855f7)'
+            : 'rgba(255,255,255,0.97)',
+          border: isPlaying ? '2px solid #7c3aed' : '2px solid #d8b4fe',
+          cursor: 'pointer',
+          padding: '0 8px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: isPlaying ? '0 0 8px rgba(124,58,237,0.4)' : '0 2px 6px rgba(0,0,0,0.12)',
+          gap: 3,
+          boxShadow: isPlaying
+            ? '0 0 10px rgba(124,58,237,0.5), 0 2px 8px rgba(0,0,0,0.15)'
+            : '0 2px 8px rgba(0,0,0,0.15)',
           transition: 'all 0.2s',
           zIndex: 10002,
-          opacity: hasTracks ? 1 : 0.5,
+          whiteSpace: 'nowrap',
         }}
         aria-label="Toggle music player"
       >
-        {/* Gramophone SVG icon */}
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isPlaying ? 'white' : '#a07060'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          {/* Horn */}
-          <path d="M9 18V6l3-1.5L15 6v4" />
-          {/* Bell of horn */}
-          <path d="M15 6c2 0 5 2 5 6s-3 6-5 6H9" />
-          {/* Spinning disc */}
-          <circle cx="6" cy="18" r="3" style={{ animation: isPlaying ? 'disc-spin 2s linear infinite' : 'none', transformOrigin: '6px 18px' }} />
-          {/* Center dot */}
-          <circle cx="6" cy="18" r="1" fill={isPlaying ? 'white' : '#a07060'} stroke="none" />
-        </svg>
+        {/* Musical note icon */}
+        <span style={{ fontSize: 14, lineHeight: 1 }}>
+          {isPlaying ? '🎵' : '🎵'}
+        </span>
+        <span style={{
+          fontSize: 10,
+          fontWeight: 700,
+          color: isPlaying ? 'white' : '#7c3aed',
+          fontFamily: 'system-ui, sans-serif',
+          letterSpacing: '0.02em',
+        }}>
+          {isPlaying ? '♪ Now Playing' : 'Music'}
+        </span>
+        {/* Spinning disc when playing */}
+        {isPlaying && (
+          <span style={{ fontSize: 11, animation: 'disc-spin 1.5s linear infinite', display: 'inline-block' }}>
+            ◎
+          </span>
+        )}
       </button>
 
       {/* ── Mini player popup ── */}

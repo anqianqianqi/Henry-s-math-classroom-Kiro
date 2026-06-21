@@ -10,8 +10,7 @@ export interface Track {
 }
 
 export const PLAYLIST: Track[] = [
-  // Add your tracks here once you upload the files:
-  // { file: 'study-1.mp3', title: '晨光' },
-  // { file: 'calm-piano.mp3', title: 'Calm Piano' },
-  // { file: 'rainy-afternoon.mp3', title: 'Rainy Afternoon' },
+  { file: 'alex-morgan-study-lofi-music-548638.mp3', title: 'Study Lofi' },
+  { file: 'the_mountain-study-vibe-136087.mp3', title: 'Study Vibe' },
+  { file: 'the_mountain-geography-study-141463.mp3', title: 'Geography Study' },
 ]
