@@ -291,6 +291,21 @@ export default function DesktopPet({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [xpGainToast])
 
+  // ── One-time music hint on challenges pages ───────────────────────────────
+  useEffect(() => {
+    if (!mounted || isEgg) return
+    if (!pathname?.startsWith('/challenges')) return
+    try {
+      if (localStorage.getItem('didi-music-hint-shown')) return
+    } catch { return }
+    const t = setTimeout(() => {
+      say('🎵 Try music while studying!')
+      try { localStorage.setItem('didi-music-hint-shown', '1') } catch {}
+    }, 3000)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, mounted, isEgg])
+
   // ── Advance behavior ─────────────────────────────────────────────────────
   const advance = useCallback((cur: Behavior) => {
     const next = nextBehavior(cur, window.innerWidth)
