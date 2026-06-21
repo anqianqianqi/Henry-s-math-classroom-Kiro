@@ -150,6 +150,7 @@ export function buildShopItemInsert(
     food_xp: form.category === 'food' ? parseInt(form.food_xp, 10) : null,
     target_species: form.category === 'pet' ? form.target_species as Species : null,
     draws_per_redemption: draws,
+    music_file: form.commodity_type === 'music_track' ? (form.music_file?.trim() || null) : null,
   }
 }
 
