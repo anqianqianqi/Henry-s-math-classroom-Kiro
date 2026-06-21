@@ -157,7 +157,9 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
   useEffect(() => {
     setMounted(true)
     if (!dockPos) {
-      setOwnPos({ left: window.innerWidth - 164, top: window.innerHeight - 56 })
+      const vw = document.documentElement.clientWidth
+      const vh = document.documentElement.clientHeight
+      setOwnPos({ left: vw - 44 - 8, top: vh - 44 - 8 })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -179,19 +181,24 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
   }
 
   // ── Drag (standalone mode only) ───────────────────────────────────────────
+  const PILL_W = 44
+  const PILL_H_DRAG = 44
+
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     if (dockPos) return
     const tag = (e.target as HTMLElement).tagName.toLowerCase()
     if (['button', 'input'].includes(tag)) return
     e.preventDefault()
     dragMoved.current = false
-    const cur = ownPos ?? { left: window.innerWidth - 164, top: window.innerHeight - 56 }
+    const vw = document.documentElement.clientWidth
+    const vh = document.documentElement.clientHeight
+    const cur = ownPos ?? { left: vw - PILL_W - 8, top: vh - PILL_H_DRAG - 8 }
     dragOffset.current = { x: e.clientX - cur.left, y: e.clientY - cur.top }
     const onMove = (ev: MouseEvent) => {
       dragMoved.current = true
       setOwnPos({
-        left: Math.max(0, Math.min(window.innerWidth  - 148, ev.clientX - dragOffset.current.x)),
-        top:  Math.max(0, Math.min(window.innerHeight - 40,  ev.clientY - dragOffset.current.y)),
+        left: Math.max(0, Math.min(vw - PILL_W, ev.clientX - dragOffset.current.x)),
+        top:  Math.max(0, Math.min(vh - PILL_H_DRAG, ev.clientY - dragOffset.current.y)),
       })
     }
     const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
@@ -205,15 +212,17 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
     if (['button', 'input'].includes(tag)) return
     dragMoved.current = false
     const touch = e.touches[0]
-    const cur = ownPos ?? { left: window.innerWidth - 164, top: window.innerHeight - 56 }
+    const vw = document.documentElement.clientWidth
+    const vh = document.documentElement.clientHeight
+    const cur = ownPos ?? { left: vw - PILL_W - 8, top: vh - PILL_H_DRAG - 8 }
     dragOffset.current = { x: touch.clientX - cur.left, y: touch.clientY - cur.top }
     const onMove = (ev: TouchEvent) => {
       ev.preventDefault()
       dragMoved.current = true
       const t = ev.touches[0]
       setOwnPos({
-        left: Math.max(0, Math.min(window.innerWidth  - 148, t.clientX - dragOffset.current.x)),
-        top:  Math.max(0, Math.min(window.innerHeight - 40,  t.clientY - dragOffset.current.y)),
+        left: Math.max(0, Math.min(vw - PILL_W, t.clientX - dragOffset.current.x)),
+        top:  Math.max(0, Math.min(vh - PILL_H_DRAG, t.clientY - dragOffset.current.y)),
       })
     }
     const onEnd = () => { window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd) }

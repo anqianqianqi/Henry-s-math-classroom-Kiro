@@ -22,8 +22,10 @@ function FloatingGroup({ children, onMove }: { children: React.ReactNode; onMove
   const moved      = useRef(false)
 
   useEffect(() => {
-    const x = window.innerWidth - 180
-    const y = window.innerHeight - 200
+    const vw = document.documentElement.clientWidth
+    const vh = document.documentElement.clientHeight
+    const x = vw - 180
+    const y = vh - 200
     setPos({ x, y })
     onMove?.(x, y)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -33,13 +35,15 @@ function FloatingGroup({ children, onMove }: { children: React.ReactNode; onMove
     if ((e.target as HTMLElement).closest('button, input, [data-no-drag]')) return
     e.preventDefault()
     moved.current = false
-    const cur = pos ?? { x: window.innerWidth - 180, y: window.innerHeight - 200 }
+    const vw = document.documentElement.clientWidth
+    const vh = document.documentElement.clientHeight
+    const cur = pos ?? { x: vw - 180, y: vh - 200 }
     dragOffset.current = { x: e.clientX - cur.x, y: e.clientY - cur.y }
 
     const onMoveFn = (ev: MouseEvent) => {
       moved.current = true
-      const nx = Math.max(0, Math.min(window.innerWidth  - 50, ev.clientX - dragOffset.current.x))
-      const ny = Math.max(0, Math.min(window.innerHeight - 50, ev.clientY - dragOffset.current.y))
+      const nx = Math.max(0, Math.min(vw - 50, ev.clientX - dragOffset.current.x))
+      const ny = Math.max(0, Math.min(vh - 50, ev.clientY - dragOffset.current.y))
       setPos({ x: nx, y: ny })
       onMove?.(nx, ny)
     }
@@ -55,15 +59,17 @@ function FloatingGroup({ children, onMove }: { children: React.ReactNode; onMove
     if ((e.target as HTMLElement).closest('button, input, [data-no-drag]')) return
     moved.current = false
     const touch = e.touches[0]
-    const cur = pos ?? { x: window.innerWidth - 180, y: window.innerHeight - 200 }
+    const vw = document.documentElement.clientWidth
+    const vh = document.documentElement.clientHeight
+    const cur = pos ?? { x: vw - 180, y: vh - 200 }
     dragOffset.current = { x: touch.clientX - cur.x, y: touch.clientY - cur.y }
 
     const onMoveFn = (ev: TouchEvent) => {
       ev.preventDefault()
       moved.current = true
       const t = ev.touches[0]
-      const nx = Math.max(0, Math.min(window.innerWidth  - 50, t.clientX - dragOffset.current.x))
-      const ny = Math.max(0, Math.min(window.innerHeight - 50, t.clientY - dragOffset.current.y))
+      const nx = Math.max(0, Math.min(vw - 50, t.clientX - dragOffset.current.x))
+      const ny = Math.max(0, Math.min(vh - 50, t.clientY - dragOffset.current.y))
       setPos({ x: nx, y: ny })
       onMove?.(nx, ny)
     }
