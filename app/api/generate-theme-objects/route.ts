@@ -72,7 +72,7 @@ Respond ONLY with a valid JSON array: [{"label": "item name", "prompt": "detaile
           content: `Full book cover theme: "${coverTheme}"\n\nWrite themed image generation prompts for each of these objects:\n${items.map((item, i) => `${i + 1}. ${item}`).join('\n')}`,
         },
       ],
-      max_tokens: 2000,
+      max_tokens: 3000,
       temperature: 0.5,
     }),
   })
@@ -163,8 +163,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'No cluster items found in prompt. Use format: corner clusters: [item1 + item2] [item3]' }, { status: 400 })
       }
 
+      // Cap at 12 items to avoid rate limits
+      const items = rawItems.slice(0, 12)
+
       // Ask GPT-4o to expand each item with a themed detailed description
-      const expanded = await expandItemDescriptions(apiKey, rawItems, coverPrompt.trim())
+      const expanded = await expandItemDescriptions(apiKey, items, coverPrompt.trim())
 
       // Generate all in parallel
       const genResults = await Promise.allSettled(
