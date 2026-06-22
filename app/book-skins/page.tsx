@@ -709,6 +709,8 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   const [selectedExtractObjects, setSelectedExtractObjects] = useState<Set<string>>(new Set())
   const [extracting, setExtracting] = useState(false)
   const [extractError, setExtractError] = useState<string | null>(null)
+  // Per-cluster progress: 0=pending, 1=generating, 2=done, 3=error
+  const [clusterProgress, setClusterProgress] = useState<(0|1|2|3)[]>([0,0,0,0])
 
   async function handleExtractObjects() {
     if (!sandbox || !identifiedObjects || selectedExtractObjects.size === 0) return
@@ -766,41 +768,73 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       setRefinePrompt('')
       setGenerating(false)
 
-      // Step 2: Generate objects in background — takes longer (~60-90s)
+      // Step 2: Generate each corner cluster's objects one at a time (sequential)
+      // so each cluster's 3 objects appear as soon as they're ready
       setExtracting(true)
       setExtractError(null)
-      try {
-        const objectsRes = await fetch('/api/generate-theme-objects', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ coverPrompt: fullPrompt, mode: 'individual_items' }),
+      setClusterProgress([0, 0, 0, 0])
+
+      const allErrors: string[] = []
+      for (let clusterIdx = 0; clusterIdx < 4; clusterIdx++) {
+        // Mark this cluster as "generating"
+        setClusterProgress(prev => {
+          const next = [...prev] as (0|1|2|3)[]
+          next[clusterIdx] = 1
+          return next
         })
-        const contentType = objectsRes.headers.get('content-type') ?? ''
-        if (contentType.includes('application/json')) {
-          const objectsData = await objectsRes.json()
-          if (!objectsRes.ok) {
-            setExtractError(objectsData.error ?? 'Object generation failed')
-            setSandbox(prev => prev ? { ...prev, extractedObjects: [] } : prev)
+        try {
+          const res = await fetch('/api/generate-cluster-objects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ coverPrompt: fullPrompt, clusterIndex: clusterIdx }),
+          })
+          const data = await res.json()
+          if (!res.ok) {
+            const errMsg = data.error ?? `Cluster ${clusterIdx} error ${res.status}`
+            allErrors.push(errMsg)
+            setClusterProgress(prev => {
+              const next = [...prev] as (0|1|2|3)[]
+              next[clusterIdx] = 3
+              return next
+            })
           } else {
-            const objs: { label: string; imageUrl: string }[] = objectsData.objects ?? []
-            // Always update extractedObjects so the UI knows generation is complete
-            setSandbox(prev => prev ? { ...prev, extractedObjects: objs } : prev)
-            if (objs.length === 0) {
-              setExtractError('Objects generated but none could be saved — check logs')
-            }
+            const newObjs: { label: string; imageUrl: string }[] = data.objects ?? []
+            // Append this cluster's objects immediately so they render
+            setSandbox(prev => prev ? {
+              ...prev,
+              extractedObjects: [...(prev.extractedObjects ?? []), ...newObjs],
+            } : prev)
+            setClusterProgress(prev => {
+              const next = [...prev] as (0|1|2|3)[]
+              next[clusterIdx] = 2
+              return next
+            })
+            if (data.errors?.length) allErrors.push(...data.errors)
           }
-        } else {
-          setExtractError('Unexpected response from object generation API')
-          setSandbox(prev => prev ? { ...prev, extractedObjects: [] } : prev)
+        } catch (clusterErr: any) {
+          allErrors.push(`Cluster ${clusterIdx}: ${clusterErr.message}`)
+          setClusterProgress(prev => {
+            const next = [...prev] as (0|1|2|3)[]
+            next[clusterIdx] = 3
+            return next
+          })
         }
-      } catch (objErr: any) {
-        setExtractError('Object generation timed out — try again with fewer objects')
-        setSandbox(prev => prev ? { ...prev, extractedObjects: [] } : prev)
-      } finally {
-        setExtracting(false)
+        // Small gap between cluster calls to stay well within rate limits
+        if (clusterIdx < 3) await new Promise(resolve => setTimeout(resolve, 800))
       }
+
+      if (allErrors.length > 0) {
+        setExtractError(`Some objects failed: ${allErrors.slice(0, 2).join('; ')}${allErrors.length > 2 ? ` (+${allErrors.length - 2} more)` : ''}`)
+      }
+      // Ensure extractedObjects is at least [] if nothing was added (fallback)
+      setSandbox(prev => prev && prev.extractedObjects === undefined
+        ? { ...prev, extractedObjects: [] }
+        : prev)
     } catch (err: any) {
       setGenError(err.message)
       setGenerating(false)
+    } finally {
+      setExtracting(false)
     }
   }
 
@@ -1443,33 +1477,55 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                       </div>
                     </div>
 
-                    {/* Individual objects preview — shows while generating and after */}
-                    {extracting && (
-                      <div className="flex items-center gap-2 text-xs text-purple-700 bg-purple-50 rounded-xl px-3 py-2.5 border border-purple-200">
-                        <span className="animate-spin inline-block">⏳</span>
-                        Generating individual objects… this takes 60-90s
-                      </div>
-                    )}
-                    {!extracting && sandbox.extractedObjects !== undefined && (
-                      sandbox.extractedObjects.length > 0 ? (
-                        <div className="border border-purple-200 rounded-xl p-3 bg-purple-50/40">
-                          <p className="text-xs font-semibold text-purple-700 mb-2">✨ {sandbox.extractedObjects.length} individual object{sandbox.extractedObjects.length !== 1 ? 's' : ''} — transparent PNGs ready</p>
-                          <div className="flex flex-wrap gap-2">
-                            {sandbox.extractedObjects.map((obj, idx) => (
-                              <div key={idx} className="flex flex-col items-center gap-1">
-                                <div className="w-14 h-14 rounded-lg border border-purple-200 overflow-hidden flex items-center justify-center"
-                                  style={{ background: 'repeating-conic-gradient(#d1d5db 0% 25%, #fff 0% 50%) 0 0 / 12px 12px' }}>
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={obj.imageUrl} alt={obj.label} className="w-full h-full object-contain" />
-                                </div>
-                                <span className="text-[10px] text-purple-700 font-medium text-center max-w-[56px] truncate">{obj.label}</span>
-                              </div>
-                            ))}
-                          </div>
+                    {/* Individual objects — progressive per-cluster display */}
+                    {(extracting || (sandbox.extractedObjects !== undefined)) && (
+                      <div className="border border-purple-200 rounded-xl p-3 bg-purple-50/40 space-y-2">
+                        {/* Cluster progress indicators */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {(['Top-left', 'Top-right', 'Bot-left', 'Bot-right'] as const).map((name, i) => {
+                            const st = clusterProgress[i]
+                            return (
+                              <span key={i} className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+                                st === 1 ? 'bg-purple-100 border-purple-400 text-purple-700 animate-pulse' :
+                                st === 2 ? 'bg-green-100 border-green-400 text-green-700' :
+                                st === 3 ? 'bg-red-100 border-red-400 text-red-600' :
+                                'bg-gray-100 border-gray-300 text-gray-400'
+                              }`}>
+                                {st === 1 ? '⏳' : st === 2 ? '✓' : st === 3 ? '✕' : '○'} {name}
+                              </span>
+                            )
+                          })}
+                          {extracting && <span className="text-[11px] text-purple-500 ml-1 animate-pulse">generating…</span>}
                         </div>
-                      ) : extractError ? null : (
-                        <div className="text-xs text-gray-400 text-center py-1">No objects were generated.</div>
-                      )
+                        {/* Objects grid — fills in as each cluster completes */}
+                        {sandbox.extractedObjects && sandbox.extractedObjects.length > 0 && (
+                          <>
+                            <p className="text-xs font-semibold text-purple-700">
+                              ✨ {sandbox.extractedObjects.length} object{sandbox.extractedObjects.length !== 1 ? 's' : ''} — transparent PNGs
+                              {extracting ? ' (more coming…)' : ' ready'}
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {sandbox.extractedObjects.map((obj, idx) => (
+                                <div key={idx} className="flex flex-col items-center gap-1">
+                                  <div
+                                    className="w-16 h-16 rounded-lg border border-purple-200 overflow-hidden flex items-center justify-center"
+                                    style={{ background: 'repeating-conic-gradient(#d1d5db 0% 25%, #fff 0% 50%) 0 0 / 12px 12px' }}
+                                  >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={obj.imageUrl} alt={obj.label} className="w-full h-full object-contain" />
+                                  </div>
+                                  <span className="text-[10px] text-purple-700 font-medium text-center max-w-[64px] truncate leading-tight">
+                                    {obj.label}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        {!extracting && sandbox.extractedObjects?.length === 0 && !extractError && (
+                          <p className="text-xs text-gray-400">No objects were generated.</p>
+                        )}
+                      </div>
                     )}
                     {!extracting && extractError && (
                       <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{extractError}</div>
