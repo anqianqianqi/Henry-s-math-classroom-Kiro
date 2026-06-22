@@ -758,12 +758,19 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
         }),
         fetch('/api/generate-theme-objects', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ coverPrompt: fullPrompt, mode: 'corner_clusters' }),
+          body: JSON.stringify({ coverPrompt: fullPrompt, mode: 'individual_items' }),
         }),
       ])
       const coverData = await coverRes.json()
-      const objectsData = await objectsRes.json()
       if (!coverRes.ok) throw new Error(coverData.error || `Cover error ${coverRes.status}`)
+      // Objects may fail/timeout — handle gracefully
+      let objectsData = { objects: [] }
+      try {
+        const contentType = objectsRes.headers.get('content-type') ?? ''
+        if (contentType.includes('application/json')) {
+          objectsData = await objectsRes.json()
+        }
+      } catch { /* objects failed — show cover anyway */ }
       setSandbox({ imageUrl: coverData.image_url, prompt: coverData.prompt, iteration: 1, extractedObjects: objectsData.objects ?? [] })
       setRefinePrompt('')
     } catch (err: any) { setGenError(err.message) }

@@ -15,7 +15,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 120
+export const maxDuration = 180
 
 // ── Parse individual items from cluster descriptions ──────────────────────
 // Input:  "copper steam pipe + pressure gauge + rivets"
@@ -169,10 +169,20 @@ export async function POST(request: Request) {
       // Ask GPT-4o to expand each item with a themed detailed description
       const expanded = await expandItemDescriptions(apiKey, items, coverPrompt.trim())
 
-      // Generate all in parallel
-      const genResults = await Promise.allSettled(
-        expanded.map(item => generateObject(apiKey, item.prompt))
-      )
+      // Generate in batches of 4 to avoid rate limits
+      const BATCH_SIZE = 4
+      const genResults: PromiseSettledResult<string>[] = []
+      for (let batchStart = 0; batchStart < expanded.length; batchStart += BATCH_SIZE) {
+        const batch = expanded.slice(batchStart, batchStart + BATCH_SIZE)
+        if (batchStart > 0) {
+          // Small delay between batches to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1500))
+        }
+        const batchResults = await Promise.allSettled(
+          batch.map(item => generateObject(apiKey, item.prompt))
+        )
+        genResults.push(...batchResults)
+      }
 
       const objects: { label: string; imageUrl: string }[] = []
       for (let i = 0; i < genResults.length; i++) {
