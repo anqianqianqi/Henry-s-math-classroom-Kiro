@@ -1127,7 +1127,7 @@ const ANIMATION_CSS: Record<OverlayAnimation, string> = {
 // ─────────────────────────────────────────────────────────────────────────────
 // OverlayEditorModal
 // ─────────────────────────────────────────────────────────────────────────────
-export function OverlayEditorModal({
+function OverlayEditorModal({
   skin,
   overlays,
   loading,
