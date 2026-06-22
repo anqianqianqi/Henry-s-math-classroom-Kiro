@@ -1430,7 +1430,8 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                     </div>
 
                     {/* ── Generate standalone theme objects (only when cleanCorners is on) ── */}
-                    {cleanCorners && <>
+                    {cleanCorners && (
+                    <div className="space-y-2">
                     <div className="border border-purple-200 rounded-xl p-3 bg-purple-50/40 space-y-2">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="text-xs font-semibold text-purple-800">✨ Generate Theme Objects</span>
@@ -1474,7 +1475,8 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                         ))}
                       </div>
                     )}
-                    </>} {/* end cleanCorners */}
+                    </div>
+                    )} {/* end cleanCorners */}
 
                     {/* Save */}
                     {!genSaveOpen ? (
