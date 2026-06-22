@@ -747,7 +747,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     if (!genPrompt.trim()) { setGenError('Enter a description.'); return }
     setGenError(null); setGenerating(true); setCleanCorners(true)
     // Strip "corner clusters: ..." from the prompt — objects are generated separately
-    const cleanPrompt = genPrompt.trim().replace(/,?\s*corner clusters:\s*\[.*$/si, '').trim()
+    const cleanPrompt = genPrompt.trim().replace(/,?\s*corner clusters:\s*\[[\s\S]*$/i, '').trim()
     try {
       const [coverRes, objectsRes] = await Promise.all([
         fetch('/api/preview-book-skin', {
