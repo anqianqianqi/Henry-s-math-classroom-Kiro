@@ -759,8 +759,10 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       const coverData = await coverRes.json()
       if (!coverRes.ok) throw new Error(coverData.error || `Cover error ${coverRes.status}`)
 
-      // Show cover immediately with empty objects
-      setSandbox({ imageUrl: coverData.image_url, prompt: coverData.prompt, iteration: 1, extractedObjects: [] })
+      // Show cover immediately — extractedObjects starts as undefined (not yet loaded)
+      const coverImageUrl = coverData.image_url
+      const coverPromptText = coverData.prompt
+      setSandbox({ imageUrl: coverImageUrl, prompt: coverPromptText, iteration: 1 })
       setRefinePrompt('')
       setGenerating(false)
 
@@ -775,14 +777,24 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
         const contentType = objectsRes.headers.get('content-type') ?? ''
         if (contentType.includes('application/json')) {
           const objectsData = await objectsRes.json()
-          if (objectsRes.ok && objectsData.objects?.length > 0) {
-            setSandbox(prev => prev ? { ...prev, extractedObjects: objectsData.objects } : prev)
-          } else if (!objectsRes.ok) {
+          if (!objectsRes.ok) {
             setExtractError(objectsData.error ?? 'Object generation failed')
+            setSandbox(prev => prev ? { ...prev, extractedObjects: [] } : prev)
+          } else {
+            const objs: { label: string; imageUrl: string }[] = objectsData.objects ?? []
+            // Always update extractedObjects so the UI knows generation is complete
+            setSandbox(prev => prev ? { ...prev, extractedObjects: objs } : prev)
+            if (objs.length === 0) {
+              setExtractError('Objects generated but none could be saved — check logs')
+            }
           }
+        } else {
+          setExtractError('Unexpected response from object generation API')
+          setSandbox(prev => prev ? { ...prev, extractedObjects: [] } : prev)
         }
       } catch (objErr: any) {
         setExtractError('Object generation timed out — try again with fewer objects')
+        setSandbox(prev => prev ? { ...prev, extractedObjects: [] } : prev)
       } finally {
         setExtracting(false)
       }
@@ -1431,29 +1443,36 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                       </div>
                     </div>
 
-                    {/* Extracted corner cluster objects preview */}
+                    {/* Individual objects preview — shows while generating and after */}
                     {extracting && (
                       <div className="flex items-center gap-2 text-xs text-purple-700 bg-purple-50 rounded-xl px-3 py-2.5 border border-purple-200">
                         <span className="animate-spin inline-block">⏳</span>
                         Generating individual objects… this takes 60-90s
                       </div>
                     )}
-                    {!extracting && sandbox.extractedObjects && sandbox.extractedObjects.length > 0 && (
-                      <div className="border border-purple-200 rounded-xl p-3 bg-purple-50/40">
-                        <p className="text-xs font-semibold text-purple-700 mb-2">✨ {sandbox.extractedObjects.length} corner cluster{sandbox.extractedObjects.length !== 1 ? 's' : ''} — transparent PNGs</p>
-                        <div className="flex flex-wrap gap-2">
-                          {sandbox.extractedObjects.map((obj, idx) => (
-                            <div key={idx} className="flex flex-col items-center gap-1">
-                              <div className="w-14 h-14 rounded-lg border border-purple-200 overflow-hidden flex items-center justify-center"
-                                style={{ background: 'repeating-conic-gradient(#d1d5db 0% 25%, #fff 0% 50%) 0 0 / 12px 12px' }}>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={obj.imageUrl} alt={obj.label} className="w-full h-full object-contain" />
+                    {!extracting && sandbox.extractedObjects !== undefined && (
+                      sandbox.extractedObjects.length > 0 ? (
+                        <div className="border border-purple-200 rounded-xl p-3 bg-purple-50/40">
+                          <p className="text-xs font-semibold text-purple-700 mb-2">✨ {sandbox.extractedObjects.length} individual object{sandbox.extractedObjects.length !== 1 ? 's' : ''} — transparent PNGs ready</p>
+                          <div className="flex flex-wrap gap-2">
+                            {sandbox.extractedObjects.map((obj, idx) => (
+                              <div key={idx} className="flex flex-col items-center gap-1">
+                                <div className="w-14 h-14 rounded-lg border border-purple-200 overflow-hidden flex items-center justify-center"
+                                  style={{ background: 'repeating-conic-gradient(#d1d5db 0% 25%, #fff 0% 50%) 0 0 / 12px 12px' }}>
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={obj.imageUrl} alt={obj.label} className="w-full h-full object-contain" />
+                                </div>
+                                <span className="text-[10px] text-purple-700 font-medium text-center max-w-[56px] truncate">{obj.label}</span>
                               </div>
-                              <span className="text-[10px] text-purple-700 font-medium text-center max-w-[56px] truncate">{obj.label}</span>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      ) : extractError ? null : (
+                        <div className="text-xs text-gray-400 text-center py-1">No objects were generated.</div>
+                      )
+                    )}
+                    {!extracting && extractError && (
+                      <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{extractError}</div>
                     )}
 
                     {/* Layout editor toggle */}
@@ -1548,7 +1567,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                     {sandbox.extractedObjects && sandbox.extractedObjects.length > 0 && (
                       <div className="border border-purple-200 rounded-xl p-3 bg-purple-50/40 space-y-2">
                         <div className="flex items-center justify-between">
-                          <p className="text-xs font-semibold text-purple-700">✨ {sandbox.extractedObjects.length} extracted object{sandbox.extractedObjects.length !== 1 ? 's' : ''}</p>
+                          <p className="text-xs font-semibold text-purple-700">✨ {sandbox.extractedObjects.length} individual object{sandbox.extractedObjects.length !== 1 ? 's' : ''}</p>
                           {sandbox.originalUrl && (
                             <button onClick={() => setSandbox(prev => prev ? { ...prev, imageUrl: prev.originalUrl!, originalUrl: undefined, extractedObjects: undefined } : prev)}
                               className="text-[10px] text-gray-400 hover:text-gray-600">↺ Revert cover</button>
