@@ -15,8 +15,8 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
-// Injected into every book cover generation prompt
-const COVER_CONTEXT = `
+// Two cover context variants — selected by the cleanCorners flag in the request
+const COVER_CONTEXT_CLEAN = `
 COMPOSITION RULES — follow exactly:
 
 Generate a hardcover book cover illustration on a TRANSPARENT background. The image format is RGBA PNG. The area outside the book must be fully transparent (alpha = 0) — no color, no fill, no background at all. Only the book itself should be opaque.
@@ -25,7 +25,7 @@ The book is a flat front-facing hardcover portrait rectangle. It has a slight dr
 
 COVER SURFACE: Rich thematic texture — deeply embossed near the edges, smoother toward the center. A thin ornate gold decorative border runs inside the cover perimeter. The cover material looks like premium cloth or leather hardcover.
 
-CORNERS: Keep all four corners of the cover CLEAN and EMPTY — just the book surface texture and the border frame, no objects, no decorations, no clusters. The corners must be plain cover surface ready for animated overlay objects to be composited on top.
+CORNERS: Keep all four corners of the cover CLEAN and EMPTY — just the book surface texture and the border frame, no objects, no decorations, no clusters. The corners must be plain cover surface ready for animated overlay objects to be composited on top later.
 
 CENTER ZONE: Keep the central area (roughly middle 60% width, middle 50% height) plain — just background texture — clear space for title and text overlay.
 
@@ -35,6 +35,28 @@ TRANSPARENT BACKGROUND: Everything outside the book shape (except the drop shado
 
 NO text, letters, numbers, or glyphs anywhere in the image.
 `.trim()
+
+const COVER_CONTEXT_WITH_CORNERS = `
+COMPOSITION RULES — follow exactly:
+
+Generate a hardcover book cover illustration on a TRANSPARENT background. The image format is RGBA PNG. The area outside the book must be fully transparent (alpha = 0) — no color, no fill, no background at all. Only the book itself should be opaque.
+
+The book is a flat front-facing hardcover portrait rectangle. It has a slight drop shadow around its edges (semi-transparent dark shadow that fades to transparent — this is the only thing allowed outside the book boundary).
+
+COVER SURFACE: Rich thematic texture — deeply embossed near the edges, smoother toward the center. A thin ornate gold decorative border runs inside the cover perimeter. The cover material looks like premium cloth or leather hardcover.
+
+CORNER DECORATION: Each corner has a dense cluster of 2–4 closely grouped 3D objects forming a small vignette. Objects sit ON the cover surface, casting soft shadows on it. The clusters extend to the very corner edges of the cover.
+
+CENTER ZONE: Keep the central area (roughly middle 60% width, middle 50% height) plain — just background texture — clear space for title and text overlay.
+
+DEPTH: Give it physical weight through: edge darkening/vignette on the cover surface itself, embossed border ornaments, realistic material texture.
+
+TRANSPARENT BACKGROUND: Everything outside the book shape (except the drop shadow) must be fully transparent. No white fill, no color fill, no background.
+
+NO text, letters, numbers, or glyphs anywhere in the image.
+`.trim()
+
+DEPTH: Give it physical weight through: edge darkening/vignette on the cover surface itself, embossed border ornaments, realistic material texture.
 
 async function callGenerations(apiKey: string, prompt: string): Promise<string> {
   const res = await fetch('https://api.openai.com/v1/images/generations', {
@@ -89,9 +111,12 @@ export async function POST(request: Request) {
     const isAdmin = (roles as any[])?.some((r: any) => r.roles?.name === 'administrator' || r.roles?.name === 'teacher')
     if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const { prompt, sourceImageUrl, changePrompt } = await request.json()
+    const { prompt, sourceImageUrl, changePrompt, cleanCorners } = await request.json()
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 })
+
+    // Pick context based on whether admin wants clean corners (for overlay objects) or corner clusters
+    const COVER_CONTEXT = cleanCorners ? COVER_CONTEXT_CLEAN : COVER_CONTEXT_WITH_CORNERS
 
     const uid = session.user.id
     const ts = Date.now()

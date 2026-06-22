@@ -700,12 +700,40 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   const [genSaveError, setGenSaveError] = useState<string | null>(null)
   const [genCoverLayout, setGenCoverLayout] = useState<CoverLayout>(DEFAULT_LAYOUT)
   const [showGenLayoutEditor, setShowGenLayoutEditor] = useState(false)
+  const [cleanCorners, setCleanCorners] = useState(false)  // false = corner clusters (default), true = clean for overlays
 
   // ── Overlay extraction / object generation state ─────────────────────────
   const [extracting, setExtracting] = useState(false)
   const [extractError, setExtractError] = useState<string | null>(null)
 
-  async function handleGenerateThemeObjects() {
+  async function handleGenerateWithObjects() {
+    if (!genPrompt.trim()) { setGenError('Enter a description.'); return }
+    setGenError(null); setGenerating(true); setCleanCorners(true)
+    try {
+      // Fire cover + 4 corner clusters in parallel
+      const [coverRes, objectsRes] = await Promise.all([
+        fetch('/api/preview-book-skin', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: genPrompt.trim(), cleanCorners: true }),
+        }),
+        fetch('/api/generate-theme-objects', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coverPrompt: genPrompt.trim(), mode: 'corner_clusters' }),
+        }),
+      ])
+      const coverData = await coverRes.json()
+      const objectsData = await objectsRes.json()
+      if (!coverRes.ok) throw new Error(coverData.error || `Cover error ${coverRes.status}`)
+      setSandbox({
+        imageUrl: coverData.image_url,
+        prompt: coverData.prompt,
+        iteration: 1,
+        extractedObjects: objectsData.objects ?? [],
+      })
+      setRefinePrompt('')
+    } catch (err: any) { setGenError(err.message) }
+    finally { setGenerating(false) }
+  }
     if (!sandbox) return
     setExtracting(true)
     setExtractError(null)
@@ -735,7 +763,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     try {
       const res = await fetch('/api/preview-book-skin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: genPrompt.trim() }),
+        body: JSON.stringify({ prompt: genPrompt.trim(), cleanCorners }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
@@ -774,7 +802,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     try {
       const res = await fetch('/api/preview-book-skin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: sandbox.prompt, sourceImageUrl: sandbox.imageUrl, changePrompt: refinePrompt.trim() }),
+        body: JSON.stringify({ prompt: sandbox.prompt, sourceImageUrl: sandbox.imageUrl, changePrompt: refinePrompt.trim(), cleanCorners }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
@@ -1340,11 +1368,16 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                         ))}
                       </div>
                     </div>
-                    <button onClick={handleGenerate} disabled={generating || !genPrompt.trim()}
-                      className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-semibold rounded-xl text-sm transition-colors">
-                      {generating ? '⏳ Generating… (~15s)' : '✨ Generate Cover'}
-                    </button>
-                  </div>
+                    <div className="flex gap-2">
+                      <button onClick={handleGenerate} disabled={generating || !genPrompt.trim()}
+                        className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-semibold rounded-xl text-sm transition-colors">
+                        {generating && !cleanCorners ? '⏳ Generating…' : '✨ Generate Cover'}
+                      </button>
+                      <button onClick={handleGenerateWithObjects} disabled={generating || !genPrompt.trim()}
+                        className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-semibold rounded-xl text-sm transition-colors text-center leading-tight">
+                        {generating && cleanCorners ? '⏳ Generating…' : <>✨ Generate Cover<br /><span className="text-[10px] font-normal opacity-90">+ Separate Objects</span></>}
+                      </button>
+                    </div>
                 ) : (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -1394,7 +1427,8 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                       </div>
                     </div>
 
-                    {/* ── Generate standalone theme objects ── */}
+                    {/* ── Generate standalone theme objects (only when cleanCorners is on) ── */}
+                    {cleanCorners && <>
                     <div className="border border-purple-200 rounded-xl p-3 bg-purple-50/40 space-y-2">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="text-xs font-semibold text-purple-800">✨ Generate Theme Objects</span>
@@ -1438,6 +1472,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                         ))}
                       </div>
                     )}
+                    </>} {/* end cleanCorners */}
 
                     {/* Save */}
                     {!genSaveOpen ? (
