@@ -25,7 +25,7 @@ The book is a flat front-facing hardcover portrait rectangle. It has a slight dr
 
 COVER SURFACE: Rich thematic texture — deeply embossed near the edges, smoother toward the center. A thin ornate gold decorative border runs inside the cover perimeter. The cover material looks like premium cloth or leather hardcover.
 
-CORNER DECORATION: Each corner has a dense cluster of 2–4 closely grouped 3D objects forming a small vignette. Objects sit ON the cover surface, casting soft shadows on it. The clusters extend to the very corner edges of the cover.
+CORNERS: Keep all four corners of the cover CLEAN and EMPTY — just the book surface texture and the border frame, no objects, no decorations, no clusters. The corners must be plain cover surface ready for animated overlay objects to be composited on top.
 
 CENTER ZONE: Keep the central area (roughly middle 60% width, middle 50% height) plain — just background texture — clear space for title and text overlay.
 
