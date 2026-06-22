@@ -1680,7 +1680,7 @@ function OverlayEditorInline({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" onClick={onClose}>
       <style>{OV_KEYFRAMES}</style>
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <div>
             <div className="font-bold text-gray-900">✨ Animate Overlays — {skin.name}</div>
@@ -1695,16 +1695,16 @@ function OverlayEditorInline({
             No overlay objects found. Extract corner objects first using the Generate tab.
           </div>
         ) : (
-          <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-            {/* Cover preview */}
-            <div className="md:w-60 shrink-0 p-4 flex flex-col items-center gap-2 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-200">
-              <p className="text-xs font-semibold text-gray-500 self-start">Drag to reposition</p>
-              <div ref={previewRef} className="relative rounded-xl overflow-hidden border-2 border-amber-200 shadow" style={{ width: 180, height: 280, userSelect: 'none' }}>
+          <div className="flex-1 overflow-y-auto flex flex-col">
+            {/* Cover preview — large, full width at top */}
+            <div className="shrink-0 p-4 flex flex-col items-center gap-2 bg-gray-50 border-b border-gray-200">
+              <p className="text-xs font-semibold text-gray-500 self-start">Drag objects to reposition</p>
+              <div ref={previewRef} className="relative rounded-xl overflow-hidden border-2 border-amber-200 shadow" style={{ width: 320, height: 496, userSelect: 'none' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={skin.image_url} alt={skin.name} className="w-full h-full object-cover" draggable={false} />
                 {overlays.map(o => {
                   const c = configs[o.id] ?? DEFAULT_OV
-                  const sz = Math.round(54 * c.scale)
+                  const sz = Math.round(80 * c.scale)
                   return (
                     <div key={o.id}
                       onMouseDown={e => { e.preventDefault(); startDrag(o.id, e.clientX, e.clientY) }}
@@ -1717,8 +1717,8 @@ function OverlayEditorInline({
                 })}
               </div>
             </div>
-            {/* Controls */}
-            <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+            {/* Controls — below the preview */}
+            <div className="flex-1 p-4 space-y-4">
               <div className="flex flex-wrap gap-2">
                 {overlays.map(o => (
                   <button key={o.id} onClick={() => setSelected(o.id)}
