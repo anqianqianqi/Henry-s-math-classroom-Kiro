@@ -684,7 +684,13 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   const [genPrompt, setGenPrompt] = useState('')
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
-  const [sandbox, setSandbox] = useState<{ imageUrl: string; prompt: string; iteration: number } | null>(null)
+  const [sandbox, setSandbox] = useState<{
+    imageUrl: string       // current cover image (may be stripped if extraction was done)
+    originalUrl?: string   // the pre-extraction cover (for reference)
+    prompt: string
+    iteration: number
+    extractedObjects?: { label: string; imageUrl: string }[]  // transparent PNG per object
+  } | null>(null)
   const [refinePrompt, setRefinePrompt] = useState('')
   const [genSaveOpen, setGenSaveOpen] = useState(false)
   const [genSaveName, setGenSaveName] = useState('')
@@ -703,7 +709,38 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   const [extracting, setExtracting] = useState(false)
   const [extractError, setExtractError] = useState<string | null>(null)
 
-  async function handleGenerate() {
+  async function handleExtractObjects() {
+    if (!sandbox || !identifiedObjects || selectedExtractObjects.size === 0) return
+    setExtracting(true)
+    setExtractError(null)
+    try {
+      // Upload a temporary placeholder skin to get an ID for the extraction API
+      // We use a special "preview" mode — the API returns results without saving to DB
+      const res = await fetch('/api/extract-cover-objects-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coverImageUrl: sandbox.imageUrl,
+          coverPrompt: genPrompt,
+          selectedObjects: Array.from(selectedExtractObjects),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
+      // Update sandbox: show stripped cover + extracted object thumbnails
+      setSandbox(prev => prev ? {
+        ...prev,
+        imageUrl: data.stripped_url,
+        originalUrl: prev.originalUrl ?? prev.imageUrl,
+        extractedObjects: data.objects ?? [],
+        iteration: prev.iteration + 1,
+      } : prev)
+    } catch (err: any) {
+      setExtractError(err.message)
+    } finally {
+      setExtracting(false)
+    }
+  }
     if (!genPrompt.trim()) { setGenError('Enter a description.'); return }
     setGenError(null); setGenerating(true)
     try {
@@ -903,40 +940,36 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       setGenSaveOpen(false); setGenSaveName(''); setGenSaveDesc('')
       setSandbox(null); setGenPrompt(''); setRefinePrompt('')
       setGenCoverLayout(DEFAULT_LAYOUT); setShowGenLayoutEditor(false)
+      setIdentifiedObjects(null); setSelectedExtractObjects(new Set())
       setUploadSuccess('✅ Book cover saved!')
       onSaved?.()
 
-      // If extraction is enabled and objects are selected, run extraction now
-      if (extractEnabled && identifiedObjects && selectedExtractObjects.size > 0 && newSkin?.id) {
+      // If sandbox has extracted objects (from preview extraction), save them now
+      if (sandbox.extractedObjects && sandbox.extractedObjects.length > 0 && newSkin?.id) {
         setExtracting(true)
-        setExtractError(null)
         try {
-          const extractRes = await fetch('/api/extract-cover-objects', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              skinId: newSkin.id,
-              coverImageUrl: publicUrl,
-              coverPrompt: genPrompt,
-              selectedObjects: Array.from(selectedExtractObjects),
-            }),
-          })
-          const extractData = await extractRes.json()
-          if (!extractRes.ok) throw new Error(extractData.error || 'Extraction failed')
-          const count = extractData.overlays?.length ?? 0
+          // Upload extracted objects to permanent paths and insert overlay rows
+          for (let i = 0; i < sandbox.extractedObjects.length; i++) {
+            const obj = sandbox.extractedObjects[i]
+            // Objects are already uploaded to preview paths — just insert the overlay rows
+            await supabase.from('book_skin_overlays').insert({
+              skin_id: newSkin.id,
+              label: obj.label,
+              image_url: obj.imageUrl,
+              sort_order: i,
+              overlay_config: null,
+            })
+          }
+          await supabase.from('book_skins').update({ has_overlays: true }).eq('id', newSkin.id)
+          const count = sandbox.extractedObjects.length
           setUploadSuccess(`✅ Book cover saved with ${count} animated overlay${count !== 1 ? 's' : ''}!`)
           onSaved?.()
         } catch (err: any) {
-          setExtractError(`Cover saved, but extraction failed: ${err.message}`)
+          console.warn('[handleGenSave] overlay insert error:', err.message)
         } finally {
           setExtracting(false)
         }
       }
-
-      // Reset extract state
-      setExtractEnabled(false)
-      setIdentifiedObjects(null)
-      setSelectedExtractObjects(new Set())
     } catch (err: any) { setGenSaveError(err.message) }
     finally { setGenSaving(false) }
   }
@@ -1373,27 +1406,37 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                       </div>
                     </div>
 
-                    {/* ── Extract corner objects (pre-save refinement step) ── */}
+                    {/* ── Extract corner objects (refine iteration step) ── */}
                     <div className="border border-amber-200 rounded-xl p-3 bg-amber-50/50 space-y-2">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="text-xs font-semibold text-amber-800">✂️ Extract Corner Objects</span>
-                        {!identifiedObjects && (
-                          <button onClick={handleIdentifyObjects} disabled={identifying || generating}
-                            className="text-xs px-2.5 py-1 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-semibold rounded-lg transition-colors">
-                            {identifying ? '🔍 Identifying…' : '🔍 Identify'}
-                          </button>
-                        )}
-                        {identifiedObjects && (
-                          <button onClick={() => { setIdentifiedObjects(null); setSelectedExtractObjects(new Set()) }}
-                            className="text-[10px] text-gray-400 hover:text-gray-600">↺ Re-identify</button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {identifiedObjects && (
+                            <button onClick={() => { setIdentifiedObjects(null); setSelectedExtractObjects(new Set()) }}
+                              className="text-[10px] text-gray-400 hover:text-gray-600">↺ Re-identify</button>
+                          )}
+                          {!identifiedObjects ? (
+                            <button onClick={handleIdentifyObjects} disabled={identifying || generating}
+                              className="text-xs px-2.5 py-1 bg-amber-100 hover:bg-amber-200 disabled:bg-amber-50 text-amber-800 font-semibold rounded-lg border border-amber-300 transition-colors">
+                              {identifying ? '🔍 Identifying…' : '🔍 Identify'}
+                            </button>
+                          ) : (
+                            <button onClick={handleExtractObjects}
+                              disabled={extracting || generating || selectedExtractObjects.size === 0}
+                              className="text-xs px-2.5 py-1 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-semibold rounded-lg transition-colors">
+                              {extracting ? '⏳ Extracting…' : `✂️ Extract${selectedExtractObjects.size > 0 ? ` (${selectedExtractObjects.size})` : ''}`}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-[11px] text-gray-500">
-                        Identify objects in the corner clusters, select which to extract as transparent PNGs. The cover will be saved with those objects removed — animate them later in the collection editor.
-                      </p>
+                      {!identifiedObjects && !sandbox.extractedObjects && (
+                        <p className="text-[11px] text-gray-500">
+                          Identify the objects in the corner clusters, pick which to extract, then preview the stripped cover + each object as a transparent PNG.
+                        </p>
+                      )}
                       {identifiedObjects && (
                         <div className="space-y-2">
-                          <p className="text-[11px] font-semibold text-amber-700">Select objects to extract ({selectedExtractObjects.size}/{identifiedObjects.length}):</p>
+                          <p className="text-[11px] font-semibold text-amber-700">Select objects ({selectedExtractObjects.size}/{identifiedObjects.length}):</p>
                           <div className="flex flex-wrap gap-1.5">
                             {identifiedObjects.map(obj => {
                               const selected = selectedExtractObjects.has(obj)
@@ -1409,16 +1452,40 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                               )
                             })}
                           </div>
-                          <div className="flex gap-2 pt-1">
-                            <button onClick={() => setSelectedExtractObjects(new Set(identifiedObjects))}
-                              className="text-[10px] text-amber-600 hover:underline">Select all</button>
-                            <button onClick={() => setSelectedExtractObjects(new Set())}
-                              className="text-[10px] text-gray-400 hover:underline">Clear</button>
+                          <div className="flex gap-2">
+                            <button onClick={() => setSelectedExtractObjects(new Set(identifiedObjects))} className="text-[10px] text-amber-600 hover:underline">Select all</button>
+                            <button onClick={() => setSelectedExtractObjects(new Set())} className="text-[10px] text-gray-400 hover:underline">Clear</button>
                           </div>
                         </div>
                       )}
                       {extractError && <p className="text-[11px] text-red-600">{extractError}</p>}
                     </div>
+
+                    {/* ── Extracted objects preview grid ── */}
+                    {sandbox.extractedObjects && sandbox.extractedObjects.length > 0 && (
+                      <div className="border border-purple-200 rounded-xl p-3 bg-purple-50/40 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold text-purple-700">✨ {sandbox.extractedObjects.length} extracted object{sandbox.extractedObjects.length !== 1 ? 's' : ''}</p>
+                          {sandbox.originalUrl && (
+                            <button onClick={() => setSandbox(prev => prev ? { ...prev, imageUrl: prev.originalUrl!, originalUrl: undefined, extractedObjects: undefined } : prev)}
+                              className="text-[10px] text-gray-400 hover:text-gray-600">↺ Revert cover</button>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {sandbox.extractedObjects.map((obj, idx) => (
+                            <div key={idx} className="flex flex-col items-center gap-1">
+                              <div className="w-14 h-14 rounded-lg border border-purple-200 overflow-hidden flex items-center justify-center"
+                                style={{ background: 'repeating-conic-gradient(#d1d5db 0% 25%, #fff 0% 50%) 0 0 / 12px 12px' }}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={obj.imageUrl} alt={obj.label} className="w-full h-full object-contain" />
+                              </div>
+                              <span className="text-[10px] text-purple-700 font-medium text-center max-w-[56px] truncate">{obj.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-gray-400">These will be saved as animated overlays alongside the stripped cover.</p>
+                      </div>
+                    )}
 
                     {/* Save */}
                     {!genSaveOpen ? (
