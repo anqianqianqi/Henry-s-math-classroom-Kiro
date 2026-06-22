@@ -112,20 +112,33 @@ export async function POST(request: Request) {
     const ts = Date.now()
 
     if (mode === 'corner_clusters') {
-      // Generate 4 corner cluster images — one per corner, each a group of 2-4 thematic objects
+      // Parse explicit corner cluster descriptions from the prompt if present
+      // Format: "corner clusters: [cluster1] [cluster2] [cluster3] [cluster4]"
+      const clusterMatches = coverPrompt.match(/\[([^\]]+)\]/g)
+      const parsedClusters = clusterMatches
+        ? clusterMatches.slice(0, 4).map(m => m.replace(/^\[|\]$/g, '').trim())
+        : null
+
       const styleHint = coverPrompt.split(',')[0].trim()
       const cornerLabels = ['top-left cluster', 'top-right cluster', 'bottom-left cluster', 'bottom-right cluster']
-      const cornerPrompt = (pos: string) =>
-        `A corner decoration cluster for a hardcover book with the theme: "${styleHint}".
-This is the ${pos} corner — a dense vignette of 2–4 closely grouped 3D decorative objects from the theme.
-All objects match the same art style, color palette, lighting and material texture.
+
+      const clusterPrompt = (pos: string, clusterDesc: string | null) => {
+        const objectDesc = clusterDesc
+          ? `a group of these objects: ${clusterDesc}`
+          : `a thematic group of 2-4 decorative objects matching the theme: "${styleHint}"`
+        return `A corner decoration cluster for a book cover with theme: "${styleHint}".
+Generate ${objectDesc}.
+Position: ${pos} corner — arrange the objects as a compact dense vignette.
+All objects must share the same art style, color palette, and lighting as the book theme.
 FULLY TRANSPARENT BACKGROUND (alpha = 0 everywhere outside the objects).
-The cluster should be compact, richly detailed, with soft shadows cast between objects.
-Objects should be oriented to face slightly toward the center of the cluster.
-No text. No book surface. No border. Only the object cluster on transparent background.`
+Soft shadows between objects. No text. No book surface. No border. Only the cluster on transparent background.`
+      }
 
       const clusterResults = await Promise.allSettled(
-        cornerLabels.map(pos => generateObject(apiKey, pos, coverPrompt.trim(), cornerPrompt(pos)))
+        cornerLabels.map((pos, i) => generateObject(
+          apiKey, pos, coverPrompt.trim(),
+          clusterPrompt(pos, parsedClusters ? parsedClusters[i] ?? null : null)
+        ))
       )
 
       const objects: { label: string; imageUrl: string }[] = []

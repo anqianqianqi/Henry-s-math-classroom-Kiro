@@ -746,8 +746,10 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   async function handleGenerateWithObjects() {
     if (!genPrompt.trim()) { setGenError('Enter a description.'); return }
     setGenError(null); setGenerating(true); setCleanCorners(true)
-    // Strip "corner clusters: ..." from the prompt — objects are generated separately
+    // Strip "corner clusters: ..." from the prompt for the clean cover
+    // but keep the FULL prompt for object generation so specific cluster items are used
     const cleanPrompt = genPrompt.trim().replace(/,?\s*corner clusters:\s*\[[\s\S]*$/i, '').trim()
+    const fullPrompt = genPrompt.trim()
     try {
       const [coverRes, objectsRes] = await Promise.all([
         fetch('/api/preview-book-skin', {
@@ -756,7 +758,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
         }),
         fetch('/api/generate-theme-objects', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ coverPrompt: cleanPrompt, mode: 'corner_clusters' }),
+          body: JSON.stringify({ coverPrompt: fullPrompt, mode: 'corner_clusters' }),
         }),
       ])
       const coverData = await coverRes.json()
