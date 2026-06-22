@@ -751,30 +751,45 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     const cleanPrompt = genPrompt.trim().replace(/,?\s*corner clusters:\s*\[[\s\S]*$/i, '').trim()
     const fullPrompt = genPrompt.trim()
     try {
-      const [coverRes, objectsRes] = await Promise.all([
-        fetch('/api/preview-book-skin', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: cleanPrompt, cleanCorners: true }),
-        }),
-        fetch('/api/generate-theme-objects', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ coverPrompt: fullPrompt, mode: 'individual_items' }),
-        }),
-      ])
+      // Step 1: Generate cover first — fast (~15s)
+      const coverRes = await fetch('/api/preview-book-skin', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: cleanPrompt, cleanCorners: true }),
+      })
       const coverData = await coverRes.json()
       if (!coverRes.ok) throw new Error(coverData.error || `Cover error ${coverRes.status}`)
-      // Objects may fail/timeout — handle gracefully
-      let objectsData = { objects: [] }
+
+      // Show cover immediately with empty objects
+      setSandbox({ imageUrl: coverData.image_url, prompt: coverData.prompt, iteration: 1, extractedObjects: [] })
+      setRefinePrompt('')
+      setGenerating(false)
+
+      // Step 2: Generate objects in background — takes longer (~60-90s)
+      setExtracting(true)
+      setExtractError(null)
       try {
+        const objectsRes = await fetch('/api/generate-theme-objects', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coverPrompt: fullPrompt, mode: 'individual_items' }),
+        })
         const contentType = objectsRes.headers.get('content-type') ?? ''
         if (contentType.includes('application/json')) {
-          objectsData = await objectsRes.json()
+          const objectsData = await objectsRes.json()
+          if (objectsRes.ok && objectsData.objects?.length > 0) {
+            setSandbox(prev => prev ? { ...prev, extractedObjects: objectsData.objects } : prev)
+          } else if (!objectsRes.ok) {
+            setExtractError(objectsData.error ?? 'Object generation failed')
+          }
         }
-      } catch { /* objects failed — show cover anyway */ }
-      setSandbox({ imageUrl: coverData.image_url, prompt: coverData.prompt, iteration: 1, extractedObjects: objectsData.objects ?? [] })
-      setRefinePrompt('')
-    } catch (err: any) { setGenError(err.message) }
-    finally { setGenerating(false) }
+      } catch (objErr: any) {
+        setExtractError('Object generation timed out — try again with fewer objects')
+      } finally {
+        setExtracting(false)
+      }
+    } catch (err: any) {
+      setGenError(err.message)
+      setGenerating(false)
+    }
   }
 
   async function handleGenerate() {
@@ -1396,7 +1411,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                       </button>
                       <button onClick={handleGenerateWithObjects} disabled={generating || !genPrompt.trim()}
                         className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-semibold rounded-xl text-sm transition-colors">
-                        {generating && cleanCorners ? '⏳ Generating…' : '✨ Generate + Objects'}
+                        {generating && cleanCorners ? '⏳ Generating cover…' : extracting ? '⏳ Generating objects…' : '✨ Generate + Objects'}
                       </button>
                     </div>
                   </div>
@@ -1417,7 +1432,13 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                     </div>
 
                     {/* Extracted corner cluster objects preview */}
-                    {sandbox.extractedObjects && sandbox.extractedObjects.length > 0 && (
+                    {extracting && (
+                      <div className="flex items-center gap-2 text-xs text-purple-700 bg-purple-50 rounded-xl px-3 py-2.5 border border-purple-200">
+                        <span className="animate-spin inline-block">⏳</span>
+                        Generating individual objects… this takes 60-90s
+                      </div>
+                    )}
+                    {!extracting && sandbox.extractedObjects && sandbox.extractedObjects.length > 0 && (
                       <div className="border border-purple-200 rounded-xl p-3 bg-purple-50/40">
                         <p className="text-xs font-semibold text-purple-700 mb-2">✨ {sandbox.extractedObjects.length} corner cluster{sandbox.extractedObjects.length !== 1 ? 's' : ''} — transparent PNGs</p>
                         <div className="flex flex-wrap gap-2">
