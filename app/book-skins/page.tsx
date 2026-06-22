@@ -711,6 +711,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   const [extractError, setExtractError] = useState<string | null>(null)
   // Per-cluster progress: 0=pending, 1=generating, 2=done, 3=error
   const [clusterProgress, setClusterProgress] = useState<(0|1|2|3)[]>([0,0,0,0])
+  const [clusterErrors, setClusterErrors] = useState<(string|null)[]>([null,null,null,null])
 
   async function handleExtractObjects() {
     if (!sandbox || !identifiedObjects || selectedExtractObjects.size === 0) return
@@ -748,88 +749,112 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   async function handleGenerateWithObjects() {
     if (!genPrompt.trim()) { setGenError('Enter a description.'); return }
     setGenError(null); setGenerating(true); setCleanCorners(true)
-    // Strip "corner clusters: ..." from the prompt for the clean cover
-    // but keep the FULL prompt for object generation so specific cluster items are used
     const cleanPrompt = genPrompt.trim().replace(/,?\s*corner clusters:\s*\[[\s\S]*$/i, '').trim()
     const fullPrompt = genPrompt.trim()
     try {
-      // Step 1: Generate cover first — fast (~15s)
+      // ── Step 1: Generate cover (~15s) ──────────────────────────────────
       const coverRes = await fetch('/api/preview-book-skin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: cleanPrompt, cleanCorners: true }),
       })
       const coverData = await coverRes.json()
       if (!coverRes.ok) throw new Error(coverData.error || `Cover error ${coverRes.status}`)
-
-      // Show cover immediately — extractedObjects starts as undefined (not yet loaded)
-      const coverImageUrl = coverData.image_url
-      const coverPromptText = coverData.prompt
-      setSandbox({ imageUrl: coverImageUrl, prompt: coverPromptText, iteration: 1 })
+      setSandbox({ imageUrl: coverData.image_url, prompt: coverData.prompt, iteration: 1 })
       setRefinePrompt('')
       setGenerating(false)
 
-      // Step 2: Generate each corner cluster's objects one at a time (sequential)
-      // so each cluster's 3 objects appear as soon as they're ready
+      // ── Step 2: Enrich all 12 items in one GPT-4o call (~4s) ───────────
       setExtracting(true)
       setExtractError(null)
       setClusterProgress([0, 0, 0, 0])
+      setClusterErrors([null, null, null, null])
 
-      const allErrors: string[] = []
-      for (let clusterIdx = 0; clusterIdx < 4; clusterIdx++) {
-        // Mark this cluster as "generating"
-        setClusterProgress(prev => {
-          const next = [...prev] as (0|1|2|3)[]
-          next[clusterIdx] = 1
-          return next
-        })
-        try {
-          const res = await fetch('/api/generate-cluster-objects', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ coverPrompt: fullPrompt, clusterIndex: clusterIdx }),
-          })
-          const data = await res.json()
-          if (!res.ok) {
-            const errMsg = data.error ?? `Cluster ${clusterIdx} error ${res.status}`
-            allErrors.push(errMsg)
-            setClusterProgress(prev => {
-              const next = [...prev] as (0|1|2|3)[]
-              next[clusterIdx] = 3
-              return next
+      const enrichRes = await fetch('/api/enrich-cluster-items', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coverPrompt: fullPrompt }),
+      })
+      let enrichData: any
+      try { enrichData = await enrichRes.json() } catch { enrichData = {} }
+      if (!enrichRes.ok) {
+        setExtractError(enrichData?.error ?? 'Enrichment failed')
+        setSandbox(prev => prev ? { ...prev, extractedObjects: [] } : prev)
+        setExtracting(false)
+        return
+      }
+
+      const clusters: { clusterIndex: number; corner: string; items: { label: string; prompt: string }[] }[] =
+        enrichData.clusters ?? []
+      if (clusters.length === 0) {
+        setExtractError('No clusters found in prompt — use format: corner clusters: [item1 + item2 + item3] [...]')
+        setSandbox(prev => prev ? { ...prev, extractedObjects: [] } : prev)
+        setExtracting(false)
+        return
+      }
+
+      // ── Step 3: Generate one object at a time, each appears immediately ──
+      // Flatten all objects into a sequential list: cluster0-obj0, c0-obj1, c0-obj2, c1-obj0 ...
+      for (const cluster of clusters) {
+        // Mark cluster as generating
+        setClusterProgress(prev => { const n = [...prev] as (0|1|2|3)[]; n[cluster.clusterIndex] = 1; return n })
+
+        let clusterSuccesses = 0
+        for (let objIdx = 0; objIdx < cluster.items.length; objIdx++) {
+          const item = cluster.items[objIdx]
+          try {
+            const res = await fetch('/api/generate-single-object', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                label: item.label,
+                prompt: item.prompt,
+                clusterIndex: cluster.clusterIndex,
+                objectIndex: objIdx,
+              }),
             })
-          } else {
-            const newObjs: { label: string; imageUrl: string }[] = data.objects ?? []
-            // Append this cluster's objects immediately so they render
-            setSandbox(prev => prev ? {
-              ...prev,
-              extractedObjects: [...(prev.extractedObjects ?? []), ...newObjs],
-            } : prev)
-            setClusterProgress(prev => {
-              const next = [...prev] as (0|1|2|3)[]
-              next[clusterIdx] = 2
-              return next
+            let objData: any
+            try { objData = await res.json() } catch { objData = {} }
+
+            if (!res.ok) {
+              const msg = objData?.error ?? `HTTP ${res.status}`
+              console.error(`[obj gen] cluster=${cluster.clusterIndex} obj="${item.label}":`, msg)
+              setClusterErrors(prev => {
+                const n = [...prev]
+                n[cluster.clusterIndex] = (n[cluster.clusterIndex] ? n[cluster.clusterIndex] + '; ' : '') + `${item.label}: ${msg}`
+                return n
+              })
+            } else {
+              // Object ready — append immediately so it renders
+              setSandbox(prev => prev ? {
+                ...prev,
+                extractedObjects: [...(prev.extractedObjects ?? []), { label: objData.label, imageUrl: objData.imageUrl }],
+              } : prev)
+              clusterSuccesses++
+            }
+          } catch (err: any) {
+            const msg = err.message ?? 'network error'
+            console.error(`[obj gen] cluster=${cluster.clusterIndex} obj="${item.label}" fetch error:`, msg)
+            setClusterErrors(prev => {
+              const n = [...prev]
+              n[cluster.clusterIndex] = (n[cluster.clusterIndex] ? n[cluster.clusterIndex] + '; ' : '') + `${item.label}: ${msg}`
+              return n
             })
-            if (data.errors?.length) allErrors.push(...data.errors)
           }
-        } catch (clusterErr: any) {
-          allErrors.push(`Cluster ${clusterIdx}: ${clusterErr.message}`)
-          setClusterProgress(prev => {
-            const next = [...prev] as (0|1|2|3)[]
-            next[clusterIdx] = 3
-            return next
-          })
+          // Small gap between object calls
+          if (objIdx < cluster.items.length - 1) await new Promise(r => setTimeout(r, 300))
         }
-        // Small gap between cluster calls to stay well within rate limits
-        if (clusterIdx < 3) await new Promise(resolve => setTimeout(resolve, 800))
+
+        // Mark cluster done (green if any succeeded, red if none)
+        setClusterProgress(prev => {
+          const n = [...prev] as (0|1|2|3)[]
+          n[cluster.clusterIndex] = clusterSuccesses > 0 ? 2 : 3
+          return n
+        })
+
+        // Gap between clusters
+        if (cluster.clusterIndex < clusters.length - 1) await new Promise(r => setTimeout(r, 300))
       }
 
-      if (allErrors.length > 0) {
-        setExtractError(`Some objects failed: ${allErrors.slice(0, 2).join('; ')}${allErrors.length > 2 ? ` (+${allErrors.length - 2} more)` : ''}`)
-      }
-      // Ensure extractedObjects is at least [] if nothing was added (fallback)
-      setSandbox(prev => prev && prev.extractedObjects === undefined
-        ? { ...prev, extractedObjects: [] }
-        : prev)
+      // Ensure extractedObjects is never undefined after we finish
+      setSandbox(prev => prev && prev.extractedObjects === undefined ? { ...prev, extractedObjects: [] } : prev)
     } catch (err: any) {
       setGenError(err.message)
       setGenerating(false)
@@ -1481,21 +1506,29 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                     {(extracting || (sandbox.extractedObjects !== undefined)) && (
                       <div className="border border-purple-200 rounded-xl p-3 bg-purple-50/40 space-y-2">
                         {/* Cluster progress indicators */}
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {(['Top-left', 'Top-right', 'Bot-left', 'Bot-right'] as const).map((name, i) => {
-                            const st = clusterProgress[i]
-                            return (
-                              <span key={i} className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
-                                st === 1 ? 'bg-purple-100 border-purple-400 text-purple-700 animate-pulse' :
-                                st === 2 ? 'bg-green-100 border-green-400 text-green-700' :
-                                st === 3 ? 'bg-red-100 border-red-400 text-red-600' :
-                                'bg-gray-100 border-gray-300 text-gray-400'
-                              }`}>
-                                {st === 1 ? '⏳' : st === 2 ? '✓' : st === 3 ? '✕' : '○'} {name}
-                              </span>
-                            )
-                          })}
-                          {extracting && <span className="text-[11px] text-purple-500 ml-1 animate-pulse">generating…</span>}
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {(['Top-left', 'Top-right', 'Bot-left', 'Bot-right'] as const).map((name, i) => {
+                              const st = clusterProgress[i]
+                              return (
+                                <span key={i} className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+                                  st === 1 ? 'bg-purple-100 border-purple-400 text-purple-700 animate-pulse' :
+                                  st === 2 ? 'bg-green-100 border-green-400 text-green-700' :
+                                  st === 3 ? 'bg-red-100 border-red-400 text-red-600' :
+                                  'bg-gray-100 border-gray-300 text-gray-400'
+                                }`}>
+                                  {st === 1 ? '⏳' : st === 2 ? '✓' : st === 3 ? '✕' : '○'} {name}
+                                </span>
+                              )
+                            })}
+                            {extracting && <span className="text-[11px] text-purple-500 ml-1 animate-pulse">generating…</span>}
+                          </div>
+                          {/* Per-cluster error messages */}
+                          {clusterErrors.map((err, i) => err && clusterProgress[i] === 3 ? (
+                            <p key={i} className="text-[11px] text-red-600 bg-red-50 rounded-lg px-2 py-1 border border-red-200">
+                              {(['Top-left','Top-right','Bot-left','Bot-right'])[i]}: {err}
+                            </p>
+                          ) : null)}
                         </div>
                         {/* Objects grid — fills in as each cluster completes */}
                         {sandbox.extractedObjects && sandbox.extractedObjects.length > 0 && (
@@ -1522,13 +1555,10 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                             </div>
                           </>
                         )}
-                        {!extracting && sandbox.extractedObjects?.length === 0 && !extractError && (
-                          <p className="text-xs text-gray-400">No objects were generated.</p>
+                        {!extracting && sandbox.extractedObjects?.length === 0 && (
+                          <p className="text-xs text-gray-400">No objects were generated. Check errors above.</p>
                         )}
                       </div>
-                    )}
-                    {!extracting && extractError && (
-                      <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{extractError}</div>
                     )}
 
                     {/* Layout editor toggle */}
