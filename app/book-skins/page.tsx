@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -58,6 +58,31 @@ export default function BookSkinsUserPage() {
   const [layoutEditorSkin, setLayoutEditorSkin] = useState<BookSkin | null>(null)
   const [editingLayout, setEditingLayout] = useState<CoverLayout>(DEFAULT_LAYOUT)
   const [layoutSaving, setLayoutSaving] = useState(false)
+
+  // Admin: overlay animation editor for skins with extracted objects
+  const [overlayEditorSkin, setOverlayEditorSkin] = useState<BookSkin | null>(null)
+  const [overlayEditorObjects, setOverlayEditorObjects] = useState<any[]>([])
+  const [overlayEditorLoading, setOverlayEditorLoading] = useState(false)
+  const [overlayEditorSaving, setOverlayEditorSaving] = useState(false)
+
+  async function openOverlayEditor(skin: BookSkin) {
+    setOverlayEditorSkin(skin)
+    setOverlayEditorLoading(true)
+    const { data } = await supabase
+      .from('book_skin_overlays')
+      .select('*')
+      .eq('skin_id', skin.id)
+      .order('sort_order', { ascending: true })
+    setOverlayEditorObjects(data ?? [])
+    setOverlayEditorLoading(false)
+  }
+
+  async function saveOverlayConfig(overlay: any, config: any) {
+    setOverlayEditorSaving(true)
+    await supabase.from('book_skin_overlays').update({ overlay_config: config }).eq('id', overlay.id)
+    setOverlayEditorObjects(prev => prev.map((o: any) => o.id === overlay.id ? { ...o, overlay_config: config } : o))
+    setOverlayEditorSaving(false)
+  }
 
   // ── Load skins + user prefs ─────────────────────────────────────────────────
   async function loadSkins(uid: string, adminRole: boolean) {
@@ -417,6 +442,15 @@ export default function BookSkinsUserPage() {
                   🎨 Edit Title &amp; Button Layout
                 </button>
               )}
+              {/* Overlay animation editor — cover skins with extracted objects */}
+              {actionSkin.skin_type === 'cover' && (actionSkin as any).has_overlays && (
+                <button
+                  onClick={() => { openOverlayEditor(actionSkin); setActionSkin(null) }}
+                  className="w-full py-2 px-3 text-sm font-semibold rounded-xl border-2 border-dashed border-purple-400 text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors"
+                >
+                  ✨ Animate Overlay Objects
+                </button>
+              )}
               {showSellInput && (
                 <div className="flex gap-2">
                   <input type="number" min={1} value={sellPrice} onChange={e => setSellPrice(e.target.value)}
@@ -430,6 +464,18 @@ export default function BookSkinsUserPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Overlay Animation Editor Modal ── */}
+      {overlayEditorSkin && (
+        <OverlayEditorInline
+          skin={overlayEditorSkin}
+          overlays={overlayEditorObjects}
+          loading={overlayEditorLoading}
+          saving={overlayEditorSaving}
+          onSave={saveOverlayConfig}
+          onClose={() => setOverlayEditorSkin(null)}
+        />
       )}
     </div>
   )
@@ -1327,6 +1373,53 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                       </div>
                     </div>
 
+                    {/* ── Extract corner objects (pre-save refinement step) ── */}
+                    <div className="border border-amber-200 rounded-xl p-3 bg-amber-50/50 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-amber-800">✂️ Extract Corner Objects</span>
+                        {!identifiedObjects && (
+                          <button onClick={handleIdentifyObjects} disabled={identifying || generating}
+                            className="text-xs px-2.5 py-1 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-semibold rounded-lg transition-colors">
+                            {identifying ? '🔍 Identifying…' : '🔍 Identify'}
+                          </button>
+                        )}
+                        {identifiedObjects && (
+                          <button onClick={() => { setIdentifiedObjects(null); setSelectedExtractObjects(new Set()) }}
+                            className="text-[10px] text-gray-400 hover:text-gray-600">↺ Re-identify</button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500">
+                        Identify objects in the corner clusters, select which to extract as transparent PNGs. The cover will be saved with those objects removed — animate them later in the collection editor.
+                      </p>
+                      {identifiedObjects && (
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-semibold text-amber-700">Select objects to extract ({selectedExtractObjects.size}/{identifiedObjects.length}):</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {identifiedObjects.map(obj => {
+                              const selected = selectedExtractObjects.has(obj)
+                              return (
+                                <button key={obj} onClick={() => {
+                                  const next = new Set(selectedExtractObjects)
+                                  if (selected) next.delete(obj); else next.add(obj)
+                                  setSelectedExtractObjects(next)
+                                }}
+                                  className={`px-2 py-1 rounded-lg text-xs font-semibold border transition-colors ${selected ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600 border-gray-200 hover:border-amber-400'}`}>
+                                  {selected ? '✓ ' : ''}{obj}
+                                </button>
+                              )
+                            })}
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <button onClick={() => setSelectedExtractObjects(new Set(identifiedObjects))}
+                              className="text-[10px] text-amber-600 hover:underline">Select all</button>
+                            <button onClick={() => setSelectedExtractObjects(new Set())}
+                              className="text-[10px] text-gray-400 hover:underline">Clear</button>
+                          </div>
+                        </div>
+                      )}
+                      {extractError && <p className="text-[11px] text-red-600">{extractError}</p>}
+                    </div>
+
                     {/* Save */}
                     {!genSaveOpen ? (
                       <button onClick={() => { setGenSaveName(''); setGenSaveDesc(''); setGenSaveError(null); setGenSaveOpen(true) }}
@@ -1360,60 +1453,20 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                           </div>
                         </div>
 
-                        {/* ── Extract overlay objects ─────────────────────── */}
+                        {/* ── Extract overlay objects (summary from refine step) ── */}
                         <div className="border-t border-amber-100 pt-3">
-                          <label className="flex items-center gap-2 cursor-pointer mb-2">
-                            <input type="checkbox" checked={extractEnabled}
-                              onChange={e => {
-                                setExtractEnabled(e.target.checked)
-                                if (!e.target.checked) { setIdentifiedObjects(null); setSelectedExtractObjects(new Set()) }
-                              }}
-                              className="w-4 h-4 accent-amber-600" />
-                            <span className="text-xs font-semibold text-amber-800">✂️ Extract corner objects as animated overlays</span>
-                          </label>
-                          {extractEnabled && (
-                            <div className="space-y-2">
-                              <p className="text-[11px] text-gray-500">
-                                Identifies individual objects in the corner clusters, extracts each as a separate transparent PNG, and saves the cover with those objects removed. Animate them later in the collection editor.
-                              </p>
-                              {!identifiedObjects ? (
-                                <button onClick={handleIdentifyObjects} disabled={identifying}
-                                  className="w-full py-2 bg-amber-100 hover:bg-amber-200 disabled:bg-amber-50 text-amber-800 font-semibold rounded-xl text-xs border border-amber-300">
-                                  {identifying ? '🔍 Identifying objects…' : '🔍 Identify objects in cover'}
-                                </button>
-                              ) : (
-                                <div className="space-y-2">
-                                  <p className="text-[11px] font-semibold text-amber-700">Select objects to extract ({selectedExtractObjects.size} selected):</p>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {identifiedObjects.map(obj => {
-                                      const selected = selectedExtractObjects.has(obj)
-                                      return (
-                                        <button key={obj} onClick={() => {
-                                          const next = new Set(selectedExtractObjects)
-                                          if (selected) next.delete(obj); else next.add(obj)
-                                          setSelectedExtractObjects(next)
-                                        }}
-                                          className={`px-2 py-1 rounded-lg text-xs font-semibold border transition-colors ${selected ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600 border-gray-200 hover:border-amber-400'}`}>
-                                          {selected ? '✓ ' : ''}{obj}
-                                        </button>
-                                      )
-                                    })}
-                                  </div>
-                                  <button onClick={handleIdentifyObjects} disabled={identifying}
-                                    className="text-[10px] text-amber-600 hover:underline">
-                                    {identifying ? '🔍 Re-identifying…' : '↺ Re-identify'}
-                                  </button>
-                                </div>
-                              )}
-                              {extractError && <p className="text-[11px] text-red-600">{extractError}</p>}
-                              {extracting && (
-                                <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2">
-                                  <span className="animate-spin inline-block">⏳</span>
-                                  Extracting {selectedExtractObjects.size} object{selectedExtractObjects.size !== 1 ? 's' : ''} + stripped cover in parallel… ~30s
-                                </div>
-                              )}
+                          {identifiedObjects && selectedExtractObjects.size > 0 ? (
+                            <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2 border border-amber-200">
+                              <span>✂️</span>
+                              <span><strong>{selectedExtractObjects.size}</strong> corner object{selectedExtractObjects.size !== 1 ? 's' : ''} will be extracted after saving</span>
+                              {extracting && <span className="ml-auto animate-spin">⏳</span>}
                             </div>
+                          ) : (
+                            <p className="text-[11px] text-gray-400">
+                              Tip: use "✂️ Extract Corner Objects" above the save button to extract animated overlay objects.
+                            </p>
                           )}
+                          {extractError && <p className="text-[11px] text-red-600 mt-1">{extractError}</p>}
                         </div>
 
                         <div className="flex gap-2">
@@ -1434,5 +1487,171 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
         )}
       </Card.Body>
     </Card>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Overlay Animation Editor — used in the manage modal of this page
+// ─────────────────────────────────────────────────────────────────────────────
+type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce'
+interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim }
+const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float' }
+const OV_KEYFRAMES = `
+@keyframes bov-float   { 0%,100%{transform:translateY(0)}    50%{transform:translateY(-8px)} }
+@keyframes bov-pulse   { 0%,100%{transform:scale(1)}         50%{transform:scale(1.12)} }
+@keyframes bov-rotate  { from{transform:rotate(0deg)}        to{transform:rotate(360deg)} }
+@keyframes bov-shimmer { 0%,100%{opacity:1}                  50%{opacity:0.45} }
+@keyframes bov-bounce  { 0%,100%{transform:translateY(0)}    40%{transform:translateY(-14px)} 60%{transform:translateY(-6px)} }
+`
+const OV_CSS: Record<OverlayAnim, string> = {
+  none: '', float: 'bov-float 3s ease-in-out infinite', pulse: 'bov-pulse 2.5s ease-in-out infinite',
+  rotate: 'bov-rotate 8s linear infinite', shimmer: 'bov-shimmer 2s ease-in-out infinite', bounce: 'bov-bounce 1.8s ease-in-out infinite',
+}
+const OV_ANIMS: { value: OverlayAnim; label: string }[] = [
+  { value: 'none', label: '⏸ None' }, { value: 'float', label: '🌊 Float' }, { value: 'pulse', label: '💗 Pulse' },
+  { value: 'rotate', label: '🔄 Rotate' }, { value: 'shimmer', label: '✨ Shimmer' }, { value: 'bounce', label: '🏀 Bounce' },
+]
+
+function OverlayEditorInline({
+  skin, overlays, loading, saving, onSave, onClose,
+}: {
+  skin: BookSkin; overlays: any[]; loading: boolean; saving: boolean
+  onSave: (overlay: any, config: OvConfig) => void; onClose: () => void
+}) {
+  const [selected, setSelected] = useState<string | null>(overlays[0]?.id ?? null)
+  const [configs, setConfigs] = useState<Record<string, OvConfig>>(() => {
+    const init: Record<string, OvConfig> = {}
+    for (const o of overlays) init[o.id] = o.overlay_config ?? { ...DEFAULT_OV }
+    return init
+  })
+  const previewRef = useRef<HTMLDivElement>(null)
+  const dragging = useRef<{ id: string; sx: number; sy: number; ox: number; oy: number } | null>(null)
+
+  const sel = overlays.find(o => o.id === selected)
+  const cfg = selected ? (configs[selected] ?? DEFAULT_OV) : null
+
+  function upd(id: string, patch: Partial<OvConfig>) {
+    setConfigs(prev => ({ ...prev, [id]: { ...(prev[id] ?? DEFAULT_OV), ...patch } }))
+  }
+
+  function startDrag(id: string, cx: number, cy: number) {
+    const c = configs[id] ?? DEFAULT_OV
+    dragging.current = { id, sx: cx, sy: cy, ox: c.x, oy: c.y }
+    setSelected(id)
+    const onMove = (ev: MouseEvent | TouchEvent) => {
+      if (!dragging.current || !previewRef.current) return
+      const r = previewRef.current.getBoundingClientRect()
+      const x = 'touches' in ev ? ev.touches[0].clientX : ev.clientX
+      const y = 'touches' in ev ? ev.touches[0].clientY : ev.clientY
+      upd(id, {
+        x: Math.max(0, Math.min(100, dragging.current.ox + ((x - dragging.current.sx) / r.width) * 100)),
+        y: Math.max(0, Math.min(100, dragging.current.oy + ((y - dragging.current.sy) / r.height) * 100)),
+      })
+    }
+    const onEnd = () => {
+      dragging.current = null
+      window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onEnd)
+      window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd)
+    }
+    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onEnd)
+    window.addEventListener('touchmove', onMove, { passive: false }); window.addEventListener('touchend', onEnd)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" onClick={onClose}>
+      <style>{OV_KEYFRAMES}</style>
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+          <div>
+            <div className="font-bold text-gray-900">✨ Animate Overlays — {skin.name}</div>
+            <div className="text-xs text-gray-400 mt-0.5">Drag objects on the cover preview · pick animation · save</div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
+        </div>
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center py-16 text-gray-400">Loading overlays…</div>
+        ) : overlays.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center py-16 px-6 text-center text-gray-400 text-sm">
+            No overlay objects found. Extract corner objects first using the Generate tab.
+          </div>
+        ) : (
+          <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+            {/* Cover preview */}
+            <div className="md:w-60 shrink-0 p-4 flex flex-col items-center gap-2 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-200">
+              <p className="text-xs font-semibold text-gray-500 self-start">Drag to reposition</p>
+              <div ref={previewRef} className="relative rounded-xl overflow-hidden border-2 border-amber-200 shadow" style={{ width: 180, height: 280, userSelect: 'none' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={skin.image_url} alt={skin.name} className="w-full h-full object-cover" draggable={false} />
+                {overlays.map(o => {
+                  const c = configs[o.id] ?? DEFAULT_OV
+                  const sz = Math.round(54 * c.scale)
+                  return (
+                    <div key={o.id}
+                      onMouseDown={e => { e.preventDefault(); startDrag(o.id, e.clientX, e.clientY) }}
+                      onTouchStart={e => startDrag(o.id, e.touches[0].clientX, e.touches[0].clientY)}
+                      style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', width: sz, height: sz, cursor: 'grab', zIndex: selected === o.id ? 10 : 5, outline: selected === o.id ? '2px solid #a855f7' : undefined, borderRadius: 4 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={o.image_url} alt={o.label} style={{ width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS[c.animation] : undefined, pointerEvents: 'none' }} draggable={false} />
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            {/* Controls */}
+            <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+              <div className="flex flex-wrap gap-2">
+                {overlays.map(o => (
+                  <button key={o.id} onClick={() => setSelected(o.id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border-2 transition-colors ${selected === o.id ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={o.image_url} alt={o.label} className="w-5 h-5 object-contain" />{o.label}
+                  </button>
+                ))}
+              </div>
+              {sel && cfg && (
+                <div className="space-y-3 border border-gray-100 rounded-xl p-3">
+                  <p className="text-sm font-bold text-gray-800 capitalize">{sel.label}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">X ({Math.round(cfg.x)}%)</label>
+                      <input type="range" min={0} max={100} step={1} value={cfg.x} onChange={e => upd(sel.id, { x: Number(e.target.value) })} className="w-full accent-purple-600" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Y ({Math.round(cfg.y)}%)</label>
+                      <input type="range" min={0} max={100} step={1} value={cfg.y} onChange={e => upd(sel.id, { y: Number(e.target.value) })} className="w-full accent-purple-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Scale ({cfg.scale.toFixed(1)}×)</label>
+                    <input type="range" min={0.3} max={2.0} step={0.1} value={cfg.scale} onChange={e => upd(sel.id, { scale: Number(e.target.value) })} className="w-full accent-purple-600" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-2">Animation</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {OV_ANIMS.map(opt => (
+                        <button key={opt.value} onClick={() => upd(sel.id, { animation: opt.value })}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border-2 transition-colors ${cfg.animation === opt.value ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}>
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <button disabled={saving} onClick={() => onSave(sel, configs[sel.id] ?? DEFAULT_OV)}
+                    className="w-full py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-bold rounded-xl text-sm">
+                    {saving ? '⏳ Saving…' : `💾 Save "${sel.label}"`}
+                  </button>
+                </div>
+              )}
+              {overlays.length > 1 && (
+                <button disabled={saving} onClick={async () => { for (const o of overlays) await onSave(o, configs[o.id] ?? DEFAULT_OV) }}
+                  className="w-full py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-semibold rounded-xl text-sm">
+                  {saving ? '⏳ Saving…' : `💾 Save All ${overlays.length} Objects`}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
