@@ -355,6 +355,34 @@ export default function BookSkinsAdminPage() {
     await loadSkins()
   }
 
+  // ── Overlay editor ─────────────────────────────────────────────────────────
+  const [overlayEditorSkin, setOverlayEditorSkin] = useState<BookSkin | null>(null)
+  const [overlays, setOverlays] = useState<OverlayObject[]>([])
+  const [overlayLoading, setOverlayLoading] = useState(false)
+  const [overlaySaving, setOverlaySaving] = useState(false)
+
+  async function openOverlayEditor(skin: BookSkin) {
+    setOverlayEditorSkin(skin)
+    setOverlayLoading(true)
+    const { data } = await supabase
+      .from('book_skin_overlays')
+      .select('*')
+      .eq('skin_id', skin.id)
+      .order('sort_order', { ascending: true })
+    setOverlays((data ?? []) as OverlayObject[])
+    setOverlayLoading(false)
+  }
+
+  async function saveOverlayConfig(overlay: OverlayObject, config: OverlayConfig) {
+    setOverlaySaving(true)
+    await supabase
+      .from('book_skin_overlays')
+      .update({ overlay_config: config })
+      .eq('id', overlay.id)
+    setOverlays(prev => prev.map(o => o.id === overlay.id ? { ...o, overlay_config: config } : o))
+    setOverlaySaving(false)
+  }
+
   // ── Sell in shop ───────────────────────────────────────────────────────────
   const [sellingSkin, setSellingSkin] = useState<BookSkin | null>(null)
   const [sellPrice, setSellPrice] = useState('')
@@ -733,6 +761,7 @@ export default function BookSkinsAdminPage() {
               onSellInShop={(skin) => { setSellingSkin(skin); setSellPrice('') }}
               onRemoveFromShop={handleRemoveFromShop}
               onDelete={deleteSkin}
+              onEditOverlays={(skin) => openOverlayEditor(skin)}
               previewW={160}
               previewH={248}
             />
@@ -814,6 +843,18 @@ export default function BookSkinsAdminPage() {
           </div>
         </div>
       )}
+
+      {/* ── Overlay Editor Modal ── */}
+      {overlayEditorSkin && (
+        <OverlayEditorModal
+          skin={overlayEditorSkin}
+          overlays={overlays}
+          loading={overlayLoading}
+          saving={overlaySaving}
+          onSave={saveOverlayConfig}
+          onClose={() => setOverlayEditorSkin(null)}
+        />
+      )}
     </div>
   )
 }
@@ -831,6 +872,7 @@ function SkinGrid({
   onSellInShop,
   onRemoveFromShop,
   onDelete,
+  onEditOverlays,
   previewW,
   previewH,
 }: {
@@ -843,6 +885,7 @@ function SkinGrid({
   onSellInShop: (s: BookSkin) => void
   onRemoveFromShop: (s: BookSkin) => void
   onDelete: (s: BookSkin) => void
+  onEditOverlays?: (s: BookSkin) => void
   previewW: number
   previewH: number
 }) {
@@ -1012,6 +1055,15 @@ function SkinGrid({
                     >
                       Delete
                     </button>
+                    {/* Overlay animation editor — cover skins with has_overlays */}
+                    {skin.skin_type === 'cover' && (skin as any).has_overlays && onEditOverlays && (
+                      <button
+                        onClick={() => onEditOverlays(skin)}
+                        className="text-xs px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors w-full"
+                      >
+                        ✨ Animate Overlays
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1020,5 +1072,308 @@ function SkinGrid({
         )}
       </Card.Body>
     </Card>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Overlay animation types
+// ─────────────────────────────────────────────────────────────────────────────
+type OverlayAnimation = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce'
+
+interface OverlayConfig {
+  x: number           // % of cover width, 0–100
+  y: number           // % of cover height, 0–100
+  scale: number       // 0.3–2.0
+  animation: OverlayAnimation
+}
+
+interface OverlayObject {
+  id: string
+  skin_id: string
+  label: string
+  image_url: string
+  sort_order: number
+  overlay_config: OverlayConfig | null
+}
+
+const DEFAULT_OVERLAY_CONFIG: OverlayConfig = { x: 15, y: 15, scale: 1.0, animation: 'float' }
+
+const ANIMATION_OPTIONS: { value: OverlayAnimation; label: string; description: string }[] = [
+  { value: 'none',    label: '⏸ None',    description: 'Static — no movement' },
+  { value: 'float',   label: '🌊 Float',   description: 'Gentle up-down bobbing' },
+  { value: 'pulse',   label: '💗 Pulse',   description: 'Slow scale in/out breathing' },
+  { value: 'rotate',  label: '🔄 Rotate',  description: 'Continuous slow rotation' },
+  { value: 'shimmer', label: '✨ Shimmer', description: 'Opacity glow fade in/out' },
+  { value: 'bounce',  label: '🏀 Bounce',  description: 'Playful spring bounce' },
+]
+
+const OVERLAY_KEYFRAMES = `
+@keyframes ov-float   { 0%,100%{transform:translateY(0)}    50%{transform:translateY(-8px)} }
+@keyframes ov-pulse   { 0%,100%{transform:scale(1)}         50%{transform:scale(1.12)} }
+@keyframes ov-rotate  { from{transform:rotate(0deg)}        to{transform:rotate(360deg)} }
+@keyframes ov-shimmer { 0%,100%{opacity:1}                  50%{opacity:0.45} }
+@keyframes ov-bounce  { 0%,100%{transform:translateY(0)}    40%{transform:translateY(-14px)} 60%{transform:translateY(-6px)} }
+`
+
+const ANIMATION_CSS: Record<OverlayAnimation, string> = {
+  none:    '',
+  float:   'ov-float 3s ease-in-out infinite',
+  pulse:   'ov-pulse 2.5s ease-in-out infinite',
+  rotate:  'ov-rotate 8s linear infinite',
+  shimmer: 'ov-shimmer 2s ease-in-out infinite',
+  bounce:  'ov-bounce 1.8s ease-in-out infinite',
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OverlayEditorModal
+// ─────────────────────────────────────────────────────────────────────────────
+export function OverlayEditorModal({
+  skin,
+  overlays,
+  loading,
+  saving,
+  onSave,
+  onClose,
+}: {
+  skin: BookSkin
+  overlays: OverlayObject[]
+  loading: boolean
+  saving: boolean
+  onSave: (overlay: OverlayObject, config: OverlayConfig) => void
+  onClose: () => void
+}) {
+  const [selected, setSelected] = useState<string | null>(overlays[0]?.id ?? null)
+  const [configs, setConfigs] = useState<Record<string, OverlayConfig>>(() => {
+    const init: Record<string, OverlayConfig> = {}
+    for (const o of overlays) init[o.id] = o.overlay_config ?? { ...DEFAULT_OVERLAY_CONFIG }
+    return init
+  })
+  const previewRef = useRef<HTMLDivElement>(null)
+  const dragging = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null)
+
+  const selectedOverlay = overlays.find(o => o.id === selected)
+  const cfg = selected ? (configs[selected] ?? DEFAULT_OVERLAY_CONFIG) : null
+
+  function updateCfg(id: string, patch: Partial<OverlayConfig>) {
+    setConfigs(prev => ({ ...prev, [id]: { ...(prev[id] ?? DEFAULT_OVERLAY_CONFIG), ...patch } }))
+  }
+
+  function handlePreviewMouseDown(e: React.MouseEvent, id: string) {
+    e.preventDefault()
+    const rect = previewRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const c = configs[id] ?? DEFAULT_OVERLAY_CONFIG
+    dragging.current = { id, startX: e.clientX, startY: e.clientY, origX: c.x, origY: c.y }
+    setSelected(id)
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging.current || !previewRef.current) return
+      const r = previewRef.current.getBoundingClientRect()
+      const dx = ((ev.clientX - dragging.current.startX) / r.width) * 100
+      const dy = ((ev.clientY - dragging.current.startY) / r.height) * 100
+      updateCfg(id, {
+        x: Math.max(0, Math.min(100, dragging.current.origX + dx)),
+        y: Math.max(0, Math.min(100, dragging.current.origY + dy)),
+      })
+    }
+    const onUp = () => {
+      dragging.current = null
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  function handlePreviewTouchStart(e: React.TouchEvent, id: string) {
+    const rect = previewRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const touch = e.touches[0]
+    const c = configs[id] ?? DEFAULT_OVERLAY_CONFIG
+    dragging.current = { id, startX: touch.clientX, startY: touch.clientY, origX: c.x, origY: c.y }
+    setSelected(id)
+    const onMove = (ev: TouchEvent) => {
+      ev.preventDefault()
+      if (!dragging.current || !previewRef.current) return
+      const r = previewRef.current.getBoundingClientRect()
+      const t = ev.touches[0]
+      const dx = ((t.clientX - dragging.current.startX) / r.width) * 100
+      const dy = ((t.clientY - dragging.current.startY) / r.height) * 100
+      updateCfg(id, {
+        x: Math.max(0, Math.min(100, dragging.current.origX + dx)),
+        y: Math.max(0, Math.min(100, dragging.current.origY + dy)),
+      })
+    }
+    const onEnd = () => {
+      dragging.current = null
+      window.removeEventListener('touchmove', onMove)
+      window.removeEventListener('touchend', onEnd)
+    }
+    window.addEventListener('touchmove', onMove, { passive: false })
+    window.addEventListener('touchend', onEnd)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" onClick={onClose}>
+      <style>{OVERLAY_KEYFRAMES}</style>
+      <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+          <div>
+            <div className="font-bold text-gray-900">✨ Animate Overlays — {skin.name}</div>
+            <div className="text-xs text-gray-400 mt-0.5">Drag objects on the preview to position · pick animation · save</div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
+        </div>
+
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center text-gray-400 py-16">Loading overlays…</div>
+        ) : overlays.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center text-gray-400 py-16 px-6 text-center">
+            <div>
+              <div className="text-4xl mb-3">😶</div>
+              <p className="text-sm">No overlay objects found for this skin.</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Overlay objects are created when saving an AI-generated cover with &quot;Extract corner objects&quot; enabled.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+            {/* Left — cover preview with draggable overlays */}
+            <div className="md:w-[280px] shrink-0 p-4 flex flex-col items-center gap-3 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-200">
+              <p className="text-xs font-semibold text-gray-500 self-start">Drag to position</p>
+              <div
+                ref={previewRef}
+                className="relative rounded-xl overflow-hidden border-2 border-amber-200 shadow"
+                style={{ width: 200, height: 310, userSelect: 'none' }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={skin.image_url} alt={skin.name} className="w-full h-full object-cover" draggable={false} />
+                {overlays.map(o => {
+                  const c = configs[o.id] ?? DEFAULT_OVERLAY_CONFIG
+                  const isSelected = selected === o.id
+                  const OVERLAY_SIZE = Math.round(60 * c.scale)
+                  return (
+                    <div
+                      key={o.id}
+                      onMouseDown={e => handlePreviewMouseDown(e, o.id)}
+                      onTouchStart={e => handlePreviewTouchStart(e, o.id)}
+                      style={{
+                        position: 'absolute',
+                        left: `${c.x}%`,
+                        top: `${c.y}%`,
+                        transform: 'translate(-50%, -50%)',
+                        width: OVERLAY_SIZE,
+                        height: OVERLAY_SIZE,
+                        cursor: 'grab',
+                        zIndex: isSelected ? 10 : 5,
+                        outline: isSelected ? '2px solid #a855f7' : undefined,
+                        borderRadius: 4,
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={o.image_url}
+                        alt={o.label}
+                        style={{
+                          width: '100%', height: '100%',
+                          objectFit: 'contain',
+                          animation: c.animation !== 'none' ? ANIMATION_CSS[c.animation] : undefined,
+                          pointerEvents: 'none',
+                        }}
+                        draggable={false}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-[10px] text-gray-400 text-center">Purple outline = selected object</p>
+            </div>
+
+            {/* Right — controls */}
+            <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+              {/* Object picker */}
+              <div>
+                <p className="text-xs font-semibold text-gray-600 mb-2">Objects ({overlays.length})</p>
+                <div className="flex flex-wrap gap-2">
+                  {overlays.map(o => (
+                    <button key={o.id} onClick={() => setSelected(o.id)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border-2 transition-colors ${
+                        selected === o.id ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                      }`}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={o.image_url} alt={o.label} className="w-6 h-6 object-contain" />
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {selectedOverlay && cfg && (
+                <div className="space-y-4 border border-gray-100 rounded-xl p-4">
+                  <p className="text-sm font-bold text-gray-800 capitalize">{selectedOverlay.label}</p>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">X <span className="font-normal text-gray-400">({Math.round(cfg.x)}%)</span></label>
+                      <input type="range" min={0} max={100} step={1} value={cfg.x}
+                        onChange={e => updateCfg(selectedOverlay.id, { x: Number(e.target.value) })}
+                        className="w-full accent-purple-600" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Y <span className="font-normal text-gray-400">({Math.round(cfg.y)}%)</span></label>
+                      <input type="range" min={0} max={100} step={1} value={cfg.y}
+                        onChange={e => updateCfg(selectedOverlay.id, { y: Number(e.target.value) })}
+                        className="w-full accent-purple-600" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Scale <span className="font-normal text-gray-400">({cfg.scale.toFixed(1)}×)</span></label>
+                    <input type="range" min={0.3} max={2.0} step={0.1} value={cfg.scale}
+                      onChange={e => updateCfg(selectedOverlay.id, { scale: Number(e.target.value) })}
+                      className="w-full accent-purple-600" />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-2">Animation</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {ANIMATION_OPTIONS.map(opt => (
+                        <button key={opt.value} onClick={() => updateCfg(selectedOverlay.id, { animation: opt.value })}
+                          className={`px-2 py-2 rounded-xl text-xs font-semibold border-2 text-left transition-colors ${
+                            cfg.animation === opt.value ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                          }`}>
+                          <div>{opt.label}</div>
+                          <div className="text-[10px] font-normal text-gray-400 mt-0.5">{opt.description}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    disabled={saving}
+                    onClick={() => onSave(selectedOverlay, configs[selectedOverlay.id] ?? DEFAULT_OVERLAY_CONFIG)}
+                    className="w-full py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-bold rounded-xl text-sm"
+                  >
+                    {saving ? '⏳ Saving…' : `💾 Save "${selectedOverlay.label}"`}
+                  </button>
+                </div>
+              )}
+
+              {overlays.length > 1 && (
+                <button
+                  disabled={saving}
+                  onClick={async () => {
+                    for (const o of overlays) await onSave(o, configs[o.id] ?? DEFAULT_OVERLAY_CONFIG)
+                  }}
+                  className="w-full py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-semibold rounded-xl text-sm"
+                >
+                  {saving ? '⏳ Saving…' : `💾 Save All ${overlays.length} Objects`}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

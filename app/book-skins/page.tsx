@@ -649,6 +649,14 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   const [genCoverLayout, setGenCoverLayout] = useState<CoverLayout>(DEFAULT_LAYOUT)
   const [showGenLayoutEditor, setShowGenLayoutEditor] = useState(false)
 
+  // ── Overlay extraction state ───────────────────────────────────────────────
+  const [extractEnabled, setExtractEnabled] = useState(false)
+  const [identifying, setIdentifying] = useState(false)
+  const [identifiedObjects, setIdentifiedObjects] = useState<string[] | null>(null)
+  const [selectedExtractObjects, setSelectedExtractObjects] = useState<Set<string>>(new Set())
+  const [extracting, setExtracting] = useState(false)
+  const [extractError, setExtractError] = useState<string | null>(null)
+
   async function handleGenerate() {
     if (!genPrompt.trim()) { setGenError('Enter a description.'); return }
     setGenError(null); setGenerating(true)
@@ -663,6 +671,29 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       setRefinePrompt('')
     } catch (err: any) { setGenError(err.message) }
     finally { setGenerating(false) }
+  }
+
+  async function handleIdentifyObjects() {
+    if (!sandbox) return
+    setIdentifying(true)
+    setExtractError(null)
+    try {
+      const res = await fetch('/api/identify-cover-objects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: sandbox.imageUrl, coverPrompt: genPrompt }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
+      const objs: string[] = data.objects ?? []
+      setIdentifiedObjects(objs)
+      // Pre-select all by default
+      setSelectedExtractObjects(new Set(objs))
+    } catch (err: any) {
+      setExtractError(err.message)
+    } finally {
+      setIdentifying(false)
+    }
   }
 
   async function handleRefine() {
@@ -815,19 +846,51 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       const { error: uploadErr } = await supabase.storage.from('book-skins').upload(fileName, paddedBlob, { contentType: 'image/png', upsert: false })
       if (uploadErr) throw new Error('Upload failed: ' + uploadErr.message)
       const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(fileName)
-      const { error: insertErr } = await supabase.from('book_skins').insert({
+      const { data: newSkin, error: insertErr } = await supabase.from('book_skins').insert({
         name: genSaveName.trim(), description: genSaveDesc.trim() || null,
         skin_type: 'cover', image_url: publicUrl,
         width: FINAL_W, height: FINAL_H,
         created_by: user.id, visibility: genSaveVisibility,
         cover_layout: genCoverLayout,
-      })
+      }).select('id').single()
       if (insertErr) throw new Error(insertErr.message)
       setGenSaveOpen(false); setGenSaveName(''); setGenSaveDesc('')
       setSandbox(null); setGenPrompt(''); setRefinePrompt('')
       setGenCoverLayout(DEFAULT_LAYOUT); setShowGenLayoutEditor(false)
       setUploadSuccess('✅ Book cover saved!')
       onSaved?.()
+
+      // If extraction is enabled and objects are selected, run extraction now
+      if (extractEnabled && identifiedObjects && selectedExtractObjects.size > 0 && newSkin?.id) {
+        setExtracting(true)
+        setExtractError(null)
+        try {
+          const extractRes = await fetch('/api/extract-cover-objects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              skinId: newSkin.id,
+              coverImageUrl: publicUrl,
+              coverPrompt: genPrompt,
+              selectedObjects: Array.from(selectedExtractObjects),
+            }),
+          })
+          const extractData = await extractRes.json()
+          if (!extractRes.ok) throw new Error(extractData.error || 'Extraction failed')
+          const count = extractData.overlays?.length ?? 0
+          setUploadSuccess(`✅ Book cover saved with ${count} animated overlay${count !== 1 ? 's' : ''}!`)
+          onSaved?.()
+        } catch (err: any) {
+          setExtractError(`Cover saved, but extraction failed: ${err.message}`)
+        } finally {
+          setExtracting(false)
+        }
+      }
+
+      // Reset extract state
+      setExtractEnabled(false)
+      setIdentifiedObjects(null)
+      setSelectedExtractObjects(new Set())
     } catch (err: any) { setGenSaveError(err.message) }
     finally { setGenSaving(false) }
   }
@@ -1296,11 +1359,68 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                             ))}
                           </div>
                         </div>
+
+                        {/* ── Extract overlay objects ─────────────────────── */}
+                        <div className="border-t border-amber-100 pt-3">
+                          <label className="flex items-center gap-2 cursor-pointer mb-2">
+                            <input type="checkbox" checked={extractEnabled}
+                              onChange={e => {
+                                setExtractEnabled(e.target.checked)
+                                if (!e.target.checked) { setIdentifiedObjects(null); setSelectedExtractObjects(new Set()) }
+                              }}
+                              className="w-4 h-4 accent-amber-600" />
+                            <span className="text-xs font-semibold text-amber-800">✂️ Extract corner objects as animated overlays</span>
+                          </label>
+                          {extractEnabled && (
+                            <div className="space-y-2">
+                              <p className="text-[11px] text-gray-500">
+                                Identifies individual objects in the corner clusters, extracts each as a separate transparent PNG, and saves the cover with those objects removed. Animate them later in the collection editor.
+                              </p>
+                              {!identifiedObjects ? (
+                                <button onClick={handleIdentifyObjects} disabled={identifying}
+                                  className="w-full py-2 bg-amber-100 hover:bg-amber-200 disabled:bg-amber-50 text-amber-800 font-semibold rounded-xl text-xs border border-amber-300">
+                                  {identifying ? '🔍 Identifying objects…' : '🔍 Identify objects in cover'}
+                                </button>
+                              ) : (
+                                <div className="space-y-2">
+                                  <p className="text-[11px] font-semibold text-amber-700">Select objects to extract ({selectedExtractObjects.size} selected):</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {identifiedObjects.map(obj => {
+                                      const selected = selectedExtractObjects.has(obj)
+                                      return (
+                                        <button key={obj} onClick={() => {
+                                          const next = new Set(selectedExtractObjects)
+                                          if (selected) next.delete(obj); else next.add(obj)
+                                          setSelectedExtractObjects(next)
+                                        }}
+                                          className={`px-2 py-1 rounded-lg text-xs font-semibold border transition-colors ${selected ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600 border-gray-200 hover:border-amber-400'}`}>
+                                          {selected ? '✓ ' : ''}{obj}
+                                        </button>
+                                      )
+                                    })}
+                                  </div>
+                                  <button onClick={handleIdentifyObjects} disabled={identifying}
+                                    className="text-[10px] text-amber-600 hover:underline">
+                                    {identifying ? '🔍 Re-identifying…' : '↺ Re-identify'}
+                                  </button>
+                                </div>
+                              )}
+                              {extractError && <p className="text-[11px] text-red-600">{extractError}</p>}
+                              {extracting && (
+                                <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2">
+                                  <span className="animate-spin inline-block">⏳</span>
+                                  Extracting {selectedExtractObjects.size} object{selectedExtractObjects.size !== 1 ? 's' : ''} + stripped cover in parallel… ~30s
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
                         <div className="flex gap-2">
                           <button onClick={() => setGenSaveOpen(false)} className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm">Cancel</button>
-                          <button onClick={handleGenSave} disabled={genSaving || !genSaveName.trim()}
+                          <button onClick={handleGenSave} disabled={genSaving || extracting || !genSaveName.trim()}
                             className="flex-1 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-bold rounded-xl text-sm">
-                            {genSaving ? '⏳ Saving…' : '💾 Save'}
+                            {genSaving ? '⏳ Saving…' : extracting ? '⏳ Extracting…' : '💾 Save'}
                           </button>
                         </div>
                       </div>
