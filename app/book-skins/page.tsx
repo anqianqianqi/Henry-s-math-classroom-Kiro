@@ -734,6 +734,8 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     } catch (err: any) { setGenError(err.message) }
     finally { setGenerating(false) }
   }
+
+  async function handleGenerateThemeObjects() {
     if (!sandbox) return
     setExtracting(true)
     setExtractError(null)

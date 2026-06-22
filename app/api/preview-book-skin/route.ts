@@ -56,8 +56,6 @@ TRANSPARENT BACKGROUND: Everything outside the book shape (except the drop shado
 NO text, letters, numbers, or glyphs anywhere in the image.
 `.trim()
 
-DEPTH: Give it physical weight through: edge darkening/vignette on the cover surface itself, embossed border ornaments, realistic material texture.
-
 async function callGenerations(apiKey: string, prompt: string): Promise<string> {
   const res = await fetch('https://api.openai.com/v1/images/generations', {
     method: 'POST',
