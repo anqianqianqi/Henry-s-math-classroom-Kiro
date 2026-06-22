@@ -27,7 +27,11 @@ COVER SURFACE: Rich thematic texture — deeply embossed near the edges, smoothe
 
 CORNERS: Keep all four corners of the cover CLEAN and EMPTY — just the book surface texture and the border frame, no objects, no decorations, no clusters. The corners must be plain cover surface ready for animated overlay objects to be composited on top later.
 
-CENTER ZONE: Keep the central area (roughly middle 60% width, middle 50% height) plain — just background texture — clear space for title and text overlay.
+CENTER ZONE — CRITICAL: The central rectangle (middle 60% width × middle 50% height) must be a PLAIN, FLAT, UNIFORM SURFACE. This means:
+- NO scenic illustrations, NO landscapes, NO forests, NO scenes, NO characters, NO objects
+- ONLY the bare book cover material (leather, cloth, or embossed texture) — flat and uniform
+- Subtle embossed texture pattern is acceptable but NO representational imagery of any kind
+- This area will hold the book title — it must read as a blank canvas
 
 DEPTH: Give it physical weight through: edge darkening/vignette on the cover surface itself, embossed border ornaments, realistic material texture.
 
@@ -47,7 +51,11 @@ COVER SURFACE: Rich thematic texture — deeply embossed near the edges, smoothe
 
 CORNER DECORATION: Each corner has a dense cluster of 2–4 closely grouped 3D objects forming a small vignette. Objects sit ON the cover surface, casting soft shadows on it. The clusters extend to the very corner edges of the cover.
 
-CENTER ZONE: Keep the central area (roughly middle 60% width, middle 50% height) plain — just background texture — clear space for title and text overlay.
+CENTER ZONE — CRITICAL: The central rectangle (middle 60% width × middle 50% height) must be a PLAIN, FLAT, UNIFORM SURFACE. This means:
+- NO scenic illustrations, NO landscapes, NO forests, NO scenes, NO characters, NO objects
+- ONLY the bare book cover material (leather, cloth, or embossed texture) — flat and uniform
+- Subtle embossed texture or faint thematic pattern is acceptable but NO representational imagery of any kind
+- This area will hold the book title — it must read as a blank canvas
 
 DEPTH: Give it physical weight through: edge darkening/vignette on the cover surface itself, embossed border ornaments, realistic material texture.
 
