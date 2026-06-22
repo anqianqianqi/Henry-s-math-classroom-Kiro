@@ -741,6 +741,8 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       setExtracting(false)
     }
   }
+
+  async function handleGenerate() {
     if (!genPrompt.trim()) { setGenError('Enter a description.'); return }
     setGenError(null); setGenerating(true)
     try {
