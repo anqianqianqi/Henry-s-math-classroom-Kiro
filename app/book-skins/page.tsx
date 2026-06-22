@@ -1377,7 +1377,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                       </button>
                       <button onClick={handleGenerateWithObjects} disabled={generating || !genPrompt.trim()}
                         className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-semibold rounded-xl text-sm transition-colors text-center leading-tight">
-                        {generating && cleanCorners ? '⏳ Generating…' : <>✨ Generate Cover<br /><span className="text-[10px] font-normal opacity-90">+ Separate Objects</span></>}
+                        {generating && cleanCorners ? '⏳ Generating…' : '✨ Generate + Objects'}
                       </button>
                     </div>
                 ) : (
