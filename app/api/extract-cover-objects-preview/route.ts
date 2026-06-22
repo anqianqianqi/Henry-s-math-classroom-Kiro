@@ -21,7 +21,7 @@ async function editImage(apiKey: string, imageUrl: string, prompt: string): Prom
   if (!imgRes.ok) throw new Error(`Could not fetch image: ${imgRes.status}`)
   const imgBlob = new Blob([await imgRes.arrayBuffer()], { type: 'image/png' })
   const form = new FormData()
-  form.append('model', 'gpt-image-1')
+  form.append('model', 'gpt-image-2')
   form.append('image', imgBlob, 'cover.png')
   form.append('prompt', prompt)
   form.append('n', '1')

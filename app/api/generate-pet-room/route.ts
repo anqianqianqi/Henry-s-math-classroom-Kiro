@@ -1,6 +1,6 @@
 // app/api/generate-pet-room/route.ts
 //
-// Generates a pet room background image using GPT Image 2 (gpt-image-1),
+// Generates a pet room background image using GPT Image 2 (gpt-image-2),
 // uploads the result to Supabase storage, and inserts a row in
 // pet_room_backgrounds so it immediately appears in the pet room picker.
 //
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-image-1',
+        model: 'gpt-image-2',
         prompt: fullPrompt,
         n: 1,
         size: '1536x1024',       // landscape — matches pet area aspect ratio

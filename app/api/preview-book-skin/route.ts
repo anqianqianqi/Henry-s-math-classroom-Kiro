@@ -1,6 +1,6 @@
 // app/api/preview-book-skin/route.ts
 //
-// Generates a preview book cover image using gpt-image-1.
+// Generates a preview book cover image using gpt-image-2.
 // Does NOT insert into DB — caller displays the image then saves with a name.
 //
 // POST body:
@@ -61,7 +61,7 @@ async function callGenerations(apiKey: string, prompt: string): Promise<string> 
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'gpt-image-1',
+      model: 'gpt-image-2',
       prompt,
       n: 1,
       size: '1024x1536',   // portrait — fills canvas naturally, no side padding
@@ -81,7 +81,7 @@ async function callEdit(apiKey: string, imageUrl: string, editPrompt: string): P
   if (!imgRes.ok) throw new Error('Could not fetch source image')
   const imgBlob = new Blob([await imgRes.arrayBuffer()], { type: 'image/png' })
   const form = new FormData()
-  form.append('model', 'gpt-image-1')
+  form.append('model', 'gpt-image-2')
   form.append('image', imgBlob, 'cover.png')
   form.append('prompt', editPrompt)
   form.append('n', '1')

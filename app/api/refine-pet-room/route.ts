@@ -80,10 +80,10 @@ export async function POST(request: Request) {
     const editPrompt = `${changePrompt.trim()}\n\nAdditional constraints to preserve:\n${PET_AREA_CONTEXT}`
 
     // ── Call images.edit via multipart/form-data ─────────────────────────────
-    // GPT Image 2 (gpt-image-1) supports images.edit without a mask —
+    // GPT Image 2 (gpt-image-2) supports images.edit without a mask —
     // it uses the image as full context and applies the instruction globally.
     const formData = new FormData()
-    formData.append('model', 'gpt-image-1')
+    formData.append('model', 'gpt-image-2')
     formData.append('image', imgBlob, 'source.png')
     formData.append('prompt', editPrompt)
     formData.append('n', '1')

@@ -110,7 +110,7 @@ CRITICAL RENDERING REQUIREMENTS:
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'gpt-image-1',
+      model: 'gpt-image-2',
       prompt: fullPrompt,
       n: 1,
       size: '1024x1024',
