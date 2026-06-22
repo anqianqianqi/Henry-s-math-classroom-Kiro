@@ -700,17 +700,53 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   const [genSaveError, setGenSaveError] = useState<string | null>(null)
   const [genCoverLayout, setGenCoverLayout] = useState<CoverLayout>(DEFAULT_LAYOUT)
   const [showGenLayoutEditor, setShowGenLayoutEditor] = useState(false)
-  const [cleanCorners, setCleanCorners] = useState(false)  // false = corner clusters (default), true = clean for overlays
+  const [cleanCorners, setCleanCorners] = useState(false)
 
-  // ── Overlay extraction / object generation state ─────────────────────────
+  // ── Overlay extraction state ───────────────────────────────────────────────
+  const [extractEnabled, setExtractEnabled] = useState(false)
+  const [identifying, setIdentifying] = useState(false)
+  const [identifiedObjects, setIdentifiedObjects] = useState<string[] | null>(null)
+  const [selectedExtractObjects, setSelectedExtractObjects] = useState<Set<string>>(new Set())
   const [extracting, setExtracting] = useState(false)
   const [extractError, setExtractError] = useState<string | null>(null)
+
+  async function handleExtractObjects() {
+    if (!sandbox || !identifiedObjects || selectedExtractObjects.size === 0) return
+    setExtracting(true)
+    setExtractError(null)
+    try {
+      // Upload a temporary placeholder skin to get an ID for the extraction API
+      // We use a special "preview" mode — the API returns results without saving to DB
+      const res = await fetch('/api/extract-cover-objects-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coverImageUrl: sandbox.imageUrl,
+          coverPrompt: genPrompt,
+          selectedObjects: Array.from(selectedExtractObjects),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
+      // Update sandbox: show stripped cover + extracted object thumbnails
+      setSandbox(prev => prev ? {
+        ...prev,
+        imageUrl: data.stripped_url,
+        originalUrl: prev.originalUrl ?? prev.imageUrl,
+        extractedObjects: data.objects ?? [],
+        iteration: prev.iteration + 1,
+      } : prev)
+    } catch (err: any) {
+      setExtractError(err.message)
+    } finally {
+      setExtracting(false)
+    }
+  }
 
   async function handleGenerateWithObjects() {
     if (!genPrompt.trim()) { setGenError('Enter a description.'); return }
     setGenError(null); setGenerating(true); setCleanCorners(true)
     try {
-      // Fire cover + 4 corner clusters in parallel
       const [coverRes, objectsRes] = await Promise.all([
         fetch('/api/preview-book-skin', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -724,39 +760,10 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       const coverData = await coverRes.json()
       const objectsData = await objectsRes.json()
       if (!coverRes.ok) throw new Error(coverData.error || `Cover error ${coverRes.status}`)
-      setSandbox({
-        imageUrl: coverData.image_url,
-        prompt: coverData.prompt,
-        iteration: 1,
-        extractedObjects: objectsData.objects ?? [],
-      })
+      setSandbox({ imageUrl: coverData.image_url, prompt: coverData.prompt, iteration: 1, extractedObjects: objectsData.objects ?? [] })
       setRefinePrompt('')
     } catch (err: any) { setGenError(err.message) }
     finally { setGenerating(false) }
-  }
-
-  async function handleGenerateThemeObjects() {
-    if (!sandbox) return
-    setExtracting(true)
-    setExtractError(null)
-    try {
-      const res = await fetch('/api/generate-theme-objects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coverPrompt: genPrompt }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
-      setSandbox(prev => prev ? {
-        ...prev,
-        extractedObjects: data.objects ?? [],
-        iteration: prev.iteration + 1,
-      } : prev)
-    } catch (err: any) {
-      setExtractError(err.message)
-    } finally {
-      setExtracting(false)
-    }
   }
 
   async function handleGenerate() {
@@ -765,7 +772,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     try {
       const res = await fetch('/api/preview-book-skin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: genPrompt.trim(), cleanCorners }),
+        body: JSON.stringify({ prompt: genPrompt.trim() }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
@@ -804,7 +811,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     try {
       const res = await fetch('/api/preview-book-skin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: sandbox.prompt, sourceImageUrl: sandbox.imageUrl, changePrompt: refinePrompt.trim(), cleanCorners }),
+        body: JSON.stringify({ prompt: sandbox.prompt, sourceImageUrl: sandbox.imageUrl, changePrompt: refinePrompt.trim() }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
@@ -959,6 +966,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       setGenSaveOpen(false); setGenSaveName(''); setGenSaveDesc('')
       setSandbox(null); setGenPrompt(''); setRefinePrompt('')
       setGenCoverLayout(DEFAULT_LAYOUT); setShowGenLayoutEditor(false)
+      setIdentifiedObjects(null); setSelectedExtractObjects(new Set())
       setUploadSuccess('✅ Book cover saved!')
       onSaved?.()
 
@@ -1376,10 +1384,11 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                         {generating && !cleanCorners ? '⏳ Generating…' : '✨ Generate Cover'}
                       </button>
                       <button onClick={handleGenerateWithObjects} disabled={generating || !genPrompt.trim()}
-                        className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-semibold rounded-xl text-sm transition-colors text-center leading-tight">
+                        className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-semibold rounded-xl text-sm transition-colors">
                         {generating && cleanCorners ? '⏳ Generating…' : '✨ Generate + Objects'}
                       </button>
                     </div>
+                  </div>
                 ) : (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -1395,6 +1404,25 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                         <img src={sandbox.imageUrl} alt="Generated cover" className="w-full h-full object-cover" />
                       </div>
                     </div>
+
+                    {/* Extracted corner cluster objects preview */}
+                    {sandbox.extractedObjects && sandbox.extractedObjects.length > 0 && (
+                      <div className="border border-purple-200 rounded-xl p-3 bg-purple-50/40">
+                        <p className="text-xs font-semibold text-purple-700 mb-2">✨ {sandbox.extractedObjects.length} corner cluster{sandbox.extractedObjects.length !== 1 ? 's' : ''} — transparent PNGs</p>
+                        <div className="flex flex-wrap gap-2">
+                          {sandbox.extractedObjects.map((obj, idx) => (
+                            <div key={idx} className="flex flex-col items-center gap-1">
+                              <div className="w-14 h-14 rounded-lg border border-purple-200 overflow-hidden flex items-center justify-center"
+                                style={{ background: 'repeating-conic-gradient(#d1d5db 0% 25%, #fff 0% 50%) 0 0 / 12px 12px' }}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={obj.imageUrl} alt={obj.label} className="w-full h-full object-contain" />
+                              </div>
+                              <span className="text-[10px] text-purple-700 font-medium text-center max-w-[56px] truncate">{obj.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Layout editor toggle */}
                     <button
@@ -1429,54 +1457,86 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                       </div>
                     </div>
 
-                    {/* ── Generate standalone theme objects (only when cleanCorners is on) ── */}
-                    {cleanCorners && (
-                    <div className="space-y-2">
-                    <div className="border border-purple-200 rounded-xl p-3 bg-purple-50/40 space-y-2">
+                    {/* ── Extract corner objects (refine iteration step) ── */}
+                    <div className="border border-amber-200 rounded-xl p-3 bg-amber-50/50 space-y-2">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="text-xs font-semibold text-purple-800">✨ Generate Theme Objects</span>
+                        <span className="text-xs font-semibold text-amber-800">✂️ Extract Corner Objects</span>
                         <div className="flex items-center gap-2">
-                          {sandbox.extractedObjects && (
-                            <button onClick={() => setSandbox(prev => prev ? { ...prev, extractedObjects: undefined } : prev)}
-                              className="text-[10px] text-gray-400 hover:text-gray-600">✕ Clear</button>
+                          {identifiedObjects && (
+                            <button onClick={() => { setIdentifiedObjects(null); setSelectedExtractObjects(new Set()) }}
+                              className="text-[10px] text-gray-400 hover:text-gray-600">↺ Re-identify</button>
                           )}
-                          <button
-                            onClick={handleGenerateThemeObjects}
-                            disabled={extracting || generating}
-                            className="text-xs px-2.5 py-1 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-semibold rounded-lg transition-colors">
-                            {extracting ? '⏳ Generating…' : sandbox.extractedObjects ? '↺ Regenerate' : '✨ Generate'}
-                          </button>
+                          {!identifiedObjects ? (
+                            <button onClick={handleIdentifyObjects} disabled={identifying || generating}
+                              className="text-xs px-2.5 py-1 bg-amber-100 hover:bg-amber-200 disabled:bg-amber-50 text-amber-800 font-semibold rounded-lg border border-amber-300 transition-colors">
+                              {identifying ? '🔍 Identifying…' : '🔍 Identify'}
+                            </button>
+                          ) : (
+                            <button onClick={handleExtractObjects}
+                              disabled={extracting || generating || selectedExtractObjects.size === 0}
+                              className="text-xs px-2.5 py-1 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-semibold rounded-lg transition-colors">
+                              {extracting ? '⏳ Extracting…' : `✂️ Extract${selectedExtractObjects.size > 0 ? ` (${selectedExtractObjects.size})` : ''}`}
+                            </button>
+                          )}
                         </div>
                       </div>
-                      {!sandbox.extractedObjects ? (
+                      {!identifiedObjects && !sandbox.extractedObjects && (
                         <p className="text-[11px] text-gray-500">
-                          Generate standalone 3D objects that match the cover&apos;s theme and art style — purpose-built for animated overlays. Each object is on a transparent background.
+                          Identify the objects in the corner clusters, pick which to extract, then preview the stripped cover + each object as a transparent PNG.
                         </p>
-                      ) : (
-                        <div className="space-y-1">
-                          <p className="text-[11px] font-semibold text-purple-700">{sandbox.extractedObjects.length} objects generated — transparent PNGs ready for animation</p>
+                      )}
+                      {identifiedObjects && (
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-semibold text-amber-700">Select objects ({selectedExtractObjects.size}/{identifiedObjects.length}):</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {identifiedObjects.map(obj => {
+                              const selected = selectedExtractObjects.has(obj)
+                              return (
+                                <button key={obj} onClick={() => {
+                                  const next = new Set(selectedExtractObjects)
+                                  if (selected) next.delete(obj); else next.add(obj)
+                                  setSelectedExtractObjects(next)
+                                }}
+                                  className={`px-2 py-1 rounded-lg text-xs font-semibold border transition-colors ${selected ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600 border-gray-200 hover:border-amber-400'}`}>
+                                  {selected ? '✓ ' : ''}{obj}
+                                </button>
+                              )
+                            })}
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => setSelectedExtractObjects(new Set(identifiedObjects))} className="text-[10px] text-amber-600 hover:underline">Select all</button>
+                            <button onClick={() => setSelectedExtractObjects(new Set())} className="text-[10px] text-gray-400 hover:underline">Clear</button>
+                          </div>
                         </div>
                       )}
                       {extractError && <p className="text-[11px] text-red-600">{extractError}</p>}
                     </div>
 
-                    {/* ── Generated objects preview grid ── */}
+                    {/* ── Extracted objects preview grid ── */}
                     {sandbox.extractedObjects && sandbox.extractedObjects.length > 0 && (
-                      <div className="flex flex-wrap gap-2 p-2 bg-white border border-purple-100 rounded-xl">
-                        {sandbox.extractedObjects.map((obj, idx) => (
-                          <div key={idx} className="flex flex-col items-center gap-1">
-                            <div className="w-14 h-14 rounded-lg border border-purple-200 overflow-hidden flex items-center justify-center"
-                              style={{ background: 'repeating-conic-gradient(#d1d5db 0% 25%, #fff 0% 50%) 0 0 / 12px 12px' }}>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={obj.imageUrl} alt={obj.label} className="w-full h-full object-contain" />
+                      <div className="border border-purple-200 rounded-xl p-3 bg-purple-50/40 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold text-purple-700">✨ {sandbox.extractedObjects.length} extracted object{sandbox.extractedObjects.length !== 1 ? 's' : ''}</p>
+                          {sandbox.originalUrl && (
+                            <button onClick={() => setSandbox(prev => prev ? { ...prev, imageUrl: prev.originalUrl!, originalUrl: undefined, extractedObjects: undefined } : prev)}
+                              className="text-[10px] text-gray-400 hover:text-gray-600">↺ Revert cover</button>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {sandbox.extractedObjects.map((obj, idx) => (
+                            <div key={idx} className="flex flex-col items-center gap-1">
+                              <div className="w-14 h-14 rounded-lg border border-purple-200 overflow-hidden flex items-center justify-center"
+                                style={{ background: 'repeating-conic-gradient(#d1d5db 0% 25%, #fff 0% 50%) 0 0 / 12px 12px' }}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={obj.imageUrl} alt={obj.label} className="w-full h-full object-contain" />
+                              </div>
+                              <span className="text-[10px] text-purple-700 font-medium text-center max-w-[56px] truncate">{obj.label}</span>
                             </div>
-                            <span className="text-[10px] text-purple-700 font-medium text-center max-w-[56px] truncate">{obj.label}</span>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-gray-400">These will be saved as animated overlays alongside the stripped cover.</p>
                       </div>
                     )}
-                    </div>
-                    )} {/* end cleanCorners */}
 
                     {/* Save */}
                     {!genSaveOpen ? (
@@ -1511,17 +1571,17 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                           </div>
                         </div>
 
-                        {/* ── Generated objects summary ── */}
+                        {/* ── Extract overlay objects (summary from refine step) ── */}
                         <div className="border-t border-amber-100 pt-3">
-                          {sandbox.extractedObjects && sandbox.extractedObjects.length > 0 ? (
-                            <div className="flex items-center gap-2 text-xs text-purple-700 bg-purple-50 rounded-xl px-3 py-2 border border-purple-200">
-                              <span>✨</span>
-                              <span><strong>{sandbox.extractedObjects.length}</strong> theme object{sandbox.extractedObjects.length !== 1 ? 's' : ''} will be saved as animated overlays</span>
+                          {identifiedObjects && selectedExtractObjects.size > 0 ? (
+                            <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2 border border-amber-200">
+                              <span>✂️</span>
+                              <span><strong>{selectedExtractObjects.size}</strong> corner object{selectedExtractObjects.size !== 1 ? 's' : ''} will be extracted after saving</span>
                               {extracting && <span className="ml-auto animate-spin">⏳</span>}
                             </div>
                           ) : (
                             <p className="text-[11px] text-gray-400">
-                              Tip: use &quot;✨ Generate Theme Objects&quot; above to add animated overlay objects.
+                              Tip: use "✂️ Extract Corner Objects" above the save button to extract animated overlay objects.
                             </p>
                           )}
                           {extractError && <p className="text-[11px] text-red-600 mt-1">{extractError}</p>}
