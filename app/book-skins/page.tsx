@@ -813,16 +813,22 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     const cleanPrompt = genPrompt.trim().replace(/,?\s*corner clusters:\s*\[[\s\S]*$/i, '').trim()
     const fullPrompt = genPrompt.trim()
 
-    // Build corner annotation for the cover prompt so the AI knows which corners
-    // will receive animated overlays (keep bare) vs stay fully clean
+    // Build corner annotation for the cover prompt:
+    // - overlay corners: keep clean (objects will be composited as animated PNGs)
+    // - baked corners: describe the cluster objects to render onto the cover surface
     const CORNER_LABELS = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
     const clusterMatches = fullPrompt.match(/\[([^\]]+)\]/g) ?? []
     const cornerNotes = CORNER_LABELS.map((corner, i) => {
-      if (!enabledClusters[i]) return `${corner}: leave plain and empty (no overlay objects)`
       const clusterDesc = clusterMatches[i]?.replace(/^\[|\]$/g, '').trim() ?? ''
-      return `${corner}: will receive animated overlay objects (${clusterDesc || 'from cluster'}) — keep this corner bare cover surface`
+      if (enabledClusters[i]) {
+        // Overlay mode: keep corner clean — objects generated separately as animated PNGs
+        return `${corner}: KEEP CLEAN AND EMPTY — plain cover surface only, no objects drawn here (animated overlay objects will be composited later)`
+      } else {
+        // Baked mode: render cluster objects directly onto the cover surface
+        return `${corner}: render decorative objects baked into the cover surface (${clusterDesc})`
+      }
     }).join('; ')
-    const annotatedCleanPrompt = `${styledPrompt(cleanPrompt)}. Corner notes: [${cornerNotes}]`
+    const annotatedCleanPrompt = `${styledPrompt(cleanPrompt)}. Corner instructions: [${cornerNotes}]`
 
     try {
       // ── Step 1: Generate cover (~15s) ──────────────────────────────────
@@ -1634,35 +1640,38 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                         className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-semibold rounded-xl text-sm transition-colors">
                         {generating && !cleanCorners ? '⏳ Generating…' : '✨ Generate Cover'}
                       </button>
-                      <button onClick={handleGenerateWithObjects} disabled={generating || !genPrompt.trim() || !enabledClusters.some(Boolean)}
+                      <button onClick={handleGenerateWithObjects} disabled={generating || !genPrompt.trim()}
                         className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-semibold rounded-xl text-sm transition-colors">
                         {generating && cleanCorners ? '⏳ Generating cover…' : extracting ? '⏳ Generating objects…' : '✨ Generate + Objects'}
                       </button>
                     </div>
-                    {/* Corner cluster selection — shown below Generate + Objects */}
+                    {/* Corner cluster mode selection */}
                     <div className="border border-purple-200 rounded-xl p-2.5 bg-purple-50/40">
-                      <p className="text-[11px] font-semibold text-purple-700 mb-2">Generate objects for corners:</p>
-                      <div className="grid grid-cols-2 gap-1.5">
+                      <p className="text-[11px] font-semibold text-purple-700 mb-2">Per-corner cluster mode:</p>
+                      <div className="space-y-1.5">
                         {(['Top-left ↖', 'Top-right ↗', 'Bot-left ↙', 'Bot-right ↘'] as const).map((label, i) => (
-                          <label key={i} className="flex items-center gap-1.5 cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={enabledClusters[i]}
-                              onChange={() => setEnabledClusters(prev => { const n = [...prev]; n[i] = !n[i]; return n })}
-                              className="accent-purple-600 w-3.5 h-3.5"
-                            />
-                            <span className={`text-[11px] font-medium ${enabledClusters[i] ? 'text-purple-800' : 'text-gray-400'}`}>{label}</span>
-                          </label>
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="text-[11px] text-gray-500 w-20 shrink-0">{label}</span>
+                            <div className="flex gap-1 flex-1">
+                              <button
+                                onClick={() => setEnabledClusters(prev => { const n = [...prev]; n[i] = true; return n })}
+                                className={`flex-1 py-0.5 text-[11px] font-semibold rounded-lg border transition-colors ${enabledClusters[i] ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-500 border-gray-200 hover:border-purple-400'}`}
+                              >
+                                🎭 Overlay
+                              </button>
+                              <button
+                                onClick={() => setEnabledClusters(prev => { const n = [...prev]; n[i] = false; return n })}
+                                className={`flex-1 py-0.5 text-[11px] font-semibold rounded-lg border transition-colors ${!enabledClusters[i] ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-500 border-gray-200 hover:border-amber-400'}`}
+                              >
+                                🎨 Baked
+                              </button>
+                            </div>
+                          </div>
                         ))}
                       </div>
-                      <button
-                        onClick={() => setEnabledClusters(
-                          enabledClusters.every(Boolean) ? [false,false,false,false] : [true,true,true,true]
-                        )}
-                        className="mt-1.5 text-[10px] text-purple-500 hover:text-purple-700 underline"
-                      >
-                        {enabledClusters.every(Boolean) ? 'Deselect all' : 'Select all'}
-                      </button>
+                      <p className="text-[10px] text-gray-400 mt-2">
+                        <strong>Overlay</strong>: corner kept clean; objects generated as animated PNGs · <strong>Baked</strong>: objects drawn onto cover surface
+                      </p>
                     </div>
                   </div>
                 ) : (
