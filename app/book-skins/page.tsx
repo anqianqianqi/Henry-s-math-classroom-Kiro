@@ -599,13 +599,16 @@ const ZP_CSS: Record<string, string> = {
 function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
   skinId: string; coverImageUrl: string; coverLayout?: any; label: string
 }) {
-  const supabase = createClient()
   const [overlays, setOverlays] = React.useState<any[]>([])
 
   React.useEffect(() => {
+    const supabase = createClient()
     supabase.from('book_skin_overlays').select('*').eq('skin_id', skinId)
       .order('sort_order', { ascending: true })
-      .then(({ data }) => setOverlays(data ?? []))
+      .then(({ data, error }) => {
+        console.log('[ZoomPreviewCover] overlays for', skinId, ':', data?.length, error?.message)
+        setOverlays(data ?? [])
+      })
   }, [skinId])
 
   const titleLayout = coverLayout?.title

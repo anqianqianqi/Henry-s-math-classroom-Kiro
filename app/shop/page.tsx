@@ -36,15 +36,18 @@ const SHOP_ZP_CSS: Record<string, string> = {
   flicker: 'szp-flicker 1.4s ease-in-out infinite', bling: 'szp-bling 2s ease-in-out infinite',
 }
 function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
-  const supabase = createClient()
   const [overlays, setOverlays] = useState<any[]>([])
   const tl = (skin as any).cover_layout?.title
   const pl = (skin as any).cover_layout?.prompt
 
   useEffect(() => {
+    const supabase = createClient()
     supabase.from('book_skin_overlays').select('*').eq('skin_id', skin.id)
       .order('sort_order', { ascending: true })
-      .then(({ data }) => setOverlays(data ?? []))
+      .then(({ data, error }) => {
+        console.log('[ShopCoverZoom] overlays for', skin.id, ':', data?.length, error?.message)
+        setOverlays(data ?? [])
+      })
   }, [skin.id])
 
   return (
