@@ -2492,7 +2492,7 @@ function OverlayEditorInline({
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Scale ({cfg.scale.toFixed(1)}×)</label>
-                    <input type="range" min={0.3} max={2.0} step={0.1} value={cfg.scale} onChange={e => upd(sel.id, { scale: Number(e.target.value) })} className="w-full accent-purple-600" />
+                    <input type="range" min={0.3} max={4.0} step={0.1} value={cfg.scale} onChange={e => upd(sel.id, { scale: Number(e.target.value) })} className="w-full accent-purple-600" />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-2">Animation</label>
