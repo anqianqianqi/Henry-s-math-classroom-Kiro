@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 interface Comment {
   id: string
@@ -59,6 +59,17 @@ export function CommentThread({
   const [editDraft, setEditDraft] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
+
+  // Auto-resize textarea ref
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Re-measure height whenever newComment changes (covers AI pre-fill case)
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.max(38, el.scrollHeight) + 'px'
+  }, [newComment])
 
   // Determine which comments are "unread" — comments from others newer than last seen timestamp
   function isUnread(comment: Comment): boolean {
@@ -225,12 +236,10 @@ export function CommentThread({
             </label>
           )}
           <textarea
+            ref={textareaRef}
             value={newComment}
             onChange={(e) => {
               onCommentChange(e.target.value)
-              // Reset to auto first so shrinking works, then expand to content
-              e.target.style.height = 'auto'
-              e.target.style.height = Math.max(38, e.target.scrollHeight) + 'px'
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -238,7 +247,6 @@ export function CommentThread({
                 onSubmitComment(commentImage)
                 setCommentImage(null)
                 setCommentImagePreview(null)
-                ;(e.target as HTMLTextAreaElement).style.height = '38px'
               }
             }}
             placeholder="Add a comment..."
@@ -246,7 +254,7 @@ export function CommentThread({
             className="flex-1 px-3 py-2 text-sm border-2 border-gray-200 rounded-xl 
                      focus:border-primary-500 focus:ring-2 focus:ring-primary-100
                      transition-all resize-none"
-            style={{ minHeight: '38px', height: '38px', overflow: 'hidden' }}
+            style={{ minHeight: '38px', overflow: 'hidden' }}
           />
           <button
             onClick={() => {
