@@ -628,7 +628,6 @@ function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
               coverImageUrl={coverImageUrl}
               xPct={cfg.x} yPct={cfg.y} widthPct={sz}
               auraStrength={cfg.auraStrength ?? 0}
-              auraDistance={cfg.auraDistance ?? 20}
               containerWidthPx={420}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2244,8 +2243,8 @@ import type { BurstConfig } from '@/components/OverlayBurstRenderer'
 import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
 import { OverlayAuraWrapper } from '@/components/OverlayAuraWrapper'
 type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling' | 'burst'
-interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig; auraStrength?: number; auraDistance?: number }
-const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0, auraStrength: 0, auraDistance: 20 }
+interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig; auraStrength?: number }
+const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0, auraStrength: 0 }
 const DEFAULT_BURST: BurstConfig = {
   polygon: [],
   center: { x: 50, y: 50 },
@@ -2456,7 +2455,6 @@ function OverlayEditorInline({
                           xPct={c.x} yPct={c.y}
                           widthPct={sz}
                           auraStrength={c.auraStrength}
-                          auraDistance={c.auraDistance ?? 20}
                           containerWidthPx={previewRef.current?.offsetWidth ?? 480}
                           style={{ position: 'absolute', inset: 0, transform: 'none', left: 0, top: 0, width: '100%', height: '100%' }}
                         ><span /></OverlayAuraWrapper>
@@ -2513,34 +2511,22 @@ function OverlayEditorInline({
                     <input type="range" min={0.3} max={4.0} step={0.1} value={cfg.scale} onChange={e => upd(sel.id, { scale: Number(e.target.value) })} className="w-full accent-purple-600" />
                   </div>
 
-                  {/* ── Boundary aura — darkens cover pixels at object boundary ── */}
+                  {/* ── Shadow blend — uses overlay's own alpha as decay ── */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">
-                      🌑 Boundary aura ({Math.round((cfg.auraStrength ?? 0) * 100)}%)
+                      🌑 Shadow blend ({((cfg.auraStrength ?? 0) * 100).toFixed(0)}%)
                       <span className="ml-1 font-normal text-gray-400">
-                        {(cfg.auraStrength ?? 0) === 0 ? 'off' : (cfg.auraStrength ?? 0) < 0.3 ? 'subtle' : (cfg.auraStrength ?? 0) < 0.6 ? 'medium' : 'strong'}
+                        {(cfg.auraStrength ?? 0) === 0 ? 'off' : (cfg.auraStrength ?? 0) < 0.5 ? 'subtle' : (cfg.auraStrength ?? 0) < 1.0 ? 'medium' : 'strong'}
                       </span>
                     </label>
-                    <input type="range" min={0} max={0.8} step={0.05} value={cfg.auraStrength ?? 0}
+                    <input type="range" min={0} max={2.0} step={0.1} value={cfg.auraStrength ?? 0}
                       onChange={e => upd(sel.id, { auraStrength: Number(e.target.value) })}
                       className="w-full accent-amber-600" />
                     <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
-                      <span>0% off</span><span>40% medium</span><span>80% strong</span>
+                      <span>0% off</span><span>100% natural</span><span>200% enhanced</span>
                     </div>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Amplifies the object's own shadow to darken the cover it sits on.</p>
                   </div>
-                  {(cfg.auraStrength ?? 0) > 0 && (
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">
-                        Aura distance ({cfg.auraDistance ?? 20}px)
-                      </label>
-                      <input type="range" min={4} max={40} step={2} value={cfg.auraDistance ?? 20}
-                        onChange={e => upd(sel.id, { auraDistance: Number(e.target.value) })}
-                        className="w-full accent-amber-500" />
-                      <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
-                        <span>4px tight</span><span>20px medium</span><span>40px wide</span>
-                      </div>
-                    </div>
-                  )}
 
                   {/* ── Animation ── */}
                   <div>

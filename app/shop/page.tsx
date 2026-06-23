@@ -67,7 +67,6 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
               coverImageUrl={skin.image_url}
               xPct={cfg.x} yPct={cfg.y} widthPct={sz}
               auraStrength={cfg.auraStrength ?? 0}
-              auraDistance={cfg.auraDistance ?? 20}
               containerWidthPx={420}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

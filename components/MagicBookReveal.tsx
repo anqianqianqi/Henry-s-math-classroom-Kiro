@@ -449,7 +449,6 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                         coverImageUrl={activeCoverImage}
                         xPct={cfg.x} yPct={cfg.y} widthPct={sz}
                         auraStrength={auraStrength}
-                        auraDistance={(cfg as any).auraDistance ?? 20}
                         containerWidthPx={bookRef.current?.offsetWidth ?? 480}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}

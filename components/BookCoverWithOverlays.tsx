@@ -121,7 +121,6 @@ export function BookCoverWithOverlays({
             coverImageUrl={coverImageUrl}
             xPct={cfg.x} yPct={cfg.y} widthPct={sz}
             auraStrength={auraStrength}
-            auraDistance={(cfg as any).auraDistance ?? 20}
             containerWidthPx={containerWidthPx}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
