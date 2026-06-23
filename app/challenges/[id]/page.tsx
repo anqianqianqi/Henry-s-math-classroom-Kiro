@@ -336,11 +336,26 @@ export default function ChallengePage() {
       if (userPrefData?.cover_skin_id) {
         const { data: uc } = await supabase
           .from('book_skins')
-          .select('image_url')
+          .select('image_url, has_overlays')
           .eq('id', userPrefData.cover_skin_id)
           .eq('is_active', true)
           .maybeSingle()
-        if (uc) resolvedCoverUrl = (uc as any).image_url
+        if (uc) {
+          resolvedCoverUrl = (uc as any).image_url
+          // Load overlays for user's personal skin (overrides default overlays)
+          if ((uc as any).has_overlays) {
+            const { data: userOverlays } = await supabase
+              .from('book_skin_overlays')
+              .select('*')
+              .eq('skin_id', userPrefData.cover_skin_id)
+              .order('sort_order', { ascending: true })
+            if (userOverlays && userOverlays.length > 0) {
+              setDefaultCoverOverlays(userOverlays)
+            }
+          } else {
+            setDefaultCoverOverlays([])
+          }
+        }
       }
       if (userPrefData?.page_skin_id) {
         const { data: up } = await supabase
