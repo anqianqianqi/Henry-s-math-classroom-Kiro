@@ -56,6 +56,15 @@ export default function GradingPage() {
   const [dateTo, setDateTo] = useState('')
   const [exporting, setExporting] = useState(false)
 
+  // AI fine-tune state
+  const [ftJob, setFtJob] = useState<{
+    id: string; openai_job_id: string; status: string
+    model_id: string | null; examples_count: number; created_at: string
+  } | null>(null)
+  const [ftLaunching, setFtLaunching] = useState(false)
+  const [ftError, setFtError] = useState<string | null>(null)
+  const [ftPolling, setFtPolling] = useState(false)
+
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
@@ -117,6 +126,66 @@ export default function GradingPage() {
   }, [router, supabase])
 
   useEffect(() => { load() }, [load])
+
+  // Load fine-tune job status on mount
+  useEffect(() => {
+    async function loadFtStatus() {
+      try {
+        const res = await fetch('/api/fine-tune/status')
+        if (res.ok) {
+          const data = await res.json()
+          setFtJob(data.job)
+          // If still training, start polling
+          if (data.job && data.job.status !== 'ready' && data.job.status !== 'failed') {
+            setFtPolling(true)
+          }
+        }
+      } catch { /* ignore */ }
+    }
+    loadFtStatus()
+  }, [])
+
+  // Poll every 30s while training
+  useEffect(() => {
+    if (!ftPolling) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/fine-tune/status')
+        if (res.ok) {
+          const data = await res.json()
+          setFtJob(data.job)
+          if (data.job?.status === 'ready' || data.job?.status === 'failed') {
+            setFtPolling(false)
+          }
+        }
+      } catch { /* ignore */ }
+    }, 30_000)
+    return () => clearInterval(interval)
+  }, [ftPolling])
+
+  async function handleLaunchFineTune() {
+    setFtLaunching(true)
+    setFtError(null)
+    try {
+      const res = await fetch('/api/fine-tune/start', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        setFtError(data.error ?? 'Failed to start fine-tune job')
+        return
+      }
+      // Reload status after launch
+      const statusRes = await fetch('/api/fine-tune/status')
+      if (statusRes.ok) {
+        const statusData = await statusRes.json()
+        setFtJob(statusData.job)
+        setFtPolling(true)
+      }
+    } catch {
+      setFtError('Network error launching fine-tune job')
+    } finally {
+      setFtLaunching(false)
+    }
+  }
 
   // Apply date filter client-side
   function applyDateFilter(list: Submission[]) {
@@ -230,6 +299,67 @@ export default function GradingPage() {
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{error}</div>
         )}
+
+        {/* AI Fine-tune Panel */}
+        <Card>
+          <Card.Body>
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">🤖</span>
+                  <span className="font-semibold text-gray-900">AI Grading Assistant</span>
+                  {ftPolling && (
+                    <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full animate-pulse">
+                      Training…
+                    </span>
+                  )}
+                </div>
+                {ftJob ? (
+                  <div className="text-sm text-gray-600 space-y-0.5">
+                    <p>
+                      Status:{' '}
+                      <span className={
+                        ftJob.status === 'ready' ? 'font-semibold text-green-600' :
+                        ftJob.status === 'failed' ? 'font-semibold text-red-600' :
+                        'font-semibold text-amber-600'
+                      }>
+                        {ftJob.status === 'ready' ? '✅ Ready' :
+                         ftJob.status === 'failed' ? '❌ Failed' :
+                         ftJob.status === 'training' ? '⏳ Training' : '⏳ Pending'}
+                      </span>
+                    </p>
+                    <p>Trained on <span className="font-medium">{ftJob.examples_count}</span> examples
+                      {' · '}Started {new Date(ftJob.created_at).toLocaleDateString()}
+                    </p>
+                    {ftJob.model_id && (
+                      <p className="font-mono text-xs text-gray-400 break-all">{ftJob.model_id}</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    No fine-tune job yet. Launch one to train the AI on your grading style.
+                  </p>
+                )}
+                {ftError && (
+                  <p className="mt-1 text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{ftError}</p>
+                )}
+              </div>
+              <div className="shrink-0">
+                <Button
+                  size="sm"
+                  disabled={ftLaunching || ftPolling}
+                  onClick={handleLaunchFineTune}
+                >
+                  {ftLaunching ? '⏳ Launching…' :
+                   ftPolling ? '⏳ Training in progress…' :
+                   ftJob?.status === 'ready' ? '🔄 Retrain Model' :
+                   '🚀 Launch Fine-tune Job'}
+                </Button>
+                <p className="text-xs text-gray-400 mt-1 text-right">Uses up to 20 examples</p>
+              </div>
+            </div>
+          </Card.Body>
+        </Card>
 
         {/* Date filter */}
         <div className="flex flex-wrap items-center gap-3">
