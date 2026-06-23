@@ -140,15 +140,15 @@ export function BookCoverLivePreview({
   return (
     <div
       className={className}
-      style={{ position: 'relative', display: 'block', overflow: 'hidden', ...style }}
+      style={{ overflow: 'hidden', ...style }}
       onClick={onClick}
     >
-      {/* Cover image — in normal flow so it sets the container height */}
+      {/* Cover image — fills container via absolute positioning */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={coverImageUrl}
         alt="Book cover"
-        style={{ display: 'block', width: '100%', height: 'auto' }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
         draggable={false}
       />
 

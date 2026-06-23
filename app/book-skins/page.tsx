@@ -615,19 +615,9 @@ function SkinOption({
       >
         <div className="relative w-full overflow-hidden bg-gray-50" style={{ paddingBottom: `${(1 / aspect) * 100}%` }}>
           {imageUrl ? (
-            skinType === 'cover' && skinId ? (
-              <BookCoverLivePreview
-                skinId={skinId}
-                coverImageUrl={imageUrl}
-                coverLayout={coverLayout}
-                className="absolute inset-0 w-full h-full"
-                style={{ background: '#111' }}
-                overlayBaseSize={32}
-              />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl} alt={label} className="absolute inset-0 w-full h-full object-contain p-1" />
-            )
+            // Plain static image for the card thumbnail — no layout issues
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imageUrl} alt={label} className="absolute inset-0 w-full h-full object-contain p-1" />
           ) : (
             <div className="absolute inset-0" style={{
               background: skinType === 'page'
@@ -675,7 +665,7 @@ function SkinOption({
               coverLayout={coverLayout}
               title="Challenge Title Preview"
               showPromptButton
-              style={{ width: '100%', maxHeight: '80vh', borderRadius: 12, overflow: 'hidden', background: '#111' }}
+              style={{ width: '100%', maxHeight: '80vh', borderRadius: 12, overflow: 'hidden', background: '#111', position: 'relative' }}
             />
             <div className="flex items-center justify-between w-full px-1">
               <span className="text-white text-sm font-semibold drop-shadow">{label}</span>

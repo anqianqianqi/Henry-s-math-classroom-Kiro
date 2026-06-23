@@ -92,16 +92,11 @@ function BookCoverBrowseModal({
                 return (
                   <div key={skin.id} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100 hover:border-amber-300 transition-colors flex flex-col">
                     {/* Portrait thumbnail — click to open full live preview */}
-                    <div className="relative group" style={{ aspectRatio: '400/620' }}
+                    <div className="relative group cursor-pointer" style={{ aspectRatio: '400/620' }}
                       onClick={() => setPreviewSkin(skin)}>
-                      <BookCoverLivePreview
-                        skinId={skin.id}
-                        coverImageUrl={skin.image_url}
-                        coverLayout={(skin as any).cover_layout}
-                        className="absolute inset-0 w-full h-full"
-                        style={{ background: '#111', cursor: 'pointer' }}
-                        overlayBaseSize={28}
-                      />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={skin.image_url} alt={skin.name}
+                        className="absolute inset-0 w-full h-full object-contain" />
                       <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">🔍 Preview</span>
                       </div>
@@ -147,7 +142,7 @@ function BookCoverBrowseModal({
               coverLayout={(previewSkin as any).cover_layout}
               title="Challenge Title Preview"
               showPromptButton
-              style={{ width: '100%', maxHeight: '82vh', borderRadius: 12, overflow: 'hidden', background: '#111' }}
+              style={{ width: '100%', maxHeight: '82vh', borderRadius: 12, overflow: 'hidden', background: '#111', position: 'relative' }}
             />
             <button onClick={() => setPreviewSkin(null)}
               className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
