@@ -394,7 +394,7 @@ export default function BookSkinsUserPage() {
               <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-100" style={{ width: '100%', aspectRatio: '400/620' }}>
                 {actionSkin.image_url
                   // eslint-disable-next-line @next/next/no-img-element
-                  ? <img src={actionSkin.image_url} alt={actionSkin.name} className="w-full h-full object-cover" />
+                  ? <img src={actionSkin.image_url} alt={actionSkin.name} className="w-full h-full object-contain p-2 bg-gray-50" />
                   : <div className="w-full h-full flex items-center justify-center text-gray-300 text-3xl">📖</div>}
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -595,10 +595,10 @@ function SkinOption({
         isSelected ? 'border-amber-500 shadow-lg shadow-amber-100' : 'border-gray-200 hover:border-amber-300'
       }`}
     >
-      <div className="relative w-full overflow-hidden bg-gray-100" style={{ paddingBottom: `${(1 / aspect) * 100}%` }}>
+      <div className="relative w-full overflow-hidden bg-gray-50" style={{ paddingBottom: `${(1 / aspect) * 100}%` }}>
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt={label} className="absolute inset-0 w-full h-full object-cover" />
+          <img src={imageUrl} alt={label} className="absolute inset-0 w-full h-full object-contain p-1" />
         ) : (
           <div className="absolute inset-0" style={{
             background: skinType === 'page'
