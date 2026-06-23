@@ -21,7 +21,9 @@ COMPOSITION RULES — follow exactly:
 
 Generate a hardcover book cover illustration on a TRANSPARENT background. The image format is RGBA PNG. The area outside the book must be fully transparent (alpha = 0) — no color, no fill, no background at all. Only the book itself should be opaque.
 
-The book is a flat front-facing hardcover portrait rectangle. It has a slight drop shadow around its edges (semi-transparent dark shadow that fades to transparent — this is the only thing allowed outside the book boundary).
+VIEW ANGLE — CRITICAL: The book must be shown in a PERFECTLY FLAT, DEAD-ON FRONT VIEW. The camera looks straight at the cover — zero tilt, zero rotation, zero perspective distortion, no 3/4 angle, no foreshortening, no vanishing point. The top edge and bottom edge are perfectly horizontal and parallel. The left and right edges are perfectly vertical and parallel. This is a 2D orthographic front view of the cover, not a product photo.
+
+The book is a flat front-facing hardcover portrait rectangle that fills the canvas. It has a slight drop shadow around its edges (semi-transparent dark shadow that fades to transparent — this is the only thing allowed outside the book boundary).
 
 COVER SURFACE: Rich thematic texture — deeply embossed near the edges, smoother toward the center. A thin ornate gold decorative border runs inside the cover perimeter. The cover material looks like premium cloth or leather hardcover.
 
@@ -33,7 +35,7 @@ CENTER ZONE — CRITICAL: The central rectangle (middle 60% width × middle 50% 
 - Subtle embossed texture pattern is acceptable but NO representational imagery of any kind
 - This area will hold the book title — it must read as a blank canvas
 
-DEPTH: Give it physical weight through: edge darkening/vignette on the cover surface itself, embossed border ornaments, realistic material texture.
+DEPTH: Give it physical weight through: edge darkening/vignette on the cover surface itself, embossed border ornaments, realistic material texture. Do NOT add depth through perspective or tilt.
 
 TRANSPARENT BACKGROUND: Everything outside the book shape (except the drop shadow) must be fully transparent. No white fill, no color fill, no background.
 
@@ -45,7 +47,9 @@ COMPOSITION RULES — follow exactly:
 
 Generate a hardcover book cover illustration on a TRANSPARENT background. The image format is RGBA PNG. The area outside the book must be fully transparent (alpha = 0) — no color, no fill, no background at all. Only the book itself should be opaque.
 
-The book is a flat front-facing hardcover portrait rectangle. It has a slight drop shadow around its edges (semi-transparent dark shadow that fades to transparent — this is the only thing allowed outside the book boundary).
+VIEW ANGLE — CRITICAL: The book must be shown in a PERFECTLY FLAT, DEAD-ON FRONT VIEW. The camera looks straight at the cover — zero tilt, zero rotation, zero perspective distortion, no 3/4 angle, no foreshortening, no vanishing point. The top edge and bottom edge are perfectly horizontal and parallel. The left and right edges are perfectly vertical and parallel. This is a 2D orthographic front view of the cover, not a product photo.
+
+The book is a flat front-facing hardcover portrait rectangle that fills the canvas. It has a slight drop shadow around its edges (semi-transparent dark shadow that fades to transparent — this is the only thing allowed outside the book boundary).
 
 COVER SURFACE: Rich thematic texture — deeply embossed near the edges, smoother toward the center. A thin ornate gold decorative border runs inside the cover perimeter. The cover material looks like premium cloth or leather hardcover.
 
@@ -57,7 +61,7 @@ CENTER ZONE — CRITICAL: The central rectangle (middle 60% width × middle 50% 
 - Subtle embossed texture or faint thematic pattern is acceptable but NO representational imagery of any kind
 - This area will hold the book title — it must read as a blank canvas
 
-DEPTH: Give it physical weight through: edge darkening/vignette on the cover surface itself, embossed border ornaments, realistic material texture.
+DEPTH: Give it physical weight through: edge darkening/vignette on the cover surface itself, embossed border ornaments, realistic material texture. Do NOT add depth through perspective or tilt.
 
 TRANSPARENT BACKGROUND: Everything outside the book shape (except the drop shadow) must be fully transparent. No white fill, no color fill, no background.
 
