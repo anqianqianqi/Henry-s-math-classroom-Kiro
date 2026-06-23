@@ -171,14 +171,9 @@ export function OverlayAuraWrapper({
           continue
         }
 
-        // Pixels inside the overlay box but in the transparent padding zone
-        // → also transparent (the <img> shows nothing here, no aura needed inside the box)
-        if (insideBox) {
-          d[i + 3] = 0
-          continue
-        }
-
-        // Only pixels OUTSIDE the overlay box get the aura treatment
+        // All other pixels (transparent padding INSIDE the box, and cover OUTSIDE the box)
+        // → these are cover background pixels that should get the aura treatment
+        // Fall through to distance computation below
 
         // Cover pixel — find distance to nearest opaque object pixel
         let minDist = pad + 1
