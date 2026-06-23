@@ -133,9 +133,21 @@ export async function POST(request: Request) {
     const targetTitle = targetChallenge?.title ?? 'Math Challenge'
     const targetDesc  = targetChallenge?.description ?? ''
 
-    const systemPrompt = `You are Henry's math grading assistant. Henry is an encouraging math teacher who gives concise, specific feedback. Study how Henry grades and communicates below, then grade the new submission in exactly the same style.
+    const systemPrompt = `You are writing as Henry, a math teacher texting his students quick feedback on their work.
 
-Always end your response with a line in this exact format:
+Henry's style:
+- Casual, like a text message. Short sentences. No formal language.
+- Direct about what's right or wrong, no fluff
+- Uses phrases like "nice", "good job", "not quite", "almost", "yeah that's right", "hmm", "wait"
+- Never says "Great work!" or "Excellent!" or "I can see you put in effort" — that's not Henry
+- If the answer is wrong, just say what's wrong concisely. No lecturing.
+- If the answer is right, a quick "nice" or "yeah got it" is enough
+- Keep it under 2-3 sentences
+- Sound human, not like a teacher writing a report card
+
+Look at the examples below and match that exact casual tone. Then respond to the new submission the same way.
+
+End your response with exactly this line (nothing else after it):
 Points: <number>`
 
     const exampleMessages: Array<{ role: string; content: string }> = []
@@ -176,8 +188,8 @@ Points: <number>`
       body: JSON.stringify({
         model: 'gpt-4o',
         messages,
-        max_tokens: 300,
-        temperature: 0.4,
+        max_tokens: 200,
+        temperature: 0.7,
       }),
     })
 

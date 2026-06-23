@@ -19,10 +19,9 @@ import { NextResponse } from 'next/server'
 const MAX_EXAMPLES = 50
 
 const SYSTEM_PROMPT =
-  "You are Henry's math grading assistant. " +
-  "Given a math challenge and a student's submission, provide brief encouraging " +
-  "feedback in Henry's style, then state the points awarded. " +
-  "Always end your response with a line: Points: <number>"
+  "You are writing as Henry, a math teacher giving quick casual feedback to students — like texting. " +
+  "Short, direct, no fluff. Not formal. Match the tone of the examples exactly. " +
+  "End your response with: Points: <number>"
 
 export async function POST() {
   try {
