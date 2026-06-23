@@ -151,7 +151,9 @@ export function OverlayAuraWrapper({
     // ── 3. Process each canvas pixel ─────────────────────────────────────────
     const imgData = ctx.getImageData(0, 0, canvasW, canvasH)
     const d = imgData.data
-    const searchR = Math.min(pad, 16)  // cap search for performance
+    // searchR must be large enough to reach through padding into jar silhouette.
+    // Padding is typically ~15% of objSizePx on each side.
+    const searchR = pad + Math.round(objSizePx * 0.25)  // reach 25% into overlay from outside
 
     for (let cy = 0; cy < canvasH; cy++) {
       for (let cx = 0; cx < canvasW; cx++) {
@@ -161,19 +163,15 @@ export function OverlayAuraWrapper({
 
         const i = (cy * canvasW + cx) * 4
 
-        // Is this pixel inside the overlay bounding box?
-        const insideBox = ox >= 0 && ox < objSizePx && oy >= 0 && oy < objSizePx
-
-        // Object pixel (inside box AND opaque in overlay) → fully transparent
-        // (the overlay <img> renders on top)
-        if (insideBox && oAlpha(ox, oy) > 30) {
+        // Rule 1: Opaque overlay pixel (part of the jar) → fully transparent.
+        // The overlay <img> renders on top and shows the jar.
+        if (oAlpha(ox, oy) > 30) {
           d[i + 3] = 0
           continue
         }
 
-        // All other pixels (transparent padding INSIDE the box, and cover OUTSIDE the box)
-        // → these are cover background pixels that should get the aura treatment
-        // Fall through to distance computation below
+        // Rule 2: Everything else is transparent cover background.
+        // Show the cover pixel here, darkened by how close it is to the jar.
 
         // Cover pixel — find distance to nearest opaque object pixel
         let minDist = pad + 1
