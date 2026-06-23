@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef } from 'react'
-import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim, overlayWidthPct, overlayEdgeFadeStyle } from '@/lib/overlayAnimations'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim, overlayWidthPct } from '@/lib/overlayAnimations'
 import { OverlayBurstRenderer } from './OverlayBurstRenderer'
 import { OverlayAuraWrapper } from './OverlayAuraWrapper'
 
@@ -118,9 +118,11 @@ export function BookCoverWithOverlays({
           }}>
             {auraStrength > 0 && (
               <OverlayAuraWrapper
+                overlayImageUrl={obj.image_url}
                 coverImageUrl={coverImageUrl}
                 xPct={cfg.x} yPct={cfg.y} widthPct={sz}
                 auraStrength={auraStrength}
+                auraDistance={(cfg as any).auraDistance ?? 20}
                 containerWidthPx={overlayBaseSize / (80 / 1024) * 1024}
                 style={{ position: 'absolute', inset: 0, transform: 'none', left: 0, top: 0, width: '100%', height: '100%' }}
               ><span /></OverlayAuraWrapper>
@@ -131,7 +133,6 @@ export function BookCoverWithOverlays({
                 position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain',
                 animation: anim, transformOrigin,
                 animationPlayState: overlayAnimationPaused ? 'paused' : 'running',
-                ...overlayEdgeFadeStyle((cfg as any).edgeFade),
               }}
             />
           </div>

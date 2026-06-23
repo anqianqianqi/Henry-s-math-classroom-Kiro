@@ -19,7 +19,7 @@ const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/Anim
 
 // ── ShopCoverZoom — simple reliable zoom preview for book cover skins ─────────
 // Image in normal flow sets height; overlays + title absolute on top.
-import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct, overlayEdgeFadeStyle } from '@/lib/overlayAnimations'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct } from '@/lib/overlayAnimations'
 import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
 import { OverlayAuraWrapper } from '@/components/OverlayAuraWrapper'
 const SHOP_ZP_KEYFRAMES = buildKeyframesCSS('szp') + `
@@ -68,17 +68,18 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
             }}>
               {(cfg.auraStrength ?? 0) > 0 && (
                 <OverlayAuraWrapper
+                  overlayImageUrl={obj.image_url}
                   coverImageUrl={skin.image_url}
                   xPct={cfg.x} yPct={cfg.y} widthPct={sz}
                   auraStrength={cfg.auraStrength}
+                  auraDistance={cfg.auraDistance ?? 20}
                   containerWidthPx={420}
                   style={{ position: 'absolute', inset: 0, transform: 'none', left: 0, top: 0, width: '100%', height: '100%' }}
                 ><span /></OverlayAuraWrapper>
               )}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={obj.image_url} alt={obj.label} draggable={false}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin,
-                  ...overlayEdgeFadeStyle(cfg.edgeFade) }} />
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin }} />
             </div>
           )
         })}

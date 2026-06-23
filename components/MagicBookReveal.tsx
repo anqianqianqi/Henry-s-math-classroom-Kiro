@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { BookCoverWithOverlays, type OverlayObject } from './BookCoverWithOverlays'
-import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct, overlayEdgeFadeStyle } from '@/lib/overlayAnimations'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct } from '@/lib/overlayAnimations'
 import { OverlayBurstRenderer } from './OverlayBurstRenderer'
 import { OverlayAuraWrapper } from './OverlayAuraWrapper'
 
@@ -449,9 +449,11 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                       }}>
                         {auraStrength > 0 && (
                           <OverlayAuraWrapper
+                            overlayImageUrl={obj.image_url}
                             coverImageUrl={activeCoverImage}
                             xPct={cfg.x} yPct={cfg.y} widthPct={sz}
                             auraStrength={auraStrength}
+                            auraDistance={(cfg as any).auraDistance ?? 20}
                             containerWidthPx={bookRef.current?.offsetWidth ?? 480}
                             style={{ position: 'absolute', inset: 0, transform: 'none', left: 0, top: 0, width: '100%', height: '100%' }}
                           ><span /></OverlayAuraWrapper>
@@ -462,7 +464,6 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                             position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain',
                             animation: anim, transformOrigin,
                             animationPlayState: phase === 'opening' ? 'paused' : 'running',
-                            ...overlayEdgeFadeStyle((cfg as any).edgeFade),
                           }}
                         />
                       </div>

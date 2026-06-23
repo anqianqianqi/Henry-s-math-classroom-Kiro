@@ -1,154 +1,226 @@
 'use client'
 /**
- * OverlayAuraWrapper
+ * OverlayAuraWrapper — canvas-based boundary darkening aura
  *
- * Wraps an overlay object to add a canvas-based "boundary darkening aura":
- * - Renders a canvas element behind the overlay image
- * - The canvas samples the cover image pixels in the region this overlay sits on
- * - Applies a radial multiply-darken: cover pixels at the outer boundary are
- *   darkened (multiplied by a dark value), fading to transparent at the center
- * - The result looks like the baked-in asset effect: a soft dark mist around
- *   the object boundary that blends into the cover
+ * Renders a canvas that extends BEYOND the overlay object's bounding box.
+ * The canvas:
+ *   1. Loads the overlay object image to find the actual object silhouette
+ *   2. For pixels OUTSIDE the object (transparent in the overlay PNG),
+ *      applies a darkening to the cover background proportional to
+ *      proximity to the nearest opaque object pixel
+ *   3. Pixels AT the object boundary get maximum darkening
+ *   4. Darkening fades to transparent over `auraDistance` pixels outward
  *
- * Props:
- *   coverImageUrl: string — the cover image URL (needed to sample cover pixels)
- *   xPct, yPct: number — overlay anchor position as % of cover container
- *   widthPct: string — overlay width as % string (from overlayWidthPct())
- *   auraStrength: number — 0–1, how strong the darkening is (default 0.4)
- *   containerRef: React.RefObject<HTMLElement> — the cover container element
- *   children: the overlay <img> + any animation
+ * The result looks like the soft dark mist seen on baked-in book cover assets.
+ *
+ * The canvas is positioned larger than the overlay — it extends outward by
+ * `auraDistance` px on all sides.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface OverlayAuraWrapperProps {
+  /** The overlay object image URL — used to read its alpha silhouette */
+  overlayImageUrl: string
+  /** Cover image URL — used to sample cover pixels for the aura region */
   coverImageUrl: string
+  /** Anchor position as % of cover container */
   xPct: number
   yPct: number
-  widthPct: string          // e.g. "7.8%" — from overlayWidthPct(scale)
-  auraStrength?: number     // 0–1, default 0.4
-  containerWidthPx?: number // rendered width of the cover container in px
+  /** Overlay rendered width as % string, e.g. "7.8%" */
+  widthPct: string
+  /** How far the aura extends outward from the object boundary in px (at rendered size) */
+  auraDistance?: number
+  /** Darkening strength 0–1 (default 0.5) */
+  auraStrength?: number
+  /** Rendered width of cover container in px */
+  containerWidthPx?: number
   style?: React.CSSProperties
-  children: ReactNode
+  children: React.ReactNode
 }
 
 export function OverlayAuraWrapper({
+  overlayImageUrl,
   coverImageUrl,
   xPct,
   yPct,
   widthPct,
-  auraStrength = 0.4,
+  auraDistance = 20,
+  auraStrength = 0.5,
   containerWidthPx = 480,
   style,
   children,
 }: OverlayAuraWrapperProps) {
-  const auraCanvasRef = useRef<HTMLCanvasElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const coverImgRef = useRef<HTMLImageElement | null>(null)
-  const [coverLoaded, setCoverLoaded] = useState(false)
+  const overlayImgRef = useRef<HTMLImageElement | null>(null)
+  const [bothLoaded, setBothLoaded] = useState(false)
 
-  // Parse widthPct string to a fraction (e.g. "7.8%" → 0.078)
   const widthFrac = parseFloat(widthPct) / 100
+  const objSizePx = Math.round(containerWidthPx * widthFrac)
+  // Canvas is larger: object size + aura margin on all sides
+  const canvasSize = objSizePx + auraDistance * 2
 
-  // Load cover image once
+  // Load both images
   useEffect(() => {
-    if (!coverImageUrl) return
-    const img = new window.Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => { coverImgRef.current = img; setCoverLoaded(true) }
-    img.onerror = () => setCoverLoaded(false)
-    img.src = coverImageUrl
-  }, [coverImageUrl])
+    if (!coverImageUrl || !overlayImageUrl) return
+    let coverDone = false, overlayDone = false
+    function checkDone() { if (coverDone && overlayDone) setBothLoaded(true) }
 
-  // Draw aura whenever position/size/cover changes
+    const cImg = new window.Image(); cImg.crossOrigin = 'anonymous'
+    cImg.onload = () => { coverImgRef.current = cImg; coverDone = true; checkDone() }
+    cImg.onerror = () => { coverDone = true; checkDone() }
+    cImg.src = coverImageUrl
+
+    const oImg = new window.Image(); oImg.crossOrigin = 'anonymous'
+    oImg.onload = () => { overlayImgRef.current = oImg; overlayDone = true; checkDone() }
+    oImg.onerror = () => { overlayDone = true; checkDone() }
+    oImg.src = overlayImageUrl
+  }, [coverImageUrl, overlayImageUrl])
+
   useEffect(() => {
-    const canvas = auraCanvasRef.current
-    if (!canvas || !coverLoaded || !coverImgRef.current) return
-    if (auraStrength <= 0) { canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height); return }
+    const canvas = canvasRef.current
+    if (!canvas || !bothLoaded) return
+    if (auraStrength <= 0 || auraDistance <= 0) {
+      canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height)
+      return
+    }
 
     const coverImg = coverImgRef.current
+    const overlayImg = overlayImgRef.current
+    if (!coverImg || !overlayImg) return
 
-    // Canvas size = overlay rendered size in px
-    const sizePx = Math.round(containerWidthPx * widthFrac)
-    if (sizePx < 4) return
-    canvas.width = sizePx
-    canvas.height = sizePx
-
+    canvas.width = canvasSize
+    canvas.height = canvasSize
     const ctx = canvas.getContext('2d')!
-    ctx.clearRect(0, 0, sizePx, sizePx)
+    ctx.clearRect(0, 0, canvasSize, canvasSize)
 
-    // Sample cover pixels in the region this overlay covers:
-    // Overlay anchor is at (xPct%, yPct%) of the cover container.
-    // The overlay square spans [-sizePx/2, +sizePx/2] around the anchor.
-    // Map back to cover image coordinates.
+    // ── Step 1: Draw the cover region under + around this overlay ──────────────
+    // The canvas is (objSizePx + 2*auraDistance) square, centered on the anchor.
+    // Map canvas pixel (0,0) = anchor - (objSizePx/2 + auraDistance) in rendered px.
+
     const coverW = coverImg.naturalWidth
     const coverH = coverImg.naturalHeight
-
-    // Cover may render with letterboxing — compute actual rendered cover rect
-    // Assume cover fills the container width (object-contain, h-auto pattern)
     const renderW = containerWidthPx
-    const renderH = Math.round(coverH * (containerWidthPx / coverW))
+    const renderH = Math.round(coverH * (renderW / coverW))
 
-    // Anchor position in rendered px
     const anchorPx = (xPct / 100) * renderW
     const anchorPy = (yPct / 100) * renderH
 
-    // Top-left of the overlay square in rendered px
-    const tlX = anchorPx - sizePx / 2
-    const tlY = anchorPy - sizePx / 2
+    // Top-left of the CANVAS in rendered cover px (includes aura margin)
+    const canvasTLx = anchorPx - objSizePx / 2 - auraDistance
+    const canvasTLy = anchorPy - objSizePx / 2 - auraDistance
 
-    // Map to cover image coordinates
     const scaleX = coverW / renderW
     const scaleY = coverH / renderH
-    const srcX = Math.round(tlX * scaleX)
-    const srcY = Math.round(tlY * scaleY)
-    const srcW = Math.round(sizePx * scaleX)
-    const srcH = Math.round(sizePx * scaleY)
+    const srcX = Math.round(canvasTLx * scaleX)
+    const srcY = Math.round(canvasTLy * scaleY)
+    const srcW = Math.round(canvasSize * scaleX)
+    const srcH = Math.round(canvasSize * scaleY)
 
-    // Draw the cover region onto our canvas at full overlay size
-    ctx.drawImage(coverImg, srcX, srcY, srcW, srcH, 0, 0, sizePx, sizePx)
+    ctx.drawImage(coverImg, srcX, srcY, srcW, srcH, 0, 0, canvasSize, canvasSize)
 
-    // Now apply radial darkening in 'multiply' composite mode:
-    // A radial gradient going from opaque-dark at edges to transparent at center.
-    // 'multiply' will darken the cover pixels by the gradient alpha.
-    ctx.globalCompositeOperation = 'multiply'
+    // ── Step 2: Read the overlay image alpha to find the object silhouette ────────
+    // Draw the overlay image at objSizePx size, offset by auraDistance
+    const offscreenCanvas = document.createElement('canvas')
+    offscreenCanvas.width = objSizePx
+    offscreenCanvas.height = objSizePx
+    const offCtx = offscreenCanvas.getContext('2d')!
+    offCtx.drawImage(overlayImg, 0, 0, objSizePx, objSizePx)
+    const overlayData = offCtx.getImageData(0, 0, objSizePx, objSizePx).data
 
-    const innerStop = 0.35  // center region stays bright
-    const outerStop = 1.0   // full darkening at exact edge
+    // ── Step 3: Build distance-from-boundary map ──────────────────────────────
+    // For every pixel in the canvas, compute distance to nearest opaque overlay pixel.
+    // Opaque = alpha > 20 in the overlay image.
+    // We use a simplified approach: iterate each canvas pixel, find distance to nearest
+    // opaque overlay pixel. For performance, limit search to auraDistance radius.
 
-    const grad = ctx.createRadialGradient(
-      sizePx / 2, sizePx / 2, sizePx * innerStop * 0.5,  // inner circle (transparent)
-      sizePx / 2, sizePx / 2, sizePx * 0.5               // outer circle (fully dark)
-    )
-    // Dark color: the same amber/brown tone of the cover, but darker
-    // Using rgba(40, 20, 0, strength) — dark amber, creates warm darkening
-    grad.addColorStop(0, `rgba(30, 15, 0, 0)`)
-    grad.addColorStop(innerStop, `rgba(30, 15, 0, 0)`)
-    grad.addColorStop(outerStop, `rgba(30, 15, 0, ${auraStrength.toFixed(2)})`)
+    const mainData = ctx.getImageData(0, 0, canvasSize, canvasSize)
+    const d = mainData.data
 
-    ctx.fillStyle = grad
-    ctx.fillRect(0, 0, sizePx, sizePx)
+    for (let cy = 0; cy < canvasSize; cy++) {
+      for (let cx = 0; cx < canvasSize; cx++) {
+        // Map canvas pixel to overlay image pixel
+        const ox = cx - auraDistance  // overlay-space x
+        const oy = cy - auraDistance  // overlay-space y
 
-    // Reset composite
-    ctx.globalCompositeOperation = 'source-over'
-  }, [coverLoaded, xPct, yPct, widthFrac, auraStrength, containerWidthPx])
+        // If this pixel is inside the overlay bounds and object is opaque here → skip (no aura inside)
+        if (ox >= 0 && ox < objSizePx && oy >= 0 && oy < objSizePx) {
+          const overlayAlpha = overlayData[(oy * objSizePx + ox) * 4 + 3]
+          if (overlayAlpha > 30) continue  // inside object → no darkening
+        }
+
+        // Find distance to nearest opaque overlay pixel (within auraDistance)
+        let minDist = auraDistance + 1
+        const searchR = Math.min(auraDistance, 12)  // cap search radius for performance
+
+        outer: for (let dy = -searchR; dy <= searchR; dy++) {
+          for (let dx = -searchR; dx <= searchR; dx++) {
+            const px = ox + dx
+            const py = oy + dy
+            if (px < 0 || px >= objSizePx || py < 0 || py >= objSizePx) continue
+            const alpha = overlayData[(py * objSizePx + px) * 4 + 3]
+            if (alpha > 30) {
+              const dist = Math.sqrt(dx * dx + dy * dy)
+              if (dist < minDist) {
+                minDist = dist
+                if (minDist < 1) break outer
+              }
+            }
+          }
+        }
+
+        if (minDist > auraDistance) continue  // too far from object → no effect
+
+        // Darkening amount: 1 at distance 0 (boundary), 0 at auraDistance
+        const t = 1 - minDist / auraDistance
+        const darken = t * t * auraStrength  // quadratic falloff
+
+        const i = (cy * canvasSize + cx) * 4
+        d[i]     = Math.round(d[i]     * (1 - darken))
+        d[i + 1] = Math.round(d[i + 1] * (1 - darken))
+        d[i + 2] = Math.round(d[i + 2] * (1 - darken))
+        // Keep alpha from cover (fully opaque where cover is)
+      }
+    }
+
+    ctx.putImageData(mainData, 0, 0)
+
+    // ── Step 4: Mask out the interior of the overlay (leave it transparent) ───
+    // The canvas interior (inside the object silhouette) should show nothing
+    // since the overlay image sits on top. Clear the object interior pixels.
+    ctx.save()
+    ctx.globalCompositeOperation = 'destination-out'
+    ctx.drawImage(overlayImg, auraDistance, auraDistance, objSizePx, objSizePx)
+    ctx.restore()
+
+  }, [bothLoaded, xPct, yPct, widthFrac, auraDistance, auraStrength, containerWidthPx, canvasSize, objSizePx])
+
+  // The canvas is centered on the same anchor as the overlay, but larger
+  // by auraDistance on all sides.
+  const marginPct = (auraDistance / containerWidthPx) * 100
 
   return (
     <div style={{ position: 'absolute', left: `${xPct}%`, top: `${yPct}%`, transform: 'translate(-50%,-50%)', width: widthPct, height: widthPct, ...style }}>
-      {/* Aura canvas — behind the object, same size */}
+      {/* Aura canvas: larger than the overlay box, centered on same anchor */}
       {auraStrength > 0 && (
         <canvas
-          ref={auraCanvasRef}
+          ref={canvasRef}
           style={{
             position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
+            left: `${-auraDistance}px`,
+            top: `${-auraDistance}px`,
+            width: `calc(100% + ${auraDistance * 2}px)`,
+            height: `calc(100% + ${auraDistance * 2}px)`,
             pointerEvents: 'none',
+            zIndex: 0,
           }}
         />
       )}
-      {/* Overlay object — on top of aura */}
-      {children}
+      {/* Overlay children on top */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
+        {children}
+      </div>
     </div>
   )
 }

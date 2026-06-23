@@ -105,11 +105,5 @@ export const OV_ANIM_OPTIONS: { value: OverlayAnim; label: string }[] = [
 
 /** Compute CSS mask-image for edge feathering using radial gradient.
  *  edgeFade: 0 = no fade (hard edge), 0.8 = aggressive fade from 20% inward.
- *  Returns a partial CSSProperties object to spread onto the <img> element. */
-export function overlayEdgeFadeStyle(edgeFade?: number): { WebkitMaskImage?: string; maskImage?: string } {
-  if (!edgeFade || edgeFade <= 0) return {}
-  // Inner solid zone: 1 - edgeFade (e.g. fade=0.3 → solid until 70%, then fades to transparent)
-  const solidPct = Math.round((1 - edgeFade) * 100)
-  const mask = `radial-gradient(ellipse at 50% 50%, black ${solidPct}%, transparent 100%)`
-  return { WebkitMaskImage: mask, maskImage: mask }
-}
+ *  @deprecated Use OverlayAuraWrapper canvas approach instead */
+export function overlayEdgeFadeStyle(_edgeFade?: number): {} { return {} }
