@@ -623,9 +623,14 @@ function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
           }
           return (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={obj.id} src={obj.image_url} alt={obj.label} draggable={false}
-              style={{ position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`, width: sz, height: sz,
-                objectFit: 'contain', transform: 'translate(-50%,-50%)', animation: anim, transformOrigin, pointerEvents: 'none' }} />
+            <div key={obj.id} style={{
+              position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
+              width: sz, height: sz, transform: 'translate(-50%,-50%)', pointerEvents: 'none',
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={obj.image_url} alt={obj.label} draggable={false}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin }} />
+            </div>
           )
         })}
         {/* Title */}

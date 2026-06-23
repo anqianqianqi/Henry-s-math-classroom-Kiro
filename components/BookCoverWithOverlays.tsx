@@ -110,26 +110,21 @@ export function BookCoverWithOverlays({
         const transformOrigin = getTransformOrigin(cfg.animation ?? 'none')
 
         return (
-          <img
-            key={obj.id}
-            src={obj.image_url}
-            alt={obj.label}
-            draggable={false}
-            style={{
-              position: 'absolute',
-              left: `${cfg.x}%`,
-              top: `${cfg.y}%`,
-              width: sz,
-              height: sz,
-              objectFit: 'contain',
-              transform: 'translate(-50%, -50%)',
-              animation: anim,
-              transformOrigin,
-              // Pause during book flip, resume afterward from the same position
-              animationPlayState: overlayAnimationPaused ? 'paused' : 'running',
-              pointerEvents: 'none',
-            }}
-          />
+          // Outer div handles centering; inner img handles animation (no translate in keyframes)
+          <div key={obj.id} style={{
+            position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
+            width: sz, height: sz, transform: 'translate(-50%,-50%)',
+            pointerEvents: 'none',
+          }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={obj.image_url} alt={obj.label} draggable={false}
+              style={{
+                width: '100%', height: '100%', objectFit: 'contain',
+                animation: anim, transformOrigin,
+                animationPlayState: overlayAnimationPaused ? 'paused' : 'running',
+              }}
+            />
+          </div>
         )
       })}
     </div>

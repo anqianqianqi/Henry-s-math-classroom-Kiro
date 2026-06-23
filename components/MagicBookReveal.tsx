@@ -441,18 +441,19 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                     const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation as any, 'bov', (cfg as any).speed ?? 1.0) : undefined
                     const transformOrigin = getTransformOrigin(cfg.animation as any)
                     return (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img key={obj.id} src={obj.image_url} alt={obj.label} draggable={false}
-                        style={{
-                          position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
-                          width: sz, height: sz, objectFit: 'contain',
-                          transform: 'translate(-50%,-50%)',
-                          animation: anim,
-                          transformOrigin,
-                          animationPlayState: phase === 'opening' ? 'paused' : 'running',
-                          pointerEvents: 'none',
-                        }}
-                      />
+                      <div key={obj.id} style={{
+                        position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
+                        width: sz, height: sz, transform: 'translate(-50%,-50%)', pointerEvents: 'none',
+                      }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={obj.image_url} alt={obj.label} draggable={false}
+                          style={{
+                            width: '100%', height: '100%', objectFit: 'contain',
+                            animation: anim, transformOrigin,
+                            animationPlayState: phase === 'opening' ? 'paused' : 'running',
+                          }}
+                        />
+                      </div>
                     )
                   })}
                   {/* Title overlay */}
