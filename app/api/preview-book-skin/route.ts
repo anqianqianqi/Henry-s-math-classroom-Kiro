@@ -77,12 +77,13 @@ async function callGenerations(apiKey: string, prompt: string): Promise<string> 
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'gpt-image-2',
+      model: 'gpt-image-1',
       prompt,
       n: 1,
       size: '1024x1536',   // portrait — fills canvas naturally, no side padding
       output_format: 'png',
       quality: 'high',
+      background: 'transparent',
     }),
   })
   if (!res.ok) throw new Error(`Generation failed (${res.status}): ${(await res.text()).slice(0, 200)}`)
