@@ -22,7 +22,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-const NUM_EXAMPLES = 5
+const NUM_EXAMPLES = 10
 
 export async function POST(request: Request) {
   try {
