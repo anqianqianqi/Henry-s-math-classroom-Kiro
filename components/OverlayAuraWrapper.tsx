@@ -103,24 +103,27 @@ export function OverlayAuraWrapper({
 
     ctx.drawImage(coverImg, sx, sy, sw, sh, 0, 0, canvasW, canvasH)
 
-    // ── 2. Read overlay alpha at objSizePx resolution ─────────────────────────
+    // ── 2. Read overlay alpha map at higher resolution for better silhouette ───
+    // Use 256px to get a good alpha map regardless of objSizePx being tiny
+    const ALPHA_RES = Math.max(objSizePx, 128)
     const offscreen = document.createElement('canvas')
-    offscreen.width = objSizePx; offscreen.height = objSizePx
+    offscreen.width = ALPHA_RES; offscreen.height = ALPHA_RES
     const offCtx = offscreen.getContext('2d')!
-    offCtx.drawImage(overlayImg, 0, 0, objSizePx, objSizePx)
-    const oPx = offCtx.getImageData(0, 0, objSizePx, objSizePx).data
+    offCtx.drawImage(overlayImg, 0, 0, ALPHA_RES, ALPHA_RES)
+    const oPx = offCtx.getImageData(0, 0, ALPHA_RES, ALPHA_RES).data
 
-    // Helper: overlay alpha at overlay-space coords
+    // Helper: overlay alpha at overlay-space coords (0-objSizePx range → 0-ALPHA_RES)
     function oAlpha(ox: number, oy: number): number {
-      const ix = Math.round(ox), iy = Math.round(oy)
-      if (ix < 0 || ix >= objSizePx || iy < 0 || iy >= objSizePx) return 0
-      return oPx[(iy * objSizePx + ix) * 4 + 3]
+      const ix = Math.round(ox * ALPHA_RES / objSizePx)
+      const iy = Math.round(oy * ALPHA_RES / objSizePx)
+      if (ix < 0 || ix >= ALPHA_RES || iy < 0 || iy >= ALPHA_RES) return 0
+      return oPx[(iy * ALPHA_RES + ix) * 4 + 3]
     }
 
     // ── 3. Process each canvas pixel ─────────────────────────────────────────
     const imgData = ctx.getImageData(0, 0, canvasW, canvasH)
     const d = imgData.data
-    const searchR = Math.min(pad, 16)
+    const searchR = Math.min(pad, 16)  // cap search for performance
 
     for (let cy = 0; cy < canvasH; cy++) {
       for (let cx = 0; cx < canvasW; cx++) {
