@@ -769,6 +769,8 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   // Per-cluster progress: 0=pending, 1=generating, 2=done, 3=error
   const [clusterProgress, setClusterProgress] = useState<(0|1|2|3)[]>([0,0,0,0])
   const [clusterErrors, setClusterErrors] = useState<(string|null)[]>([null,null,null,null])
+  // Which corner clusters to generate objects for (all on by default)
+  const [enabledClusters, setEnabledClusters] = useState<boolean[]>([true, true, true, true])
   // Lightbox: zoom any cover or object image
   const [zoomedImage, setZoomedImage] = useState<{ src: string; label: string } | null>(null)
 
@@ -834,7 +836,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 
       const enrichRes = await fetch('/api/enrich-cluster-items', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coverPrompt: fullPrompt, artStyle }),
+        body: JSON.stringify({ coverPrompt: fullPrompt, artStyle, enabledClusters }),
       })
       let enrichData: any
       try { enrichData = await enrichRes.json() } catch {
@@ -1619,9 +1621,34 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                         className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-semibold rounded-xl text-sm transition-colors">
                         {generating && !cleanCorners ? '⏳ Generating…' : '✨ Generate Cover'}
                       </button>
-                      <button onClick={handleGenerateWithObjects} disabled={generating || !genPrompt.trim()}
+                      <button onClick={handleGenerateWithObjects} disabled={generating || !genPrompt.trim() || !enabledClusters.some(Boolean)}
                         className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-semibold rounded-xl text-sm transition-colors">
                         {generating && cleanCorners ? '⏳ Generating cover…' : extracting ? '⏳ Generating objects…' : '✨ Generate + Objects'}
+                      </button>
+                    </div>
+                    {/* Corner cluster selection — shown below Generate + Objects */}
+                    <div className="border border-purple-200 rounded-xl p-2.5 bg-purple-50/40">
+                      <p className="text-[11px] font-semibold text-purple-700 mb-2">Generate objects for corners:</p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {(['Top-left ↖', 'Top-right ↗', 'Bot-left ↙', 'Bot-right ↘'] as const).map((label, i) => (
+                          <label key={i} className="flex items-center gap-1.5 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={enabledClusters[i]}
+                              onChange={() => setEnabledClusters(prev => { const n = [...prev]; n[i] = !n[i]; return n })}
+                              className="accent-purple-600 w-3.5 h-3.5"
+                            />
+                            <span className={`text-[11px] font-medium ${enabledClusters[i] ? 'text-purple-800' : 'text-gray-400'}`}>{label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setEnabledClusters(
+                          enabledClusters.every(Boolean) ? [false,false,false,false] : [true,true,true,true]
+                        )}
+                        className="mt-1.5 text-[10px] text-purple-500 hover:text-purple-700 underline"
+                      >
+                        {enabledClusters.every(Boolean) ? 'Deselect all' : 'Select all'}
                       </button>
                     </div>
                   </div>

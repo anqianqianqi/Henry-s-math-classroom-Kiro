@@ -52,8 +52,13 @@ export async function POST(request: Request) {
     const isAdmin = (roles as any[])?.some((r: any) => r.roles?.name === 'administrator' || r.roles?.name === 'teacher')
     if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const { coverPrompt, artStyle } = await request.json()
+    const { coverPrompt, artStyle, enabledClusters } = await request.json()
     if (!coverPrompt?.trim()) return NextResponse.json({ error: 'coverPrompt required' }, { status: 400 })
+
+    // enabledClusters: boolean[4] — defaults to all true if not provided
+    const enabled: boolean[] = Array.isArray(enabledClusters) && enabledClusters.length === 4
+      ? enabledClusters
+      : [true, true, true, true]
 
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 })
@@ -63,11 +68,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No cluster items found in prompt. Use format: corner clusters: [item1 + item2 + item3] [...]' }, { status: 400 })
     }
 
-    // Build the item list for GPT-4o — flat list with cluster labels
-    const allItems: { corner: string; item: string }[] = []
-    for (const cluster of parsed) {
+    // Filter to only enabled clusters
+    const activeParsed = parsed.map((cluster, i) => ({ ...cluster, clusterIndex: i, active: enabled[i] ?? true }))
+      .filter(c => c.active)
+
+    if (activeParsed.length === 0) {
+      return NextResponse.json({ error: 'No clusters selected — enable at least one corner.' }, { status: 400 })
+    }
+
+    // Build the item list for GPT-4o — flat list with corner labels
+    const allItems: { corner: string; item: string; clusterIndex: number }[] = []
+    for (const cluster of activeParsed) {
       for (const item of cluster.items) {
-        allItems.push({ corner: cluster.corner, item })
+        allItems.push({ corner: cluster.corner, item, clusterIndex: cluster.clusterIndex })
       }
     }
 
@@ -142,12 +155,12 @@ Output ONLY a valid JSON array, one entry per item in the SAME ORDER as input:
       }))
     }
 
-    // Reassemble into per-cluster groups matching the original cluster order
-    const clusters = parsed.map((cluster, clusterIdx) => {
-      const startIdx = parsed.slice(0, clusterIdx).reduce((acc, c) => acc + c.items.length, 0)
+    // Reassemble into per-cluster groups matching the active cluster order
+    const clusters = activeParsed.map((cluster, activeIdx) => {
+      const startIdx = activeParsed.slice(0, activeIdx).reduce((acc, c) => acc + c.items.length, 0)
       const clusterEnriched = enriched.slice(startIdx, startIdx + cluster.items.length)
       return {
-        clusterIndex: clusterIdx,
+        clusterIndex: cluster.clusterIndex,
         corner: cluster.corner,
         items: clusterEnriched,
       }
