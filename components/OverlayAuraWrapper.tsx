@@ -103,17 +103,45 @@ export function OverlayAuraWrapper({
 
     ctx.drawImage(coverImg, sx, sy, sw, sh, 0, 0, canvasW, canvasH)
 
-    // ── 2. Read overlay alpha map at higher resolution for better silhouette ───
-    // Use 256px to get a good alpha map regardless of objSizePx being tiny
-    const ALPHA_RES = Math.max(objSizePx, 128)
+    // ── 2. Read overlay alpha map and find actual content bounding box ────────
+    const ALPHA_RES = Math.max(objSizePx * 2, 256)
     const offscreen = document.createElement('canvas')
     offscreen.width = ALPHA_RES; offscreen.height = ALPHA_RES
     const offCtx = offscreen.getContext('2d')!
     offCtx.drawImage(overlayImg, 0, 0, ALPHA_RES, ALPHA_RES)
     const oPx = offCtx.getImageData(0, 0, ALPHA_RES, ALPHA_RES).data
 
-    // Helper: overlay alpha at overlay-space coords (0-objSizePx range → 0-ALPHA_RES)
+    // Find the actual content bounding box (where opaque pixels are)
+    let minX = ALPHA_RES, maxX = 0, minY = ALPHA_RES, maxY = 0
+    for (let y = 0; y < ALPHA_RES; y++) {
+      for (let x = 0; x < ALPHA_RES; x++) {
+        if (oPx[(y * ALPHA_RES + x) * 4 + 3] > 30) {
+          if (x < minX) minX = x
+          if (x > maxX) maxX = x
+          if (y < minY) minY = y
+          if (y > maxY) maxY = y
+        }
+      }
+    }
+    // If no opaque pixels found, fall back to full bounds
+    if (maxX <= minX || maxY <= minY) { minX = 0; maxX = ALPHA_RES - 1; minY = 0; maxY = ALPHA_RES - 1 }
+
+    // Content size in ALPHA_RES space
+    const contentW = maxX - minX + 1
+    const contentH = maxY - minY + 1
+
+    // Helper: given canvas pixel (cx,cy), map to alpha map and check if opaque.
+    // The canvas is (canvasW × canvasH). The overlay object fills objSizePx in the canvas
+    // (starting at pad offset). The content bounding box within ALPHA_RES tells us where
+    // the actual jar is. We need to map canvas pixel → is it part of the jar silhouette.
+    //
+    // canvas overlay region: cx in [pad, pad+objSizePx), cy in [pad, pad+objSizePx)
+    // In that region, (cx-pad)/objSizePx = fraction along obj box
+    // Map to alpha: ix = minX + fraction * contentW (within content bounds)
     function oAlpha(ox: number, oy: number): number {
+      // ox, oy are in overlay-space (0..objSizePx)
+      if (ox < 0 || ox >= objSizePx || oy < 0 || oy >= objSizePx) return 0
+      // Map to ALPHA_RES full image coordinates
       const ix = Math.round(ox * ALPHA_RES / objSizePx)
       const iy = Math.round(oy * ALPHA_RES / objSizePx)
       if (ix < 0 || ix >= ALPHA_RES || iy < 0 || iy >= ALPHA_RES) return 0
@@ -133,12 +161,24 @@ export function OverlayAuraWrapper({
 
         const i = (cy * canvasW + cx) * 4
 
-        // Is this pixel inside the object silhouette?
-        if (oAlpha(ox, oy) > 30) {
-          // Object pixel → fully transparent (the overlay <img> draws here)
+        // Is this pixel inside the overlay bounding box?
+        const insideBox = ox >= 0 && ox < objSizePx && oy >= 0 && oy < objSizePx
+
+        // Object pixel (inside box AND opaque in overlay) → fully transparent
+        // (the overlay <img> renders on top)
+        if (insideBox && oAlpha(ox, oy) > 30) {
           d[i + 3] = 0
           continue
         }
+
+        // Pixels inside the overlay box but in the transparent padding zone
+        // → also transparent (the <img> shows nothing here, no aura needed inside the box)
+        if (insideBox) {
+          d[i + 3] = 0
+          continue
+        }
+
+        // Only pixels OUTSIDE the overlay box get the aura treatment
 
         // Cover pixel — find distance to nearest opaque object pixel
         let minDist = pad + 1
