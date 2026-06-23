@@ -712,6 +712,8 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   // Per-cluster progress: 0=pending, 1=generating, 2=done, 3=error
   const [clusterProgress, setClusterProgress] = useState<(0|1|2|3)[]>([0,0,0,0])
   const [clusterErrors, setClusterErrors] = useState<(string|null)[]>([null,null,null,null])
+  // Lightbox: zoom any cover or object image
+  const [zoomedImage, setZoomedImage] = useState<{ src: string; label: string } | null>(null)
 
   async function handleExtractObjects() {
     if (!sandbox || !identifiedObjects || selectedExtractObjects.size === 0) return
@@ -1552,9 +1554,14 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                         className="text-xs text-gray-400 hover:text-gray-600">✕ Start over</button>
                     </div>
 
-                    {/* Preview */}
+                    {/* Preview — click to zoom */}
                     <div className="flex justify-center">
-                      <div className="rounded-xl overflow-hidden border-2 border-amber-200 shadow-lg" style={{ width: 280, height: 434 }}>
+                      <div
+                        className="rounded-xl overflow-hidden border-2 border-amber-200 shadow-lg cursor-zoom-in"
+                        style={{ width: 280, height: 434 }}
+                        onClick={() => setZoomedImage({ src: sandbox.imageUrl, label: 'Cover preview' })}
+                        title="Click to zoom"
+                      >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={sandbox.imageUrl} alt="Generated cover" className="w-full h-full object-cover" />
                       </div>
@@ -1599,8 +1606,10 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                               {sandbox.extractedObjects.map((obj, idx) => (
                                 <div key={idx} className="flex flex-col items-center gap-1">
                                   <div
-                                    className="w-16 h-16 rounded-lg border border-purple-200 overflow-hidden flex items-center justify-center"
+                                    className="w-16 h-16 rounded-lg border border-purple-200 overflow-hidden flex items-center justify-center cursor-zoom-in"
                                     style={{ background: 'repeating-conic-gradient(#d1d5db 0% 25%, #fff 0% 50%) 0 0 / 12px 12px' }}
+                                    onClick={() => setZoomedImage({ src: obj.imageUrl, label: obj.label })}
+                                    title="Click to zoom"
                                   >
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src={obj.imageUrl} alt={obj.label} className="w-full h-full object-contain" />
@@ -1799,6 +1808,38 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
           </div>
         )}
       </Card.Body>
+
+      {/* Lightbox — click any cover or object thumbnail to zoom */}
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 cursor-zoom-out"
+          onClick={() => setZoomedImage(null)}
+        >
+          <div className="relative max-w-2xl w-full flex flex-col items-center gap-3" onClick={e => e.stopPropagation()}>
+            <div
+              className="rounded-2xl overflow-hidden shadow-2xl"
+              style={{ background: 'repeating-conic-gradient(#374151 0% 25%, #1f2937 0% 50%) 0 0 / 20px 20px', maxHeight: '80vh' }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={zoomedImage.src}
+                alt={zoomedImage.label}
+                className="max-w-full max-h-[78vh] object-contain"
+                style={{ display: 'block' }}
+              />
+            </div>
+            <div className="flex items-center justify-between w-full px-1">
+              <span className="text-white text-sm font-semibold drop-shadow">{zoomedImage.label}</span>
+              <button
+                onClick={() => setZoomedImage(null)}
+                className="text-white/70 hover:text-white text-sm px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                ✕ Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }
