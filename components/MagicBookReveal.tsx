@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { BookCoverWithOverlays, type OverlayObject } from './BookCoverWithOverlays'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct } from '@/lib/overlayAnimations'
+import { OverlayBurstRenderer } from './OverlayBurstRenderer'
 
 interface MagicBookRevealProps {
   title: string
@@ -38,6 +41,11 @@ interface MagicBookRevealProps {
    * instead of the CSS flip animation. Last frame = transition complete → open.
    */
   coverFrameUrls?: string[]
+  /**
+   * Overlay objects from book_skin_overlays — rendered as animated transparent PNGs
+   * composited on top of the cover image.
+   */
+  coverOverlays?: import('./BookCoverWithOverlays').OverlayObject[]
 }
 
 /**
@@ -52,7 +60,7 @@ interface MagicBookRevealProps {
  * Mobile (< 768 px):
  *   Same cover/animation, single parchment page for the problem, solution slot below.
  */
-export function MagicBookReveal({ title, date, children, solutionSlot, coverImageUrl, pageImageUrl, coverLayout, coverFrameUrls }: MagicBookRevealProps) {
+export function MagicBookReveal({ title, date, children, solutionSlot, coverImageUrl, pageImageUrl, coverLayout, coverFrameUrls, coverOverlays }: MagicBookRevealProps) {
   const [phase, setPhase] = useState<'closed' | 'opening' | 'open'>('closed')
   const [particles, setParticles] = useState<
     { id: number; x: number; y: number; angle: number; delay: number }[]
@@ -332,6 +340,8 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
 
   return (
     <>
+      {/* Overlay animation keyframes — injected once */}
+      <style>{buildKeyframesCSS('bov')}</style>
       <div ref={bookRef} className="relative w-full mb-6" style={{ perspective: '1400px', background: 'transparent' }}>
 
         {/* ── Sparkle particles ── */}
@@ -405,6 +415,46 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                       ))}
                     </div>
                   )}
+                  {/* Animated overlay objects — paused during book flip */}
+                  {coverOverlays && coverOverlays.length > 0 && coverOverlays.map((obj) => {
+                    const cfg = obj.overlay_config
+                    if (!cfg) return null
+                    const sz = overlayWidthPct(cfg.scale ?? 1.0)
+
+                    // Burst animation — canvas-based renderer
+                    if ((cfg as any).animation === 'burst' && (cfg as any).burst?.polygon?.length >= 3) {
+                      const containerPx = bookRef.current?.offsetWidth ?? 480
+                      return (
+                        <OverlayBurstRenderer
+                          key={obj.id}
+                          imageUrl={obj.image_url}
+                          containerWidthPx={containerPx}
+                          scale={cfg.scale ?? 1.0}
+                          speed={(cfg as any).speed ?? 1.0}
+                          burst={(cfg as any).burst}
+                          paused={phase === 'opening'}
+                          style={{ left: `${cfg.x}%`, top: `${cfg.y}%`, transform: 'translate(-50%,-50%)' }}
+                        />
+                      )
+                    }
+
+                    const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation as any, 'bov', (cfg as any).speed ?? 1.0) : undefined
+                    const transformOrigin = getTransformOrigin(cfg.animation as any)
+                    return (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={obj.id} src={obj.image_url} alt={obj.label} draggable={false}
+                        style={{
+                          position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
+                          width: sz, height: sz, objectFit: 'contain',
+                          transform: 'translate(-50%,-50%)',
+                          animation: anim,
+                          transformOrigin,
+                          animationPlayState: phase === 'opening' ? 'paused' : 'running',
+                          pointerEvents: 'none',
+                        }}
+                      />
+                    )
+                  })}
                   {/* Title overlay */}
                   <div
                     className="absolute text-center px-4 w-full"

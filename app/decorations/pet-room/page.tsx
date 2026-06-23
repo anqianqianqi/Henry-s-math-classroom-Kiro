@@ -10,6 +10,7 @@ import dynamicImport from 'next/dynamic'
 import type { AnimZone } from '@/components/pet-room/AnimationZoneEditor'
 
 const AnimationZoneEditor = dynamicImport(() => import('@/components/pet-room/AnimationZoneEditor'), { ssr: false })
+const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/AnimatedRoomLayer'), { ssr: false })
 
 interface PetRoomBackground {
   id: string
@@ -45,6 +46,7 @@ export default function PetRoomPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [lightbox, setLightbox] = useState<string | null>(null)
+  const [previewBg, setPreviewBg] = useState<PetRoomBackground | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
   // ── AI sandbox (generate + iterate before saving) ─────────────────────────
@@ -682,8 +684,18 @@ export default function PetRoomPage() {
                   className={`relative rounded-2xl overflow-hidden border-4 transition-all ${isInactive ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${isSelected ? 'border-primary-500 shadow-lg shadow-primary-200' : 'border-transparent hover:border-primary-300 hover:shadow-md'}`}>
                   <div className="relative aspect-[16/9] bg-gray-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={bg.image_url} alt={bg.name} className="w-full h-full object-cover"
-                      onClick={e => { e.stopPropagation(); setLightbox(bg.image_url) }} />
+                    <img src={bg.image_url} alt={bg.name} className="w-full h-full object-cover" draggable={false} />
+                    {/* Hover overlay + 🔍 button — consistent with book cover cards */}
+                    {!isInactive && (
+                      <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 hover:opacity-100 transition-opacity bg-black/10">
+                        <button
+                          onClick={e => { e.stopPropagation(); setPreviewBg(bg) }}
+                          className="bg-black/55 hover:bg-black/75 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg backdrop-blur-sm transition-colors"
+                        >
+                          🔍 Preview
+                        </button>
+                      </div>
+                    )}
                   {isInactive && <div className="absolute inset-0 bg-gray-900/50 flex flex-col items-center justify-center gap-1"><span className="text-2xl">⚠️</span><span className="text-white text-xs font-bold bg-gray-900/70 px-2 py-1 rounded-lg">Unavailable</span></div>}
                     {!isPublic && isAdmin && <div className="absolute top-2 left-2 text-xs bg-gray-800/70 text-white px-2 py-0.5 rounded font-semibold">🔒 Admin only</div>}
                     {isOwned && !isAdmin && <div className="absolute top-2 left-2 text-xs bg-purple-600/80 text-white px-2 py-0.5 rounded font-semibold">🛒 Owned</div>}
@@ -758,7 +770,27 @@ export default function PetRoomPage() {
         )}
       </main>
 
-      {/* ── Lightbox ──────────────────────────────────────────────────────── */}
+      {/* ── Animated preview modal (replaces old static lightbox for room cards) ── */}
+      {previewBg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4" onClick={() => setPreviewBg(null)}>
+          <div className="relative w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewBg.image_url} alt={previewBg.name} className="w-full block" draggable={false} />
+            {previewBg.animation_zones && previewBg.animation_zones.length > 0 && (
+              <AnimatedRoomLayer imageUrl={previewBg.image_url} zones={previewBg.animation_zones} />
+            )}
+            <button onClick={() => setPreviewBg(null)}
+              className="absolute top-3 right-3 z-10 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
+              ✕ Close
+            </button>
+            <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-xl text-sm font-semibold">
+              {previewBg.name}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Lightbox (for blindbox photos only) ───────────────────────────── */}
       {lightbox && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 cursor-zoom-out" onClick={() => setLightbox(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element */}

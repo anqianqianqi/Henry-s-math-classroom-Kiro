@@ -37,7 +37,7 @@ async function callGenerations(apiKey: string, prompt: string): Promise<string> 
   const res = await fetch('https://api.openai.com/v1/images/generations', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'gpt-image-1', prompt, n: 1, size: '1536x1024', output_format: 'png', quality: 'high' }),
+    body: JSON.stringify({ model: 'gpt-image-2', prompt, n: 1, size: '1536x1024', output_format: 'png', quality: 'high' }),
   })
   if (!res.ok) throw new Error(`Generation failed (${res.status}): ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
@@ -51,7 +51,7 @@ async function callEdit(apiKey: string, imageUrl: string, editPrompt: string): P
   if (!imgRes.ok) throw new Error('Could not fetch source image')
   const imgBlob = new Blob([await imgRes.arrayBuffer()], { type: 'image/png' })
   const form = new FormData()
-  form.append('model', 'gpt-image-1')
+  form.append('model', 'gpt-image-2')
   form.append('image', imgBlob, 'room.png')
   form.append('prompt', editPrompt)
   form.append('n', '1')
