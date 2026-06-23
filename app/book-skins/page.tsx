@@ -801,15 +801,18 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
         return
       }
 
-      // ── Step 3: Per cluster, fire all 3 objects in parallel; clusters stay sequential ──
+      // ── Step 3: Generate one object at a time — each pops in immediately when done ──
+      // Sequential to avoid gateway timeouts from concurrent long-running requests.
       for (const cluster of clusters) {
         setClusterProgress(prev => { const n = [...prev] as (0|1|2|3)[]; n[cluster.clusterIndex] = 1; return n })
 
-        // Fire all items in this cluster simultaneously — 3 parallel serverless calls,
-        // each is just 1 gpt-image-2 call + 1 upload so no timeout risk per call
-        const clusterResults = await Promise.allSettled(
-          cluster.items.map((item, objIdx) =>
-            fetch('/api/generate-single-object', {
+        let clusterSuccesses = 0
+        const errs: string[] = []
+
+        for (let objIdx = 0; objIdx < cluster.items.length; objIdx++) {
+          const item = cluster.items[objIdx]
+          try {
+            const res = await fetch('/api/generate-single-object', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 label: item.label,
@@ -817,46 +820,32 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                 clusterIndex: cluster.clusterIndex,
                 objectIndex: objIdx,
               }),
-            }).then(async res => {
-              let data: any
-              try { data = await res.json() } catch { data = {} }
-              if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`)
-              return { label: data.label as string, imageUrl: data.imageUrl as string }
             })
-          )
-        )
-
-        // Collect successes and append them all at once — 3 objects pop in together
-        const succeeded: { label: string; imageUrl: string }[] = []
-        const errs: string[] = []
-        for (let i = 0; i < clusterResults.length; i++) {
-          const r = clusterResults[i]
-          if (r.status === 'fulfilled') {
-            succeeded.push(r.value)
-          } else {
-            const msg = r.reason?.message ?? 'unknown error'
-            console.error(`[cluster ${cluster.clusterIndex}] "${cluster.items[i]?.label}":`, msg)
-            errs.push(`${cluster.items[i]?.label}: ${msg}`)
+            let data: any
+            try { data = await res.json() } catch { data = {} }
+            if (!res.ok) {
+              errs.push(`${item.label}: ${data?.error ?? `HTTP ${res.status}`}`)
+            } else {
+              // Object ready — append immediately so it renders
+              setSandbox(prev => prev ? {
+                ...prev,
+                extractedObjects: [...(prev.extractedObjects ?? []), { label: data.label, imageUrl: data.imageUrl }],
+              } : prev)
+              clusterSuccesses++
+            }
+          } catch (err: any) {
+            errs.push(`${item.label}: ${err.message ?? 'network error'}`)
           }
         }
 
-        if (succeeded.length > 0) {
-          setSandbox(prev => prev ? {
-            ...prev,
-            extractedObjects: [...(prev.extractedObjects ?? []), ...succeeded],
-          } : prev)
-        }
         if (errs.length > 0) {
           setClusterErrors(prev => { const n = [...prev]; n[cluster.clusterIndex] = errs.join('; '); return n })
         }
         setClusterProgress(prev => {
           const n = [...prev] as (0|1|2|3)[]
-          n[cluster.clusterIndex] = succeeded.length > 0 ? 2 : 3
+          n[cluster.clusterIndex] = clusterSuccesses > 0 ? 2 : 3
           return n
         })
-
-        // Short gap between clusters to avoid OpenAI bursting 6+ concurrent requests
-        if (cluster.clusterIndex < clusters.length - 1) await new Promise(r => setTimeout(r, 1000))
       }
 
       // Ensure extractedObjects is never undefined after we finish
