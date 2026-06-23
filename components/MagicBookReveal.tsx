@@ -451,7 +451,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                             width: '100%', height: '100%', objectFit: 'contain',
                             animation: anim, transformOrigin,
                             animationPlayState: phase === 'opening' ? 'paused' : 'running',
-                            ...overlayBlendStyle((cfg as any).blendMode),
+                            ...overlayBlendStyle((cfg as any).blendMode, (cfg as any).blendStrength, (cfg as any).warmTint),
                           }}
                         />
                       </div>

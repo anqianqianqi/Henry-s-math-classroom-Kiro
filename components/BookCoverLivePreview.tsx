@@ -117,7 +117,7 @@ export function BookCoverLivePreview({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={obj.image_url} alt={obj.label} draggable={false}
               style={{ width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin,
-                ...overlayBlendStyle((cfg as any).blendMode) }} />
+                ...overlayBlendStyle((cfg as any).blendMode, (cfg as any).blendStrength, (cfg as any).warmTint) }} />
           </div>
         )
       })}

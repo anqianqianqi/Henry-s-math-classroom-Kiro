@@ -68,7 +68,7 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={obj.image_url} alt={obj.label} draggable={false}
                 style={{ width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin,
-                  ...overlayBlendStyle(cfg.blendMode) }} />
+                  ...overlayBlendStyle(cfg.blendMode, cfg.blendStrength, cfg.warmTint) }} />
             </div>
           )
         })}

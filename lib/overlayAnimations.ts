@@ -105,12 +105,22 @@ export const OV_ANIM_OPTIONS: { value: OverlayAnim; label: string }[] = [
 
 /** Compute CSS mixBlendMode and filter for a given blendMode string.
  *  Returns a partial CSSProperties object to spread onto the <img> element. */
-export function overlayBlendStyle(blendMode?: string): { mixBlendMode?: any; filter?: string } {
-  if (blendMode === 'multiply' || blendMode === 'multiply-warm') {
-    return {
-      mixBlendMode: 'multiply',
-      filter: blendMode === 'multiply-warm' ? 'sepia(0.4)' : undefined,
-    }
+export function overlayBlendStyle(blendMode?: boolean | string, blendStrength?: number, warmTint?: number): { mixBlendMode?: any; filter?: string; opacity?: number } {
+  // Support both old string format (backward compat) and new boolean format
+  const isMultiply = blendMode === true || blendMode === 'multiply' || blendMode === 'multiply-warm'
+  if (!isMultiply) return {}
+
+  const strength = blendStrength ?? 0.85
+  const tint = warmTint ?? (blendMode === 'multiply-warm' ? 0.4 : 0)
+
+  // Build filter string: sepia for warm tint
+  const filterParts: string[] = []
+  if (tint > 0) filterParts.push(`sepia(${tint.toFixed(2)})`)
+  const filter = filterParts.length > 0 ? filterParts.join(' ') : undefined
+
+  return {
+    mixBlendMode: 'multiply',
+    opacity: strength,
+    filter,
   }
-  return {}
 }

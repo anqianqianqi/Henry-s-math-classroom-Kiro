@@ -630,8 +630,7 @@ function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={obj.image_url} alt={obj.label} draggable={false}
                 style={{ width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin,
-                  mixBlendMode: cfg.blendMode === 'multiply' || cfg.blendMode === 'multiply-warm' ? 'multiply' : undefined,
-                  filter: cfg.blendMode === 'multiply-warm' ? 'sepia(0.4)' : undefined }} />
+                  ...overlayBlendStyle(cfg.blendMode, cfg.blendStrength, cfg.warmTint) }} />
             </div>
           )
         })}
@@ -2241,8 +2240,8 @@ import { BurstPolygonEditor } from '@/components/BurstPolygonEditor'
 import type { BurstConfig } from '@/components/OverlayBurstRenderer'
 import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
 type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling' | 'burst'
-interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig; blendMode?: 'normal' | 'multiply' | 'multiply-warm' }
-const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0, blendMode: 'normal' }
+interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig; blendMode?: boolean; blendStrength?: number; warmTint?: number }
+const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0, blendMode: false, blendStrength: 0.85, warmTint: 0 }
 const DEFAULT_BURST: BurstConfig = {
   polygon: [],
   center: { x: 50, y: 50 },
@@ -2446,8 +2445,7 @@ function OverlayEditorInline({
                       onTouchStart={e => startDrag(o.id, e.touches[0].clientX, e.touches[0].clientY)}
                       style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', width: sz, height: sz, cursor: 'grab', zIndex: zIdx + 2, outline: selected === o.id ? '2px solid #a855f7' : undefined, borderRadius: 4 }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={o.image_url} alt={o.label} style={{ width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS_FN(c.animation, speed) : undefined, transformOrigin: getTransformOrigin(c.animation), pointerEvents: 'none', mixBlendMode: c.blendMode === 'multiply' || c.blendMode === 'multiply-warm' ? 'multiply' : undefined, filter: c.blendMode === 'multiply-warm' ? 'sepia(0.4)' : undefined }} draggable={false} />
-                    </div>
+                      <img src={o.image_url} alt={o.label} style={{ width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS_FN(c.animation, speed) : undefined, transformOrigin: getTransformOrigin(c.animation), pointerEvents: 'none', ...overlayBlendStyle(c.blendMode, c.blendStrength, c.warmTint) }} draggable={false} />                    </div>
                   )
                 })}
               </div>
@@ -2496,6 +2494,48 @@ function OverlayEditorInline({
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Scale ({cfg.scale.toFixed(1)}×)</label>
                     <input type="range" min={0.3} max={4.0} step={0.1} value={cfg.scale} onChange={e => upd(sel.id, { scale: Number(e.target.value) })} className="w-full accent-purple-600" />
                   </div>
+
+                  {/* ── Blend mode — BEFORE animation ── */}
+                  <div className="border border-gray-100 rounded-xl p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-gray-700">🎨 Blend Mode</label>
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 cursor-pointer select-none">
+                        <input type="checkbox" checked={!!cfg.blendMode} onChange={e => upd(sel.id, { blendMode: e.target.checked })} className="accent-purple-600" />
+                        Multiply blend
+                      </label>
+                    </div>
+                    {cfg.blendMode && (
+                      <>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">
+                            Blend strength ({((cfg.blendStrength ?? 0.85) * 100).toFixed(0)}%)
+                            <span className="ml-1 font-normal text-gray-400">opacity of object into cover</span>
+                          </label>
+                          <input type="range" min={0.1} max={1.0} step={0.05} value={cfg.blendStrength ?? 0.85}
+                            onChange={e => upd(sel.id, { blendStrength: Number(e.target.value) })}
+                            className="w-full accent-purple-600" />
+                          <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                            <span>10% subtle</span><span>50% medium</span><span>100% full</span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">
+                            Warm tint ({((cfg.warmTint ?? 0) * 100).toFixed(0)}%)
+                            <span className="ml-1 font-normal text-gray-400">amber/sepia overlay</span>
+                          </label>
+                          <input type="range" min={0} max={1.0} step={0.05} value={cfg.warmTint ?? 0}
+                            onChange={e => upd(sel.id, { warmTint: Number(e.target.value) })}
+                            className="w-full accent-amber-500" />
+                          <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                            <span>0% cool</span><span>50% warm</span><span>100% amber</span>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {!cfg.blendMode && <p className="text-[10px] text-gray-400">Enable to blend the object into the cover surface — lighter pixels pick up the cover's color.</p>}
+                  </div>
+
+                  {/* ── Animation ── */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-2">Animation</label>
                     <div className="flex flex-wrap gap-1.5">
@@ -2531,25 +2571,6 @@ function OverlayEditorInline({
                       onChange={b => upd(sel.id, { burst: b })}
                     />
                   )}
-                  {/* Blend mode — how the overlay blends with the cover beneath */}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">🎨 Blend Mode</label>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {([
-                        { value: 'normal',       label: '🔲 Normal',       desc: 'Sits on top as-is' },
-                        { value: 'multiply',     label: '✖️ Multiply',     desc: 'Blends into cover color' },
-                        { value: 'multiply-warm',label: '🌅 Warm Blend',   desc: 'Multiply + warm amber tint' },
-                      ] as const).map(opt => (
-                        <button key={opt.value}
-                          title={opt.desc}
-                          onClick={() => upd(sel.id, { blendMode: opt.value })}
-                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border-2 transition-colors ${(cfg.blendMode ?? 'normal') === opt.value ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300'}`}>
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-gray-400 mt-1">Multiply blends lighter pixels with the cover beneath so edges look embedded. Warm adds a sepia tint.</p>
-                  </div>
                   <button disabled={saving} onClick={() => onSave(sel, configs[sel.id] ?? DEFAULT_OV)}
                     className="w-full py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-bold rounded-xl text-sm">
                     {saving ? '⏳ Saving…' : `💾 Save "${sel.label}"`}

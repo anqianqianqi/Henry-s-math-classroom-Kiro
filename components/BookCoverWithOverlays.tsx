@@ -122,7 +122,7 @@ export function BookCoverWithOverlays({
                 width: '100%', height: '100%', objectFit: 'contain',
                 animation: anim, transformOrigin,
                 animationPlayState: overlayAnimationPaused ? 'paused' : 'running',
-                ...overlayBlendStyle((cfg as any).blendMode),
+                ...overlayBlendStyle((cfg as any).blendMode, (cfg as any).blendStrength, (cfg as any).warmTint),
               }}
             />
           </div>
