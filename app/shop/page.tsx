@@ -61,11 +61,6 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
             )
           }
           return (
-            // eslint-disable-next-line @next/next/no-img-element
-            <div key={obj.id} style={{
-              position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
-              width: sz, height: sz, transform: 'translate(-50%,-50%)', pointerEvents: 'none',
-          return (
             <OverlayAuraWrapper
               key={obj.id}
               overlayImageUrl={obj.image_url}
