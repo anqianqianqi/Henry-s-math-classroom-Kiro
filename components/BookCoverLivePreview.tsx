@@ -140,7 +140,7 @@ export function BookCoverLivePreview({
   return (
     <div
       className={className}
-      style={{ position: 'relative', display: 'inline-block', ...style }}
+      style={{ position: 'relative', display: 'block', overflow: 'hidden', ...style }}
       onClick={onClick}
     >
       {/* Cover image — object-contain matches MagicBookReveal exactly */}
@@ -148,8 +148,7 @@ export function BookCoverLivePreview({
       <img
         src={coverImageUrl}
         alt="Book cover"
-        className="w-full h-full object-contain"
-        style={{ display: 'block' }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
         draggable={false}
       />
 
