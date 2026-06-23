@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     const { data: target, error: targetErr } = await supabase
       .from('challenge_submissions')
       .select(`
-        id, content, points,
+        id, content, points, image_url,
         daily_challenges:challenge_id ( title, description )
       `)
       .eq('id', submissionId)
@@ -129,23 +129,23 @@ export async function POST(request: Request) {
     }
 
     // ── Step 3: Build the prompt ──────────────────────────────────────────────
-    const targetChallenge = (target as any).daily_challenges
-    const targetTitle = targetChallenge?.title ?? 'Math Challenge'
-    const targetDesc  = targetChallenge?.description ?? ''
+    const targetTitle = (target as any).daily_challenges?.title ?? 'Math Challenge'
+    const targetDesc  = (target as any).daily_challenges?.description ?? ''
+    const targetImageUrl: string | null = (target as any).image_url ?? null
 
     const systemPrompt = `You are writing as Henry, a math teacher texting his students quick feedback on their work.
 
 Henry's style:
-- Casual, like a text message. Short sentences. No formal language.
-- Direct about what's right or wrong, no fluff
-- Uses phrases like "nice", "good job", "not quite", "almost", "yeah that's right", "hmm", "wait"
-- Never says "Great work!" or "Excellent!" or "I can see you put in effort" — that's not Henry
-- If the answer is wrong, just say what's wrong concisely. No lecturing.
-- If the answer is right, a quick "nice" or "yeah got it" is enough
-- Keep it under 2-3 sentences
-- Sound human, not like a teacher writing a report card
+- Casual, short, direct — like a text message
+- Always reference the SPECIFIC thing the student did right or wrong in their actual work
+- Never give generic advice like "break it down step by step" or "start with the basics" — that tells them nothing
+- If wrong: say exactly WHAT is wrong (wrong formula, wrong sign, skipped a step, etc.)
+- If right: say "nice" or "yeah got it" and optionally note what they did well specifically
+- Keep it 1-2 sentences max
+- Do NOT ask questions like "where did you get stuck?" — just give the feedback
+- Sound human, not like a report card
 
-Look at the examples below and match that exact casual tone. Then respond to the new submission the same way.
+Look at the examples below to match Henry's exact tone, then respond to the new submission.
 
 End your response with exactly this line (nothing else after it):
 Points: <number>`
@@ -169,14 +169,26 @@ Points: <number>`
     const messages = [
       { role: 'system', content: systemPrompt },
       ...exampleMessages,
-      {
-        role: 'user',
-        content:
-          `Challenge: ${targetTitle}\n` +
-          (targetDesc ? `Description: ${targetDesc}\n` : '') +
-          `\nStudent's answer:\n${(target as any).content}`,
-      },
     ]
+
+    // Final user message: include image if submission has one
+    const textContent =
+      `Challenge: ${targetTitle}\n` +
+      (targetDesc ? `Description: ${targetDesc}\n` : '') +
+      `\nStudent's answer:\n${(target as any).content || '(see image)'}`
+
+    if (targetImageUrl) {
+      // Vision format — image + text together
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: textContent },
+          { type: 'image_url', image_url: { url: targetImageUrl, detail: 'low' } },
+        ] as any,
+      })
+    } else {
+      messages.push({ role: 'user', content: textContent })
+    }
 
     // ── Step 4: Call OpenAI chat completions ──────────────────────────────────
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
