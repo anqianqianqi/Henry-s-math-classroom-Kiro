@@ -2136,7 +2136,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Overlay Animation Editor — used in the manage modal of this page
 // ─────────────────────────────────────────────────────────────────────────────
-type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce'
+type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling'
 interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim }
 const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float' }
 const OV_KEYFRAMES = `
@@ -2145,14 +2145,19 @@ const OV_KEYFRAMES = `
 @keyframes bov-rotate  { from{transform:rotate(0deg)}        to{transform:rotate(360deg)} }
 @keyframes bov-shimmer { 0%,100%{opacity:1}                  50%{opacity:0.45} }
 @keyframes bov-bounce  { 0%,100%{transform:translateY(0)}    40%{transform:translateY(-14px)} 60%{transform:translateY(-6px)} }
+@keyframes bov-sway    { 0%,100%{transform:rotate(-8deg) translateY(0)} 50%{transform:rotate(8deg) translateY(-4px)} }
+@keyframes bov-flicker { 0%,100%{opacity:1} 25%{opacity:0.3} 50%{opacity:0.9} 75%{opacity:0.15} }
+@keyframes bov-bling   { 0%,100%{filter:brightness(1) drop-shadow(0 0 0px gold)} 50%{filter:brightness(1.6) drop-shadow(0 0 8px gold)} }
 `
 const OV_CSS: Record<OverlayAnim, string> = {
   none: '', float: 'bov-float 3s ease-in-out infinite', pulse: 'bov-pulse 2.5s ease-in-out infinite',
   rotate: 'bov-rotate 8s linear infinite', shimmer: 'bov-shimmer 2s ease-in-out infinite', bounce: 'bov-bounce 1.8s ease-in-out infinite',
+  sway: 'bov-sway 2.5s ease-in-out infinite', flicker: 'bov-flicker 1.4s ease-in-out infinite', bling: 'bov-bling 2s ease-in-out infinite',
 }
 const OV_ANIMS: { value: OverlayAnim; label: string }[] = [
   { value: 'none', label: '⏸ None' }, { value: 'float', label: '🌊 Float' }, { value: 'pulse', label: '💗 Pulse' },
   { value: 'rotate', label: '🔄 Rotate' }, { value: 'shimmer', label: '✨ Shimmer' }, { value: 'bounce', label: '🏀 Bounce' },
+  { value: 'sway', label: '🌿 Sway' }, { value: 'flicker', label: '🕯 Flicker' }, { value: 'bling', label: '💎 Bling' },
 ]
 
 function OverlayEditorInline({

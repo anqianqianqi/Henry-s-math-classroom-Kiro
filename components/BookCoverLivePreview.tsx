@@ -20,7 +20,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce'
+type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling'
 
 interface OverlayObject {
   id: string
@@ -46,6 +46,9 @@ const OV_KEYFRAMES = `
 @keyframes bcl-rotate  { from{transform:rotate(0deg) translate(-50%,-50%)}         to{transform:rotate(360deg) translate(-50%,-50%)} }
 @keyframes bcl-shimmer { 0%,100%{opacity:1}                                         50%{opacity:0.45} }
 @keyframes bcl-bounce  { 0%,100%{transform:translateY(0) translate(-50%,-50%)}     40%{transform:translateY(-14px) translate(-50%,-50%)} 60%{transform:translateY(-6px) translate(-50%,-50%)} }
+@keyframes bcl-sway    { 0%,100%{transform:rotate(-8deg) translateY(0) translate(-50%,-50%)} 50%{transform:rotate(8deg) translateY(-4px) translate(-50%,-50%)} }
+@keyframes bcl-flicker { 0%,100%{opacity:1} 25%{opacity:0.3} 50%{opacity:0.9} 75%{opacity:0.15} }
+@keyframes bcl-bling   { 0%,100%{filter:brightness(1) drop-shadow(0 0 0px gold)} 50%{filter:brightness(1.6) drop-shadow(0 0 8px gold)} }
 @keyframes bcl-pulse-glow { 0%,100%{opacity:1} 50%{opacity:0.7} }
 @keyframes bcl-wiggle   { 0%,100%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} }
 `
@@ -57,6 +60,9 @@ const OV_CSS: Record<OverlayAnim, string> = {
   rotate:  'bcl-rotate 8s linear infinite',
   shimmer: 'bcl-shimmer 2s ease-in-out infinite',
   bounce:  'bcl-bounce 1.8s ease-in-out infinite',
+  sway:    'bcl-sway 2.5s ease-in-out infinite',
+  flicker: 'bcl-flicker 1.4s ease-in-out infinite',
+  bling:   'bcl-bling 2s ease-in-out infinite',
 }
 
 interface BookCoverLivePreviewProps {
