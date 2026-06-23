@@ -1165,7 +1165,11 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     finally { setGenerating(false) }
   }
 
-  // Remove solid background from a base64 PNG by flood-filling from corners
+  // Remove solid background from a base64 PNG.
+  // Step 1: flood-fill from corners to clear connected background
+  // Step 2: global near-background pass — reduces alpha of any remaining
+  //         near-white pixels proportionally to how close they are to the bg colour.
+  //         This catches the soft feathered halo flood-fill misses.
   async function removeBackground(b64: string): Promise<Uint8Array> {
     return new Promise((resolve) => {
       const img = new Image()
@@ -1184,7 +1188,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
           const i = (y*W+x)*4
           return [data[i],data[i+1],data[i+2],data[i+3]]
         })
-        // If corner alpha is already 0, image is likely already transparent
+        // If all corners are already transparent, skip processing
         const allTransparent = samples.every(s => s[3] < 30)
         if (allTransparent) {
           const binaryStr = atob(b64)
@@ -1192,15 +1196,17 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
           for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
           resolve(bytes); return
         }
+
         const bgR = Math.round(samples.reduce((s,c)=>s+c[0],0)/4)
         const bgG = Math.round(samples.reduce((s,c)=>s+c[1],0)/4)
         const bgB = Math.round(samples.reduce((s,c)=>s+c[2],0)/4)
 
-        const TOL = 40
+        // ── Step 1: Flood-fill from corners (catches connected background) ──
+        const FLOOD_TOL = 40
         const isBg = (i: number) => {
           if (data[i+3] < 30) return true
           const dr=data[i]-bgR, dg=data[i+1]-bgG, db=data[i+2]-bgB
-          return Math.sqrt(dr*dr+dg*dg+db*db) < TOL
+          return Math.sqrt(dr*dr+dg*dg+db*db) < FLOOD_TOL
         }
         const visited = new Uint8Array(W*H)
         const queue: number[] = [0, W-1, (H-1)*W, (H-1)*W+W-1]
@@ -1212,13 +1218,35 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
           if (!isBg(i)) continue
           const dr=data[i]-bgR, dg=data[i+1]-bgG, db=data[i+2]-bgB
           const d = Math.sqrt(dr*dr+dg*dg+db*db)
-          data[i+3] = d < TOL ? 0 : Math.min(data[i+3], Math.round((d/TOL)*data[i+3]))
+          data[i+3] = d < FLOOD_TOL ? 0 : Math.min(data[i+3], Math.round((d/FLOOD_TOL)*data[i+3]))
           const ns = [x>0?pos-1:-1, x<W-1?pos+1:-1, y>0?pos-W:-1, y<H-1?pos+W:-1]
           for (const n of ns) { if (n>=0 && !visited[n]) { visited[n]=1; queue.push(n) } }
         }
+
+        // ── Step 2: Global near-background alpha reduction ──────────────────
+        // For every pixel still having alpha > 0, measure its distance from
+        // the background colour. Pixels within SOFT_INNER are fully transparent;
+        // pixels between SOFT_INNER and SOFT_OUTER get a proportional alpha
+        // reduction blended with existing alpha; pixels beyond SOFT_OUTER are untouched.
+        const SOFT_INNER = 30   // fully transparent if dist < this
+        const SOFT_OUTER = 100  // no reduction if dist > this
+        for (let p = 0; p < W * H; p++) {
+          const i = p * 4
+          if (data[i+3] === 0) continue
+          const dr = data[i] - bgR, dg = data[i+1] - bgG, db = data[i+2] - bgB
+          const dist = Math.sqrt(dr*dr + dg*dg + db*db)
+          if (dist < SOFT_INNER) {
+            data[i+3] = 0
+          } else if (dist < SOFT_OUTER) {
+            // Linear falloff: 0 at SOFT_INNER, full alpha at SOFT_OUTER
+            const t = (dist - SOFT_INNER) / (SOFT_OUTER - SOFT_INNER)
+            data[i+3] = Math.round(data[i+3] * t)
+          }
+        }
+
         ctx.putImageData(imageData, 0, 0)
         canvas.toBlob(blob => {
-          if (!blob) { // fallback: return original bytes
+          if (!blob) {
             const binaryStr = atob(b64)
             const bytes = new Uint8Array(binaryStr.length)
             for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
