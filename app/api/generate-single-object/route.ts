@@ -44,11 +44,12 @@ export async function POST(request: Request) {
     const fullPrompt = `${prompt.trim()}
 
 RENDERING REQUIREMENTS (MANDATORY):
+• PHYSICAL REAL-WORLD OBJECT — render this as an actual physical item with its true, natural colours. NOT a sculpture, NOT a statuette, NOT a figurine, NOT a monochrome or single-material cast. A barometer looks like a real barometer: brass dials, glass face, rubber tubing. A lantern looks like a real lantern: iron frame, amber glass, flame inside.
+• FULL NATURAL COLOUR — every material shows its real colour: brass is warm golden-brown, copper is reddish-orange, iron is dark grey, glass is clear/amber/coloured, leather is tan or dark brown, wood is warm brown grain, fabric shows its actual colour. No monochrome, no all-gold, no all-stone colouring.
 • FULLY TRANSPARENT BACKGROUND — alpha = 0 everywhere outside the object. No dark backdrop, colour fill, gradient, or vignette. The object floats on pure transparency.
-• 3D photorealistic render — sharp specular highlights on metal/glass, subsurface scattering on organic/translucent materials, realistic micro-surface detail.
+• Realistic depth cues through lighting only — sharp specular highlights on metal/glass, soft subsurface scattering on organic/translucent materials, warm directional light from slightly above-left.
 • Object fills 60-70% of the 1024×1024 frame; generous transparent padding on all sides.
 • Single soft drop shadow directly beneath the object — the ONLY non-transparent pixels outside the object silhouette.
-• Natural material colours preserved: brass is golden-brown, copper is reddish-orange, iron is dark grey, wood is warm brown.
 • Output: RGBA PNG with genuine per-pixel transparency.`
 
     // Generate the image

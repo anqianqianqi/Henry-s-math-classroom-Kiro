@@ -86,7 +86,7 @@ RULES (apply to every object):
 3. LIGHTING: warm directional light from slightly above-left; one soft drop shadow beneath the object
 4. COMPOSITION: object centred, filling 62-70% of frame, generous transparent padding all sides
 5. BACKGROUND: fully transparent RGBA (alpha=0 outside object); only the shadow touches the "floor"
-6. RENDER: photorealistic 3D — sharp specular on metal/glass, subsurface scattering on organics
+6. RENDER: photorealistic real-world object with full natural colour — NOT a sculpture, statuette, or monochrome cast. Show the actual materials: brass dials, glass faces, leather straps, iron frames, wood grain, fabric colour. Depth comes from lighting, not material transformation.
 7. NO text, no book surface, no other objects in frame
 8. Max 110 words per prompt
 
