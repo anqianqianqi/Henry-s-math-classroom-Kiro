@@ -9,6 +9,22 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { HomeButton } from '@/components/ui/HomeButton'
 
+async function downloadTrainingData() {
+  const res = await fetch('/api/export-training-data')
+  if (!res.ok) {
+    const { error } = await res.json().catch(() => ({ error: 'Export failed' }))
+    alert(`Export failed: ${error}`)
+    return
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'henry-grading-training.jsonl'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 interface Submission {
   id: string
   user_id: string
@@ -38,6 +54,7 @@ export default function GradingPage() {
   const [error, setError] = useState<string | null>(null)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [exporting, setExporting] = useState(false)
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -111,6 +128,31 @@ export default function GradingPage() {
     })
   }
 
+  async function handleExportTrainingData() {
+    setExporting(true)
+    try {
+      const res = await fetch('/api/export-training-data')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setError(body.error ?? 'Export failed')
+        return
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'henry-grading-training.jsonl'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch {
+      setError('Export failed')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   async function handleMarkReviewed(submissionId: string) {
     const { error: updateErr } = await supabase
       .from('challenge_submissions')
@@ -170,6 +212,16 @@ export default function GradingPage() {
             </Button>
             <HomeButton />
             <h1 className="text-lg sm:text-xl font-bold text-gray-900">Grade Submissions</h1>
+            <div className="ml-auto">
+              <button
+                onClick={handleExportTrainingData}
+                disabled={exporting}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300 text-white rounded-lg transition-colors"
+                title="Export all graded submissions + comments as JSONL for AI fine-tuning"
+              >
+                {exporting ? '⏳ Exporting…' : '🤖 Export Training Data'}
+              </button>
+            </div>
           </div>
         </div>
       </header>
