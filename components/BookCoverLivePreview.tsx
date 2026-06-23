@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim, overlayWidthPct, overlayBlendStyle } from '@/lib/overlayAnimations'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim, overlayWidthPct, overlayEdgeFadeStyle } from '@/lib/overlayAnimations'
 import { OverlayBurstRenderer } from './OverlayBurstRenderer'
 
 interface OverlayObject {
@@ -117,7 +117,7 @@ export function BookCoverLivePreview({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={obj.image_url} alt={obj.label} draggable={false}
               style={{ width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin,
-                ...overlayBlendStyle((cfg as any).blendMode, (cfg as any).blendStrength, (cfg as any).warmTint) }} />
+                ...overlayEdgeFadeStyle((cfg as any).edgeFade) }} />
           </div>
         )
       })}

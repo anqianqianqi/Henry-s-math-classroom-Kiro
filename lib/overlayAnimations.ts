@@ -103,24 +103,13 @@ export const OV_ANIM_OPTIONS: { value: OverlayAnim; label: string }[] = [
   { value: 'burst',   label: '💥 Burst' },
 ]
 
-/** Compute CSS mixBlendMode and filter for a given blendMode string.
+/** Compute CSS mask-image for edge feathering using radial gradient.
+ *  edgeFade: 0 = no fade (hard edge), 0.8 = aggressive fade from 20% inward.
  *  Returns a partial CSSProperties object to spread onto the <img> element. */
-export function overlayBlendStyle(blendMode?: boolean | string, blendStrength?: number, warmTint?: number): { mixBlendMode?: any; filter?: string; opacity?: number } {
-  // Support both old string format (backward compat) and new boolean format
-  const isMultiply = blendMode === true || blendMode === 'multiply' || blendMode === 'multiply-warm'
-  if (!isMultiply) return {}
-
-  const strength = blendStrength ?? 0.85
-  const tint = warmTint ?? (blendMode === 'multiply-warm' ? 0.4 : 0)
-
-  // Build filter string: sepia for warm tint
-  const filterParts: string[] = []
-  if (tint > 0) filterParts.push(`sepia(${tint.toFixed(2)})`)
-  const filter = filterParts.length > 0 ? filterParts.join(' ') : undefined
-
-  return {
-    mixBlendMode: 'multiply',
-    opacity: strength,
-    filter,
-  }
+export function overlayEdgeFadeStyle(edgeFade?: number): { WebkitMaskImage?: string; maskImage?: string } {
+  if (!edgeFade || edgeFade <= 0) return {}
+  // Inner solid zone: 1 - edgeFade (e.g. fade=0.3 → solid until 70%, then fades to transparent)
+  const solidPct = Math.round((1 - edgeFade) * 100)
+  const mask = `radial-gradient(ellipse at 50% 50%, black ${solidPct}%, transparent 100%)`
+  return { WebkitMaskImage: mask, maskImage: mask }
 }

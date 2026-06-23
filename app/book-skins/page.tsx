@@ -630,7 +630,7 @@ function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={obj.image_url} alt={obj.label} draggable={false}
                 style={{ width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin,
-                  ...overlayBlendStyle(cfg.blendMode, cfg.blendStrength, cfg.warmTint) }} />
+                  ...overlayEdgeFadeStyle(cfg.edgeFade) }} />
             </div>
           )
         })}
@@ -2235,13 +2235,13 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Overlay Animation Editor — used in the manage modal of this page
 // ─────────────────────────────────────────────────────────────────────────────
-import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, OV_ANIM_OPTIONS, overlayWidthPct, overlayBlendStyle } from '@/lib/overlayAnimations'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, OV_ANIM_OPTIONS, overlayWidthPct, overlayEdgeFadeStyle } from '@/lib/overlayAnimations'
 import { BurstPolygonEditor } from '@/components/BurstPolygonEditor'
 import type { BurstConfig } from '@/components/OverlayBurstRenderer'
 import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
 type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling' | 'burst'
-interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig; blendMode?: boolean; blendStrength?: number; warmTint?: number }
-const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0, blendMode: false, blendStrength: 0.85, warmTint: 0 }
+interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig; edgeFade?: number }
+const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0, edgeFade: 0 }
 const DEFAULT_BURST: BurstConfig = {
   polygon: [],
   center: { x: 50, y: 50 },
@@ -2445,7 +2445,7 @@ function OverlayEditorInline({
                       onTouchStart={e => startDrag(o.id, e.touches[0].clientX, e.touches[0].clientY)}
                       style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', width: sz, height: sz, cursor: 'grab', zIndex: zIdx + 2, outline: selected === o.id ? '2px solid #a855f7' : undefined, borderRadius: 4 }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={o.image_url} alt={o.label} style={{ width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS_FN(c.animation, speed) : undefined, transformOrigin: getTransformOrigin(c.animation), pointerEvents: 'none', ...overlayBlendStyle(c.blendMode, c.blendStrength, c.warmTint) }} draggable={false} />                    </div>
+                      <img src={o.image_url} alt={o.label} style={{ width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS_FN(c.animation, speed) : undefined, transformOrigin: getTransformOrigin(c.animation), pointerEvents: 'none', ...overlayEdgeFadeStyle(c.edgeFade) }} draggable={false} />                    </div>
                   )
                 })}
               </div>
@@ -2495,44 +2495,20 @@ function OverlayEditorInline({
                     <input type="range" min={0.3} max={4.0} step={0.1} value={cfg.scale} onChange={e => upd(sel.id, { scale: Number(e.target.value) })} className="w-full accent-purple-600" />
                   </div>
 
-                  {/* ── Blend mode — BEFORE animation ── */}
-                  <div className="border border-gray-100 rounded-xl p-3 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-gray-700">🎨 Blend Mode</label>
-                      <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 cursor-pointer select-none">
-                        <input type="checkbox" checked={!!cfg.blendMode} onChange={e => upd(sel.id, { blendMode: e.target.checked })} className="accent-purple-600" />
-                        Multiply blend
-                      </label>
+                  {/* ── Edge fade — fades boundary into background ── */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">
+                      🌫 Edge fade ({Math.round((cfg.edgeFade ?? 0) * 100)}%)
+                      <span className="ml-1 font-normal text-gray-400">
+                        {(cfg.edgeFade ?? 0) === 0 ? 'off — hard edge' : (cfg.edgeFade ?? 0) < 0.3 ? 'subtle blend' : (cfg.edgeFade ?? 0) < 0.6 ? 'soft blend' : 'strong fade'}
+                      </span>
+                    </label>
+                    <input type="range" min={0} max={0.8} step={0.05} value={cfg.edgeFade ?? 0}
+                      onChange={e => upd(sel.id, { edgeFade: Number(e.target.value) })}
+                      className="w-full accent-purple-600" />
+                    <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                      <span>0% hard</span><span>30% soft</span><span>80% heavy</span>
                     </div>
-                    {cfg.blendMode && (
-                      <>
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-600 mb-1">
-                            Blend strength ({((cfg.blendStrength ?? 0.85) * 100).toFixed(0)}%)
-                            <span className="ml-1 font-normal text-gray-400">opacity of object into cover</span>
-                          </label>
-                          <input type="range" min={0.1} max={1.0} step={0.05} value={cfg.blendStrength ?? 0.85}
-                            onChange={e => upd(sel.id, { blendStrength: Number(e.target.value) })}
-                            className="w-full accent-purple-600" />
-                          <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
-                            <span>10% subtle</span><span>50% medium</span><span>100% full</span>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-600 mb-1">
-                            Warm tint ({((cfg.warmTint ?? 0) * 100).toFixed(0)}%)
-                            <span className="ml-1 font-normal text-gray-400">amber/sepia overlay</span>
-                          </label>
-                          <input type="range" min={0} max={1.0} step={0.05} value={cfg.warmTint ?? 0}
-                            onChange={e => upd(sel.id, { warmTint: Number(e.target.value) })}
-                            className="w-full accent-amber-500" />
-                          <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
-                            <span>0% cool</span><span>50% warm</span><span>100% amber</span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    {!cfg.blendMode && <p className="text-[10px] text-gray-400">Enable to blend the object into the cover surface — lighter pixels pick up the cover's color.</p>}
                   </div>
 
                   {/* ── Animation ── */}
