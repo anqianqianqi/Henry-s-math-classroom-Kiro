@@ -143,12 +143,12 @@ export function BookCoverLivePreview({
       style={{ position: 'relative', display: 'block', overflow: 'hidden', ...style }}
       onClick={onClick}
     >
-      {/* Cover image — object-contain matches MagicBookReveal exactly */}
+      {/* Cover image — in normal flow so it sets the container height */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={coverImageUrl}
         alt="Book cover"
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+        style={{ display: 'block', width: '100%', height: 'auto' }}
         draggable={false}
       />
 
