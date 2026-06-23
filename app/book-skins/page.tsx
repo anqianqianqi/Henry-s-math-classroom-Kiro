@@ -833,11 +833,14 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     // if all corners are baked, use WITH_CORNERS context which allows drawn decoration
     const hasOverlayCorners = enabledClusters.some(Boolean)
 
+    // All-baked: send the full original prompt (same as Generate Cover) for best results
+    const coverPromptToSend = hasOverlayCorners ? annotatedCleanPrompt : styledPrompt(fullPrompt)
+
     try {
       // ── Step 1: Generate cover (~15s) ──────────────────────────────────
       const coverRes = await fetch('/api/preview-book-skin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: annotatedCleanPrompt, cleanCorners: hasOverlayCorners }),
+        body: JSON.stringify({ prompt: coverPromptToSend, cleanCorners: hasOverlayCorners }),
       })
       let coverData: any
       try { coverData = await coverRes.json() } catch {
@@ -956,9 +959,23 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     if (!genPrompt.trim()) { setGenError('Enter a description.'); return }
     setGenError(null); setGenerating(true)
     try {
+      // Build the same annotated prompt as all-baked in Generate + Objects
+      // so both buttons produce consistent cover generation
+      const fullPrompt = genPrompt.trim()
+      const cleanBase = fullPrompt.replace(/,?\s*corner clusters:\s*\[[\s\S]*$/i, '').trim()
+      const CORNER_LABELS = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+      const clusterMatches = fullPrompt.match(/\[([^\]]+)\]/g) ?? []
+      const cornerNotes = CORNER_LABELS.map((corner, i) => {
+        const clusterDesc = clusterMatches[i]?.replace(/^\[|\]$/g, '').trim() ?? ''
+        return clusterDesc
+          ? `${corner}: render decorative objects baked into the cover surface (${clusterDesc})`
+          : `${corner}: apply thematic border decoration`
+      }).join('; ')
+      const promptToSend = styledPrompt(`${cleanBase}. Corner instructions: [${cornerNotes}]`)
+
       const res = await fetch('/api/preview-book-skin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: styledPrompt(genPrompt.trim()) }),
+        body: JSON.stringify({ prompt: promptToSend, cleanCorners: false }),
       })
       let data: any
       try { data = await res.json() } catch {
