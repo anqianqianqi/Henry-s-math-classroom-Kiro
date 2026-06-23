@@ -1869,7 +1869,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                             </div>
                           ) : (
                             <p className="text-[11px] text-gray-400">
-                              Tip: use "✂️ Extract Corner Objects" above the save button to extract animated overlay objects.
+                              Tip: use "✨ Generate + Objects" to generate animated overlay objects alongside the cover.
                             </p>
                           )}
                           {extractError && <p className="text-[11px] text-red-600 mt-1">{extractError}</p>}
@@ -1879,7 +1879,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                           <button onClick={() => setGenSaveOpen(false)} className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm">Cancel</button>
                           <button onClick={handleGenSave} disabled={genSaving || extracting || !genSaveName.trim()}
                             className="flex-1 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-bold rounded-xl text-sm">
-                            {genSaving ? '⏳ Saving…' : extracting ? '⏳ Extracting…' : '💾 Save'}
+                            {genSaving ? '⏳ Saving…' : extracting ? '⏳ Uploading objects…' : '💾 Save'}
                           </button>
                         </div>
                       </div>
