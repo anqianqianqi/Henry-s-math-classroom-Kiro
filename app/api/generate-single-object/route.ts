@@ -20,7 +20,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60  // single gpt-image-2 call + upload, always under 60s
+export const maxDuration = 120  // gpt-image-2 high quality can take 60-90s; 120s gives headroom
 
 export async function POST(request: Request) {
   try {
