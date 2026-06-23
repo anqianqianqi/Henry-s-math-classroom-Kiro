@@ -91,14 +91,19 @@ function BookCoverBrowseModal({
                 const canAfford = balance >= si.cost
                 return (
                   <div key={skin.id} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100 hover:border-amber-300 transition-colors flex flex-col">
-                    {/* Portrait image — click to zoom preview */}
-                    <div className="relative cursor-zoom-in group" style={{ aspectRatio: '400/620' }}
+                    {/* Portrait thumbnail — click to open full live preview */}
+                    <div className="relative group" style={{ aspectRatio: '400/620' }}
                       onClick={() => setPreviewSkin(skin)}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={skin.image_url} alt={skin.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                        <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">🔍 Zoom</span>
+                      <BookCoverLivePreview
+                        skinId={skin.id}
+                        coverImageUrl={skin.image_url}
+                        coverLayout={(skin as any).cover_layout}
+                        className="absolute inset-0 w-full h-full"
+                        style={{ background: '#111', cursor: 'pointer' }}
+                        overlayBaseSize={28}
+                      />
+                      <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">🔍 Preview</span>
                       </div>
                       {isOwned && (
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
@@ -224,13 +229,13 @@ function RoomBrowseModal({
                 return (
                   <div key={bg.id} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100 hover:border-primary-300 transition-colors">
                     {/* Image — click to animate preview */}
-                    <div className="relative w-full aspect-video cursor-zoom-in group overflow-hidden"
+                    <div className="relative w-full aspect-video group overflow-hidden cursor-pointer"
                       onClick={() => setPreviewBg(bg)}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={bg.image_url} alt={bg.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                        <span className="bg-black/60 text-white text-xs font-semibold px-2.5 py-1 rounded-full">▶ Preview</span>
+                      <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/10">
+                        <span className="bg-black/60 text-white text-xs font-semibold px-2.5 py-1 rounded-full">🔍 Preview</span>
                       </div>
                       {isOwned && (
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
