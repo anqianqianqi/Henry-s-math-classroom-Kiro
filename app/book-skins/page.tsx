@@ -757,8 +757,12 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: cleanPrompt, cleanCorners: true }),
       })
-      const coverData = await coverRes.json()
-      if (!coverRes.ok) throw new Error(coverData.error || `Cover error ${coverRes.status}`)
+      let coverData: any
+      try { coverData = await coverRes.json() } catch {
+        const rawText = await coverRes.text().catch(() => '')
+        throw new Error(`Cover generation failed (${coverRes.status}): ${rawText.slice(0, 200) || 'non-JSON response'}`)
+      }
+      if (!coverRes.ok) throw new Error(coverData?.error || `Cover error ${coverRes.status}`)
       setSandbox({ imageUrl: coverData.image_url, prompt: coverData.prompt, iteration: 1 })
       setRefinePrompt('')
       setGenerating(false)
@@ -774,7 +778,13 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
         body: JSON.stringify({ coverPrompt: fullPrompt }),
       })
       let enrichData: any
-      try { enrichData = await enrichRes.json() } catch { enrichData = {} }
+      try { enrichData = await enrichRes.json() } catch {
+        const rawText = await enrichRes.text().catch(() => '')
+        setExtractError(`Enrichment failed (${enrichRes.status}): ${rawText.slice(0, 150) || 'non-JSON response — likely a timeout, please try again'}`)
+        setSandbox(prev => prev ? { ...prev, extractedObjects: [] } : prev)
+        setExtracting(false)
+        return
+      }
       if (!enrichRes.ok) {
         setExtractError(enrichData?.error ?? 'Enrichment failed')
         setSandbox(prev => prev ? { ...prev, extractedObjects: [] } : prev)
@@ -867,8 +877,11 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: genPrompt.trim() }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
+      let data: any
+      try { data = await res.json() } catch {
+        throw new Error(`Cover generation failed (${res.status}) — server returned a non-JSON response. Try again.`)
+      }
+      if (!res.ok) throw new Error(data?.error || `Error ${res.status}`)
       setSandbox({ imageUrl: data.image_url, prompt: data.prompt, iteration: 1 })
       setRefinePrompt('')
     } catch (err: any) { setGenError(err.message) }
@@ -906,8 +919,11 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: sandbox.prompt, sourceImageUrl: sandbox.imageUrl, changePrompt: refinePrompt.trim() }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
+      let data: any
+      try { data = await res.json() } catch {
+        throw new Error(`Refine failed (${res.status}) — server returned a non-JSON response. Try again.`)
+      }
+      if (!res.ok) throw new Error(data?.error || `Error ${res.status}`)
       setSandbox({ imageUrl: data.image_url, prompt: data.prompt, iteration: sandbox.iteration + 1 })
       setRefinePrompt('')
     } catch (err: any) { setGenError(err.message) }
