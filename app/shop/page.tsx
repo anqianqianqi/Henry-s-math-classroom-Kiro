@@ -16,7 +16,58 @@ import {
 import type { ShopItem, Redemption } from '@/lib/types/shop'
 
 const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/AnimatedRoomLayer'), { ssr: false })
-import { BookCoverLivePreview } from '@/components/BookCoverLivePreview'
+
+// ── ShopCoverZoom — simple reliable zoom preview for book cover skins ─────────
+// Image in normal flow sets height; overlays + title absolute on top.
+const SHOP_ZP_CSS: Record<string, string> = {
+  float: 'bov-float 3s ease-in-out infinite', pulse: 'bov-pulse 2.5s ease-in-out infinite',
+  rotate: 'bov-rotate 8s linear infinite', shimmer: 'bov-shimmer 2s ease-in-out infinite',
+  bounce: 'bov-bounce 1.8s ease-in-out infinite', sway: 'bov-sway 2.5s ease-in-out infinite',
+  flicker: 'bov-flicker 1.4s ease-in-out infinite', bling: 'bov-bling 2s ease-in-out infinite',
+}
+function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
+  const supabase = createClient()
+  const [overlays, setOverlays] = useState<any[]>([])
+  const tl = (skin as any).cover_layout?.title
+  const pl = (skin as any).cover_layout?.prompt
+
+  useEffect(() => {
+    supabase.from('book_skin_overlays').select('*').eq('skin_id', skin.id)
+      .order('sort_order', { ascending: true })
+      .then(({ data }) => setOverlays(data ?? []))
+  }, [skin.id])
+
+  return (
+    <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden' }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={skin.image_url} alt={skin.name} style={{ display: 'block', width: '100%', height: 'auto' }} draggable={false} />
+      {overlays.map(obj => {
+        const cfg = obj.overlay_config
+        if (!cfg) return null
+        const sz = Math.round(80 * (cfg.scale ?? 1.0))
+        const anim = cfg.animation && cfg.animation !== 'none' ? SHOP_ZP_CSS[cfg.animation] : undefined
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={obj.id} src={obj.image_url} alt={obj.label} draggable={false}
+            style={{ position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`, width: sz, height: sz,
+              objectFit: 'contain', transform: 'translate(-50%,-50%)', animation: anim, pointerEvents: 'none' }} />
+        )
+      })}
+      <div className="absolute text-center px-4 w-full" style={{ left: `${tl?.x ?? 50}%`, top: `${tl?.y ?? 22}%`, transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
+        <h2 className="font-bold leading-snug" style={{ fontSize: tl?.fontSize ?? 20, color: tl?.color ?? '#2d1a00', fontFamily: '"Georgia","Times New Roman",serif', textShadow: (tl?.shadow ?? true) ? '0 1px 8px rgba(255,255,255,0.6),0 0 16px rgba(0,0,0,0.4)' : undefined, letterSpacing: '0.04em' }}>
+          Challenge Title Preview
+        </h2>
+      </div>
+      <div className="absolute flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap"
+        style={{ left: `${pl?.x ?? 50}%`, top: `${pl?.y ?? 82}%`, transform: 'translate(-50%,-50%)',
+          fontSize: pl?.fontSize ?? 14, color: pl?.color ?? 'rgba(240,215,140,0.97)',
+          textShadow: '0 1px 4px rgba(0,0,0,0.8)', background: 'rgba(40,25,5,0.72)', border: '1px solid rgba(200,160,60,0.55)',
+          backdropFilter: 'blur(6px)', pointerEvents: 'none' }}>
+        <span>📜</span><span style={{ letterSpacing: '0.06em' }}>Open the Book</span>
+      </div>
+    </div>
+  )
+}
 
 interface ShopItemWithCount extends ShopItem {
   redemption_count: number
@@ -135,15 +186,8 @@ function BookCoverBrowseModal({
       {/* Fullscreen zoom preview — full live preview with title + animations */}
       {previewSkin && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4" onClick={() => setPreviewSkin(null)}>
-          <div className="relative flex flex-col items-center gap-3" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-            <BookCoverLivePreview
-              skinId={previewSkin.id}
-              coverImageUrl={previewSkin.image_url}
-              coverLayout={(previewSkin as any).cover_layout}
-              title="Challenge Title Preview"
-              showPromptButton
-              style={{ width: '100%', maxHeight: '82vh', borderRadius: 12, overflow: 'hidden', background: '#111', position: 'relative' }}
-            />
+          <div className="relative flex flex-col items-center gap-3" style={{ maxWidth: 420, width: '100%' }} onClick={e => e.stopPropagation()}>
+            <ShopCoverZoom skin={previewSkin} />
             <button onClick={() => setPreviewSkin(null)}
               className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
               ✕

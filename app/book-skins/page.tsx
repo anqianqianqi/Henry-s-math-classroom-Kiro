@@ -573,6 +573,84 @@ function SkinPicker({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ZoomPreviewCover — used in the SkinOption zoom modal.
+// Image renders in normal flow (so it sets container height), overlay objects
+// and title are absolute on top. Same layout as MagicBookReveal.
+// ─────────────────────────────────────────────────────────────────────────────
+const ZP_KEYFRAMES = `
+@keyframes zp-float   { 0%,100%{transform:translateY(0) translate(-50%,-50%)}    50%{transform:translateY(-8px) translate(-50%,-50%)} }
+@keyframes zp-pulse   { 0%,100%{transform:scale(1) translate(-50%,-50%)}          50%{transform:scale(1.12) translate(-50%,-50%)} }
+@keyframes zp-rotate  { from{transform:rotate(0deg) translate(-50%,-50%)}         to{transform:rotate(360deg) translate(-50%,-50%)} }
+@keyframes zp-shimmer { 0%,100%{opacity:1}                                         50%{opacity:0.45} }
+@keyframes zp-bounce  { 0%,100%{transform:translateY(0) translate(-50%,-50%)}     40%{transform:translateY(-14px) translate(-50%,-50%)} 60%{transform:translateY(-6px) translate(-50%,-50%)} }
+@keyframes zp-sway    { 0%,100%{transform:rotate(-8deg) translateY(0) translate(-50%,-50%)} 50%{transform:rotate(8deg) translateY(-4px) translate(-50%,-50%)} }
+@keyframes zp-flicker { 0%,100%{opacity:1} 25%{opacity:0.3} 50%{opacity:0.9} 75%{opacity:0.15} }
+@keyframes zp-bling   { 0%,100%{filter:brightness(1) drop-shadow(0 0 0px gold)} 50%{filter:brightness(1.6) drop-shadow(0 0 8px gold)} }
+@keyframes zp-pulse-glow { 0%,100%{opacity:1} 50%{opacity:0.7} }
+@keyframes zp-wiggle   { 0%,100%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} }
+`
+const ZP_CSS: Record<string, string> = {
+  float: 'zp-float 3s ease-in-out infinite', pulse: 'zp-pulse 2.5s ease-in-out infinite',
+  rotate: 'zp-rotate 8s linear infinite', shimmer: 'zp-shimmer 2s ease-in-out infinite',
+  bounce: 'zp-bounce 1.8s ease-in-out infinite', sway: 'zp-sway 2.5s ease-in-out infinite',
+  flicker: 'zp-flicker 1.4s ease-in-out infinite', bling: 'zp-bling 2s ease-in-out infinite',
+}
+
+function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
+  skinId: string; coverImageUrl: string; coverLayout?: any; label: string
+}) {
+  const supabase = createClient()
+  const [overlays, setOverlays] = React.useState<any[]>([])
+
+  React.useEffect(() => {
+    supabase.from('book_skin_overlays').select('*').eq('skin_id', skinId)
+      .order('sort_order', { ascending: true })
+      .then(({ data }) => setOverlays(data ?? []))
+  }, [skinId])
+
+  const titleLayout = coverLayout?.title
+  const promptLayout = coverLayout?.prompt
+
+  return (
+    <>
+      <style>{ZP_KEYFRAMES}</style>
+      <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={coverImageUrl} alt={label} style={{ display: 'block', width: '100%', height: 'auto' }} draggable={false} />
+        {/* Overlay objects */}
+        {overlays.map(obj => {
+          const cfg = obj.overlay_config
+          if (!cfg) return null
+          const sz = Math.round(80 * (cfg.scale ?? 1.0))
+          const anim = cfg.animation && cfg.animation !== 'none' ? ZP_CSS[cfg.animation] : undefined
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={obj.id} src={obj.image_url} alt={obj.label} draggable={false}
+              style={{ position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`, width: sz, height: sz,
+                objectFit: 'contain', transform: 'translate(-50%,-50%)', animation: anim, pointerEvents: 'none' }} />
+          )
+        })}
+        {/* Title */}
+        <div className="absolute text-center px-4 w-full" style={{ left: `${titleLayout?.x ?? 50}%`, top: `${titleLayout?.y ?? 22}%`, transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
+          <h2 className="font-bold leading-snug" style={{ fontSize: titleLayout?.fontSize ?? 20, color: titleLayout?.color ?? '#2d1a00', fontFamily: '"Georgia","Times New Roman",serif', textShadow: (titleLayout?.shadow ?? true) ? '0 1px 8px rgba(255,255,255,0.6),0 0 16px rgba(0,0,0,0.4)' : undefined, letterSpacing: '0.04em' }}>
+            Challenge Title Preview
+          </h2>
+        </div>
+        {/* Open the Book prompt */}
+        <div className="absolute flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap"
+          style={{ left: `${promptLayout?.x ?? 50}%`, top: `${promptLayout?.y ?? 82}%`, transform: 'translate(-50%,-50%)',
+            fontSize: promptLayout?.fontSize ?? 14, color: promptLayout?.color ?? 'rgba(240,215,140,0.97)',
+            textShadow: '0 1px 4px rgba(0,0,0,0.8)', background: 'rgba(40,25,5,0.72)', border: '1px solid rgba(200,160,60,0.55)',
+            backdropFilter: 'blur(6px)', animation: 'zp-pulse-glow 2.5s ease-in-out infinite', pointerEvents: 'none' }}>
+          <span style={{ animation: 'zp-wiggle 2s ease-in-out infinite', display: 'inline-block' }}>📜</span>
+          <span style={{ letterSpacing: '0.06em' }}>Open the Book</span>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Individual skin option card
 // ─────────────────────────────────────────────────────────────────────────────
 function SkinOption({
@@ -653,19 +731,18 @@ function SkinOption({
       </button>
 
       {/* Full-screen zoom preview with title + animations */}
-      {zoomOpen && imageUrl && (
+      {zoomOpen && imageUrl && skinId && (
         <div
           className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4"
           onClick={() => setZoomOpen(false)}
         >
-          <div className="relative flex flex-col items-center gap-3" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-            <BookCoverLivePreview
+          <div className="relative flex flex-col items-center gap-3" style={{ maxWidth: 420, width: '100%' }} onClick={e => e.stopPropagation()}>
+            {/* Cover wrapper — image in normal flow sets height, overlays absolute on top */}
+            <ZoomPreviewCover
               skinId={skinId}
               coverImageUrl={imageUrl}
               coverLayout={coverLayout}
-              title="Challenge Title Preview"
-              showPromptButton
-              style={{ width: '100%', maxHeight: '80vh', borderRadius: 12, overflow: 'hidden', background: '#111', position: 'relative' }}
+              label={label}
             />
             <div className="flex items-center justify-between w-full px-1">
               <span className="text-white text-sm font-semibold drop-shadow">{label}</span>
