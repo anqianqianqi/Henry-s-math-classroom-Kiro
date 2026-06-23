@@ -2325,9 +2325,9 @@ function OverlayEditorInline({
             {/* Cover preview — large, full width at top */}
             <div className="shrink-0 p-4 flex flex-col items-center gap-2 bg-gray-50 border-b border-gray-200">
               <p className="text-xs font-semibold text-gray-500 self-start">Drag objects to reposition</p>
-              <div ref={previewRef} className="relative rounded-xl overflow-hidden border-2 border-amber-200 shadow" style={{ width: 320, height: 480, userSelect: 'none', background: '#1a1a1a' }}>
+              <div ref={previewRef} className="relative rounded-xl overflow-hidden border-2 border-amber-200 shadow" style={{ width: 320, userSelect: 'none', background: '#1a1a1a' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={skin.image_url} alt={skin.name} className="w-full h-full object-contain" draggable={false} />
+                <img src={skin.image_url} alt={skin.name} className="w-full h-auto block" draggable={false} />
                 {localOverlays.map(o => {
                   const c = configs[o.id] ?? DEFAULT_OV
                   const sz = Math.round(80 * c.scale)
