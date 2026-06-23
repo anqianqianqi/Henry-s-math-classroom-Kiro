@@ -1039,6 +1039,78 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     finally { setGenerating(false) }
   }
 
+  // Remove solid background from a base64 PNG by flood-filling from corners
+  async function removeBackground(b64: string): Promise<Uint8Array> {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => {
+        const W = img.naturalWidth, H = img.naturalHeight
+        const canvas = document.createElement('canvas')
+        canvas.width = W; canvas.height = H
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0)
+        const imageData = ctx.getImageData(0, 0, W, H)
+        const { data } = imageData
+
+        // Sample background colour from corners
+        const corners = [[0,0],[W-1,0],[0,H-1],[W-1,H-1]]
+        const samples = corners.map(([x,y]) => {
+          const i = (y*W+x)*4
+          return [data[i],data[i+1],data[i+2],data[i+3]]
+        })
+        // If corner alpha is already 0, image is likely already transparent
+        const allTransparent = samples.every(s => s[3] < 30)
+        if (allTransparent) {
+          const binaryStr = atob(b64)
+          const bytes = new Uint8Array(binaryStr.length)
+          for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
+          resolve(bytes); return
+        }
+        const bgR = Math.round(samples.reduce((s,c)=>s+c[0],0)/4)
+        const bgG = Math.round(samples.reduce((s,c)=>s+c[1],0)/4)
+        const bgB = Math.round(samples.reduce((s,c)=>s+c[2],0)/4)
+
+        const TOL = 40
+        const isBg = (i: number) => {
+          if (data[i+3] < 30) return true
+          const dr=data[i]-bgR, dg=data[i+1]-bgG, db=data[i+2]-bgB
+          return Math.sqrt(dr*dr+dg*dg+db*db) < TOL
+        }
+        const visited = new Uint8Array(W*H)
+        const queue: number[] = [0, W-1, (H-1)*W, (H-1)*W+W-1]
+        queue.forEach(p => { visited[p]=1 })
+        while (queue.length > 0) {
+          const pos = queue.pop()!
+          const x = pos%W, y = Math.floor(pos/W)
+          const i = pos*4
+          if (!isBg(i)) continue
+          const dr=data[i]-bgR, dg=data[i+1]-bgG, db=data[i+2]-bgB
+          const d = Math.sqrt(dr*dr+dg*dg+db*db)
+          data[i+3] = d < TOL ? 0 : Math.min(data[i+3], Math.round((d/TOL)*data[i+3]))
+          const ns = [x>0?pos-1:-1, x<W-1?pos+1:-1, y>0?pos-W:-1, y<H-1?pos+W:-1]
+          for (const n of ns) { if (n>=0 && !visited[n]) { visited[n]=1; queue.push(n) } }
+        }
+        ctx.putImageData(imageData, 0, 0)
+        canvas.toBlob(blob => {
+          if (!blob) { // fallback: return original bytes
+            const binaryStr = atob(b64)
+            const bytes = new Uint8Array(binaryStr.length)
+            for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
+            resolve(bytes); return
+          }
+          blob.arrayBuffer().then(ab => resolve(new Uint8Array(ab)))
+        }, 'image/png')
+      }
+      img.onerror = () => {
+        const binaryStr = atob(b64)
+        const bytes = new Uint8Array(binaryStr.length)
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
+        resolve(bytes)
+      }
+      img.src = `data:image/png;base64,${b64}`
+    })
+  }
+
   async function handleGenSave() {
     if (!sandbox || !genSaveName.trim()) { setGenSaveError('Enter a name.'); return }
     setGenSaveError(null); setGenSaving(true)
@@ -1217,9 +1289,8 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                 return false
               }
 
-              const binaryStr = atob(rawB64)
-              const bytes = new Uint8Array(binaryStr.length)
-              for (let b = 0; b < binaryStr.length; b++) bytes[b] = binaryStr.charCodeAt(b)
+              // Strip background before uploading — gpt-image-2 sometimes returns solid white bg
+              const bytes = await removeBackground(rawB64)
 
               const slug = obj.label.replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 30)
               const filePath = `${uid}/overlay-${ts}-${i}-${slug}.png`
