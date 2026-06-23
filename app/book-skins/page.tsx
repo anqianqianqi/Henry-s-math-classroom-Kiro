@@ -2238,7 +2238,7 @@ import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, OV_ANIM_OPTIONS, o
 import { BurstPolygonEditor } from '@/components/BurstPolygonEditor'
 import type { BurstConfig } from '@/components/OverlayBurstRenderer'
 import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
-type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling'
+type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling' | 'burst'
 interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig }
 const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0 }
 const DEFAULT_BURST: BurstConfig = {
