@@ -627,9 +627,18 @@ function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
               position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
               width: sz, height: sz, transform: 'translate(-50%,-50%)', pointerEvents: 'none',
             }}>
+              {(cfg.auraStrength ?? 0) > 0 && (
+                <OverlayAuraWrapper
+                  coverImageUrl={coverImageUrl}
+                  xPct={cfg.x} yPct={cfg.y} widthPct={sz}
+                  auraStrength={cfg.auraStrength}
+                  containerWidthPx={420}
+                  style={{ position: 'absolute', inset: 0, transform: 'none', left: 0, top: 0, width: '100%', height: '100%' }}
+                ><span /></OverlayAuraWrapper>
+              )}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={obj.image_url} alt={obj.label} draggable={false}
-                style={{ width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin,
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin,
                   ...overlayEdgeFadeStyle(cfg.edgeFade) }} />
             </div>
           )
@@ -2239,9 +2248,10 @@ import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, OV_ANIM_OPTIONS, o
 import { BurstPolygonEditor } from '@/components/BurstPolygonEditor'
 import type { BurstConfig } from '@/components/OverlayBurstRenderer'
 import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
+import { OverlayAuraWrapper } from '@/components/OverlayAuraWrapper'
 type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling' | 'burst'
-interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig; edgeFade?: number }
-const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0, edgeFade: 0 }
+interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig; edgeFade?: number; auraStrength?: number }
+const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0, edgeFade: 0, auraStrength: 0 }
 const DEFAULT_BURST: BurstConfig = {
   polygon: [],
   center: { x: 50, y: 50 },
@@ -2444,8 +2454,20 @@ function OverlayEditorInline({
                       onMouseDown={e => { e.preventDefault(); startDrag(o.id, e.clientX, e.clientY) }}
                       onTouchStart={e => startDrag(o.id, e.touches[0].clientX, e.touches[0].clientY)}
                       style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', width: sz, height: sz, cursor: 'grab', zIndex: zIdx + 2, outline: selected === o.id ? '2px solid #a855f7' : undefined, borderRadius: 4 }}>
+                      {/* Aura canvas — drawn before the image */}
+                      {(c.auraStrength ?? 0) > 0 && (
+                        <OverlayAuraWrapper
+                          coverImageUrl={skin.image_url}
+                          xPct={c.x} yPct={c.y}
+                          widthPct={sz}
+                          auraStrength={c.auraStrength}
+                          containerWidthPx={previewRef.current?.offsetWidth ?? 480}
+                          style={{ position: 'absolute', inset: 0, transform: 'none', left: 0, top: 0, width: '100%', height: '100%' }}
+                        ><span /></OverlayAuraWrapper>
+                      )}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={o.image_url} alt={o.label} style={{ width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS_FN(c.animation, speed) : undefined, transformOrigin: getTransformOrigin(c.animation), pointerEvents: 'none', ...overlayEdgeFadeStyle(c.edgeFade) }} draggable={false} />                    </div>
+                      <img src={o.image_url} alt={o.label} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS_FN(c.animation, speed) : undefined, transformOrigin: getTransformOrigin(c.animation), pointerEvents: 'none', ...overlayEdgeFadeStyle(c.edgeFade) }} draggable={false} />
+                    </div>
                   )
                 })}
               </div>
@@ -2495,7 +2517,7 @@ function OverlayEditorInline({
                     <input type="range" min={0.3} max={4.0} step={0.1} value={cfg.scale} onChange={e => upd(sel.id, { scale: Number(e.target.value) })} className="w-full accent-purple-600" />
                   </div>
 
-                  {/* ── Edge fade — fades boundary into background ── */}
+                  {/* ── Edge fade ── */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">
                       🌫 Edge fade ({Math.round((cfg.edgeFade ?? 0) * 100)}%)
@@ -2509,6 +2531,23 @@ function OverlayEditorInline({
                     <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
                       <span>0% hard</span><span>30% soft</span><span>80% heavy</span>
                     </div>
+                  </div>
+
+                  {/* ── Boundary aura — darkens cover pixels at object edge ── */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">
+                      🌑 Boundary aura ({Math.round((cfg.auraStrength ?? 0) * 100)}%)
+                      <span className="ml-1 font-normal text-gray-400">
+                        {(cfg.auraStrength ?? 0) === 0 ? 'off' : (cfg.auraStrength ?? 0) < 0.3 ? 'subtle' : (cfg.auraStrength ?? 0) < 0.6 ? 'medium' : 'strong'}
+                      </span>
+                    </label>
+                    <input type="range" min={0} max={0.8} step={0.05} value={cfg.auraStrength ?? 0}
+                      onChange={e => upd(sel.id, { auraStrength: Number(e.target.value) })}
+                      className="w-full accent-amber-600" />
+                    <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                      <span>0% off</span><span>40% medium</span><span>80% strong</span>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Darkens the cover pixels at the object boundary — like the shadow mist on baked assets.</p>
                   </div>
 
                   {/* ── Animation ── */}

@@ -8,6 +8,7 @@
 import { useEffect, useRef } from 'react'
 import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim, overlayWidthPct, overlayEdgeFadeStyle } from '@/lib/overlayAnimations'
 import { OverlayBurstRenderer } from './OverlayBurstRenderer'
+import { OverlayAuraWrapper } from './OverlayAuraWrapper'
 
 export interface OverlayObject {
   id: string
@@ -108,18 +109,26 @@ export function BookCoverWithOverlays({
 
         const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation, 'bov', (cfg as any).speed ?? 1.0) : undefined
         const transformOrigin = getTransformOrigin(cfg.animation ?? 'none')
+        const auraStrength = (cfg as any).auraStrength ?? 0
 
         return (
-          // Outer div handles centering; inner img handles animation (no translate in keyframes)
           <div key={obj.id} style={{
             position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
-            width: sz, height: sz, transform: 'translate(-50%,-50%)',
-            pointerEvents: 'none',
+            width: sz, height: sz, transform: 'translate(-50%,-50%)', pointerEvents: 'none',
           }}>
+            {auraStrength > 0 && (
+              <OverlayAuraWrapper
+                coverImageUrl={coverImageUrl}
+                xPct={cfg.x} yPct={cfg.y} widthPct={sz}
+                auraStrength={auraStrength}
+                containerWidthPx={overlayBaseSize / (80 / 1024) * 1024}
+                style={{ position: 'absolute', inset: 0, transform: 'none', left: 0, top: 0, width: '100%', height: '100%' }}
+              ><span /></OverlayAuraWrapper>
+            )}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={obj.image_url} alt={obj.label} draggable={false}
               style={{
-                width: '100%', height: '100%', objectFit: 'contain',
+                position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain',
                 animation: anim, transformOrigin,
                 animationPlayState: overlayAnimationPaused ? 'paused' : 'running',
                 ...overlayEdgeFadeStyle((cfg as any).edgeFade),

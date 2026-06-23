@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { BookCoverWithOverlays, type OverlayObject } from './BookCoverWithOverlays'
 import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct, overlayEdgeFadeStyle } from '@/lib/overlayAnimations'
 import { OverlayBurstRenderer } from './OverlayBurstRenderer'
+import { OverlayAuraWrapper } from './OverlayAuraWrapper'
 
 interface MagicBookRevealProps {
   title: string
@@ -440,15 +441,25 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
 
                     const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation as any, 'bov', (cfg as any).speed ?? 1.0) : undefined
                     const transformOrigin = getTransformOrigin(cfg.animation as any)
+                    const auraStrength = (cfg as any).auraStrength ?? 0
                     return (
                       <div key={obj.id} style={{
                         position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
                         width: sz, height: sz, transform: 'translate(-50%,-50%)', pointerEvents: 'none',
                       }}>
+                        {auraStrength > 0 && (
+                          <OverlayAuraWrapper
+                            coverImageUrl={activeCoverImage}
+                            xPct={cfg.x} yPct={cfg.y} widthPct={sz}
+                            auraStrength={auraStrength}
+                            containerWidthPx={bookRef.current?.offsetWidth ?? 480}
+                            style={{ position: 'absolute', inset: 0, transform: 'none', left: 0, top: 0, width: '100%', height: '100%' }}
+                          ><span /></OverlayAuraWrapper>
+                        )}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={obj.image_url} alt={obj.label} draggable={false}
                           style={{
-                            width: '100%', height: '100%', objectFit: 'contain',
+                            position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain',
                             animation: anim, transformOrigin,
                             animationPlayState: phase === 'opening' ? 'paused' : 'running',
                             ...overlayEdgeFadeStyle((cfg as any).edgeFade),
