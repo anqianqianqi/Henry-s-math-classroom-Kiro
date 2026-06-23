@@ -809,7 +809,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 
   async function handleGenerateWithObjects() {
     if (!genPrompt.trim()) { setGenError('Enter a description.'); return }
-    setGenError(null); setGenerating(true); setCleanCorners(true)
+    setGenError(null); setGenerating(true); setCleanCorners(enabledClusters.some(Boolean))
     const cleanPrompt = genPrompt.trim().replace(/,?\s*corner clusters:\s*\[[\s\S]*$/i, '').trim()
     const fullPrompt = genPrompt.trim()
 
@@ -829,12 +829,15 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       }
     }).join('; ')
     const annotatedCleanPrompt = `${styledPrompt(cleanPrompt)}. Corner instructions: [${cornerNotes}]`
+    // Use clean context only when some corners need to stay bare for overlays;
+    // if all corners are baked, use WITH_CORNERS context which allows drawn decoration
+    const hasOverlayCorners = enabledClusters.some(Boolean)
 
     try {
       // ── Step 1: Generate cover (~15s) ──────────────────────────────────
       const coverRes = await fetch('/api/preview-book-skin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: annotatedCleanPrompt, cleanCorners: true }),
+        body: JSON.stringify({ prompt: annotatedCleanPrompt, cleanCorners: hasOverlayCorners }),
       })
       let coverData: any
       try { coverData = await coverRes.json() } catch {
