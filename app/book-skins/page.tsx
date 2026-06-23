@@ -1796,6 +1796,9 @@ function OverlayEditorInline({
   skin: BookSkin; overlays: any[]; loading: boolean; saving: boolean
   onSave: (overlay: any, config: OvConfig) => void; onClose: () => void
 }) {
+  const supabase = (typeof window !== 'undefined' ? require('@/lib/supabase/client').createClient() : null)
+  // localOverlays: mutable copy — grows on duplicate, shrinks on delete
+  const [localOverlays, setLocalOverlays] = useState<any[]>(() => overlays)
   const [selected, setSelected] = useState<string | null>(overlays[0]?.id ?? null)
   const [configs, setConfigs] = useState<Record<string, OvConfig>>(() => {
     const init: Record<string, OvConfig> = {}
@@ -1804,10 +1807,11 @@ function OverlayEditorInline({
   })
   // zOrder: array of overlay IDs from bottom (index 0) to top (last index)
   const [zOrder, setZOrder] = useState<string[]>(() => overlays.map(o => o.id))
+  const [mutating, setMutating] = useState(false)
   const previewRef = useRef<HTMLDivElement>(null)
   const dragging = useRef<{ id: string; sx: number; sy: number; ox: number; oy: number } | null>(null)
 
-  const sel = overlays.find(o => o.id === selected)
+  const sel = localOverlays.find(o => o.id === selected)
   const cfg = selected ? (configs[selected] ?? DEFAULT_OV) : null
 
   function upd(id: string, patch: Partial<OvConfig>) {
@@ -1832,6 +1836,53 @@ function OverlayEditorInline({
       }
       return next
     })
+  }
+
+  async function duplicateOverlay(o: any) {
+    if (!supabase) return
+    setMutating(true)
+    try {
+      const srcCfg = configs[o.id] ?? DEFAULT_OV
+      // Insert into DB with a slight position offset so it's visibly separate
+      const { data: newRow, error } = await supabase.from('book_skin_overlays').insert({
+        skin_id: o.skin_id,
+        label: o.label + ' (copy)',
+        image_url: o.image_url,
+        sort_order: localOverlays.length,
+        overlay_config: { ...srcCfg, x: Math.min(100, srcCfg.x + 5), y: Math.min(100, srcCfg.y + 5) },
+      }).select('*').single()
+      if (error || !newRow) throw new Error(error?.message ?? 'Insert failed')
+      const newCfg: OvConfig = newRow.overlay_config ?? { ...srcCfg, x: Math.min(100, srcCfg.x + 5), y: Math.min(100, srcCfg.y + 5) }
+      setLocalOverlays(prev => [...prev, newRow])
+      setConfigs(prev => ({ ...prev, [newRow.id]: newCfg }))
+      setZOrder(prev => [...prev, newRow.id])
+      setSelected(newRow.id)
+    } catch (err: any) {
+      console.error('[duplicateOverlay]', err.message)
+    } finally {
+      setMutating(false)
+    }
+  }
+
+  async function deleteOverlay(id: string) {
+    if (!supabase) return
+    if (!confirm('Remove this overlay object?')) return
+    setMutating(true)
+    try {
+      await supabase.from('book_skin_overlays').delete().eq('id', id)
+      setLocalOverlays(prev => prev.filter(o => o.id !== id))
+      setZOrder(prev => prev.filter(z => z !== id))
+      setConfigs(prev => { const n = { ...prev }; delete n[id]; return n })
+      setSelected(prev => {
+        if (prev !== id) return prev
+        const remaining = localOverlays.filter(o => o.id !== id)
+        return remaining[0]?.id ?? null
+      })
+    } catch (err: any) {
+      console.error('[deleteOverlay]', err.message)
+    } finally {
+      setMutating(false)
+    }
   }
 
   function startDrag(id: string, cx: number, cy: number) {
@@ -1870,7 +1921,7 @@ function OverlayEditorInline({
         </div>
         {loading ? (
           <div className="flex-1 flex items-center justify-center py-16 text-gray-400">Loading overlays…</div>
-        ) : overlays.length === 0 ? (
+        ) : localOverlays.length === 0 ? (
           <div className="flex-1 flex items-center justify-center py-16 px-6 text-center text-gray-400 text-sm">
             No overlay objects found. Extract corner objects first using the Generate tab.
           </div>
@@ -1882,7 +1933,7 @@ function OverlayEditorInline({
               <div ref={previewRef} className="relative rounded-xl overflow-hidden border-2 border-amber-200 shadow" style={{ width: 320, height: 496, userSelect: 'none' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={skin.image_url} alt={skin.name} className="w-full h-full object-cover" draggable={false} />
-                {overlays.map(o => {
+                {localOverlays.map(o => {
                   const c = configs[o.id] ?? DEFAULT_OV
                   const sz = Math.round(80 * c.scale)
                   const zIdx = zOrder.indexOf(o.id)  // position in zOrder = actual z-index
@@ -1901,7 +1952,7 @@ function OverlayEditorInline({
             {/* Controls — below the preview */}
             <div className="flex-1 p-4 space-y-4">
               <div className="flex flex-wrap gap-2">
-                {overlays.map(o => (
+                {localOverlays.map(o => (
                   <button key={o.id} onClick={() => setSelected(o.id)}
                     className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border-2 transition-colors ${selected === o.id ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1957,19 +2008,29 @@ function OverlayEditorInline({
                     className="w-full py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-bold rounded-xl text-sm">
                     {saving ? '⏳ Saving…' : `💾 Save "${sel.label}"`}
                   </button>
+                  <div className="flex gap-2 pt-1">
+                    <button disabled={mutating} onClick={() => duplicateOverlay(sel)}
+                      className="flex-1 py-1.5 text-xs font-semibold rounded-xl border-2 border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50 transition-colors">
+                      {mutating ? '⏳' : '⧉ Duplicate'}
+                    </button>
+                    <button disabled={mutating || localOverlays.length <= 1} onClick={() => deleteOverlay(sel.id)}
+                      className="flex-1 py-1.5 text-xs font-semibold rounded-xl border-2 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 transition-colors">
+                      {mutating ? '⏳' : '🗑 Delete'}
+                    </button>
+                  </div>
                 </div>
               )}
-              {overlays.length > 1 && (
+              {localOverlays.length > 1 && (
                 <button disabled={saving} onClick={async () => {
-                  for (const o of overlays) await onSave(o, configs[o.id] ?? DEFAULT_OV)
+                  for (const o of localOverlays) await onSave(o, configs[o.id] ?? DEFAULT_OV)
                   // Persist z-order as sort_order on each overlay
-                  const supabase = (await import('@/lib/supabase/client')).createClient()
+                  const supabaseClient = (await import('@/lib/supabase/client')).createClient()
                   for (let i = 0; i < zOrder.length; i++) {
-                    await supabase.from('book_skin_overlays').update({ sort_order: i }).eq('id', zOrder[i])
+                    await supabaseClient.from('book_skin_overlays').update({ sort_order: i }).eq('id', zOrder[i])
                   }
                 }}
                   className="w-full py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-semibold rounded-xl text-sm">
-                  {saving ? '⏳ Saving…' : `💾 Save All ${overlays.length} Objects`}
+                  {saving ? '⏳ Saving…' : `💾 Save All ${localOverlays.length} Objects`}
                 </button>
               )}
             </div>
