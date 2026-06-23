@@ -67,6 +67,7 @@ export default function BookSkinsUserPage() {
 
   async function openOverlayEditor(skin: BookSkin) {
     setOverlayEditorSkin(skin)
+    setOverlayEditorObjects([])  // clear stale data immediately before loading
     setOverlayEditorLoading(true)
     const { data, error } = await supabase
       .from('book_skin_overlays')
