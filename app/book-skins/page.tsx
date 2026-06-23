@@ -613,6 +613,14 @@ function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
           const sz = overlayWidthPct(cfg.scale ?? 1.0)
           const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation, 'zp', cfg.speed ?? 1.0) : undefined
           const transformOrigin = getTransformOrigin(cfg.animation)
+          if (cfg.animation === 'burst' && cfg.burst?.polygon?.length >= 3) {
+            return (
+              <OverlayBurstRenderer key={obj.id} imageUrl={obj.image_url}
+                containerWidthPx={420} scale={cfg.scale ?? 1.0}
+                speed={cfg.speed ?? 1.0} burst={cfg.burst}
+                style={{ left: `${cfg.x}%`, top: `${cfg.y}%`, transform: 'translate(-50%,-50%)' }} />
+            )
+          }
           return (
             // eslint-disable-next-line @next/next/no-img-element
             <img key={obj.id} src={obj.image_url} alt={obj.label} draggable={false}
@@ -2194,9 +2202,18 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 // Overlay Animation Editor — used in the manage modal of this page
 // ─────────────────────────────────────────────────────────────────────────────
 import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, OV_ANIM_OPTIONS, overlayWidthPct } from '@/lib/overlayAnimations'
+import { BurstPolygonEditor } from '@/components/BurstPolygonEditor'
+import type { BurstConfig } from '@/components/OverlayBurstRenderer'
+import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
 type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling'
-interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number }
+interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig }
 const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0 }
+const DEFAULT_BURST: BurstConfig = {
+  polygon: [],
+  center: { x: 50, y: 50 },
+  particles: 8,
+  radius: 15,
+}
 const OV_KEYFRAMES = buildKeyframesCSS('bov')
 const OV_CSS_FN = (anim: OverlayAnim, speed: number) => buildAnimCSS(anim, 'bov', speed)
 const OV_ANIMS = OV_ANIM_OPTIONS
@@ -2374,6 +2391,20 @@ function OverlayEditorInline({
                   const sz = overlayWidthPct(c.scale)
                   const speed = c.speed ?? 1.0
                   const zIdx = zOrder.indexOf(o.id)  // position in zOrder = actual z-index
+
+                  // Burst: show canvas renderer in editor too
+                  if (c.animation === 'burst' && c.burst?.polygon && c.burst.polygon.length >= 3) {
+                    return (
+                      <div key={o.id}
+                        onMouseDown={e => { e.preventDefault(); startDrag(o.id, e.clientX, e.clientY) }}
+                        onTouchStart={e => startDrag(o.id, e.touches[0].clientX, e.touches[0].clientY)}
+                        style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', zIndex: zIdx + 2, outline: selected === o.id ? '2px solid #a855f7' : undefined, borderRadius: 4, cursor: 'grab' }}>
+                        <OverlayBurstRenderer imageUrl={o.image_url}
+                          containerWidthPx={previewRef.current?.offsetWidth ?? 480}
+                          scale={c.scale} speed={speed} burst={c.burst} />
+                      </div>
+                    )
+                  }
                   return (
                     <div key={o.id}
                       onMouseDown={e => { e.preventDefault(); startDrag(o.id, e.clientX, e.clientY) }}
@@ -2456,6 +2487,14 @@ function OverlayEditorInline({
                         <span>0.25× slow</span><span>1× normal</span><span>3× fast</span>
                       </div>
                     </div>
+                  )}
+                  {/* Burst polygon editor — shown when animation='burst' */}
+                  {cfg.animation === 'burst' && (
+                    <BurstPolygonEditor
+                      imageUrl={sel.image_url}
+                      burst={cfg.burst ?? DEFAULT_BURST}
+                      onChange={b => upd(sel.id, { burst: b })}
+                    />
                   )}
                   <button disabled={saving} onClick={() => onSave(sel, configs[sel.id] ?? DEFAULT_OV)}
                     className="w-full py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-bold rounded-xl text-sm">

@@ -20,6 +20,7 @@ const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/Anim
 // ── ShopCoverZoom — simple reliable zoom preview for book cover skins ─────────
 // Image in normal flow sets height; overlays + title absolute on top.
 import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct } from '@/lib/overlayAnimations'
+import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
 const SHOP_ZP_KEYFRAMES = buildKeyframesCSS('szp') + `
 @keyframes szp-pulse-glow { 0%,100%{opacity:1} 50%{opacity:0.7} }
 `
@@ -50,6 +51,14 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
           const sz = overlayWidthPct(cfg.scale ?? 1.0)
           const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation, 'szp', cfg.speed ?? 1.0) : undefined
           const transformOrigin = getTransformOrigin(cfg.animation)
+          if (cfg.animation === 'burst' && cfg.burst?.polygon?.length >= 3) {
+            return (
+              <OverlayBurstRenderer key={obj.id} imageUrl={obj.image_url}
+                containerWidthPx={420} scale={cfg.scale ?? 1.0}
+                speed={cfg.speed ?? 1.0} burst={cfg.burst}
+                style={{ left: `${cfg.x}%`, top: `${cfg.y}%`, transform: 'translate(-50%,-50%)' }} />
+            )
+          }
           return (
             // eslint-disable-next-line @next/next/no-img-element
             <img key={obj.id} src={obj.image_url} alt={obj.label} draggable={false}

@@ -11,7 +11,7 @@
  * The element wrapper must set transformOrigin accordingly — keyframe only rotates.
  */
 
-export type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling'
+export type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling' | 'burst'
 
 /** Base durations in seconds for speed=1 */
 export const BASE_DURATIONS: Record<OverlayAnim, number> = {
@@ -24,6 +24,7 @@ export const BASE_DURATIONS: Record<OverlayAnim, number> = {
   sway:    2.5,
   flicker: 1.4,
   bling:   2.0,
+  burst:   2.0,  // handled by OverlayBurstRenderer, not CSS
 }
 
 /** Easing functions per animation */
@@ -37,6 +38,7 @@ const EASINGS: Record<OverlayAnim, string> = {
   sway:    'ease-in-out',
   flicker: 'ease-in-out',
   bling:   'ease-in-out',
+  burst:   'linear',  // not used — handled by canvas renderer
 }
 
 /**
@@ -98,4 +100,5 @@ export const OV_ANIM_OPTIONS: { value: OverlayAnim; label: string }[] = [
   { value: 'sway',    label: '🌿 Sway' },
   { value: 'flicker', label: '🕯 Flicker' },
   { value: 'bling',   label: '💎 Bling' },
+  { value: 'burst',   label: '💥 Burst' },
 ]

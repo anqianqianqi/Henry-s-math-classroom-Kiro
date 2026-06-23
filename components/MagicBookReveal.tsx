@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { BookCoverWithOverlays, type OverlayObject } from './BookCoverWithOverlays'
 import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct } from '@/lib/overlayAnimations'
+import { OverlayBurstRenderer } from './OverlayBurstRenderer'
 
 interface MagicBookRevealProps {
   title: string
@@ -419,6 +420,24 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                     const cfg = obj.overlay_config
                     if (!cfg) return null
                     const sz = overlayWidthPct(cfg.scale ?? 1.0)
+
+                    // Burst animation — canvas-based renderer
+                    if ((cfg as any).animation === 'burst' && (cfg as any).burst?.polygon?.length >= 3) {
+                      const containerPx = bookRef.current?.offsetWidth ?? 480
+                      return (
+                        <OverlayBurstRenderer
+                          key={obj.id}
+                          imageUrl={obj.image_url}
+                          containerWidthPx={containerPx}
+                          scale={cfg.scale ?? 1.0}
+                          speed={(cfg as any).speed ?? 1.0}
+                          burst={(cfg as any).burst}
+                          paused={phase === 'opening'}
+                          style={{ left: `${cfg.x}%`, top: `${cfg.y}%`, transform: 'translate(-50%,-50%)' }}
+                        />
+                      )
+                    }
+
                     const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation as any, 'bov', (cfg as any).speed ?? 1.0) : undefined
                     const transformOrigin = getTransformOrigin(cfg.animation as any)
                     return (

@@ -7,6 +7,7 @@
 
 import { useEffect, useRef } from 'react'
 import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim, overlayWidthPct } from '@/lib/overlayAnimations'
+import { OverlayBurstRenderer } from './OverlayBurstRenderer'
 
 export interface OverlayObject {
   id: string
@@ -85,7 +86,27 @@ export function BookCoverWithOverlays({
         const cfg = obj.overlay_config
         if (!cfg) return null
         const sz = overlayWidthPct(cfg.scale ?? 1.0)
-        const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation, 'bov', cfg.speed ?? 1.0) : undefined
+
+        // Burst animation — canvas-based
+        if ((cfg as any).animation === 'burst' && (cfg as any).burst?.polygon?.length >= 3) {
+          // We need container width; use a data attribute approach or pass it as prop.
+          // For BookCoverWithOverlays we approximate from overlayBaseSize / (OVERLAY_BASE_PX/COVER_NATIVE_WIDTH)
+          const containerPx = Math.round(overlayBaseSize / (80 / 1024))
+          return (
+            <OverlayBurstRenderer
+              key={obj.id}
+              imageUrl={obj.image_url}
+              containerWidthPx={containerPx}
+              scale={cfg.scale ?? 1.0}
+              speed={(cfg as any).speed ?? 1.0}
+              burst={(cfg as any).burst}
+              paused={overlayAnimationPaused}
+              style={{ left: `${cfg.x}%`, top: `${cfg.y}%`, transform: 'translate(-50%,-50%)' }}
+            />
+          )
+        }
+
+        const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation, 'bov', (cfg as any).speed ?? 1.0) : undefined
         const transformOrigin = getTransformOrigin(cfg.animation ?? 'none')
 
         return (

@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim, overlayWidthPct } from '@/lib/overlayAnimations'
+import { OverlayBurstRenderer } from './OverlayBurstRenderer'
 
 interface OverlayObject {
   id: string
@@ -96,6 +97,16 @@ export function BookCoverLivePreview({
         const cfg = obj.overlay_config
         if (!cfg) return null
         const sz = overlayWidthPct(cfg.scale ?? 1.0)
+
+        if ((cfg as any).animation === 'burst' && (cfg as any).burst?.polygon?.length >= 3) {
+          return (
+            <OverlayBurstRenderer key={obj.id} imageUrl={obj.image_url}
+              containerWidthPx={480} scale={cfg.scale ?? 1.0}
+              speed={(cfg as any).speed ?? 1.0} burst={(cfg as any).burst}
+              style={{ left: `${cfg.x}%`, top: `${cfg.y}%`, transform: 'translate(-50%,-50%)' }} />
+          )
+        }
+
         const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation, 'bcl', (cfg as any).speed ?? 1.0) : undefined
         const transformOrigin = getTransformOrigin(cfg.animation ?? 'none')
         return (
