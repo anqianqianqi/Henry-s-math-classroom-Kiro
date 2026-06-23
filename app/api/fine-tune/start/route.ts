@@ -16,7 +16,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-const MAX_EXAMPLES = 20
+const MAX_EXAMPLES = 50
 
 const SYSTEM_PROMPT =
   "You are Henry's math grading assistant. " +

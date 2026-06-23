@@ -355,7 +355,7 @@ export default function GradingPage() {
                    ftJob?.status === 'ready' ? '🔄 Retrain Model' :
                    '🚀 Launch Fine-tune Job'}
                 </Button>
-                <p className="text-xs text-gray-400 mt-1 text-right">Uses up to 20 examples</p>
+                <p className="text-xs text-gray-400 mt-1 text-right">Uses up to 50 examples</p>
               </div>
             </div>
           </Card.Body>
