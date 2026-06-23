@@ -812,11 +812,23 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     setGenError(null); setGenerating(true); setCleanCorners(true)
     const cleanPrompt = genPrompt.trim().replace(/,?\s*corner clusters:\s*\[[\s\S]*$/i, '').trim()
     const fullPrompt = genPrompt.trim()
+
+    // Build corner annotation for the cover prompt so the AI knows which corners
+    // will receive animated overlays (keep bare) vs stay fully clean
+    const CORNER_LABELS = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+    const clusterMatches = fullPrompt.match(/\[([^\]]+)\]/g) ?? []
+    const cornerNotes = CORNER_LABELS.map((corner, i) => {
+      if (!enabledClusters[i]) return `${corner}: leave plain and empty (no overlay objects)`
+      const clusterDesc = clusterMatches[i]?.replace(/^\[|\]$/g, '').trim() ?? ''
+      return `${corner}: will receive animated overlay objects (${clusterDesc || 'from cluster'}) — keep this corner bare cover surface`
+    }).join('; ')
+    const annotatedCleanPrompt = `${styledPrompt(cleanPrompt)}. Corner notes: [${cornerNotes}]`
+
     try {
       // ── Step 1: Generate cover (~15s) ──────────────────────────────────
       const coverRes = await fetch('/api/preview-book-skin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: styledPrompt(cleanPrompt), cleanCorners: true }),
+        body: JSON.stringify({ prompt: annotatedCleanPrompt, cleanCorners: true }),
       })
       let coverData: any
       try { coverData = await coverRes.json() } catch {

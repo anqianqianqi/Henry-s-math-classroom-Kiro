@@ -29,6 +29,8 @@ COVER SURFACE: Rich thematic texture — deeply embossed near the edges, smoothe
 
 CORNERS: Keep all four corners of the cover CLEAN and EMPTY — just the book surface texture and the border frame, no objects, no decorations, no clusters. The corners must be plain cover surface ready for animated overlay objects to be composited on top later.
 
+If the prompt includes "Corner notes:" — use those to understand which specific corners will receive animated overlays. All specified corners must be kept as bare cover surface. Any corner not listed should also stay plain.
+
 CENTER ZONE — CRITICAL: The central rectangle (middle 60% width × middle 50% height) must be a PLAIN, FLAT, UNIFORM SURFACE. This means:
 - NO scenic illustrations, NO landscapes, NO forests, NO scenes, NO characters, NO objects
 - ONLY the bare book cover material (leather, cloth, or embossed texture) — flat and uniform
