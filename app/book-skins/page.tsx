@@ -809,7 +809,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 
   async function handleGenerateWithObjects() {
     if (!genPrompt.trim()) { setGenError('Enter a description.'); return }
-    setGenError(null); setGenerating(true); setCleanCorners(enabledClusters.some(Boolean))
+    setGenError(null); setGenerating(true); setCleanCorners(enabledClusters.every(Boolean))
     const cleanPrompt = genPrompt.trim().replace(/,?\s*corner clusters:\s*\[[\s\S]*$/i, '').trim()
     const fullPrompt = genPrompt.trim()
 
@@ -829,18 +829,21 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       }
     }).join('; ')
     const annotatedCleanPrompt = `${styledPrompt(cleanPrompt)}. Corner instructions: [${cornerNotes}]`
-    // Use clean context only when some corners need to stay bare for overlays;
-    // if all corners are baked, use WITH_CORNERS context which allows drawn decoration
+    // Context selection:
+    // - ALL overlay → COVER_CONTEXT_CLEAN (all corners bare, no drawn decoration)
+    // - ANY baked → COVER_CONTEXT_WITH_CORNERS (some corners have drawn objects)
+    // The Corner instructions in the prompt handle the per-corner detail
     const hasOverlayCorners = enabledClusters.some(Boolean)
+    const allOverlay = enabledClusters.every(Boolean)
 
     // All-baked: send the full original prompt (same as Generate Cover) for best results
-    const coverPromptToSend = hasOverlayCorners ? annotatedCleanPrompt : styledPrompt(fullPrompt)
+    const coverPromptToSend = allOverlay ? annotatedCleanPrompt : styledPrompt(fullPrompt.replace(/,?\s*corner clusters:\s*\[[\s\S]*$/i, '').trim() + `. Corner instructions: [${cornerNotes}]`)
 
     try {
       // ── Step 1: Generate cover (~15s) ──────────────────────────────────
       const coverRes = await fetch('/api/preview-book-skin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: coverPromptToSend, cleanCorners: hasOverlayCorners }),
+        body: JSON.stringify({ prompt: coverPromptToSend, cleanCorners: allOverlay }),
       })
       let coverData: any
       try { coverData = await coverRes.json() } catch {
