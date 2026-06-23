@@ -68,11 +68,15 @@ export default function BookSkinsUserPage() {
   async function openOverlayEditor(skin: BookSkin) {
     setOverlayEditorSkin(skin)
     setOverlayEditorLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('book_skin_overlays')
       .select('*')
       .eq('skin_id', skin.id)
       .order('sort_order', { ascending: true })
+    if (error) {
+      console.error('[openOverlayEditor] query error:', error.message, error.details)
+    }
+    console.log('[openOverlayEditor] skin_id:', skin.id, '| rows returned:', data?.length ?? 0, '| error:', error?.message)
     setOverlayEditorObjects(data ?? [])
     setOverlayEditorLoading(false)
   }
