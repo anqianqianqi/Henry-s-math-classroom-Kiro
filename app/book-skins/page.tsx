@@ -442,13 +442,13 @@ export default function BookSkinsUserPage() {
                   🎨 Edit Title &amp; Button Layout
                 </button>
               )}
-              {/* Overlay animation editor — cover skins with extracted objects */}
-              {actionSkin.skin_type === 'cover' && (actionSkin as any).has_overlays && (
+              {/* Overlay animation editor — cover skins (always show for covers; editor handles empty state) */}
+              {actionSkin.skin_type === 'cover' && (
                 <button
                   onClick={() => { openOverlayEditor(actionSkin); setActionSkin(null) }}
                   className="w-full py-2 px-3 text-sm font-semibold rounded-xl border-2 border-dashed border-purple-400 text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors"
                 >
-                  ✨ Animate Overlay Objects
+                  ✨ Animate Overlay Objects{!(actionSkin as any).has_overlays ? ' (none yet)' : ''}
                 </button>
               )}
               {showSellInput && (
@@ -1145,36 +1145,28 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
           const { data: { user: saveUser } } = await supabase.auth.getUser()
           const uid = saveUser?.id ?? 'unknown'
           const ts = Date.now()
-          let savedCount = 0
 
-          for (let i = 0; i < sandbox.extractedObjects.length; i++) {
-            const obj = sandbox.extractedObjects[i]
+          // Upload all objects in parallel — Supabase storage handles concurrent uploads fine
+          const uploadResults = await Promise.allSettled(
+            sandbox.extractedObjects.map(async (obj, i) => {
+              const rawB64 = obj.b64raw ?? (
+                obj.imageUrl?.startsWith('data:image/png;base64,')
+                  ? obj.imageUrl.replace('data:image/png;base64,', '')
+                  : null
+              )
 
-            // Objects were returned as data URIs — must upload to Supabase now
-            // b64raw is the raw base64 string (without the data:image/png;base64, prefix)
-            const rawB64 = obj.b64raw ?? (
-              obj.imageUrl?.startsWith('data:image/png;base64,')
-                ? obj.imageUrl.replace('data:image/png;base64,', '')
-                : null
-            )
-
-            if (!rawB64) {
-              // Object has a real URL already (old code path) — insert directly
-              if (obj.imageUrl?.startsWith('http')) {
-                await supabase.from('book_skin_overlays').insert({
-                  skin_id: newSkin.id,
-                  label: obj.label,
-                  image_url: obj.imageUrl,
-                  sort_order: i,
-                  overlay_config: null,
-                })
-                savedCount++
+              if (!rawB64) {
+                if (obj.imageUrl?.startsWith('http')) {
+                  const { error: insertErr2 } = await supabase.from('book_skin_overlays').insert({
+                    skin_id: newSkin.id, label: obj.label,
+                    image_url: obj.imageUrl, sort_order: i, overlay_config: null,
+                  })
+                  if (insertErr2) throw new Error(`DB insert failed for "${obj.label}": ${insertErr2.message}`)
+                  return true
+                }
+                return false
               }
-              continue
-            }
 
-            // Convert base64 to Uint8Array and upload
-            try {
               const binaryStr = atob(rawB64)
               const bytes = new Uint8Array(binaryStr.length)
               for (let b = 0; b < binaryStr.length; b++) bytes[b] = binaryStr.charCodeAt(b)
@@ -1185,30 +1177,33 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                 .from('book-skins')
                 .upload(filePath, bytes, { contentType: 'image/png', upsert: false })
 
-              if (upErr) {
-                console.warn(`[handleGenSave] upload failed for "${obj.label}":`, upErr.message)
-                continue  // skip this overlay rather than save a broken data URI
-              }
+              if (upErr) throw new Error(`Upload failed for "${obj.label}": ${upErr.message}`)
 
               const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(filePath)
-              await supabase.from('book_skin_overlays').insert({
-                skin_id: newSkin.id,
-                label: obj.label,
-                image_url: publicUrl,
-                sort_order: i,
-                overlay_config: null,
+              const { error: insertErr } = await supabase.from('book_skin_overlays').insert({
+                skin_id: newSkin.id, label: obj.label,
+                image_url: publicUrl, sort_order: i, overlay_config: null,
               })
-              savedCount++
-            } catch (convErr: any) {
-              console.warn(`[handleGenSave] conversion error for "${obj.label}":`, convErr.message)
-            }
+              if (insertErr) throw new Error(`DB insert failed for "${obj.label}": ${insertErr.message}`)
+              return true
+            })
+          )
+
+          const savedCount = uploadResults.filter(r => r.status === 'fulfilled' && r.value === true).length
+          const failedMessages = uploadResults
+            .filter(r => r.status === 'rejected')
+            .map(r => (r as PromiseRejectedResult).reason?.message ?? 'unknown')
+          if (failedMessages.length > 0) {
+            console.warn('[handleGenSave] some overlays failed:', failedMessages)
           }
 
           if (savedCount > 0) {
             await supabase.from('book_skins').update({ has_overlays: true }).eq('id', newSkin.id)
-            setUploadSuccess(`✅ Book cover saved with ${savedCount} animated overlay${savedCount !== 1 ? 's' : ''}!`)
+            const failNote = failedMessages.length > 0 ? ` (${failedMessages.length} failed: ${failedMessages[0].slice(0, 60)})` : ''
+            setUploadSuccess(`✅ Book cover saved with ${savedCount} overlay${savedCount !== 1 ? 's' : ''}!${failNote}`)
           } else {
-            setUploadSuccess('✅ Book cover saved! (Overlay upload failed — try regenerating objects)')
+            const errNote = failedMessages.length > 0 ? ` Error: ${failedMessages[0].slice(0, 100)}` : ''
+            setUploadSuccess(`✅ Book cover saved! Overlay upload failed.${errNote} Run fix-book-skin-overlays-rls.sql in Supabase.`)
           }
           onSaved?.()
         } catch (err: any) {
