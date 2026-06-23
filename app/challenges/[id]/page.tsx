@@ -101,6 +101,7 @@ export default function ChallengePage() {
   const [defaultPageUrl, setDefaultPageUrl] = useState<string | undefined>(undefined)
   const [defaultCoverLayout, setDefaultCoverLayout] = useState<any>(undefined)
   const [defaultCoverFrameUrls, setDefaultCoverFrameUrls] = useState<string[] | undefined>(undefined)
+  const [defaultCoverOverlays, setDefaultCoverOverlays] = useState<any[]>([])
 
   useEffect(() => {
     loadChallenge()
@@ -286,7 +287,7 @@ export default function ChallengePage() {
     try {
       const { data: skinData } = await supabase
         .from('book_skins')
-        .select('skin_type, image_url, cover_layout, is_animated, id')
+        .select('skin_type, image_url, cover_layout, is_animated, has_overlays, id')
         .eq('is_default', true)
         .eq('is_active', true)
 
@@ -305,6 +306,17 @@ export default function ChallengePage() {
               .order('sort_order', { ascending: true })
             if (frames && frames.length >= 2) {
               setDefaultCoverFrameUrls(frames.map((f: any) => f.image_url))
+            }
+          }
+          // Fetch overlay objects for this skin
+          if (defCover.has_overlays) {
+            const { data: overlayData } = await supabase
+              .from('book_skin_overlays')
+              .select('*')
+              .eq('skin_id', defCover.id)
+              .order('sort_order', { ascending: true })
+            if (overlayData && overlayData.length > 0) {
+              setDefaultCoverOverlays(overlayData)
             }
           }
         }
@@ -1265,6 +1277,7 @@ export default function ChallengePage() {
           pageImageUrl={defaultPageUrl}
           coverLayout={defaultCoverLayout}
           coverFrameUrls={defaultCoverFrameUrls}
+          coverOverlays={defaultCoverOverlays.length > 0 ? defaultCoverOverlays : undefined}
           solutionSlot={
             <>{hasSubmitted && !isEditing ? (
               <>

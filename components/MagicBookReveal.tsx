@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { BookCoverWithOverlays, type OverlayObject } from './BookCoverWithOverlays'
 
 interface MagicBookRevealProps {
   title: string
@@ -38,6 +39,11 @@ interface MagicBookRevealProps {
    * instead of the CSS flip animation. Last frame = transition complete → open.
    */
   coverFrameUrls?: string[]
+  /**
+   * Overlay objects from book_skin_overlays — rendered as animated transparent PNGs
+   * composited on top of the cover image.
+   */
+  coverOverlays?: import('./BookCoverWithOverlays').OverlayObject[]
 }
 
 /**
@@ -52,7 +58,7 @@ interface MagicBookRevealProps {
  * Mobile (< 768 px):
  *   Same cover/animation, single parchment page for the problem, solution slot below.
  */
-export function MagicBookReveal({ title, date, children, solutionSlot, coverImageUrl, pageImageUrl, coverLayout, coverFrameUrls }: MagicBookRevealProps) {
+export function MagicBookReveal({ title, date, children, solutionSlot, coverImageUrl, pageImageUrl, coverLayout, coverFrameUrls, coverOverlays }: MagicBookRevealProps) {
   const [phase, setPhase] = useState<'closed' | 'opening' | 'open'>('closed')
   const [particles, setParticles] = useState<
     { id: number; x: number; y: number; angle: number; delay: number }[]
@@ -332,6 +338,14 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
 
   return (
     <>
+      {/* Overlay animation keyframes — injected once */}
+      <style>{`
+        @keyframes bov-float   { 0%,100%{transform:translateY(0) translate(-50%,-50%)}    50%{transform:translateY(-8px) translate(-50%,-50%)} }
+        @keyframes bov-pulse   { 0%,100%{transform:scale(1) translate(-50%,-50%)}          50%{transform:scale(1.12) translate(-50%,-50%)} }
+        @keyframes bov-rotate  { from{transform:rotate(0deg) translate(-50%,-50%)}         to{transform:rotate(360deg) translate(-50%,-50%)} }
+        @keyframes bov-shimmer { 0%,100%{opacity:1} 50%{opacity:0.45} }
+        @keyframes bov-bounce  { 0%,100%{transform:translateY(0) translate(-50%,-50%)} 40%{transform:translateY(-14px) translate(-50%,-50%)} 60%{transform:translateY(-6px) translate(-50%,-50%)} }
+      `}</style>
       <div ref={bookRef} className="relative w-full mb-6" style={{ perspective: '1400px', background: 'transparent' }}>
 
         {/* ── Sparkle particles ── */}
@@ -405,6 +419,29 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                       ))}
                     </div>
                   )}
+                  {/* Animated overlay objects — paused during book flip */}
+                  {coverOverlays && coverOverlays.length > 0 && coverOverlays.map((obj) => {
+                    const cfg = obj.overlay_config
+                    if (!cfg) return null
+                    const OV_CSS: Record<string, string> = {
+                      none: '', float: 'bov-float 3s ease-in-out infinite', pulse: 'bov-pulse 2.5s ease-in-out infinite',
+                      rotate: 'bov-rotate 8s linear infinite', shimmer: 'bov-shimmer 2s ease-in-out infinite', bounce: 'bov-bounce 1.8s ease-in-out infinite',
+                    }
+                    const sz = Math.round(80 * (cfg.scale ?? 1.0))
+                    return (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={obj.id} src={obj.image_url} alt={obj.label} draggable={false}
+                        style={{
+                          position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
+                          width: sz, height: sz, objectFit: 'contain',
+                          transform: 'translate(-50%,-50%)',
+                          animation: cfg.animation && cfg.animation !== 'none' ? OV_CSS[cfg.animation] : undefined,
+                          animationPlayState: phase === 'opening' ? 'paused' : 'running',
+                          pointerEvents: 'none',
+                        }}
+                      />
+                    )
+                  })}
                   {/* Title overlay */}
                   <div
                     className="absolute text-center px-4 w-full"

@@ -2349,7 +2349,7 @@ function OverlayEditorInline({
                   </div>
                 </div>
               )}
-              {localOverlays.length > 1 && (
+              {localOverlays.length >= 1 && (
                 <button disabled={saving} onClick={async () => {
                   for (const o of localOverlays) await onSave(o, configs[o.id] ?? DEFAULT_OV)
                   // Persist z-order as sort_order on each overlay
@@ -2357,9 +2357,10 @@ function OverlayEditorInline({
                   for (let i = 0; i < zOrder.length; i++) {
                     await supabaseClient.from('book_skin_overlays').update({ sort_order: i }).eq('id', zOrder[i])
                   }
+                  onClose()
                 }}
-                  className="w-full py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-semibold rounded-xl text-sm">
-                  {saving ? '⏳ Saving…' : `💾 Save All ${localOverlays.length} Objects`}
+                  className="w-full py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-bold rounded-xl text-sm">
+                  {saving ? '⏳ Saving…' : `✨ Save Animation & Close`}
                 </button>
               )}
             </div>
