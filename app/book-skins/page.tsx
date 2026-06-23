@@ -622,26 +622,19 @@ function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
             )
           }
           return (
-            // eslint-disable-next-line @next/next/no-img-element
-            <div key={obj.id} style={{
-              position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
-              width: sz, height: sz, transform: 'translate(-50%,-50%)', pointerEvents: 'none',
-            }}>
-              {(cfg.auraStrength ?? 0) > 0 && (
-                <OverlayAuraWrapper
-                  overlayImageUrl={obj.image_url}
-                  coverImageUrl={coverImageUrl}
-                  xPct={cfg.x} yPct={cfg.y} widthPct={sz}
-                  auraStrength={cfg.auraStrength}
-                  auraDistance={cfg.auraDistance ?? 20}
-                  containerWidthPx={420}
-                  style={{ position: 'absolute', inset: 0, transform: 'none', left: 0, top: 0, width: '100%', height: '100%' }}
-                ><span /></OverlayAuraWrapper>
-              )}
+            <OverlayAuraWrapper
+              key={obj.id}
+              overlayImageUrl={obj.image_url}
+              coverImageUrl={coverImageUrl}
+              xPct={cfg.x} yPct={cfg.y} widthPct={sz}
+              auraStrength={cfg.auraStrength ?? 0}
+              auraDistance={cfg.auraDistance ?? 20}
+              containerWidthPx={420}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={obj.image_url} alt={obj.label} draggable={false}
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin }} />
-            </div>
+            </OverlayAuraWrapper>
           )
         })}
         {/* Title */}
@@ -2455,7 +2448,7 @@ function OverlayEditorInline({
                       onMouseDown={e => { e.preventDefault(); startDrag(o.id, e.clientX, e.clientY) }}
                       onTouchStart={e => startDrag(o.id, e.touches[0].clientX, e.touches[0].clientY)}
                       style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', width: sz, height: sz, cursor: 'grab', zIndex: zIdx + 2, outline: selected === o.id ? '2px solid #a855f7' : undefined, borderRadius: 4 }}>
-                      {/* Aura canvas — drawn before the image */}
+                      {/* Aura canvas — correct cover-sampling aura */}
                       {(c.auraStrength ?? 0) > 0 && (
                         <OverlayAuraWrapper
                           overlayImageUrl={o.image_url}

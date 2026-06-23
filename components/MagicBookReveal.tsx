@@ -443,21 +443,15 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                     const transformOrigin = getTransformOrigin(cfg.animation as any)
                     const auraStrength = (cfg as any).auraStrength ?? 0
                     return (
-                      <div key={obj.id} style={{
-                        position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
-                        width: sz, height: sz, transform: 'translate(-50%,-50%)', pointerEvents: 'none',
-                      }}>
-                        {auraStrength > 0 && (
-                          <OverlayAuraWrapper
-                            overlayImageUrl={obj.image_url}
-                            coverImageUrl={activeCoverImage}
-                            xPct={cfg.x} yPct={cfg.y} widthPct={sz}
-                            auraStrength={auraStrength}
-                            auraDistance={(cfg as any).auraDistance ?? 20}
-                            containerWidthPx={bookRef.current?.offsetWidth ?? 480}
-                            style={{ position: 'absolute', inset: 0, transform: 'none', left: 0, top: 0, width: '100%', height: '100%' }}
-                          ><span /></OverlayAuraWrapper>
-                        )}
+                      <OverlayAuraWrapper
+                        key={obj.id}
+                        overlayImageUrl={obj.image_url}
+                        coverImageUrl={activeCoverImage}
+                        xPct={cfg.x} yPct={cfg.y} widthPct={sz}
+                        auraStrength={auraStrength}
+                        auraDistance={(cfg as any).auraDistance ?? 20}
+                        containerWidthPx={bookRef.current?.offsetWidth ?? 480}
+                      >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={obj.image_url} alt={obj.label} draggable={false}
                           style={{
@@ -466,7 +460,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                             animationPlayState: phase === 'opening' ? 'paused' : 'running',
                           }}
                         />
-                      </div>
+                      </OverlayAuraWrapper>
                     )
                   })}
                   {/* Title overlay */}

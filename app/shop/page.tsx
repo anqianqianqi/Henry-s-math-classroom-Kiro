@@ -65,22 +65,20 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
             <div key={obj.id} style={{
               position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
               width: sz, height: sz, transform: 'translate(-50%,-50%)', pointerEvents: 'none',
-            }}>
-              {(cfg.auraStrength ?? 0) > 0 && (
-                <OverlayAuraWrapper
-                  overlayImageUrl={obj.image_url}
-                  coverImageUrl={skin.image_url}
-                  xPct={cfg.x} yPct={cfg.y} widthPct={sz}
-                  auraStrength={cfg.auraStrength}
-                  auraDistance={cfg.auraDistance ?? 20}
-                  containerWidthPx={420}
-                  style={{ position: 'absolute', inset: 0, transform: 'none', left: 0, top: 0, width: '100%', height: '100%' }}
-                ><span /></OverlayAuraWrapper>
-              )}
+          return (
+            <OverlayAuraWrapper
+              key={obj.id}
+              overlayImageUrl={obj.image_url}
+              coverImageUrl={skin.image_url}
+              xPct={cfg.x} yPct={cfg.y} widthPct={sz}
+              auraStrength={cfg.auraStrength ?? 0}
+              auraDistance={cfg.auraDistance ?? 20}
+              containerWidthPx={420}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={obj.image_url} alt={obj.label} draggable={false}
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin }} />
-            </div>
+            </OverlayAuraWrapper>
           )
         })}
         <div className="absolute text-center px-4 w-full" style={{ left: `${tl?.x ?? 50}%`, top: `${tl?.y ?? 22}%`, transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>

@@ -39,6 +39,8 @@ interface BookCoverWithOverlaysProps {
   style?: React.CSSProperties
   /** Size of overlay objects in pixels — scales with cover size. Default: 80 */
   overlayBaseSize?: number
+  /** Rendered width of the cover container in px — used for aura calculation */
+  containerWidthPx?: number
   /** Called when the cover is clicked */
   onClick?: () => void
 }
@@ -50,6 +52,7 @@ export function BookCoverWithOverlays({
   className,
   style,
   overlayBaseSize = 80,
+  containerWidthPx = 480,
   onClick,
 }: BookCoverWithOverlaysProps) {
   const stylesInjected = useRef(false)
@@ -112,21 +115,15 @@ export function BookCoverWithOverlays({
         const auraStrength = (cfg as any).auraStrength ?? 0
 
         return (
-          <div key={obj.id} style={{
-            position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
-            width: sz, height: sz, transform: 'translate(-50%,-50%)', pointerEvents: 'none',
-          }}>
-            {auraStrength > 0 && (
-              <OverlayAuraWrapper
-                overlayImageUrl={obj.image_url}
-                coverImageUrl={coverImageUrl}
-                xPct={cfg.x} yPct={cfg.y} widthPct={sz}
-                auraStrength={auraStrength}
-                auraDistance={(cfg as any).auraDistance ?? 20}
-                containerWidthPx={overlayBaseSize / (80 / 1024) * 1024}
-                style={{ position: 'absolute', inset: 0, transform: 'none', left: 0, top: 0, width: '100%', height: '100%' }}
-              ><span /></OverlayAuraWrapper>
-            )}
+          <OverlayAuraWrapper
+            key={obj.id}
+            overlayImageUrl={obj.image_url}
+            coverImageUrl={coverImageUrl}
+            xPct={cfg.x} yPct={cfg.y} widthPct={sz}
+            auraStrength={auraStrength}
+            auraDistance={(cfg as any).auraDistance ?? 20}
+            containerWidthPx={containerWidthPx}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={obj.image_url} alt={obj.label} draggable={false}
               style={{
@@ -135,7 +132,7 @@ export function BookCoverWithOverlays({
                 animationPlayState: overlayAnimationPaused ? 'paused' : 'running',
               }}
             />
-          </div>
+          </OverlayAuraWrapper>
         )
       })}
     </div>
