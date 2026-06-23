@@ -88,7 +88,18 @@ export function OverlayAuraWrapper({
     const sw = Math.round(objSizePx * coverNW / renderW)
     const sh = Math.round(objSizePx * coverNH / renderH)
 
-    ctx.drawImage(coverImg, sx, sy, sw, sh, 0, 0, objSizePx, objSizePx)
+    // Clamp source rectangle to valid cover image bounds to avoid black edges
+    const clampedSx = Math.max(0, Math.min(coverNW - 1, sx))
+    const clampedSy = Math.max(0, Math.min(coverNH - 1, sy))
+    const clampedSw = Math.max(1, Math.min(coverNW - clampedSx, sw))
+    const clampedSh = Math.max(1, Math.min(coverNH - clampedSy, sh))
+    // Destination offset on canvas (if source was clamped)
+    const dstOffX = Math.round((clampedSx - sx) * objSizePx / sw)
+    const dstOffY = Math.round((clampedSy - sy) * objSizePx / sh)
+    const dstW = Math.round(clampedSw * objSizePx / sw)
+    const dstH = Math.round(clampedSh * objSizePx / sh)
+
+    ctx.drawImage(coverImg, clampedSx, clampedSy, clampedSw, clampedSh, dstOffX, dstOffY, dstW, dstH)
 
     // ── 2. Read the overlay alpha map ─────────────────────────────────────────
     const offscreen = document.createElement('canvas')
@@ -126,6 +137,26 @@ export function OverlayAuraWrapper({
       d[i * 4 + 3] = 255  // fully opaque — show the darkened cover
     }
 
+    // ── 4. Fade canvas edges to transparent so canvas boundary is invisible ──
+    // Apply a soft margin so the canvas blends into the surrounding cover.
+    const edgeFadeMarginPx = Math.round(objSizePx * 0.08)  // 8% of object size
+    for (let y = 0; y < objSizePx; y++) {
+      for (let x = 0; x < objSizePx; x++) {
+        const idx = (y * objSizePx + x) * 4
+        if (d[idx + 3] === 0) continue  // skip transparent pixels
+        // Distance from each edge
+        const distLeft   = x
+        const distRight  = objSizePx - 1 - x
+        const distTop    = y
+        const distBottom = objSizePx - 1 - y
+        const minEdgeDist = Math.min(distLeft, distRight, distTop, distBottom)
+        if (minEdgeDist < edgeFadeMarginPx) {
+          const fade = minEdgeDist / edgeFadeMarginPx  // 0 at edge, 1 inside
+          d[idx + 3] = Math.round(d[idx + 3] * fade)
+        }
+      }
+    }
+
     ctx.putImageData(imgData, 0, 0)
   }, [tick, xPct, yPct, widthFrac, auraStrength, containerWidthPx, objSizePx])
 
@@ -143,6 +174,7 @@ export function OverlayAuraWrapper({
             position: 'absolute', inset: 0,
             width: '100%', height: '100%',
             pointerEvents: 'none', zIndex: 0,
+            outline: 'none',
           }}
         />
       )}
