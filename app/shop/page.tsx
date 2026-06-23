@@ -19,11 +19,21 @@ const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/Anim
 
 // ── ShopCoverZoom — simple reliable zoom preview for book cover skins ─────────
 // Image in normal flow sets height; overlays + title absolute on top.
+const SHOP_ZP_KEYFRAMES = `
+@keyframes szp-float   { 0%,100%{transform:translateY(0) translate(-50%,-50%)}    50%{transform:translateY(-8px) translate(-50%,-50%)} }
+@keyframes szp-pulse   { 0%,100%{transform:scale(1) translate(-50%,-50%)}          50%{transform:scale(1.12) translate(-50%,-50%)} }
+@keyframes szp-rotate  { from{transform:rotate(0deg) translate(-50%,-50%)}         to{transform:rotate(360deg) translate(-50%,-50%)} }
+@keyframes szp-shimmer { 0%,100%{opacity:1}                                         50%{opacity:0.45} }
+@keyframes szp-bounce  { 0%,100%{transform:translateY(0) translate(-50%,-50%)}     40%{transform:translateY(-14px) translate(-50%,-50%)} 60%{transform:translateY(-6px) translate(-50%,-50%)} }
+@keyframes szp-sway    { 0%,100%{transform:rotate(-8deg) translateY(0) translate(-50%,-50%)} 50%{transform:rotate(8deg) translateY(-4px) translate(-50%,-50%)} }
+@keyframes szp-flicker { 0%,100%{opacity:1} 25%{opacity:0.3} 50%{opacity:0.9} 75%{opacity:0.15} }
+@keyframes szp-bling   { 0%,100%{filter:brightness(1) drop-shadow(0 0 0px gold)} 50%{filter:brightness(1.6) drop-shadow(0 0 8px gold)} }
+`
 const SHOP_ZP_CSS: Record<string, string> = {
-  float: 'bov-float 3s ease-in-out infinite', pulse: 'bov-pulse 2.5s ease-in-out infinite',
-  rotate: 'bov-rotate 8s linear infinite', shimmer: 'bov-shimmer 2s ease-in-out infinite',
-  bounce: 'bov-bounce 1.8s ease-in-out infinite', sway: 'bov-sway 2.5s ease-in-out infinite',
-  flicker: 'bov-flicker 1.4s ease-in-out infinite', bling: 'bov-bling 2s ease-in-out infinite',
+  float: 'szp-float 3s ease-in-out infinite', pulse: 'szp-pulse 2.5s ease-in-out infinite',
+  rotate: 'szp-rotate 8s linear infinite', shimmer: 'szp-shimmer 2s ease-in-out infinite',
+  bounce: 'szp-bounce 1.8s ease-in-out infinite', sway: 'szp-sway 2.5s ease-in-out infinite',
+  flicker: 'szp-flicker 1.4s ease-in-out infinite', bling: 'szp-bling 2s ease-in-out infinite',
 }
 function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
   const supabase = createClient()
@@ -38,34 +48,37 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
   }, [skin.id])
 
   return (
-    <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden' }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={skin.image_url} alt={skin.name} style={{ display: 'block', width: '100%', height: 'auto' }} draggable={false} />
-      {overlays.map(obj => {
-        const cfg = obj.overlay_config
-        if (!cfg) return null
-        const sz = Math.round(80 * (cfg.scale ?? 1.0))
-        const anim = cfg.animation && cfg.animation !== 'none' ? SHOP_ZP_CSS[cfg.animation] : undefined
-        return (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img key={obj.id} src={obj.image_url} alt={obj.label} draggable={false}
-            style={{ position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`, width: sz, height: sz,
-              objectFit: 'contain', transform: 'translate(-50%,-50%)', animation: anim, pointerEvents: 'none' }} />
-        )
-      })}
-      <div className="absolute text-center px-4 w-full" style={{ left: `${tl?.x ?? 50}%`, top: `${tl?.y ?? 22}%`, transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
-        <h2 className="font-bold leading-snug" style={{ fontSize: tl?.fontSize ?? 20, color: tl?.color ?? '#2d1a00', fontFamily: '"Georgia","Times New Roman",serif', textShadow: (tl?.shadow ?? true) ? '0 1px 8px rgba(255,255,255,0.6),0 0 16px rgba(0,0,0,0.4)' : undefined, letterSpacing: '0.04em' }}>
-          Challenge Title Preview
-        </h2>
+    <>
+      <style>{SHOP_ZP_KEYFRAMES}</style>
+      <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={skin.image_url} alt={skin.name} style={{ display: 'block', width: '100%', height: 'auto' }} draggable={false} />
+        {overlays.map(obj => {
+          const cfg = obj.overlay_config
+          if (!cfg) return null
+          const sz = Math.round(80 * (cfg.scale ?? 1.0))
+          const anim = cfg.animation && cfg.animation !== 'none' ? SHOP_ZP_CSS[cfg.animation] : undefined
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={obj.id} src={obj.image_url} alt={obj.label} draggable={false}
+              style={{ position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`, width: sz, height: sz,
+                objectFit: 'contain', transform: 'translate(-50%,-50%)', animation: anim, pointerEvents: 'none' }} />
+          )
+        })}
+        <div className="absolute text-center px-4 w-full" style={{ left: `${tl?.x ?? 50}%`, top: `${tl?.y ?? 22}%`, transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
+          <h2 className="font-bold leading-snug" style={{ fontSize: tl?.fontSize ?? 20, color: tl?.color ?? '#2d1a00', fontFamily: '"Georgia","Times New Roman",serif', textShadow: (tl?.shadow ?? true) ? '0 1px 8px rgba(255,255,255,0.6),0 0 16px rgba(0,0,0,0.4)' : undefined, letterSpacing: '0.04em' }}>
+            Challenge Title Preview
+          </h2>
+        </div>
+        <div className="absolute flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap"
+          style={{ left: `${pl?.x ?? 50}%`, top: `${pl?.y ?? 82}%`, transform: 'translate(-50%,-50%)',
+            fontSize: pl?.fontSize ?? 14, color: pl?.color ?? 'rgba(240,215,140,0.97)',
+            textShadow: '0 1px 4px rgba(0,0,0,0.8)', background: 'rgba(40,25,5,0.72)', border: '1px solid rgba(200,160,60,0.55)',
+            backdropFilter: 'blur(6px)', pointerEvents: 'none' }}>
+          <span>📜</span><span style={{ letterSpacing: '0.06em' }}>Open the Book</span>
+        </div>
       </div>
-      <div className="absolute flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap"
-        style={{ left: `${pl?.x ?? 50}%`, top: `${pl?.y ?? 82}%`, transform: 'translate(-50%,-50%)',
-          fontSize: pl?.fontSize ?? 14, color: pl?.color ?? 'rgba(240,215,140,0.97)',
-          textShadow: '0 1px 4px rgba(0,0,0,0.8)', background: 'rgba(40,25,5,0.72)', border: '1px solid rgba(200,160,60,0.55)',
-          backdropFilter: 'blur(6px)', pointerEvents: 'none' }}>
-        <span>📜</span><span style={{ letterSpacing: '0.06em' }}>Open the Book</span>
-      </div>
-    </div>
+    </>
   )
 }
 
