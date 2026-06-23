@@ -1802,6 +1802,8 @@ function OverlayEditorInline({
     for (const o of overlays) init[o.id] = o.overlay_config ?? { ...DEFAULT_OV }
     return init
   })
+  // zOrder: array of overlay IDs from bottom (index 0) to top (last index)
+  const [zOrder, setZOrder] = useState<string[]>(() => overlays.map(o => o.id))
   const previewRef = useRef<HTMLDivElement>(null)
   const dragging = useRef<{ id: string; sx: number; sy: number; ox: number; oy: number } | null>(null)
 
@@ -1810,6 +1812,26 @@ function OverlayEditorInline({
 
   function upd(id: string, patch: Partial<OvConfig>) {
     setConfigs(prev => ({ ...prev, [id]: { ...(prev[id] ?? DEFAULT_OV), ...patch } }))
+  }
+
+  function moveLayer(id: string, direction: 'front' | 'back' | 'forward' | 'backward') {
+    setZOrder(prev => {
+      const idx = prev.indexOf(id)
+      if (idx === -1) return prev
+      const next = [...prev]
+      if (direction === 'back' || direction === 'backward') {
+        if (idx === 0) return prev
+        const swapIdx = direction === 'back' ? 0 : idx - 1
+        next.splice(idx, 1)
+        next.splice(swapIdx, 0, id)
+      } else {
+        if (idx === prev.length - 1) return prev
+        const swapIdx = direction === 'front' ? prev.length - 1 : idx + 1
+        next.splice(idx, 1)
+        next.splice(swapIdx, 0, id)
+      }
+      return next
+    })
   }
 
   function startDrag(id: string, cx: number, cy: number) {
@@ -1863,11 +1885,12 @@ function OverlayEditorInline({
                 {overlays.map(o => {
                   const c = configs[o.id] ?? DEFAULT_OV
                   const sz = Math.round(80 * c.scale)
+                  const zIdx = zOrder.indexOf(o.id)  // position in zOrder = actual z-index
                   return (
                     <div key={o.id}
                       onMouseDown={e => { e.preventDefault(); startDrag(o.id, e.clientX, e.clientY) }}
                       onTouchStart={e => startDrag(o.id, e.touches[0].clientX, e.touches[0].clientY)}
-                      style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', width: sz, height: sz, cursor: 'grab', zIndex: selected === o.id ? 10 : 5, outline: selected === o.id ? '2px solid #a855f7' : undefined, borderRadius: 4 }}>
+                      style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', width: sz, height: sz, cursor: 'grab', zIndex: zIdx + 2, outline: selected === o.id ? '2px solid #a855f7' : undefined, borderRadius: 4 }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={o.image_url} alt={o.label} style={{ width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS[c.animation] : undefined, pointerEvents: 'none' }} draggable={false} />
                     </div>
@@ -1888,7 +1911,23 @@ function OverlayEditorInline({
               </div>
               {sel && cfg && (
                 <div className="space-y-3 border border-gray-100 rounded-xl p-3">
-                  <p className="text-sm font-bold text-gray-800 capitalize">{sel.label}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-gray-800 capitalize">{sel.label}</p>
+                    {overlays.length > 1 && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-gray-400 mr-1">Layer:</span>
+                        <button onClick={() => moveLayer(sel.id, 'back')} title="Send to back"
+                          className="text-[11px] px-1.5 py-0.5 rounded border border-gray-200 bg-white hover:bg-gray-100 text-gray-600 font-bold" disabled={zOrder.indexOf(sel.id) === 0}>⬇⬇</button>
+                        <button onClick={() => moveLayer(sel.id, 'backward')} title="Move back one"
+                          className="text-[11px] px-1.5 py-0.5 rounded border border-gray-200 bg-white hover:bg-gray-100 text-gray-600 font-bold" disabled={zOrder.indexOf(sel.id) === 0}>⬇</button>
+                        <button onClick={() => moveLayer(sel.id, 'forward')} title="Move forward one"
+                          className="text-[11px] px-1.5 py-0.5 rounded border border-gray-200 bg-white hover:bg-gray-100 text-gray-600 font-bold" disabled={zOrder.indexOf(sel.id) === zOrder.length - 1}>⬆</button>
+                        <button onClick={() => moveLayer(sel.id, 'front')} title="Bring to front"
+                          className="text-[11px] px-1.5 py-0.5 rounded border border-gray-200 bg-white hover:bg-gray-100 text-gray-600 font-bold" disabled={zOrder.indexOf(sel.id) === zOrder.length - 1}>⬆⬆</button>
+                        <span className="text-[10px] text-gray-400 ml-1">{zOrder.indexOf(sel.id) + 1}/{zOrder.length}</span>
+                      </div>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 mb-1">X ({Math.round(cfg.x)}%)</label>
@@ -1921,7 +1960,14 @@ function OverlayEditorInline({
                 </div>
               )}
               {overlays.length > 1 && (
-                <button disabled={saving} onClick={async () => { for (const o of overlays) await onSave(o, configs[o.id] ?? DEFAULT_OV) }}
+                <button disabled={saving} onClick={async () => {
+                  for (const o of overlays) await onSave(o, configs[o.id] ?? DEFAULT_OV)
+                  // Persist z-order as sort_order on each overlay
+                  const supabase = (await import('@/lib/supabase/client')).createClient()
+                  for (let i = 0; i < zOrder.length; i++) {
+                    await supabase.from('book_skin_overlays').update({ sort_order: i }).eq('id', zOrder[i])
+                  }
+                }}
                   className="w-full py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-semibold rounded-xl text-sm">
                   {saving ? '⏳ Saving…' : `💾 Save All ${overlays.length} Objects`}
                 </button>
