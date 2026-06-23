@@ -855,6 +855,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 
       const clusters: { clusterIndex: number; corner: string; items: { label: string; prompt: string }[] }[] =
         enrichData.clusters ?? []
+      console.log('[generateWithObjects] enrichment returned', clusters.length, 'clusters:', clusters.map(c => `${c.corner}(${c.items.length})`))
       if (clusters.length === 0) {
         setExtractError('No clusters found in prompt — use format: corner clusters: [item1 + item2 + item3] [...]')
         setSandbox(prev => prev ? { ...prev, extractedObjects: [] } : prev)
