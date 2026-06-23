@@ -98,6 +98,51 @@ export default function ChallengePage() {
   const [savingHint, setSavingHint] = useState(false)
   // Book skin state — fetched from book_skins table (default skins set by admin)
   const [defaultCoverUrl, setDefaultCoverUrl] = useState<string | undefined>(undefined)
+
+  // AI suggestion state: per submission
+  const [aiSuggestions, setAiSuggestions] = useState<Record<string, {
+    suggestion: string; suggestedPoints: number | null; loading: boolean; error: string | null
+  }>>({})
+
+  async function handleGetAISuggestion(submissionId: string) {
+    setAiSuggestions(prev => ({
+      ...prev,
+      [submissionId]: { suggestion: '', suggestedPoints: null, loading: true, error: null }
+    }))
+    try {
+      const res = await fetch('/api/ai-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submissionId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setAiSuggestions(prev => ({
+          ...prev,
+          [submissionId]: { suggestion: '', suggestedPoints: null, loading: false, error: data.error ?? 'AI suggestion failed' }
+        }))
+        return
+      }
+      setAiSuggestions(prev => ({
+        ...prev,
+        [submissionId]: { suggestion: data.suggestion, suggestedPoints: data.suggestedPoints, loading: false, error: null }
+      }))
+      // Pre-fill comment box with suggestion
+      if (data.suggestion) {
+        setNewComment(prev => ({ ...prev, [submissionId]: data.suggestion }))
+      }
+      // Pre-fill grade input if suggested points provided
+      if (data.suggestedPoints !== null) {
+        const input = document.getElementById(`grade-${submissionId}`) as HTMLInputElement
+        if (input) input.value = String(data.suggestedPoints)
+      }
+    } catch {
+      setAiSuggestions(prev => ({
+        ...prev,
+        [submissionId]: { suggestion: '', suggestedPoints: null, loading: false, error: 'Network error' }
+      }))
+    }
+  }
   const [defaultPageUrl, setDefaultPageUrl] = useState<string | undefined>(undefined)
   const [defaultCoverLayout, setDefaultCoverLayout] = useState<any>(undefined)
   const [defaultCoverFrameUrls, setDefaultCoverFrameUrls] = useState<string[] | undefined>(undefined)
@@ -1756,35 +1801,89 @@ export default function ChallengePage() {
                                 )}
                               </div>
                             ) : (
-                            <div className="flex items-center gap-2 mb-3 p-3 bg-yellow-50 rounded-lg border-2 border-yellow-200 flex-wrap">
-                              <span className="text-sm font-bold text-gray-700">📝 Grade:</span>
-                              <input
-                                type="number"
-                                min={0}
-                                max={challenge?.max_points || 100}
-                                defaultValue={submission.points ?? undefined}
-                                id={`grade-${submission.id}`}
-                                className="w-20 px-3 py-2 border-2 border-gray-300 rounded-lg text-center text-sm font-bold focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                                placeholder="0"
-                              />
-                              <span className="text-sm font-medium text-gray-500">/ {challenge?.max_points || 100}</span>
-                              <button
-                                onClick={() => {
-                                  const input = document.getElementById(`grade-${submission.id}`) as HTMLInputElement
-                                  const val = input?.value
-                                  if (val === '') return alert('Enter a score first')
-                                  const maxPts = challenge?.max_points || 100
-                                  const num = Math.min(maxPts, Math.max(0, parseInt(val)))
-                                  handleGradeSubmission(submission.id, num)
-                                  alert(`✅ Grade saved: ${num}/${challenge?.max_points || 100}`)
-                                }}
-                                className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                              >
-                                Publish Grade
-                              </button>
-                              {submission.points != null && (
-                                <span className="text-xs text-green-600 font-medium">Current: {submission.points}/{challenge?.max_points || 100}</span>
-                              )}
+                            <div className="space-y-2 mb-3">
+                              {/* AI Suggestion */}
+                              {(() => {
+                                const ai = aiSuggestions[submission.id]
+                                if (ai?.loading) return (
+                                  <div className="flex items-center gap-2 text-xs text-violet-600 bg-violet-50 px-3 py-2 rounded-lg border border-violet-200">
+                                    <span className="animate-spin inline-block">⏳</span> Generating AI suggestion…
+                                  </div>
+                                )
+                                if (ai?.error) return (
+                                  <div className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{ai.error}</div>
+                                )
+                                if (ai?.suggestion) return (
+                                  <div className="bg-violet-50 border border-violet-200 rounded-lg px-3 py-2.5 space-y-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs font-semibold text-violet-700">🤖 AI Suggestion</span>
+                                      {ai.suggestedPoints !== null && (
+                                        <span className="text-xs bg-violet-200 text-violet-800 px-1.5 py-0.5 rounded-full font-semibold">
+                                          {ai.suggestedPoints} pts
+                                        </span>
+                                      )}
+                                      <span className="text-xs text-violet-500 ml-1">Pre-filled below — edit freely</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => handleGetAISuggestion(submission.id)}
+                                        className="text-xs font-semibold px-2 py-1 bg-white border border-violet-300 text-violet-700 rounded-lg hover:bg-violet-50 transition-colors"
+                                      >
+                                        Regenerate
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setAiSuggestions(prev => { const n = { ...prev }; delete n[submission.id]; return n })
+                                          setNewComment(prev => ({ ...prev, [submission.id]: '' }))
+                                        }}
+                                        className="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1 transition-colors"
+                                      >
+                                        Clear
+                                      </button>
+                                    </div>
+                                  </div>
+                                )
+                                return (
+                                  <button
+                                    onClick={() => handleGetAISuggestion(submission.id)}
+                                    className="text-xs font-semibold px-3 py-1.5 bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200 transition-colors"
+                                  >
+                                    🤖 AI Suggest
+                                  </button>
+                                )
+                              })()}
+
+                              {/* Grade row */}
+                              <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg border-2 border-yellow-200 flex-wrap">
+                                <span className="text-sm font-bold text-gray-700">📝 Grade:</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={challenge?.max_points || 100}
+                                  defaultValue={submission.points ?? undefined}
+                                  id={`grade-${submission.id}`}
+                                  className="w-20 px-3 py-2 border-2 border-gray-300 rounded-lg text-center text-sm font-bold focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                                  placeholder="0"
+                                />
+                                <span className="text-sm font-medium text-gray-500">/ {challenge?.max_points || 100}</span>
+                                <button
+                                  onClick={() => {
+                                    const input = document.getElementById(`grade-${submission.id}`) as HTMLInputElement
+                                    const val = input?.value
+                                    if (val === '') return alert('Enter a score first')
+                                    const maxPts = challenge?.max_points || 100
+                                    const num = Math.min(maxPts, Math.max(0, parseInt(val)))
+                                    handleGradeSubmission(submission.id, num)
+                                    alert(`✅ Grade saved: ${num}/${challenge?.max_points || 100}`)
+                                  }}
+                                  className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                                >
+                                  Publish Grade
+                                </button>
+                                {submission.points != null && (
+                                  <span className="text-xs text-green-600 font-medium">Current: {submission.points}/{challenge?.max_points || 100}</span>
+                                )}
+                              </div>
                             </div>
                             )
                           )}
