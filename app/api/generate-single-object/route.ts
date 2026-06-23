@@ -66,6 +66,7 @@ TECHNICAL RENDERING REQUIREMENTS:
         n: 1,
         size: '1024x1024',
         output_format: 'png',
+        background: 'transparent',
         quality: 'high',
       }),
     })
