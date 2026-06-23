@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { BookCoverWithOverlays, type OverlayObject } from './BookCoverWithOverlays'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin } from '@/lib/overlayAnimations'
 
 interface MagicBookRevealProps {
   title: string
@@ -339,16 +340,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
   return (
     <>
       {/* Overlay animation keyframes — injected once */}
-      <style>{`
-        @keyframes bov-float   { 0%,100%{transform:translateY(0) translate(-50%,-50%)}    50%{transform:translateY(-8px) translate(-50%,-50%)} }
-        @keyframes bov-pulse   { 0%,100%{transform:scale(1) translate(-50%,-50%)}          50%{transform:scale(1.12) translate(-50%,-50%)} }
-        @keyframes bov-rotate  { from{transform:rotate(0deg) translate(-50%,-50%)}         to{transform:rotate(360deg) translate(-50%,-50%)} }
-        @keyframes bov-shimmer { 0%,100%{opacity:1} 50%{opacity:0.45} }
-        @keyframes bov-bounce  { 0%,100%{transform:translateY(0) translate(-50%,-50%)} 40%{transform:translateY(-14px) translate(-50%,-50%)} 60%{transform:translateY(-6px) translate(-50%,-50%)} }
-        @keyframes bov-sway    { 0%,100%{transform:rotate(-8deg) translateY(0) translate(-50%,-50%)} 50%{transform:rotate(8deg) translateY(-4px) translate(-50%,-50%)} }
-        @keyframes bov-flicker { 0%,100%{opacity:1} 25%{opacity:0.3} 50%{opacity:0.9} 75%{opacity:0.15} }
-        @keyframes bov-bling   { 0%,100%{filter:brightness(1) drop-shadow(0 0 0px gold)} 50%{filter:brightness(1.6) drop-shadow(0 0 8px gold)} }
-      `}</style>
+      <style>{buildKeyframesCSS('bov')}</style>
       <div ref={bookRef} className="relative w-full mb-6" style={{ perspective: '1400px', background: 'transparent' }}>
 
         {/* ── Sparkle particles ── */}
@@ -426,12 +418,9 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                   {coverOverlays && coverOverlays.length > 0 && coverOverlays.map((obj) => {
                     const cfg = obj.overlay_config
                     if (!cfg) return null
-                    const OV_CSS: Record<string, string> = {
-                      none: '', float: 'bov-float 3s ease-in-out infinite', pulse: 'bov-pulse 2.5s ease-in-out infinite',
-                      rotate: 'bov-rotate 8s linear infinite', shimmer: 'bov-shimmer 2s ease-in-out infinite', bounce: 'bov-bounce 1.8s ease-in-out infinite',
-                      sway: 'bov-sway 2.5s ease-in-out infinite', flicker: 'bov-flicker 1.4s ease-in-out infinite', bling: 'bov-bling 2s ease-in-out infinite',
-                    }
                     const sz = Math.round(80 * (cfg.scale ?? 1.0))
+                    const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation as any, 'bov', (cfg as any).speed ?? 1.0) : undefined
+                    const transformOrigin = getTransformOrigin(cfg.animation as any)
                     return (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img key={obj.id} src={obj.image_url} alt={obj.label} draggable={false}
@@ -439,7 +428,8 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                           position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
                           width: sz, height: sz, objectFit: 'contain',
                           transform: 'translate(-50%,-50%)',
-                          animation: cfg.animation && cfg.animation !== 'none' ? OV_CSS[cfg.animation] : undefined,
+                          animation: anim,
+                          transformOrigin,
                           animationPlayState: phase === 'opening' ? 'paused' : 'running',
                           pointerEvents: 'none',
                         }}

@@ -577,24 +577,10 @@ function SkinPicker({
 // Image renders in normal flow (so it sets container height), overlay objects
 // and title are absolute on top. Same layout as MagicBookReveal.
 // ─────────────────────────────────────────────────────────────────────────────
-const ZP_KEYFRAMES = `
-@keyframes zp-float   { 0%,100%{transform:translateY(0) translate(-50%,-50%)}    50%{transform:translateY(-8px) translate(-50%,-50%)} }
-@keyframes zp-pulse   { 0%,100%{transform:scale(1) translate(-50%,-50%)}          50%{transform:scale(1.12) translate(-50%,-50%)} }
-@keyframes zp-rotate  { from{transform:rotate(0deg) translate(-50%,-50%)}         to{transform:rotate(360deg) translate(-50%,-50%)} }
-@keyframes zp-shimmer { 0%,100%{opacity:1}                                         50%{opacity:0.45} }
-@keyframes zp-bounce  { 0%,100%{transform:translateY(0) translate(-50%,-50%)}     40%{transform:translateY(-14px) translate(-50%,-50%)} 60%{transform:translateY(-6px) translate(-50%,-50%)} }
-@keyframes zp-sway    { 0%,100%{transform:rotate(-8deg) translateY(0) translate(-50%,-50%)} 50%{transform:rotate(8deg) translateY(-4px) translate(-50%,-50%)} }
-@keyframes zp-flicker { 0%,100%{opacity:1} 25%{opacity:0.3} 50%{opacity:0.9} 75%{opacity:0.15} }
-@keyframes zp-bling   { 0%,100%{filter:brightness(1) drop-shadow(0 0 0px gold)} 50%{filter:brightness(1.6) drop-shadow(0 0 8px gold)} }
+const ZP_KEYFRAMES = buildKeyframesCSS('zp') + `
 @keyframes zp-pulse-glow { 0%,100%{opacity:1} 50%{opacity:0.7} }
-@keyframes zp-wiggle   { 0%,100%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} }
+@keyframes zp-wiggle      { 0%,100%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} }
 `
-const ZP_CSS: Record<string, string> = {
-  float: 'zp-float 3s ease-in-out infinite', pulse: 'zp-pulse 2.5s ease-in-out infinite',
-  rotate: 'zp-rotate 8s linear infinite', shimmer: 'zp-shimmer 2s ease-in-out infinite',
-  bounce: 'zp-bounce 1.8s ease-in-out infinite', sway: 'zp-sway 2.5s ease-in-out infinite',
-  flicker: 'zp-flicker 1.4s ease-in-out infinite', bling: 'zp-bling 2s ease-in-out infinite',
-}
 
 function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
   skinId: string; coverImageUrl: string; coverLayout?: any; label: string
@@ -625,12 +611,13 @@ function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
           const cfg = obj.overlay_config
           if (!cfg) return null
           const sz = Math.round(80 * (cfg.scale ?? 1.0))
-          const anim = cfg.animation && cfg.animation !== 'none' ? ZP_CSS[cfg.animation] : undefined
+          const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation, 'zp', cfg.speed ?? 1.0) : undefined
+          const transformOrigin = getTransformOrigin(cfg.animation)
           return (
             // eslint-disable-next-line @next/next/no-img-element
             <img key={obj.id} src={obj.image_url} alt={obj.label} draggable={false}
               style={{ position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`, width: sz, height: sz,
-                objectFit: 'contain', transform: 'translate(-50%,-50%)', animation: anim, pointerEvents: 'none' }} />
+                objectFit: 'contain', transform: 'translate(-50%,-50%)', animation: anim, transformOrigin, pointerEvents: 'none' }} />
           )
         })}
         {/* Title */}
@@ -2206,29 +2193,13 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Overlay Animation Editor — used in the manage modal of this page
 // ─────────────────────────────────────────────────────────────────────────────
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, OV_ANIM_OPTIONS } from '@/lib/overlayAnimations'
 type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling'
-interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim }
-const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float' }
-const OV_KEYFRAMES = `
-@keyframes bov-float   { 0%,100%{transform:translateY(0)}    50%{transform:translateY(-8px)} }
-@keyframes bov-pulse   { 0%,100%{transform:scale(1)}         50%{transform:scale(1.12)} }
-@keyframes bov-rotate  { from{transform:rotate(0deg)}        to{transform:rotate(360deg)} }
-@keyframes bov-shimmer { 0%,100%{opacity:1}                  50%{opacity:0.45} }
-@keyframes bov-bounce  { 0%,100%{transform:translateY(0)}    40%{transform:translateY(-14px)} 60%{transform:translateY(-6px)} }
-@keyframes bov-sway    { 0%,100%{transform:rotate(-8deg) translateY(0)} 50%{transform:rotate(8deg) translateY(-4px)} }
-@keyframes bov-flicker { 0%,100%{opacity:1} 25%{opacity:0.3} 50%{opacity:0.9} 75%{opacity:0.15} }
-@keyframes bov-bling   { 0%,100%{filter:brightness(1) drop-shadow(0 0 0px gold)} 50%{filter:brightness(1.6) drop-shadow(0 0 8px gold)} }
-`
-const OV_CSS: Record<OverlayAnim, string> = {
-  none: '', float: 'bov-float 3s ease-in-out infinite', pulse: 'bov-pulse 2.5s ease-in-out infinite',
-  rotate: 'bov-rotate 8s linear infinite', shimmer: 'bov-shimmer 2s ease-in-out infinite', bounce: 'bov-bounce 1.8s ease-in-out infinite',
-  sway: 'bov-sway 2.5s ease-in-out infinite', flicker: 'bov-flicker 1.4s ease-in-out infinite', bling: 'bov-bling 2s ease-in-out infinite',
-}
-const OV_ANIMS: { value: OverlayAnim; label: string }[] = [
-  { value: 'none', label: '⏸ None' }, { value: 'float', label: '🌊 Float' }, { value: 'pulse', label: '💗 Pulse' },
-  { value: 'rotate', label: '🔄 Rotate' }, { value: 'shimmer', label: '✨ Shimmer' }, { value: 'bounce', label: '🏀 Bounce' },
-  { value: 'sway', label: '🌿 Sway' }, { value: 'flicker', label: '🕯 Flicker' }, { value: 'bling', label: '💎 Bling' },
-]
+interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number }
+const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0 }
+const OV_KEYFRAMES = buildKeyframesCSS('bov')
+const OV_CSS_FN = (anim: OverlayAnim, speed: number) => buildAnimCSS(anim, 'bov', speed)
+const OV_ANIMS = OV_ANIM_OPTIONS
 
 function OverlayEditorInline({
   skin, overlays, loading, saving, onSave, onClose,
@@ -2401,6 +2372,7 @@ function OverlayEditorInline({
                 {localOverlays.map(o => {
                   const c = configs[o.id] ?? DEFAULT_OV
                   const sz = Math.round(80 * c.scale)
+                  const speed = c.speed ?? 1.0
                   const zIdx = zOrder.indexOf(o.id)  // position in zOrder = actual z-index
                   return (
                     <div key={o.id}
@@ -2408,7 +2380,7 @@ function OverlayEditorInline({
                       onTouchStart={e => startDrag(o.id, e.touches[0].clientX, e.touches[0].clientY)}
                       style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', width: sz, height: sz, cursor: 'grab', zIndex: zIdx + 2, outline: selected === o.id ? '2px solid #a855f7' : undefined, borderRadius: 4 }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={o.image_url} alt={o.label} style={{ width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS[c.animation] : undefined, pointerEvents: 'none' }} draggable={false} />
+                      <img src={o.image_url} alt={o.label} style={{ width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS_FN(c.animation, speed) : undefined, transformOrigin: getTransformOrigin(c.animation), pointerEvents: 'none' }} draggable={false} />
                     </div>
                   )
                 })}
@@ -2469,6 +2441,22 @@ function OverlayEditorInline({
                       ))}
                     </div>
                   </div>
+                  {cfg.animation !== 'none' && (
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">
+                        Speed ({(cfg.speed ?? 1.0).toFixed(1)}×)
+                        <span className="ml-1 font-normal text-gray-400">
+                          {(cfg.speed ?? 1.0) < 0.8 ? '🐢 slow' : (cfg.speed ?? 1.0) > 1.5 ? '⚡ fast' : ''}
+                        </span>
+                      </label>
+                      <input type="range" min={0.25} max={3.0} step={0.25} value={cfg.speed ?? 1.0}
+                        onChange={e => upd(sel.id, { speed: Number(e.target.value) })}
+                        className="w-full accent-purple-600" />
+                      <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                        <span>0.25× slow</span><span>1× normal</span><span>3× fast</span>
+                      </div>
+                    </div>
+                  )}
                   <button disabled={saving} onClick={() => onSave(sel, configs[sel.id] ?? DEFAULT_OV)}
                     className="w-full py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-bold rounded-xl text-sm">
                     {saving ? '⏳ Saving…' : `💾 Save "${sel.label}"`}
