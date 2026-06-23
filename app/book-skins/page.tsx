@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { HomeButton } from '@/components/ui/HomeButton'
 import { CoverLayoutEditor, DEFAULT_LAYOUT, type CoverLayout } from '@/components/CoverLayoutEditor'
+import { BookCoverLivePreview } from '@/components/BookCoverLivePreview'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -530,6 +531,8 @@ function SkinPicker({
             aspect={previewAspect}
             badge={selectedId !== null ? '⭐' : undefined}
             skinType={skinType}
+            skinId={defaultSkin?.id}
+            coverLayout={(defaultSkin as any)?.cover_layout}
           />
           {skins.filter(s => !s.is_default).map(skin => (
             <div key={skin.id} className="relative">
@@ -543,6 +546,8 @@ function SkinPicker({
                 skinType={skinType}
                 isInactive={skin.is_active === false}
                 isPrivate={skin.visibility === 'admin_only' && isAdmin}
+                skinId={skin.id}
+                coverLayout={(skin as any).cover_layout}
               />
               {isAdmin && onManage && (
                 <button
@@ -581,6 +586,8 @@ function SkinOption({
   skinType,
   isInactive,
   isPrivate,
+  skinId,
+  coverLayout,
 }: {
   label: string
   sublabel?: string
@@ -592,43 +599,97 @@ function SkinOption({
   skinType: 'cover' | 'page'
   isInactive?: boolean
   isPrivate?: boolean
+  skinId?: string
+  coverLayout?: any
 }) {
+  const [zoomOpen, setZoomOpen] = React.useState(false)
+
   return (
-    <button
-      onClick={onClick}
-      className={`rounded-xl border-2 overflow-hidden flex flex-col text-left transition-all focus:outline-none w-full ${
-        isInactive ? 'opacity-50 cursor-not-allowed' :
-        isSelected ? 'border-amber-500 shadow-lg shadow-amber-100' : 'border-gray-200 hover:border-amber-300'
-      }`}
-    >
-      <div className="relative w-full overflow-hidden bg-gray-50" style={{ paddingBottom: `${(1 / aspect) * 100}%` }}>
-        {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt={label} className="absolute inset-0 w-full h-full object-contain p-1" />
-        ) : (
-          <div className="absolute inset-0" style={{
-            background: skinType === 'page'
-              ? 'linear-gradient(to bottom, #faf6ee 0%, #f2e8d5 50%, #ede0c4 100%)'
-              : 'linear-gradient(160deg, #c8b08a 0%, #b09060 35%, #9a7a48 70%, #7a5e30 100%)',
-          }} />
-        )}
-        {isSelected && (
-          <div className="absolute top-1.5 right-1.5 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow">✓</div>
-        )}
-        {badge && !isSelected && (
-          <div className="absolute top-1.5 left-1.5 text-sm leading-none">{badge}</div>
-        )}
-        {isInactive && <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center"><span className="text-white text-xs font-bold bg-gray-800/70 px-2 py-1 rounded-lg">⚠️ Unavailable</span></div>}
-        {isPrivate && !isInactive && <div className="absolute bottom-1 left-1 text-xs bg-gray-800/60 text-white px-1.5 py-0.5 rounded">🔒</div>}
-      </div>
-      <div className={`px-2 py-2 text-xs font-semibold truncate ${isSelected ? 'text-amber-700 bg-amber-50' : 'text-gray-700 bg-white'}`}>
-        <div className="flex items-center justify-between gap-1">
-          <span className="truncate">{label}</span>
-          {isSelected && <span className="shrink-0 text-[10px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full">✓ Active</span>}
+    <>
+      <button
+        onClick={onClick}
+        className={`rounded-xl border-2 overflow-hidden flex flex-col text-left transition-all focus:outline-none w-full ${
+          isInactive ? 'opacity-50 cursor-not-allowed' :
+          isSelected ? 'border-amber-500 shadow-lg shadow-amber-100' : 'border-gray-200 hover:border-amber-300'
+        }`}
+      >
+        <div className="relative w-full overflow-hidden bg-gray-50" style={{ paddingBottom: `${(1 / aspect) * 100}%` }}>
+          {imageUrl ? (
+            skinType === 'cover' && skinId ? (
+              <BookCoverLivePreview
+                skinId={skinId}
+                coverImageUrl={imageUrl}
+                coverLayout={coverLayout}
+                className="absolute inset-0 w-full h-full"
+                style={{ background: '#111' }}
+                overlayBaseSize={32}
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={imageUrl} alt={label} className="absolute inset-0 w-full h-full object-contain p-1" />
+            )
+          ) : (
+            <div className="absolute inset-0" style={{
+              background: skinType === 'page'
+                ? 'linear-gradient(to bottom, #faf6ee 0%, #f2e8d5 50%, #ede0c4 100%)'
+                : 'linear-gradient(160deg, #c8b08a 0%, #b09060 35%, #9a7a48 70%, #7a5e30 100%)',
+            }} />
+          )}
+          {isSelected && (
+            <div className="absolute top-1.5 right-1.5 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow">✓</div>
+          )}
+          {badge && !isSelected && (
+            <div className="absolute top-1.5 left-1.5 text-sm leading-none">{badge}</div>
+          )}
+          {/* Zoom icon for cover skins */}
+          {skinType === 'cover' && imageUrl && (
+            <button
+              onClick={e => { e.stopPropagation(); setZoomOpen(true) }}
+              className="absolute bottom-1 right-1 z-10 bg-black/50 hover:bg-black/70 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-md backdrop-blur-sm transition-colors"
+            >
+              🔍
+            </button>
+          )}
+          {isInactive && <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center"><span className="text-white text-xs font-bold bg-gray-800/70 px-2 py-1 rounded-lg">⚠️ Unavailable</span></div>}
+          {isPrivate && !isInactive && <div className="absolute bottom-1 left-1 text-xs bg-gray-800/60 text-white px-1.5 py-0.5 rounded">🔒</div>}
         </div>
-        {sublabel && <span className="block font-normal text-gray-400 truncate">{sublabel}</span>}
-      </div>
-    </button>
+        <div className={`px-2 py-2 text-xs font-semibold truncate ${isSelected ? 'text-amber-700 bg-amber-50' : 'text-gray-700 bg-white'}`}>
+          <div className="flex items-center justify-between gap-1">
+            <span className="truncate">{label}</span>
+            {isSelected && <span className="shrink-0 text-[10px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full">✓ Active</span>}
+          </div>
+          {sublabel && <span className="block font-normal text-gray-400 truncate">{sublabel}</span>}
+        </div>
+      </button>
+
+      {/* Full-screen zoom preview with title + animations */}
+      {zoomOpen && imageUrl && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4"
+          onClick={() => setZoomOpen(false)}
+        >
+          <div className="relative flex flex-col items-center gap-3" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            <BookCoverLivePreview
+              skinId={skinId}
+              coverImageUrl={imageUrl}
+              coverLayout={coverLayout}
+              title="Challenge Title Preview"
+              showPromptButton
+              style={{ width: '100%', maxHeight: '80vh', borderRadius: 12, overflow: 'hidden', background: '#111' }}
+            />
+            <div className="flex items-center justify-between w-full px-1">
+              <span className="text-white text-sm font-semibold drop-shadow">{label}</span>
+              <button
+                onClick={() => setZoomOpen(false)}
+                className="text-white/70 hover:text-white text-sm px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                ✕ Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

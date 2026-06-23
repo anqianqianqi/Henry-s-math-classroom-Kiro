@@ -16,6 +16,7 @@ import {
 import type { ShopItem, Redemption } from '@/lib/types/shop'
 
 const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/AnimatedRoomLayer'), { ssr: false })
+import { BookCoverLivePreview } from '@/components/BookCoverLivePreview'
 
 interface ShopItemWithCount extends ShopItem {
   redemption_count: number
@@ -131,19 +132,24 @@ function BookCoverBrowseModal({
         </div>
       </div>
 
-      {/* Fullscreen zoom preview — portrait aspect */}
+      {/* Fullscreen zoom preview — full live preview with title + animations */}
       {previewSkin && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4" onClick={() => setPreviewSkin(null)}>
-          <div className="relative max-h-full" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={previewSkin.image_url} alt={previewSkin.name}
-              className="max-h-[85vh] w-auto rounded-xl shadow-2xl" />
+          <div className="relative flex flex-col items-center gap-3" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            <BookCoverLivePreview
+              skinId={previewSkin.id}
+              coverImageUrl={previewSkin.image_url}
+              coverLayout={(previewSkin as any).cover_layout}
+              title="Challenge Title Preview"
+              showPromptButton
+              style={{ width: '100%', maxHeight: '82vh', borderRadius: 12, overflow: 'hidden', background: '#111' }}
+            />
             <button onClick={() => setPreviewSkin(null)}
               className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
               ✕
             </button>
-            <div className="absolute bottom-2 left-2 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-xl text-xs font-semibold">
-              {previewSkin.name} — {previewSkin.shopItem?.cost} pts
+            <div className="flex items-center justify-between w-full px-1">
+              <span className="text-white text-sm font-semibold drop-shadow">{previewSkin.name} — {previewSkin.shopItem?.cost} pts</span>
             </div>
           </div>
         </div>
@@ -674,7 +680,7 @@ export default function ShopPage() {
     try {
       const { data: skinRows } = await supabase
         .from('book_skins')
-        .select('id, name, description, image_url, skin_type, shop_item_id')
+        .select('id, name, description, image_url, skin_type, shop_item_id, cover_layout, has_overlays')
         .eq('is_active', true)
         .eq('skin_type', 'cover')
         .not('shop_item_id', 'is', null)
