@@ -22,6 +22,16 @@ export const maxDuration = 30  // GPT-4o text call only — always fast
 
 const CORNER_NAMES = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
 
+// Maps artStyle ID → object rendering style instruction injected into GPT-4o
+const OBJECT_STYLE_MAP: Record<string, string> = {
+  realistic:    'photorealistic — accurate materials, lifelike studio lighting, physical depth',
+  ghibli:       'Studio Ghibli illustration — soft watercolour texture, hand-painted feel, warm nostalgic colours, rounded friendly forms',
+  futuristic:   'futuristic sci-fi — glowing neon edges, holographic sheen, chrome and carbon materials, crisp angular forms',
+  minimalist:   'minimalist flat design — bold simplified silhouette, 2-3 colour palette, clean geometric shapes, strong negative space',
+  vintage:      'vintage engraving illustration — aged paper tone, sepia and ochre palette, classic cross-hatching linework, antique woodcut feel',
+  watercolour:  'loose watercolour illustration — translucent colour washes, soft bleeding edges, visible brushstroke texture',
+}
+
 function parseAllClusters(coverPrompt: string): { corner: string; items: string[] }[] {
   const matches = coverPrompt.match(/\[([^\]]+)\]/g) ?? []
   return matches.slice(0, 4).map((m, i) => {
@@ -42,7 +52,7 @@ export async function POST(request: Request) {
     const isAdmin = (roles as any[])?.some((r: any) => r.roles?.name === 'administrator' || r.roles?.name === 'teacher')
     if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const { coverPrompt } = await request.json()
+    const { coverPrompt, artStyle } = await request.json()
     if (!coverPrompt?.trim()) return NextResponse.json({ error: 'coverPrompt required' }, { status: 400 })
 
     const apiKey = process.env.OPENAI_API_KEY
@@ -71,10 +81,12 @@ export async function POST(request: Request) {
         messages: [
           {
             role: 'system',
-            content: `You write concise image generation prompts for isolated 3D decorative props that will be placed on a themed hardcover book cover. Each prop is a single object — museum-quality, photorealistic, on a fully transparent background.
+            content: `You write concise image generation prompts for isolated 3D decorative props that will be placed on a themed hardcover book cover. Each prop is a single object — museum-quality, on a fully transparent background.
 
-RULES (apply to every object):
-1. PRESERVE NATURAL MATERIAL — brass stays golden-brown, iron stays dark grey, glass stays clear, wood stays warm brown, copper stays reddish-orange. Never change what the object is made of.
+${artStyle && OBJECT_STYLE_MAP[artStyle] ? `ART STYLE (MANDATORY — apply to every object): ${OBJECT_STYLE_MAP[artStyle]}. The rendering style must be consistent with this throughout — surface treatment, lighting, colour palette, and line quality must all match this style.
+
+` : ''}RULES (apply to every object):
+1. PRESERVE NATURAL MATERIAL — the object's real identity stays intact (a barometer stays a barometer). What changes is the rendering STYLE and the thematic SURFACE TREATMENT.
 2. APPLY THEMATIC SURFACE TREATMENT based on the full cover theme:
    - Stormy/electric → rain-streaked surfaces, condensation beads on glass, electric-blue rim highlight, teal ambient reflection on metal
    - Volcanic/fire → soot-darkened top surfaces, ember-orange underside glow, heat-cracked enamel, faint magma shimmer on edges
@@ -86,7 +98,7 @@ RULES (apply to every object):
 3. LIGHTING: warm directional light from slightly above-left; one soft drop shadow beneath the object
 4. COMPOSITION: object centred, filling 62-70% of frame, generous transparent padding all sides
 5. BACKGROUND: fully transparent RGBA (alpha=0 outside object); only the shadow touches the "floor"
-6. RENDER: photorealistic real-world object with full natural colour — NOT a sculpture, statuette, or monochrome cast. Show the actual materials: brass dials, glass faces, leather straps, iron frames, wood grain, fabric colour. Depth comes from lighting, not material transformation.
+6. RENDER: real physical object with full natural colour — NOT a sculpture, statuette, or monochrome cast. Depth comes from lighting, not material transformation.
 7. NO text, no book surface, no other objects in frame
 8. Max 110 words per prompt
 
@@ -123,9 +135,10 @@ Output ONLY a valid JSON array, one entry per item in the SAME ORDER as input:
     // Fallback: build basic prompts if GPT-4o parse failed
     if (enriched.length < allItems.length) {
       const themeHint = coverPrompt.split(',')[0].trim()
+      const styleHint = artStyle && OBJECT_STYLE_MAP[artStyle] ? ` Render in ${OBJECT_STYLE_MAP[artStyle]} style.` : ''
       enriched = allItems.map(({ item }) => ({
         label: item,
-        prompt: `Isolated 3D prop: "${item}". Natural materials shaped by the theme "${themeHint}". Warm directional light from above-left. Object centred, 65% of frame. Fully transparent RGBA background, one soft drop shadow. Photorealistic, no text, no other objects.`,
+        prompt: `Isolated prop: "${item}". Theme: "${themeHint}".${styleHint} Warm light from above-left. Object centred, 65% of frame. Fully transparent RGBA background, one soft drop shadow. No text, no other objects.`,
       }))
     }
 

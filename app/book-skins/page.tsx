@@ -630,6 +630,62 @@ function SkinOption({
 // AdminUploadBanner — shown only to admins/teachers; lets them upload new skins
 // with visibility control and sell-in-shop option, inline on this page.
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Art style presets — applied to both cover and object generation
+// ─────────────────────────────────────────────────────────────────────────────
+const ART_STYLES: {
+  id: string
+  label: string
+  emoji: string
+  // Appended to the cover prompt
+  coverSuffix: string
+  // Included in the enrich-cluster-items system prompt as a style rule
+  objectStyle: string
+}[] = [
+  {
+    id: 'realistic',
+    label: 'Realistic',
+    emoji: '📸',
+    coverSuffix: 'rendered in a photorealistic style — rich textures, accurate materials, lifelike lighting as if photographed',
+    objectStyle: 'photorealistic — accurate materials, lifelike lighting, physical depth, as if photographed in a studio',
+  },
+  {
+    id: 'ghibli',
+    label: 'Ghibli',
+    emoji: '🌿',
+    coverSuffix: 'in the style of Studio Ghibli — soft watercolour washes, hand-painted detail, warm nostalgic palette, painterly brushwork, gentle rounded forms',
+    objectStyle: 'Studio Ghibli illustration style — soft watercolour texture, hand-painted feel, warm nostalgic colours, rounded friendly forms, painterly brushwork',
+  },
+  {
+    id: 'futuristic',
+    label: 'Futuristic',
+    emoji: '🚀',
+    coverSuffix: 'in a sleek futuristic sci-fi style — glowing neon accents, holographic surfaces, carbon fibre and chrome materials, crisp hard-edge design',
+    objectStyle: 'futuristic sci-fi style — glowing neon edges, holographic sheen, chrome and carbon materials, crisp angular forms, cyberpunk atmosphere',
+  },
+  {
+    id: 'minimalist',
+    label: 'Minimalist',
+    emoji: '◻️',
+    coverSuffix: 'in a clean minimalist style — flat bold shapes, limited colour palette of 2-3 colours, strong negative space, geometric precision, no fine detail',
+    objectStyle: 'minimalist flat design — bold simplified silhouette, 2-3 colour palette, geometric clean shapes, strong negative space, no fine ornament',
+  },
+  {
+    id: 'vintage',
+    label: 'Vintage',
+    emoji: '🕰️',
+    coverSuffix: 'in a vintage illustration style — aged paper texture, muted sepia and ochre tones, classic engraving hatching detail, antique lithograph feel',
+    objectStyle: 'vintage engraving illustration style — aged paper tone, sepia and ochre palette, classic cross-hatching linework, antique woodcut feel',
+  },
+  {
+    id: 'watercolour',
+    label: 'Watercolour',
+    emoji: '🎨',
+    coverSuffix: 'in a loose expressive watercolour style — translucent overlapping washes, soft bleeding edges, visible brushstrokes, delicate wet-on-wet blending',
+    objectStyle: 'loose watercolour illustration — translucent colour washes, soft bleeding edges, visible brushstroke texture, delicate wet-on-wet blending',
+  },
+]
+
 const COVER_W = 400
 const COVER_H = 620
 const PAGE_W  = 400
@@ -682,6 +738,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   const [adminTab, setAdminTab] = useState<'upload' | 'generate'>('upload')
   // sandbox = { imageUrl, prompt, iteration }
   const [genPrompt, setGenPrompt] = useState('')
+  const [artStyle, setArtStyle] = useState<string>('')  // empty = no style override
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
   const [sandbox, setSandbox] = useState<{
@@ -757,7 +814,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       // ── Step 1: Generate cover (~15s) ──────────────────────────────────
       const coverRes = await fetch('/api/preview-book-skin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: cleanPrompt, cleanCorners: true }),
+        body: JSON.stringify({ prompt: styledPrompt(cleanPrompt), cleanCorners: true }),
       })
       let coverData: any
       try { coverData = await coverRes.json() } catch {
@@ -777,7 +834,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 
       const enrichRes = await fetch('/api/enrich-cluster-items', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coverPrompt: fullPrompt }),
+        body: JSON.stringify({ coverPrompt: fullPrompt, artStyle }),
       })
       let enrichData: any
       try { enrichData = await enrichRes.json() } catch {
@@ -864,13 +921,20 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     }
   }
 
+  // Build the final prompt sent to APIs — appends the selected art style descriptor
+  function styledPrompt(base: string): string {
+    const style = ART_STYLES.find(s => s.id === artStyle)
+    if (!style) return base
+    return `${base}, ${style.coverSuffix}`
+  }
+
   async function handleGenerate() {
     if (!genPrompt.trim()) { setGenError('Enter a description.'); return }
     setGenError(null); setGenerating(true)
     try {
       const res = await fetch('/api/preview-book-skin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: genPrompt.trim() }),
+        body: JSON.stringify({ prompt: styledPrompt(genPrompt.trim()) }),
       })
       let data: any
       try { data = await res.json() } catch {
@@ -1400,6 +1464,26 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 
                 {!sandbox ? (
                   <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-amber-800 mb-1">Art Style</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          onClick={() => setArtStyle('')}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${artStyle === '' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300'}`}
+                        >
+                          ✦ Default
+                        </button>
+                        {ART_STYLES.map(s => (
+                          <button
+                            key={s.id}
+                            onClick={() => setArtStyle(prev => prev === s.id ? '' : s.id)}
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${artStyle === s.id ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300'}`}
+                          >
+                            {s.emoji} {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <div>
                       <label className="block text-xs font-semibold text-amber-800 mb-1">Describe the cover theme *</label>
                       <textarea value={genPrompt} onChange={e => setGenPrompt(e.target.value)}
