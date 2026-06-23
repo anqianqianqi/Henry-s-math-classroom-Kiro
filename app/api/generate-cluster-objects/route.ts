@@ -19,7 +19,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 120  // 3 parallel gpt-image-2 calls; should complete in 40-60s
+export const maxDuration = 300
 
 // ── Call gpt-image-2 for one object ───────────────────────────────────────
 async function generateObject(apiKey: string, enrichedPrompt: string): Promise<string> {

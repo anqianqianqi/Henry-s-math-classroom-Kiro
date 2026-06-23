@@ -13,7 +13,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 120
+export const maxDuration = 300
 
 // Two cover context variants — selected by the cleanCorners flag in the request
 const COVER_CONTEXT_CLEAN = `
