@@ -629,7 +629,9 @@ function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
             }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={obj.image_url} alt={obj.label} draggable={false}
-                style={{ width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin }} />
+                style={{ width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin,
+                  mixBlendMode: cfg.blendMode === 'multiply' || cfg.blendMode === 'multiply-warm' ? 'multiply' : undefined,
+                  filter: cfg.blendMode === 'multiply-warm' ? 'sepia(0.4)' : undefined }} />
             </div>
           )
         })}
@@ -2234,13 +2236,13 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Overlay Animation Editor — used in the manage modal of this page
 // ─────────────────────────────────────────────────────────────────────────────
-import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, OV_ANIM_OPTIONS, overlayWidthPct } from '@/lib/overlayAnimations'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, OV_ANIM_OPTIONS, overlayWidthPct, overlayBlendStyle } from '@/lib/overlayAnimations'
 import { BurstPolygonEditor } from '@/components/BurstPolygonEditor'
 import type { BurstConfig } from '@/components/OverlayBurstRenderer'
 import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
 type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling' | 'burst'
-interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig }
-const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0 }
+interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig; blendMode?: 'normal' | 'multiply' | 'multiply-warm' }
+const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0, blendMode: 'normal' }
 const DEFAULT_BURST: BurstConfig = {
   polygon: [],
   center: { x: 50, y: 50 },
@@ -2444,7 +2446,7 @@ function OverlayEditorInline({
                       onTouchStart={e => startDrag(o.id, e.touches[0].clientX, e.touches[0].clientY)}
                       style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', width: sz, height: sz, cursor: 'grab', zIndex: zIdx + 2, outline: selected === o.id ? '2px solid #a855f7' : undefined, borderRadius: 4 }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={o.image_url} alt={o.label} style={{ width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS_FN(c.animation, speed) : undefined, transformOrigin: getTransformOrigin(c.animation), pointerEvents: 'none' }} draggable={false} />
+                      <img src={o.image_url} alt={o.label} style={{ width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS_FN(c.animation, speed) : undefined, transformOrigin: getTransformOrigin(c.animation), pointerEvents: 'none', mixBlendMode: c.blendMode === 'multiply' || c.blendMode === 'multiply-warm' ? 'multiply' : undefined, filter: c.blendMode === 'multiply-warm' ? 'sepia(0.4)' : undefined }} draggable={false} />
                     </div>
                   )
                 })}
@@ -2529,6 +2531,25 @@ function OverlayEditorInline({
                       onChange={b => upd(sel.id, { burst: b })}
                     />
                   )}
+                  {/* Blend mode — how the overlay blends with the cover beneath */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">🎨 Blend Mode</label>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {([
+                        { value: 'normal',       label: '🔲 Normal',       desc: 'Sits on top as-is' },
+                        { value: 'multiply',     label: '✖️ Multiply',     desc: 'Blends into cover color' },
+                        { value: 'multiply-warm',label: '🌅 Warm Blend',   desc: 'Multiply + warm amber tint' },
+                      ] as const).map(opt => (
+                        <button key={opt.value}
+                          title={opt.desc}
+                          onClick={() => upd(sel.id, { blendMode: opt.value })}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border-2 transition-colors ${(cfg.blendMode ?? 'normal') === opt.value ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300'}`}>
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1">Multiply blends lighter pixels with the cover beneath so edges look embedded. Warm adds a sepia tint.</p>
+                  </div>
                   <button disabled={saving} onClick={() => onSave(sel, configs[sel.id] ?? DEFAULT_OV)}
                     className="w-full py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-bold rounded-xl text-sm">
                     {saving ? '⏳ Saving…' : `💾 Save "${sel.label}"`}

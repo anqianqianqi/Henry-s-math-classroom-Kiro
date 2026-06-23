@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef } from 'react'
-import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim, overlayWidthPct } from '@/lib/overlayAnimations'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim, overlayWidthPct, overlayBlendStyle } from '@/lib/overlayAnimations'
 import { OverlayBurstRenderer } from './OverlayBurstRenderer'
 
 export interface OverlayObject {
@@ -122,6 +122,7 @@ export function BookCoverWithOverlays({
                 width: '100%', height: '100%', objectFit: 'contain',
                 animation: anim, transformOrigin,
                 animationPlayState: overlayAnimationPaused ? 'paused' : 'running',
+                ...overlayBlendStyle((cfg as any).blendMode),
               }}
             />
           </div>

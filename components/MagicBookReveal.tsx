@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { BookCoverWithOverlays, type OverlayObject } from './BookCoverWithOverlays'
-import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct } from '@/lib/overlayAnimations'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct, overlayBlendStyle } from '@/lib/overlayAnimations'
 import { OverlayBurstRenderer } from './OverlayBurstRenderer'
 
 interface MagicBookRevealProps {
@@ -451,6 +451,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                             width: '100%', height: '100%', objectFit: 'contain',
                             animation: anim, transformOrigin,
                             animationPlayState: phase === 'opening' ? 'paused' : 'running',
+                            ...overlayBlendStyle((cfg as any).blendMode),
                           }}
                         />
                       </div>

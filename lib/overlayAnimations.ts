@@ -102,3 +102,15 @@ export const OV_ANIM_OPTIONS: { value: OverlayAnim; label: string }[] = [
   { value: 'bling',   label: '💎 Bling' },
   { value: 'burst',   label: '💥 Burst' },
 ]
+
+/** Compute CSS mixBlendMode and filter for a given blendMode string.
+ *  Returns a partial CSSProperties object to spread onto the <img> element. */
+export function overlayBlendStyle(blendMode?: string): { mixBlendMode?: any; filter?: string } {
+  if (blendMode === 'multiply' || blendMode === 'multiply-warm') {
+    return {
+      mixBlendMode: 'multiply',
+      filter: blendMode === 'multiply-warm' ? 'sepia(0.4)' : undefined,
+    }
+  }
+  return {}
+}
