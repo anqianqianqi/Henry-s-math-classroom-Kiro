@@ -2063,10 +2063,6 @@ function OverlayEditorInline({
       })
     }
   }, [overlays])
-    const init: Record<string, OvConfig> = {}
-    for (const o of overlays) init[o.id] = o.overlay_config ?? { ...DEFAULT_OV }
-    return init
-  })
   // zOrder: array of overlay IDs from bottom (index 0) to top (last index)
   const [zOrder, setZOrder] = useState<string[]>(() => overlays.map(o => o.id))
   const [mutating, setMutating] = useState(false)
