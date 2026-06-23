@@ -1,26 +1,27 @@
 // app/api/generate-single-object/route.ts
 //
-// Generates ONE object image using gpt-image-2 and uploads it.
-// Called sequentially per-object so each one appears in the UI as soon as ready.
-// Single request timeline: ~15-30s (well within any serverless timeout).
+// Generates ONE object image using gpt-image-2.
+// Returns the image as base64 directly — the UI displays it immediately.
+// Supabase upload only happens at save time to avoid the upload latency penalty.
 //
 // POST body:
 //   {
 //     label:        string   — display name (e.g. "weather vane rooster")
-//     prompt:       string   — enriched image prompt from enrich-all-clusters
+//     prompt:       string   — enriched image prompt from enrich-cluster-items
 //     clusterIndex: 0|1|2|3 — corner cluster this object belongs to
 //     objectIndex:  number   — position within cluster (0,1,2) — used for file naming
 //   }
 //
 // Returns:
-//   { label: string; imageUrl: string; clusterIndex: number }
+//   { label: string; b64: string; clusterIndex: number }
+//   (b64 is a data:image/png;base64,... URI ready to set as <img src>)
 
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 300  // gpt-image-2 high quality can take 60-120s; 300s is the max allowed
+export const maxDuration = 300  // gpt-image-2 high quality can take 60-120s; 300s is the max
 
 export async function POST(request: Request) {
   try {
@@ -41,15 +42,18 @@ export async function POST(request: Request) {
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 })
 
+    // The enriched prompt already contains the full thematic description and colour cues.
+    // The rendering block below adds only the technical output requirements — it does NOT
+    // override material colours (those come from the enriched prompt above).
     const fullPrompt = `${prompt.trim()}
 
-RENDERING REQUIREMENTS (MANDATORY):
-• PHYSICAL REAL-WORLD OBJECT — render this as an actual physical item with its true, natural colours. NOT a sculpture, NOT a statuette, NOT a figurine, NOT a monochrome or single-material cast. A barometer looks like a real barometer: brass dials, glass face, rubber tubing. A lantern looks like a real lantern: iron frame, amber glass, flame inside.
-• FULL NATURAL COLOUR — every material shows its real colour: brass is warm golden-brown, copper is reddish-orange, iron is dark grey, glass is clear/amber/coloured, leather is tan or dark brown, wood is warm brown grain, fabric shows its actual colour. No monochrome, no all-gold, no all-stone colouring.
-• FULLY TRANSPARENT BACKGROUND — alpha = 0 everywhere outside the object. No dark backdrop, colour fill, gradient, or vignette. The object floats on pure transparency.
-• Realistic depth cues through lighting only — sharp specular highlights on metal/glass, soft subsurface scattering on organic/translucent materials, warm directional light from slightly above-left.
+TECHNICAL RENDERING REQUIREMENTS:
+• REAL PHYSICAL OBJECT — render this as an actual item, NOT a sculpture, statuette, or monochrome cast. Keep the object's real identity and material nature.
+• NATURAL MATERIAL COLOURS — show the object's actual material colours as described above. The thematic atmosphere affects the surface condition (weathering, ambient light, patina) but NOT the fundamental material — a brass dial stays brass, glass stays glass, leather stays leather.
+• FULLY TRANSPARENT BACKGROUND — alpha = 0 everywhere outside the object. No dark backdrop, gradient, or vignette.
+• Warm directional lighting from slightly above-left; sharp specular on metal and glass; soft depth cues on organic materials.
 • Object fills 60-70% of the 1024×1024 frame; generous transparent padding on all sides.
-• Single soft drop shadow directly beneath the object — the ONLY non-transparent pixels outside the object silhouette.
+• Single soft drop shadow beneath the object only.
 • Output: RGBA PNG with genuine per-pixel transparency.`
 
     // Generate the image
@@ -75,29 +79,20 @@ RENDERING REQUIREMENTS (MANDATORY):
     }
 
     const genData = await genRes.json()
-    const b64: string | undefined = genData.data?.[0]?.b64_json
-    if (!b64) return NextResponse.json({ error: 'No image data returned from gpt-image-2' }, { status: 500 })
+    const b64raw: string | undefined = genData.data?.[0]?.b64_json
+    if (!b64raw) return NextResponse.json({ error: 'No image data returned from gpt-image-2' }, { status: 500 })
 
-    // Upload to Supabase storage
-    const uid = session.user.id
-    const ts = Date.now()
-    const slug = String(label).replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 30)
+    // Return base64 directly — UI displays immediately, upload happens at save time
     const ci = Number(clusterIndex) >= 0 ? Number(clusterIndex) : 0
-    const oi = Number(objectIndex) >= 0 ? Number(objectIndex) : 0
-    const filePath = `${uid}/obj-c${ci}-${oi}-${ts}-${slug}.png`
+    const dataUri = `data:image/png;base64,${b64raw}`
 
-    const buf = Buffer.from(b64, 'base64')
-    const { error: uploadErr } = await supabase.storage
-      .from('book-skins')
-      .upload(filePath, buf, { contentType: 'image/png', upsert: false })
-
-    if (uploadErr) {
-      return NextResponse.json({ error: 'Storage upload failed: ' + uploadErr.message }, { status: 500 })
-    }
-
-    const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(filePath)
-
-    return NextResponse.json({ label: label.trim(), imageUrl: publicUrl, clusterIndex: ci })
+    return NextResponse.json({
+      label: label.trim(),
+      b64: dataUri,          // browser-ready data URI for immediate display
+      b64raw,                // raw base64 for upload at save time
+      clusterIndex: ci,
+      objectIndex: Number(objectIndex) >= 0 ? Number(objectIndex) : 0,
+    })
   } catch (err: any) {
     console.error('[generate-single-object] error:', err)
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })

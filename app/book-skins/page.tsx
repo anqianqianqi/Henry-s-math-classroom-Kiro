@@ -689,7 +689,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
     originalUrl?: string   // the pre-extraction cover (for reference)
     prompt: string
     iteration: number
-    extractedObjects?: { label: string; imageUrl: string }[]  // transparent PNG per object
+    extractedObjects?: { label: string; imageUrl: string; b64raw?: string }[]  // transparent PNG per object
   } | null>(null)
   const [refinePrompt, setRefinePrompt] = useState('')
   const [genSaveOpen, setGenSaveOpen] = useState(false)
@@ -826,10 +826,14 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
             if (!res.ok) {
               errs.push(`${item.label}: ${data?.error ?? `HTTP ${res.status}`}`)
             } else {
-              // Object ready — append immediately so it renders
+              // Object ready — use data URI for instant display, keep b64raw for upload at save
               setSandbox(prev => prev ? {
                 ...prev,
-                extractedObjects: [...(prev.extractedObjects ?? []), { label: data.label, imageUrl: data.imageUrl }],
+                extractedObjects: [...(prev.extractedObjects ?? []), {
+                  label: data.label,
+                  imageUrl: data.b64,   // data:image/png;base64,... — displays immediately, no upload wait
+                  b64raw: data.b64raw,  // raw base64 stored for Supabase upload when user saves
+                }],
               } : prev)
               clusterSuccesses++
             }
@@ -1072,14 +1076,32 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       if (sandbox.extractedObjects && sandbox.extractedObjects.length > 0 && newSkin?.id) {
         setExtracting(true)
         try {
-          // Upload extracted objects to permanent paths and insert overlay rows
+          const { data: { user: saveUser } } = await supabase.auth.getUser()
+          const uid = saveUser?.id ?? 'unknown'
+          const ts = Date.now()
+
           for (let i = 0; i < sandbox.extractedObjects.length; i++) {
             const obj = sandbox.extractedObjects[i]
-            // Objects are already uploaded to preview paths — just insert the overlay rows
+            let finalUrl = obj.imageUrl
+
+            // If we have raw base64 (from generate-single-object), upload to permanent path now
+            if (obj.b64raw) {
+              const slug = obj.label.replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 30)
+              const filePath = `${uid}/overlay-${ts}-${i}-${slug}.png`
+              const buf = Uint8Array.from(atob(obj.b64raw), c => c.charCodeAt(0))
+              const { error: upErr } = await supabase.storage
+                .from('book-skins')
+                .upload(filePath, buf, { contentType: 'image/png', upsert: false })
+              if (!upErr) {
+                const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(filePath)
+                finalUrl = publicUrl
+              }
+            }
+
             await supabase.from('book_skin_overlays').insert({
               skin_id: newSkin.id,
               label: obj.label,
-              image_url: obj.imageUrl,
+              image_url: finalUrl,
               sort_order: i,
               overlay_config: null,
             })
