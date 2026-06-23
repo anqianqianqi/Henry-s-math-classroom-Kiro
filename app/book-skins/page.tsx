@@ -474,6 +474,7 @@ export default function BookSkinsUserPage() {
       {/* ── Overlay Animation Editor Modal ── */}
       {overlayEditorSkin && (
         <OverlayEditorInline
+          key={overlayEditorSkin.id}
           skin={overlayEditorSkin}
           overlays={overlayEditorObjects}
           loading={overlayEditorLoading}
@@ -2033,6 +2034,35 @@ function OverlayEditorInline({
   const [localOverlays, setLocalOverlays] = useState<any[]>(() => overlays)
   const [selected, setSelected] = useState<string | null>(overlays[0]?.id ?? null)
   const [configs, setConfigs] = useState<Record<string, OvConfig>>(() => {
+    const init: Record<string, OvConfig> = {}
+    for (const o of overlays) init[o.id] = o.overlay_config ?? { ...DEFAULT_OV }
+    return init
+  })
+
+  // Sync when parent loads data asynchronously (overlays prop updates after mount)
+  useEffect(() => {
+    if (overlays.length > 0) {
+      setLocalOverlays(overlays)
+      setSelected(prev => {
+        // Keep current selection if it exists in new overlays, else pick first
+        if (overlays.find(o => o.id === prev)) return prev
+        return overlays[0]?.id ?? null
+      })
+      setConfigs(prev => {
+        const next = { ...prev }
+        for (const o of overlays) {
+          if (!next[o.id]) next[o.id] = o.overlay_config ?? { ...DEFAULT_OV }
+        }
+        return next
+      })
+      setZOrder(prev => {
+        // Preserve existing order, add any new IDs at the end
+        const existingIds = new Set(prev)
+        const newIds = overlays.map(o => o.id).filter(id => !existingIds.has(id))
+        return [...prev.filter(id => overlays.find(o => o.id === id)), ...newIds]
+      })
+    }
+  }, [overlays])
     const init: Record<string, OvConfig> = {}
     for (const o of overlays) init[o.id] = o.overlay_config ?? { ...DEFAULT_OV }
     return init
