@@ -19,7 +19,7 @@ const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/Anim
 
 // ── ShopCoverZoom — simple reliable zoom preview for book cover skins ─────────
 // Image in normal flow sets height; overlays + title absolute on top.
-import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin } from '@/lib/overlayAnimations'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct } from '@/lib/overlayAnimations'
 const SHOP_ZP_KEYFRAMES = buildKeyframesCSS('szp') + `
 @keyframes szp-pulse-glow { 0%,100%{opacity:1} 50%{opacity:0.7} }
 `
@@ -47,7 +47,7 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
         {overlays.map(obj => {
           const cfg = obj.overlay_config
           if (!cfg) return null
-          const sz = Math.round(80 * (cfg.scale ?? 1.0))
+          const sz = overlayWidthPct(cfg.scale ?? 1.0)
           const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation, 'szp', cfg.speed ?? 1.0) : undefined
           const transformOrigin = getTransformOrigin(cfg.animation)
           return (

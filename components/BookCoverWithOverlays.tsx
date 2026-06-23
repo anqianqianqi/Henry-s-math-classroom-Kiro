@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef } from 'react'
-import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim } from '@/lib/overlayAnimations'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim, overlayWidthPct } from '@/lib/overlayAnimations'
 
 export interface OverlayObject {
   id: string
@@ -84,7 +84,7 @@ export function BookCoverWithOverlays({
       {hasOverlays && overlayObjects.map((obj) => {
         const cfg = obj.overlay_config
         if (!cfg) return null
-        const sz = Math.round(overlayBaseSize * (cfg.scale ?? 1.0))
+        const sz = overlayWidthPct(cfg.scale ?? 1.0)
         const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation, 'bov', cfg.speed ?? 1.0) : undefined
         const transformOrigin = getTransformOrigin(cfg.animation ?? 'none')
 

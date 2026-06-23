@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { BookCoverWithOverlays, type OverlayObject } from './BookCoverWithOverlays'
-import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin } from '@/lib/overlayAnimations'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct } from '@/lib/overlayAnimations'
 
 interface MagicBookRevealProps {
   title: string
@@ -418,7 +418,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                   {coverOverlays && coverOverlays.length > 0 && coverOverlays.map((obj) => {
                     const cfg = obj.overlay_config
                     if (!cfg) return null
-                    const sz = Math.round(80 * (cfg.scale ?? 1.0))
+                    const sz = overlayWidthPct(cfg.scale ?? 1.0)
                     const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation as any, 'bov', (cfg as any).speed ?? 1.0) : undefined
                     const transformOrigin = getTransformOrigin(cfg.animation as any)
                     return (

@@ -75,7 +75,19 @@ export function getTransformOrigin(anim: OverlayAnim): string | undefined {
   return anim === 'sway' ? 'top center' : undefined
 }
 
-/** Animation display labels for the editor picker */
+/** Base overlay size in px at native cover width (1024px). */
+export const OVERLAY_BASE_PX = 80
+/** Native cover width in px (gpt-image-1 cover output). */
+export const COVER_NATIVE_WIDTH = 1024
+
+/**
+ * Returns overlay size as a % of the container width.
+ * This ensures overlays scale proportionally regardless of rendered cover size.
+ *   sizePct = (OVERLAY_BASE_PX * scale / COVER_NATIVE_WIDTH) * 100
+ */
+export function overlayWidthPct(scale: number): string {
+  return `${((OVERLAY_BASE_PX * scale) / COVER_NATIVE_WIDTH) * 100}%`
+}
 export const OV_ANIM_OPTIONS: { value: OverlayAnim; label: string }[] = [
   { value: 'none',    label: '⏸ None' },
   { value: 'float',   label: '🌊 Float' },

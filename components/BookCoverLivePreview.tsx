@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim } from '@/lib/overlayAnimations'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim, overlayWidthPct } from '@/lib/overlayAnimations'
 
 interface OverlayObject {
   id: string
@@ -95,7 +95,7 @@ export function BookCoverLivePreview({
       {overlays.map((obj) => {
         const cfg = obj.overlay_config
         if (!cfg) return null
-        const sz = Math.round(overlayBaseSize * (cfg.scale ?? 1.0))
+        const sz = overlayWidthPct(cfg.scale ?? 1.0)
         const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation, 'bcl', (cfg as any).speed ?? 1.0) : undefined
         const transformOrigin = getTransformOrigin(cfg.animation ?? 'none')
         return (

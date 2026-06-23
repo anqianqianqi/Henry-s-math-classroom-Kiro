@@ -610,7 +610,7 @@ function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
         {overlays.map(obj => {
           const cfg = obj.overlay_config
           if (!cfg) return null
-          const sz = Math.round(80 * (cfg.scale ?? 1.0))
+          const sz = overlayWidthPct(cfg.scale ?? 1.0)
           const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation, 'zp', cfg.speed ?? 1.0) : undefined
           const transformOrigin = getTransformOrigin(cfg.animation)
           return (
@@ -2193,7 +2193,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Overlay Animation Editor — used in the manage modal of this page
 // ─────────────────────────────────────────────────────────────────────────────
-import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, OV_ANIM_OPTIONS } from '@/lib/overlayAnimations'
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, OV_ANIM_OPTIONS, overlayWidthPct } from '@/lib/overlayAnimations'
 type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling'
 interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number }
 const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0 }
@@ -2371,7 +2371,7 @@ function OverlayEditorInline({
                 <img src={skin.image_url} alt={skin.name} className="w-full h-auto block" draggable={false} />
                 {localOverlays.map(o => {
                   const c = configs[o.id] ?? DEFAULT_OV
-                  const sz = Math.round(80 * c.scale)
+                  const sz = overlayWidthPct(c.scale)
                   const speed = c.speed ?? 1.0
                   const zIdx = zOrder.indexOf(o.id)  // position in zOrder = actual z-index
                   return (
