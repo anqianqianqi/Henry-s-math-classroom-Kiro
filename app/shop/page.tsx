@@ -29,6 +29,16 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
   const tl = (skin as any).cover_layout?.title
   const pl = (skin as any).cover_layout?.prompt
 
+  // Inject keyframes into document head (reliable across modal portals)
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (document.getElementById('szp-keyframes')) return
+    const el = document.createElement('style')
+    el.id = 'szp-keyframes'
+    el.textContent = SHOP_ZP_KEYFRAMES
+    document.head.appendChild(el)
+  }, [])
+
   useEffect(() => {
     const supabase = createClient()
     supabase.from('book_skin_overlays').select('*').eq('skin_id', skin.id)
@@ -40,9 +50,7 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
   }, [skin.id])
 
   return (
-    <>
-      <style>{SHOP_ZP_KEYFRAMES}</style>
-      <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden' }}>
+    <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={skin.image_url} alt={skin.name} style={{ display: 'block', width: '100%', height: 'auto' }} draggable={false} />
         {overlays.map(obj => {
@@ -86,7 +94,7 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
           <span>📜</span><span style={{ letterSpacing: '0.06em' }}>Open the Book</span>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
