@@ -50,8 +50,9 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
   }, [skin.id])
 
   return (
-    <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden' }}>
-      <style>{SHOP_ZP_KEYFRAMES}</style>
+    <>
+      <style id="szp-kf">{SHOP_ZP_KEYFRAMES}</style>
+      <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={skin.image_url} alt={skin.name} style={{ display: 'block', width: '100%', height: 'auto' }} draggable={false} />
         {overlays.map(obj => {
@@ -94,7 +95,8 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
             backdropFilter: 'blur(6px)', pointerEvents: 'none' }}>
           <span>📜</span><span style={{ letterSpacing: '0.06em' }}>Open the Book</span>
         </div>
-    </div>
+      </div>
+    </>
   )
 }
 
