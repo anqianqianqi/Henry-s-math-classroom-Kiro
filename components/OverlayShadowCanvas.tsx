@@ -165,11 +165,8 @@ export function OverlayShadowCanvas({
   style,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  // Track loaded images to avoid reloading
-  const coverBitmapRef   = useRef<ImageBitmap | null>(null)
   const overlayBitmapRef = useRef<ImageBitmap | null>(null)
   const sdfRef           = useRef<Float32Array | null>(null)
-  const lastCoverUrl     = useRef('')
   const lastOverlayUrl   = useRef('')
 
   const draw = useCallback(async () => {
@@ -179,21 +176,10 @@ export function OverlayShadowCanvas({
     canvas.width  = widthPx
     canvas.height = heightPx
 
-    // ── Load cover image ──────────────────────────────────────────────────
-    if (coverBitmapRef.current === null || lastCoverUrl.current !== coverImageUrl) {
-      try {
-        const img = new window.Image()
-        img.crossOrigin = 'anonymous'
-        await new Promise<void>((res, rej) => {
-          img.onload = () => res(); img.onerror = rej; img.src = coverImageUrl
-        })
-        coverBitmapRef.current = await createImageBitmap(img)
-        lastCoverUrl.current = coverImageUrl
-      } catch { return }
-    }
+    // ── Load cover image — no longer needed, shadow is SDF-only ─────────
+    // (cover pixels are not sampled; darkening is applied via transparent overlay)
 
-    // ── Load overlay image + compute SDF ──────────────────────────────────
-    if (overlayBitmapRef.current === null || lastOverlayUrl.current !== overlayImageUrl) {
+    // ── Load overlay image + compute SDF ──────────────────────────────────    if (overlayBitmapRef.current === null || lastOverlayUrl.current !== overlayImageUrl) {
       try {
         const img = new window.Image()
         img.crossOrigin = 'anonymous'
@@ -219,7 +205,6 @@ export function OverlayShadowCanvas({
       } catch { return }
     }
 
-    const coverBitmap   = coverBitmapRef.current!
     const overlayBitmap = overlayBitmapRef.current!
     const sdf           = sdfRef.current!
 
@@ -231,22 +216,12 @@ export function OverlayShadowCanvas({
     const ctx = canvas.getContext('2d', { willReadFrequently: true })
     if (!ctx) return
 
-    // 1. Sample the cover region that lies under this overlay box
+    // Output canvas is TRANSPARENT — only the darkening pixels are drawn.
+    // The cover <img> is already rendered below in the DOM stacking order.
+    // CSS mix-blend-mode:'multiply' on the canvas handles the darkening compositing.
     ctx.clearRect(0, 0, widthPx, heightPx)
 
-    // Crop the cover to the overlay's bounding box
-    const coverNW = coverBitmap.width
-    const coverNH = coverBitmap.height
-    const scaleX = coverNW / containerWidthPx
-    const scaleY = coverNH / containerHeightPx
-    const sx = leftPx * scaleX
-    const sy = topPx  * scaleY
-    const sw = widthPx  * scaleX
-    const sh = heightPx * scaleY
-
-    ctx.drawImage(coverBitmap, sx, sy, sw, sh, 0, 0, widthPx, heightPx)
-
-    // 2. Build shadow darkness map at overlay's rendered size
+    // Build shadow darkness map at overlay's rendered size
     const shadowMap = ctx.createImageData(widthPx, heightPx)
     const sd = shadowMap.data
 
@@ -309,7 +284,9 @@ export function OverlayShadowCanvas({
 
         if (darkness <= 0) continue
 
-        // 3. Apply multiply-darkening: output = bg * (1 - darkness)
+        // Store darkening amount as black pixels with alpha = darkness.
+        // The canvas uses mix-blend-mode: multiply in CSS, so these black pixels
+        // will darken whatever is rendered below (the cover image).
         const idx = (py * widthPx + px) * 4
         sd[idx]     = 0
         sd[idx + 1] = 0
@@ -318,34 +295,14 @@ export function OverlayShadowCanvas({
       }
     }
 
-    // Composite: draw dark overlay on top of cover crop using multiply
-    // We have the background already drawn; now draw black with alpha = darkness
-    // using source-over (which correctly darkens)
-    const shadowCanvas = document.createElement('canvas')
-    shadowCanvas.width = widthPx; shadowCanvas.height = heightPx
-    const sCtx = shadowCanvas.getContext('2d')!
-    sCtx.putImageData(shadowMap, 0, 0)
+    // Draw the shadow map directly onto the transparent canvas.
+    // CSS mix-blend-mode: multiply on the canvas element handles darkening.
+    ctx.putImageData(shadowMap, 0, 0)
 
-    // Create multiply overlay: fill black, mask by shadowMap alpha
-    const mulCanvas = document.createElement('canvas')
-    mulCanvas.width = widthPx; mulCanvas.height = heightPx
-    const mCtx = mulCanvas.getContext('2d')!
-    mCtx.fillStyle = '#000'
-    mCtx.fillRect(0, 0, widthPx, heightPx)
-    mCtx.globalCompositeOperation = 'destination-in'
-    mCtx.drawImage(shadowCanvas, 0, 0)
-
-    // Blend the black mask onto the cover crop with multiply
-    ctx.globalCompositeOperation = 'multiply'
-    ctx.drawImage(mulCanvas, 0, 0)
-    ctx.globalCompositeOperation = 'source-over'
-
-    // 4. Draw the original overlay on top — unchanged
-    ctx.drawImage(overlayBitmap, 0, 0, widthPx, heightPx)
+    // Draw the original overlay on top inside the canvas (z-index 1 on the img handles this in DOM)
   }, [
-    coverImageUrl, overlayImageUrl,
-    widthPx, heightPx, leftPx, topPx,
-    containerWidthPx, containerHeightPx,
+    overlayImageUrl,
+    widthPx, heightPx,
     shadow,
   ])
 
@@ -360,8 +317,11 @@ export function OverlayShadowCanvas({
         width: '100%',
         height: '100%',
         pointerEvents: 'none',
+        mixBlendMode: 'multiply',
         zIndex: 0,
         ...style,
+      }}
+    />
       }}
     />
   )
