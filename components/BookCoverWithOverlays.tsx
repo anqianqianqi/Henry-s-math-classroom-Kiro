@@ -8,6 +8,7 @@
 import { useEffect, useRef } from 'react'
 import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim, overlayWidthPct } from '@/lib/overlayAnimations'
 import { OverlayBurstRenderer } from './OverlayBurstRenderer'
+import { OverlayShadowCanvas } from './OverlayShadowCanvas'
 
 export interface OverlayObject {
   id: string
@@ -111,6 +112,16 @@ export function BookCoverWithOverlays({
 
         const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation, 'bov', (cfg as any).speed ?? 1.0) : undefined
         const transformOrigin = getTransformOrigin(cfg.animation ?? 'none')
+        const shadow = (cfg as any).shadow
+
+        // Compute rendered px dimensions for shadow canvas
+        // containerWidthPx is the rendered width; use aspect ratio from COVER_NATIVE_WIDTH
+        const containerHeightPx = Math.round(containerWidthPx * (1024 / 400)) // approximate 400:620 aspect
+        const szPct = parseFloat(sz) / 100
+        const pxW = Math.round(containerWidthPx * szPct)
+        const pxH = pxW // overlays are square bounding boxes
+        const pxL = Math.round(containerWidthPx * cfg.x / 100 - pxW / 2)
+        const pxT = Math.round(containerHeightPx * cfg.y / 100 - pxH / 2)
 
         return (
           <div
@@ -120,12 +131,27 @@ export function BookCoverWithOverlays({
               transform: 'translate(-50%,-50%)', width: sz, height: sz,
             }}
           >
+            {/* Physical shadow canvas — only rendered when shadow config is set */}
+            {shadow && (shadow.contactEnabled || shadow.directionalEnabled) && (
+              <OverlayShadowCanvas
+                coverImageUrl={coverImageUrl}
+                overlayImageUrl={obj.image_url}
+                widthPx={pxW}
+                heightPx={pxH}
+                leftPx={pxL}
+                topPx={pxT}
+                containerWidthPx={containerWidthPx}
+                containerHeightPx={containerHeightPx}
+                shadow={shadow}
+              />
+            )}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={obj.image_url} alt={obj.label} draggable={false}
               style={{
                 position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain',
                 animation: anim, transformOrigin,
                 animationPlayState: overlayAnimationPaused ? 'paused' : 'running',
+                zIndex: 1,
               }}
             />
           </div>

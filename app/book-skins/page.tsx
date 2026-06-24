@@ -2081,9 +2081,10 @@ import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, OV_ANIM_OPTIONS, o
 import { BurstPolygonEditor } from '@/components/BurstPolygonEditor'
 import type { BurstConfig } from '@/components/OverlayBurstRenderer'
 import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
+import { OverlayShadowCanvas, DEFAULT_OVERLAY_SHADOW, type OverlayShadowConfig } from '@/components/OverlayShadowCanvas'
 type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling' | 'burst'
-interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig }
-const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0 }
+interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig; shadow?: OverlayShadowConfig }
+const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0, shadow: undefined }
 const DEFAULT_BURST: BurstConfig = {
   polygon: [],
   center: { x: 50, y: 50 },
@@ -2286,6 +2287,28 @@ function OverlayEditorInline({
                       onMouseDown={e => { e.preventDefault(); startDrag(o.id, e.clientX, e.clientY) }}
                       onTouchStart={e => startDrag(o.id, e.touches[0].clientX, e.touches[0].clientY)}
                       style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', width: sz, height: sz, cursor: 'grab', zIndex: zIdx + 2, outline: selected === o.id ? '2px solid #a855f7' : undefined, borderRadius: 4 }}>
+                      {/* Shadow canvas — renders between cover and overlay */}
+                      {c.shadow && (c.shadow.contactEnabled || c.shadow.directionalEnabled) && previewRef.current && (() => {
+                        const containerW = previewRef.current.offsetWidth
+                        const containerH = previewRef.current.offsetHeight
+                        const pxW = containerW * parseFloat(sz) / 100
+                        const pxH = containerH * parseFloat(sz) / 100
+                        const pxL = containerW * c.x / 100 - pxW / 2
+                        const pxT = containerH * c.y / 100 - pxH / 2
+                        return (
+                          <OverlayShadowCanvas
+                            coverImageUrl={skin.image_url}
+                            overlayImageUrl={o.image_url}
+                            widthPx={Math.round(pxW)}
+                            heightPx={Math.round(pxH)}
+                            leftPx={Math.round(pxL)}
+                            topPx={Math.round(pxT)}
+                            containerWidthPx={containerW}
+                            containerHeightPx={containerH}
+                            shadow={c.shadow}
+                          />
+                        )
+                      })()}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={o.image_url} alt={o.label} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS_FN(c.animation, speed) : undefined, transformOrigin: getTransformOrigin(c.animation), pointerEvents: 'none' }} draggable={false} />
                     </div>
@@ -2374,6 +2397,73 @@ function OverlayEditorInline({
                       onChange={b => upd(sel.id, { burst: b })}
                     />
                   )}
+
+                  {/* ── Physical Shadow ── */}
+                  <div className="border border-amber-200 rounded-xl p-3 bg-amber-50/40 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-amber-800">🌒 Physical Shadow</span>
+                      <button
+                        onClick={() => upd(sel.id, {
+                          shadow: cfg.shadow
+                            ? undefined
+                            : { ...DEFAULT_OVERLAY_SHADOW }
+                        })}
+                        className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-colors ${cfg.shadow ? 'bg-amber-600 text-white' : 'bg-white border border-amber-300 text-amber-700'}`}
+                      >
+                        {cfg.shadow ? '✓ On' : 'Off'}
+                      </button>
+                    </div>
+                    {cfg.shadow && (() => {
+                      const sh = cfg.shadow!
+                      const updSh = (patch: Partial<typeof sh>) => upd(sel.id, { shadow: { ...sh, ...patch } })
+                      return (
+                        <div className="space-y-2.5">
+                          {/* Contact shadow */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-gray-600">Contact shadow</span>
+                            <button onClick={() => updSh({ contactEnabled: !sh.contactEnabled })}
+                              className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${sh.contactEnabled ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                              {sh.contactEnabled ? 'on' : 'off'}
+                            </button>
+                          </div>
+                          {sh.contactEnabled && (
+                            <div className="space-y-1.5 pl-2">
+                              <label className="text-[10px] text-gray-500">Radius: {sh.contactRadius}px</label>
+                              <input type="range" min={4} max={60} step={1} value={sh.contactRadius}
+                                onChange={e => updSh({ contactRadius: +e.target.value })} className="w-full accent-amber-600" />
+                              <label className="text-[10px] text-gray-500">Strength: {(sh.contactStrength * 100).toFixed(0)}%</label>
+                              <input type="range" min={0} max={1} step={0.05} value={sh.contactStrength}
+                                onChange={e => updSh({ contactStrength: +e.target.value })} className="w-full accent-amber-600" />
+                            </div>
+                          )}
+                          {/* Directional shadow */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-gray-600">Directional shadow</span>
+                            <button onClick={() => updSh({ directionalEnabled: !sh.directionalEnabled })}
+                              className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${sh.directionalEnabled ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                              {sh.directionalEnabled ? 'on' : 'off'}
+                            </button>
+                          </div>
+                          {sh.directionalEnabled && (
+                            <div className="space-y-1.5 pl-2">
+                              <label className="text-[10px] text-gray-500">Light angle: {sh.lightAngleDeg}°</label>
+                              <input type="range" min={0} max={359} step={5} value={sh.lightAngleDeg}
+                                onChange={e => updSh({ lightAngleDeg: +e.target.value })} className="w-full accent-amber-600" />
+                              <label className="text-[10px] text-gray-500">Length: {sh.shadowLength}px</label>
+                              <input type="range" min={4} max={80} step={1} value={sh.shadowLength}
+                                onChange={e => updSh({ shadowLength: +e.target.value })} className="w-full accent-amber-600" />
+                              <label className="text-[10px] text-gray-500">Strength: {(sh.shadowStrength * 100).toFixed(0)}%</label>
+                              <input type="range" min={0} max={1} step={0.05} value={sh.shadowStrength}
+                                onChange={e => updSh({ shadowStrength: +e.target.value })} className="w-full accent-amber-600" />
+                              <label className="text-[10px] text-gray-500">Softness: {(sh.shadowSoftness * 100).toFixed(0)}%</label>
+                              <input type="range" min={0} max={1} step={0.05} value={sh.shadowSoftness}
+                                onChange={e => updSh({ shadowSoftness: +e.target.value })} className="w-full accent-amber-600" />
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </div>
                   <button disabled={saving} onClick={() => onSave(sel, configs[sel.id] ?? DEFAULT_OV)}
                     className="w-full py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-bold rounded-xl text-sm">
                     {saving ? '⏳ Saving…' : `💾 Save "${sel.label}"`}
