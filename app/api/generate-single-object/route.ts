@@ -50,11 +50,11 @@ export async function POST(request: Request) {
 TECHNICAL RENDERING REQUIREMENTS:
 • REAL PHYSICAL OBJECT — render this as an actual item, NOT a sculpture, statuette, or monochrome cast. Keep the object's real identity and material nature.
 • NATURAL MATERIAL COLOURS — show the object's actual material colours as described above. The thematic atmosphere affects the surface condition (weathering, ambient light, patina) but NOT the fundamental material — a brass dial stays brass, glass stays glass, leather stays leather.
-• FULLY TRANSPARENT BACKGROUND — alpha = 0 everywhere outside the object. No dark backdrop, gradient, or vignette.
+• FULLY TRANSPARENT BACKGROUND — alpha = 0 everywhere outside the object and its shadow. No white fill, no light backdrop, no gradient, no vignette behind the object.
+• SHADOW — render a single soft, dark semi-transparent drop shadow directly beneath the object, cast onto the transparent canvas. The shadow must be dark (dark grey/brown, NOT white or light), soft-edged, and fully transparent where it fades out. It should look exactly like the shadow you see on baked-in book cover assets — grounded and realistic.
 • Warm directional lighting from slightly above-left; sharp specular on metal and glass; soft depth cues on organic materials.
 • Object fills 60-70% of the 1024×1024 frame; generous transparent padding on all sides.
-• Single soft drop shadow beneath the object only.
-• Output: RGBA PNG with genuine per-pixel transparency.`
+• Output: RGBA PNG with genuine per-pixel transparency — object + shadow visible, everything else alpha = 0.`
 
     // Generate the image
     const genRes = await fetch('https://api.openai.com/v1/images/generations', {

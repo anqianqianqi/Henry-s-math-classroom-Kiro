@@ -61,11 +61,11 @@ export function buildAnimCSS(anim: OverlayAnim, prefix: string, speed: number = 
 export function buildKeyframesCSS(prefix: string): string {
   const p = prefix
   return `
-@keyframes ${p}-float   { 0%,100%{transform:translateY(0) translate(-50%,-50%)}    50%{transform:translateY(-8px) translate(-50%,-50%)} }
-@keyframes ${p}-pulse   { 0%,100%{transform:scale(1) translate(-50%,-50%)}          50%{transform:scale(1.12) translate(-50%,-50%)} }
-@keyframes ${p}-rotate  { from{transform:rotate(0deg) translate(-50%,-50%)}         to{transform:rotate(360deg) translate(-50%,-50%)} }
+@keyframes ${p}-float   { 0%,100%{transform:translateY(0)}                          50%{transform:translateY(-8px)} }
+@keyframes ${p}-pulse   { 0%,100%{transform:scale(1)}                                50%{transform:scale(1.12)} }
+@keyframes ${p}-rotate  { from{transform:rotate(0deg)}                               to{transform:rotate(360deg)} }
 @keyframes ${p}-shimmer { 0%,100%{opacity:1}                                         50%{opacity:0.45} }
-@keyframes ${p}-bounce  { 0%,100%{transform:translateY(0) translate(-50%,-50%)}     40%{transform:translateY(-14px) translate(-50%,-50%)} 60%{transform:translateY(-6px) translate(-50%,-50%)} }
+@keyframes ${p}-bounce  { 0%,100%{transform:translateY(0)}                           40%{transform:translateY(-14px)} 60%{transform:translateY(-6px)} }
 @keyframes ${p}-sway    { 0%,100%{transform:rotate(-8deg)}                           50%{transform:rotate(8deg)} }
 @keyframes ${p}-flicker { 0%,100%{opacity:1} 25%{opacity:0.3} 50%{opacity:0.9} 75%{opacity:0.15} }
 @keyframes ${p}-bling   { 0%,100%{filter:brightness(1) drop-shadow(0 0 0px gold)}   50%{filter:brightness(1.6) drop-shadow(0 0 8px gold)} }
@@ -102,3 +102,6 @@ export const OV_ANIM_OPTIONS: { value: OverlayAnim; label: string }[] = [
   { value: 'bling',   label: '💎 Bling' },
   { value: 'burst',   label: '💥 Burst' },
 ]
+
+/** No-op stub kept for backward compatibility. */
+export function overlayEdgeFadeStyle(_edgeFade?: number): {} { return {} }

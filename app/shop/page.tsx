@@ -29,6 +29,16 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
   const tl = (skin as any).cover_layout?.title
   const pl = (skin as any).cover_layout?.prompt
 
+  // Inject keyframes into document head (reliable across modal portals)
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (document.getElementById('szp-keyframes')) return
+    const el = document.createElement('style')
+    el.id = 'szp-keyframes'
+    el.textContent = SHOP_ZP_KEYFRAMES
+    document.head.appendChild(el)
+  }, [])
+
   useEffect(() => {
     const supabase = createClient()
     supabase.from('book_skin_overlays').select('*').eq('skin_id', skin.id)
@@ -41,7 +51,7 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
 
   return (
     <>
-      <style>{SHOP_ZP_KEYFRAMES}</style>
+      <style id="szp-kf">{SHOP_ZP_KEYFRAMES}</style>
       <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={skin.image_url} alt={skin.name} style={{ display: 'block', width: '100%', height: 'auto' }} draggable={false} />
@@ -60,10 +70,17 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
             )
           }
           return (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={obj.id} src={obj.image_url} alt={obj.label} draggable={false}
-              style={{ position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`, width: sz, height: sz,
-                objectFit: 'contain', transform: 'translate(-50%,-50%)', animation: anim, transformOrigin, pointerEvents: 'none' }} />
+            <div
+              key={obj.id}
+              style={{
+                position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
+                transform: 'translate(-50%,-50%)', width: sz, height: sz,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={obj.image_url} alt={obj.label} draggable={false}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin }} />
+            </div>
           )
         })}
         <div className="absolute text-center px-4 w-full" style={{ left: `${tl?.x ?? 50}%`, top: `${tl?.y ?? 22}%`, transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>

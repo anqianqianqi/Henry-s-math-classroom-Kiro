@@ -38,6 +38,8 @@ interface BookCoverWithOverlaysProps {
   style?: React.CSSProperties
   /** Size of overlay objects in pixels — scales with cover size. Default: 80 */
   overlayBaseSize?: number
+  /** Rendered width of the cover container in px — used for aura calculation */
+  containerWidthPx?: number
   /** Called when the cover is clicked */
   onClick?: () => void
 }
@@ -49,6 +51,7 @@ export function BookCoverWithOverlays({
   className,
   style,
   overlayBaseSize = 80,
+  containerWidthPx = 480,
   onClick,
 }: BookCoverWithOverlaysProps) {
   const stylesInjected = useRef(false)
@@ -110,26 +113,22 @@ export function BookCoverWithOverlays({
         const transformOrigin = getTransformOrigin(cfg.animation ?? 'none')
 
         return (
-          <img
+          <div
             key={obj.id}
-            src={obj.image_url}
-            alt={obj.label}
-            draggable={false}
             style={{
-              position: 'absolute',
-              left: `${cfg.x}%`,
-              top: `${cfg.y}%`,
-              width: sz,
-              height: sz,
-              objectFit: 'contain',
-              transform: 'translate(-50%, -50%)',
-              animation: anim,
-              transformOrigin,
-              // Pause during book flip, resume afterward from the same position
-              animationPlayState: overlayAnimationPaused ? 'paused' : 'running',
-              pointerEvents: 'none',
+              position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
+              transform: 'translate(-50%,-50%)', width: sz, height: sz,
             }}
-          />
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={obj.image_url} alt={obj.label} draggable={false}
+              style={{
+                position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain',
+                animation: anim, transformOrigin,
+                animationPlayState: overlayAnimationPaused ? 'paused' : 'running',
+              }}
+            />
+          </div>
         )
       })}
     </div>
