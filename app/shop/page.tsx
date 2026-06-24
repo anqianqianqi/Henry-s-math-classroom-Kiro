@@ -93,7 +93,6 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
             backdropFilter: 'blur(6px)', pointerEvents: 'none' }}>
           <span>📜</span><span style={{ letterSpacing: '0.06em' }}>Open the Book</span>
         </div>
-      </div>
     </div>
   )
 }
