@@ -52,7 +52,7 @@ export const DEFAULT_OVERLAY_SHADOW: OverlayShadowConfig = {
   shadowSoftness:     0.35,
   shadowFalloff:      1.2,
 
-  alphaThreshold: 10,
+  alphaThreshold: 128,
 }
 
 interface Props {
