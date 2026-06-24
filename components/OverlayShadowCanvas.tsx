@@ -179,7 +179,8 @@ export function OverlayShadowCanvas({
     // ── Load cover image — no longer needed, shadow is SDF-only ─────────
     // (cover pixels are not sampled; darkening is applied via transparent overlay)
 
-    // ── Load overlay image + compute SDF ──────────────────────────────────    if (overlayBitmapRef.current === null || lastOverlayUrl.current !== overlayImageUrl) {
+    // ── Load overlay image + compute SDF ──────────────────────────────────
+    if (overlayBitmapRef.current === null || lastOverlayUrl.current !== overlayImageUrl) {
       try {
         const img = new window.Image()
         img.crossOrigin = 'anonymous'
