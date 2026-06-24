@@ -202,7 +202,7 @@ export function OverlayShadowCanvas({
           sdfCache.set(cacheKey, computeSDF(pixels as Uint8ClampedArray, ow, oh, shadow.alphaThreshold))
         }
         sdfRef.current = sdfCache.get(cacheKey)!
-      } catch { return }
+      } catch (_e) { return }
     }
 
     const overlayBitmap = overlayBitmapRef.current!
