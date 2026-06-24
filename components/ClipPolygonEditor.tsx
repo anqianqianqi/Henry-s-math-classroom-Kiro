@@ -51,7 +51,7 @@ export function ClipPolygonEditor({ imageUrl, polygon, onChange, label = '✂️
     img.onload = () => {
       imgRef.current = img
       setLoaded(true)
-      const maxW = 280
+      const maxW = 320
       const ratio = img.naturalHeight / img.naturalWidth
       setCvSize({ w: maxW, h: Math.round(maxW * ratio) })
     }
@@ -70,19 +70,7 @@ export function ClipPolygonEditor({ imageUrl, polygon, onChange, label = '✂️
     if (polygon.length >= 2) {
       const pts = polygon.map(v => ({ x: (v.x / 100) * w, y: (v.y / 100) * h }))
 
-      // Darken area outside polygon
-      if (polygon.length >= 3) {
-        ctx.save()
-        ctx.beginPath()
-        ctx.rect(0, 0, w, h)
-        pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
-        ctx.closePath()
-        ctx.fillStyle = 'rgba(0,0,0,0.45)'
-        ctx.fill('evenodd')
-        ctx.restore()
-      }
-
-      // Polygon outline
+      // Polygon outline only — no dimming, object outside stays fully visible
       ctx.beginPath()
       pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
       if (polygon.length >= 3) ctx.closePath()
