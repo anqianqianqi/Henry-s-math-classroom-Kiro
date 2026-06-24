@@ -158,10 +158,7 @@ export function OverlayShadowCanvas({
 
   const draw = useCallback(async () => {
     const canvas = canvasRef.current
-    if (!canvas || widthPx < 1 || heightPx < 1) return
-
-    canvas.width  = widthPx
-    canvas.height = heightPx
+    if (!canvas || widthPx < 1) return
 
     // ── When URL changes, flush stale refs immediately so we never render
     //    a previous object's shadow while the new one is loading.
@@ -170,8 +167,10 @@ export function OverlayShadowCanvas({
       sdfRef.current           = null
       lastOverlayUrl.current   = overlayImageUrl
       // Clear canvas so nothing old shows
+      canvas.width  = widthPx
+      canvas.height = widthPx  // temp square until image loads
       const ctx2 = canvas.getContext('2d')
-      ctx2?.clearRect(0, 0, widthPx, heightPx)
+      ctx2?.clearRect(0, 0, widthPx, widthPx)
     }
 
     // ── Load overlay image ─────────────────────────────────────────────────
@@ -216,14 +215,24 @@ export function OverlayShadowCanvas({
     const natW          = overlayBitmap.width
     const natH          = overlayBitmap.height
 
+    // ── Correct canvas dimensions to match PNG aspect ratio ───────────────
+    // The overlay div is square (width=height=widthPx), but the PNG may not be.
+    // We keep the canvas exactly the size of the overlay box (widthPx × heightPx
+    // as passed in) but adjust the scale factors so we sample the SDF correctly.
+    // The canvas already has width=widthPx set above; update height to match
+    // the PNG's natural aspect ratio so pixel mapping is 1:1.
+    const trueHeightPx = Math.round(widthPx * (natH / natW))
+    canvas.width  = widthPx
+    canvas.height = trueHeightPx
+
     const ctx = canvas.getContext('2d', { willReadFrequently: true })
     if (!ctx) return
 
     // Output canvas is TRANSPARENT.  Only darkness pixels are written.
     // CSS mix-blend-mode: multiply composites these over the cover below.
-    ctx.clearRect(0, 0, widthPx, heightPx)
+    ctx.clearRect(0, 0, widthPx, trueHeightPx)
 
-    const imgData = ctx.createImageData(widthPx, heightPx)
+    const imgData = ctx.createImageData(widthPx, trueHeightPx)
     const d       = imgData.data
 
     // Light direction (from the light source, shadow cast opposite)
@@ -231,11 +240,11 @@ export function OverlayShadowCanvas({
     const ldx = Math.cos(rad)
     const ldy = Math.sin(rad)
 
-    // Scale: rendered pixel → natural image pixel
+    // Scale: rendered pixel → natural image pixel (1:1 since canvas matches PNG aspect)
     const rx = natW / widthPx
-    const ry = natH / heightPx
+    const ry = natH / trueHeightPx
 
-    for (let py = 0; py < heightPx; py++) {
+    for (let py = 0; py < trueHeightPx; py++) {
       for (let px2 = 0; px2 < widthPx; px2++) {
         // Map rendered pixel centre to natural image space
         const nx = (px2 + 0.5) * rx
@@ -294,7 +303,7 @@ export function OverlayShadowCanvas({
     }
 
     ctx.putImageData(imgData, 0, 0)
-  }, [overlayImageUrl, widthPx, heightPx, shadow])
+  }, [overlayImageUrl, widthPx, shadow])
 
   useEffect(() => { draw() }, [draw])
 
@@ -303,9 +312,15 @@ export function OverlayShadowCanvas({
       ref={canvasRef}
       style={{
         position:       'absolute',
-        inset:          0,
+        // Center the canvas in the square overlay box, letting it auto-size
+        // to its natural aspect ratio — same as how object-fit:contain works.
+        top:            '50%',
+        left:           '50%',
+        transform:      'translate(-50%, -50%)',
         width:          '100%',
-        height:         '100%',
+        height:         'auto',
+        maxHeight:      '100%',
+        objectFit:      'contain',
         pointerEvents:  'none',
         mixBlendMode:   'multiply',
         zIndex:         0,
