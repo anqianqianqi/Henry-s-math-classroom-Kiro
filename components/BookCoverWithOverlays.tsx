@@ -8,7 +8,6 @@
 import { useEffect, useRef } from 'react'
 import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim, overlayWidthPct } from '@/lib/overlayAnimations'
 import { OverlayBurstRenderer } from './OverlayBurstRenderer'
-import { OverlayAuraWrapper } from './OverlayAuraWrapper'
 
 export interface OverlayObject {
   id: string
@@ -112,16 +111,14 @@ export function BookCoverWithOverlays({
 
         const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation, 'bov', (cfg as any).speed ?? 1.0) : undefined
         const transformOrigin = getTransformOrigin(cfg.animation ?? 'none')
-        const auraStrength = (cfg as any).auraStrength ?? 0
 
         return (
-          <OverlayAuraWrapper
+          <div
             key={obj.id}
-            overlayImageUrl={obj.image_url}
-            coverImageUrl={coverImageUrl}
-            xPct={cfg.x} yPct={cfg.y} widthPct={sz}
-            auraStrength={auraStrength}
-            containerWidthPx={containerWidthPx}
+            style={{
+              position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
+              transform: 'translate(-50%,-50%)', width: sz, height: sz,
+            }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={obj.image_url} alt={obj.label} draggable={false}
@@ -131,7 +128,7 @@ export function BookCoverWithOverlays({
                 animationPlayState: overlayAnimationPaused ? 'paused' : 'running',
               }}
             />
-          </OverlayAuraWrapper>
+          </div>
         )
       })}
     </div>

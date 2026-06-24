@@ -103,7 +103,5 @@ export const OV_ANIM_OPTIONS: { value: OverlayAnim; label: string }[] = [
   { value: 'burst',   label: '💥 Burst' },
 ]
 
-/** Compute CSS mask-image for edge feathering using radial gradient.
- *  edgeFade: 0 = no fade (hard edge), 0.8 = aggressive fade from 20% inward.
- *  @deprecated Use OverlayAuraWrapper canvas approach instead */
+/** No-op stub kept for backward compatibility. */
 export function overlayEdgeFadeStyle(_edgeFade?: number): {} { return {} }

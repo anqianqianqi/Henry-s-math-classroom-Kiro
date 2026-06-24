@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { BookCoverWithOverlays, type OverlayObject } from './BookCoverWithOverlays'
 import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct } from '@/lib/overlayAnimations'
 import { OverlayBurstRenderer } from './OverlayBurstRenderer'
-import { OverlayAuraWrapper } from './OverlayAuraWrapper'
 
 interface MagicBookRevealProps {
   title: string
@@ -441,15 +440,13 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
 
                     const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation as any, 'bov', (cfg as any).speed ?? 1.0) : undefined
                     const transformOrigin = getTransformOrigin(cfg.animation as any)
-                    const auraStrength = (cfg as any).auraStrength ?? 0
                     return (
-                      <OverlayAuraWrapper
+                      <div
                         key={obj.id}
-                        overlayImageUrl={obj.image_url}
-                        coverImageUrl={activeCoverImage}
-                        xPct={cfg.x} yPct={cfg.y} widthPct={sz}
-                        auraStrength={auraStrength}
-                        containerWidthPx={bookRef.current?.offsetWidth ?? 480}
+                        style={{
+                          position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
+                          transform: 'translate(-50%,-50%)', width: sz, height: sz,
+                        }}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={obj.image_url} alt={obj.label} draggable={false}
@@ -459,7 +456,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                             animationPlayState: phase === 'opening' ? 'paused' : 'running',
                           }}
                         />
-                      </OverlayAuraWrapper>
+                      </div>
                     )
                   })}
                   {/* Title overlay */}

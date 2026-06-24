@@ -622,18 +622,17 @@ function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
             )
           }
           return (
-            <OverlayAuraWrapper
+            <div
               key={obj.id}
-              overlayImageUrl={obj.image_url}
-              coverImageUrl={coverImageUrl}
-              xPct={cfg.x} yPct={cfg.y} widthPct={sz}
-              auraStrength={cfg.auraStrength ?? 0}
-              containerWidthPx={420}
+              style={{
+                position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
+                transform: 'translate(-50%,-50%)', width: sz, height: sz,
+              }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={obj.image_url} alt={obj.label} draggable={false}
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin }} />
-            </OverlayAuraWrapper>
+            </div>
           )
         })}
         {/* Title */}
@@ -2241,10 +2240,9 @@ import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, OV_ANIM_OPTIONS, o
 import { BurstPolygonEditor } from '@/components/BurstPolygonEditor'
 import type { BurstConfig } from '@/components/OverlayBurstRenderer'
 import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
-import { OverlayAuraWrapper } from '@/components/OverlayAuraWrapper'
 type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling' | 'burst'
-interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig; auraStrength?: number }
-const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0, auraStrength: 0 }
+interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig }
+const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0 }
 const DEFAULT_BURST: BurstConfig = {
   polygon: [],
   center: { x: 50, y: 50 },
@@ -2447,18 +2445,6 @@ function OverlayEditorInline({
                       onMouseDown={e => { e.preventDefault(); startDrag(o.id, e.clientX, e.clientY) }}
                       onTouchStart={e => startDrag(o.id, e.touches[0].clientX, e.touches[0].clientY)}
                       style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', width: sz, height: sz, cursor: 'grab', zIndex: zIdx + 2, outline: selected === o.id ? '2px solid #a855f7' : undefined, borderRadius: 4 }}>
-                      {/* Aura canvas — correct cover-sampling aura */}
-                      {(c.auraStrength ?? 0) > 0 && (
-                        <OverlayAuraWrapper
-                          overlayImageUrl={o.image_url}
-                          coverImageUrl={skin.image_url}
-                          xPct={c.x} yPct={c.y}
-                          widthPct={sz}
-                          auraStrength={c.auraStrength}
-                          containerWidthPx={previewRef.current?.offsetWidth ?? 480}
-                          style={{ position: 'absolute', inset: 0, transform: 'none', left: 0, top: 0, width: '100%', height: '100%' }}
-                        ><span /></OverlayAuraWrapper>
-                      )}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={o.image_url} alt={o.label} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS_FN(c.animation, speed) : undefined, transformOrigin: getTransformOrigin(c.animation), pointerEvents: 'none' }} draggable={false} />
                     </div>
@@ -2509,23 +2495,6 @@ function OverlayEditorInline({
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Scale ({cfg.scale.toFixed(1)}×)</label>
                     <input type="range" min={0.3} max={4.0} step={0.1} value={cfg.scale} onChange={e => upd(sel.id, { scale: Number(e.target.value) })} className="w-full accent-purple-600" />
-                  </div>
-
-                  {/* ── Shadow blend — uses overlay's own alpha as decay ── */}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">
-                      🌑 Shadow blend ({((cfg.auraStrength ?? 0) * 100).toFixed(0)}%)
-                      <span className="ml-1 font-normal text-gray-400">
-                        {(cfg.auraStrength ?? 0) === 0 ? 'off' : (cfg.auraStrength ?? 0) < 0.5 ? 'subtle' : (cfg.auraStrength ?? 0) < 1.0 ? 'medium' : 'strong'}
-                      </span>
-                    </label>
-                    <input type="range" min={0} max={2.0} step={0.1} value={cfg.auraStrength ?? 0}
-                      onChange={e => upd(sel.id, { auraStrength: Number(e.target.value) })}
-                      className="w-full accent-amber-600" />
-                    <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
-                      <span>0% off</span><span>100% natural</span><span>200% enhanced</span>
-                    </div>
-                    <p className="text-[10px] text-gray-400 mt-0.5">Amplifies the object's own shadow to darken the cover it sits on.</p>
                   </div>
 
                   {/* ── Animation ── */}
