@@ -1112,6 +1112,66 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   }
 
   // Remove solid background from a base64 PNG.
+  // Crop transparent padding from a PNG Uint8Array.
+  // Scans for the tightest bounding box of non-transparent pixels,
+  // then re-draws with a small margin so drop shadows aren't clipped.
+  async function cropTransparentPadding(bytes: Uint8Array, margin = 4): Promise<Uint8Array> {
+    return new Promise((resolve) => {
+      const blob = new Blob([bytes], { type: 'image/png' })
+      const url = URL.createObjectURL(blob)
+      const img = new Image()
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const W = img.naturalWidth
+        const H = img.naturalHeight
+        const tmpCanvas = document.createElement('canvas')
+        tmpCanvas.width = W; tmpCanvas.height = H
+        const tmpCtx = tmpCanvas.getContext('2d')!
+        tmpCtx.drawImage(img, 0, 0)
+        const { data } = tmpCtx.getImageData(0, 0, W, H)
+
+        // Find bounding box of pixels with alpha > 4
+        let minX = W, maxX = 0, minY = H, maxY = 0
+        for (let y = 0; y < H; y++) {
+          for (let x = 0; x < W; x++) {
+            if (data[(y * W + x) * 4 + 3] > 4) {
+              if (x < minX) minX = x
+              if (x > maxX) maxX = x
+              if (y < minY) minY = y
+              if (y > maxY) maxY = y
+            }
+          }
+        }
+
+        // If nothing found or already tight, return as-is
+        if (minX >= maxX || minY >= maxY) { resolve(bytes); return }
+
+        // Apply margin
+        minX = Math.max(0, minX - margin)
+        minY = Math.max(0, minY - margin)
+        maxX = Math.min(W - 1, maxX + margin)
+        maxY = Math.min(H - 1, maxY + margin)
+
+        const cropW = maxX - minX + 1
+        const cropH = maxY - minY + 1
+
+        // Skip crop if it saves less than 10% of pixels (not worth it)
+        if (cropW * cropH > W * H * 0.9) { resolve(bytes); return }
+
+        const outCanvas = document.createElement('canvas')
+        outCanvas.width = cropW; outCanvas.height = cropH
+        const outCtx = outCanvas.getContext('2d')!
+        outCtx.drawImage(tmpCanvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH)
+        outCanvas.toBlob(blob2 => {
+          if (!blob2) { resolve(bytes); return }
+          blob2.arrayBuffer().then(ab => resolve(new Uint8Array(ab)))
+        }, 'image/png')
+      }
+      img.onerror = () => resolve(bytes)
+      img.src = url
+    })
+  }
+
   // Step 1: flood-fill from corners to clear connected background
   // Step 2: global near-background pass — reduces alpha of any remaining
   //         near-white pixels proportionally to how close they are to the bg colour.
@@ -1388,8 +1448,9 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
                 return false
               }
 
-              // Strip background before uploading — gpt-image-2 sometimes returns solid white bg
-              const bytes = await removeBackground(rawB64)
+              // Strip background then crop transparent padding
+              const rawBytes = await removeBackground(rawB64)
+              const bytes = await cropTransparentPadding(rawBytes)
 
               const slug = obj.label.replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 30)
               const filePath = `${uid}/overlay-${ts}-${i}-${slug}.png`

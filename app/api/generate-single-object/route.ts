@@ -53,7 +53,7 @@ TECHNICAL RENDERING REQUIREMENTS:
 • FULLY TRANSPARENT BACKGROUND — alpha = 0 everywhere outside the object and its shadow. No white fill, no light backdrop, no gradient, no vignette behind the object.
 • SHADOW — render a single soft, dark semi-transparent drop shadow directly beneath the object, cast onto the transparent canvas. The shadow must be dark (dark grey/brown, NOT white or light), soft-edged, and fully transparent where it fades out. It should look exactly like the shadow you see on baked-in book cover assets — grounded and realistic.
 • Warm directional lighting from slightly above-left; sharp specular on metal and glass; soft depth cues on organic materials.
-• Object fills 60-70% of the 1024×1024 frame; generous transparent padding on all sides.
+• Object fills the frame tightly — no empty margins or padding around it.
 • Output: RGBA PNG with genuine per-pixel transparency — object + shadow visible, everything else alpha = 0.`
 
     // Generate the image
