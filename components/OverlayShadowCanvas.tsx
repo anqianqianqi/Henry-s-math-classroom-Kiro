@@ -153,6 +153,11 @@ export function OverlayShadowCanvas({
 
     // Load overlay image and compute SDF (cached by URL)
     if (overlayBitmapRef.current === null || lastOverlayUrl.current !== overlayImageUrl) {
+      // Clear stale SDF when URL changes
+      if (lastOverlayUrl.current && lastOverlayUrl.current !== overlayImageUrl) {
+        sdfRef.current = null
+        overlayBitmapRef.current = null
+      }
       try {
         const img = new window.Image()
         img.crossOrigin = 'anonymous'
@@ -166,7 +171,7 @@ export function OverlayShadowCanvas({
 
         const ow = overlayBitmapRef.current.width
         const oh = overlayBitmapRef.current.height
-        const cacheKey = overlayImageUrl + ':' + shadow.alphaThreshold
+        const cacheKey = overlayImageUrl + ':128'
         if (!sdfCache.has(cacheKey)) {
           const tmp = document.createElement('canvas')
           tmp.width = ow
@@ -174,7 +179,8 @@ export function OverlayShadowCanvas({
           const tCtx = tmp.getContext('2d')!
           tCtx.drawImage(overlayBitmapRef.current, 0, 0)
           const pixels = tCtx.getImageData(0, 0, ow, oh).data
-          sdfCache.set(cacheKey, computeSDF(pixels as Uint8ClampedArray, ow, oh, shadow.alphaThreshold))
+          // Always use 128 as threshold — matches the visible half-opacity boundary
+          sdfCache.set(cacheKey, computeSDF(pixels as Uint8ClampedArray, ow, oh, 128))
         }
         sdfRef.current = sdfCache.get(cacheKey)!
       } catch (_e) {
