@@ -1117,7 +1117,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
   // then re-draws with a small margin so drop shadows aren't clipped.
   async function cropTransparentPadding(bytes: Uint8Array, margin = 4): Promise<Uint8Array> {
     return new Promise((resolve) => {
-      const blob = new Blob([bytes], { type: 'image/png' })
+      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'image/png' })
       const url = URL.createObjectURL(blob)
       const img = new Image()
       img.onload = () => {
