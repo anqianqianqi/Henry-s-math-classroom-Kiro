@@ -254,166 +254,41 @@ export default function ChallengePage() {
 
     setUserId(user.id)
 
-    // Load challenge - check daily_challenges first, then challenge_bank
-    let { data: challengeData } = await supabase
-      .from('daily_challenges')
-      .select('*')
-      .eq('id', params.id)
-      .single()
+    // ── Round 1: fire all independent queries in parallel ─────────────────
+    const [
+      dailyChallengeResult,
+      defaultSkinsResult,
+      userPrefResult,
+      userRolesResult,
+    ] = await Promise.all([
+      supabase.from('daily_challenges').select('*').eq('id', params.id).single(),
+      supabase.from('book_skins').select('skin_type, image_url, cover_layout, is_animated, has_overlays, id').eq('is_default', true).eq('is_active', true).catch(() => ({ data: null })),
+      supabase.from('user_book_skin_preferences').select('cover_skin_id, page_skin_id').eq('user_id', user.id).maybeSingle().catch(() => ({ data: null })),
+      supabase.from('user_roles').select('role_id').eq('user_id', user.id).is('class_id', null),
+    ])
 
-    // If not found in daily_challenges, check challenge_bank
+    // Resolve challenge (fallback to bank if not in daily_challenges)
+    let challengeData: any = dailyChallengeResult.data
     if (!challengeData) {
-      const { data: bankData } = await supabase
-        .from('challenge_bank')
-        .select('*')
-        .eq('id', params.id)
-        .single()
-      if (bankData) {
-        // Bank items don't have challenge_date — treat as a preview
-        challengeData = { ...bankData, challenge_date: null, is_bank_item: true }
-      }
+      const { data: bankData } = await supabase.from('challenge_bank').select('*').eq('id', params.id).single()
+      if (bankData) challengeData = { ...bankData, challenge_date: null, is_bank_item: true }
     }
-
     setChallenge(challengeData)
 
-    // Fetch book skins:
-    // 1. Get sitewide defaults (admin-set)
-    // 2. Get this user's personal preference (overrides default if set)
-    // Priority: user's personal pick > sitewide default > component fallback SVG
-    // Each query is independent — a missing table won't block the other.
-    let resolvedCoverUrl: string | undefined
-    let resolvedPageUrl: string | undefined
-
-    try {
-      const { data: skinData } = await supabase
-        .from('book_skins')
-        .select('skin_type, image_url, cover_layout, is_animated, has_overlays, id')
-        .eq('is_default', true)
-        .eq('is_active', true)
-
-      if (skinData && skinData.length > 0) {
-        const defCover = (skinData as any[]).find(s => s.skin_type === 'cover')
-        const defPage  = (skinData as any[]).find(s => s.skin_type === 'page')
-        if (defCover) {
-          resolvedCoverUrl = defCover.image_url
-          setDefaultCoverLayout(defCover.cover_layout)
-          // If animated, fetch frame URLs
-          if (defCover.is_animated) {
-            const { data: frames } = await supabase
-              .from('book_skin_frames')
-              .select('image_url')
-              .eq('skin_id', defCover.id)
-              .order('sort_order', { ascending: true })
-            if (frames && frames.length >= 2) {
-              setDefaultCoverFrameUrls(frames.map((f: any) => f.image_url))
-            }
-          }
-          // Fetch overlay objects for this skin
-          if (defCover.has_overlays) {
-            const { data: overlayData } = await supabase
-              .from('book_skin_overlays')
-              .select('*')
-              .eq('skin_id', defCover.id)
-              .order('sort_order', { ascending: true })
-            if (overlayData && overlayData.length > 0) {
-              setDefaultCoverOverlays(overlayData)
-            }
-          }
-        }
-        if (defPage)  { resolvedPageUrl = defPage.image_url }
-      }
-    } catch (e) {
-      console.error('[BookSkins] fetch error:', e)
-    }
-
-    try {
-      const { data: userPrefData } = await supabase
-        .from('user_book_skin_preferences')
-        .select('cover_skin_id, page_skin_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (userPrefData?.cover_skin_id) {
-        const { data: uc } = await supabase
-          .from('book_skins')
-          .select('image_url, has_overlays')
-          .eq('id', userPrefData.cover_skin_id)
-          .eq('is_active', true)
-          .maybeSingle()
-        if (uc) {
-          resolvedCoverUrl = (uc as any).image_url
-          // Load overlays for user's personal skin (overrides default overlays)
-          if ((uc as any).has_overlays) {
-            const { data: userOverlays } = await supabase
-              .from('book_skin_overlays')
-              .select('*')
-              .eq('skin_id', userPrefData.cover_skin_id)
-              .order('sort_order', { ascending: true })
-            if (userOverlays && userOverlays.length > 0) {
-              setDefaultCoverOverlays(userOverlays)
-            }
-          } else {
-            setDefaultCoverOverlays([])
-          }
-        }
-      }
-      if (userPrefData?.page_skin_id) {
-        const { data: up } = await supabase
-          .from('book_skins')
-          .select('image_url')
-          .eq('id', userPrefData.page_skin_id)
-          .eq('is_active', true)
-          .maybeSingle()
-        if (up) resolvedPageUrl = (up as any).image_url
-      }
-    } catch (_) {
-      // user_book_skin_preferences table may not exist yet
-    }
-
-    if (resolvedCoverUrl) setDefaultCoverUrl(resolvedCoverUrl)
-    if (resolvedPageUrl)  setDefaultPageUrl(resolvedPageUrl)
-
-    // Load tag names for this challenge
-    if (challengeData?.tag_ids && challengeData.tag_ids.length > 0) {
-      const { data: tagsData } = await supabase
-        .from('challenge_tags')
-        .select('id, challenge_tag_names(language, name)')
-        .in('id', challengeData.tag_ids)
-
-      if (tagsData) {
-        const namesMap: Record<string, Record<string, string>> = {}
-        tagsData.forEach((t: any) => {
-          const langMap: Record<string, string> = {}
-          t.challenge_tag_names?.forEach((n: any) => {
-            langMap[n.language] = n.name
-          })
-          namesMap[t.id] = langMap
-        })
-        setTagNames(namesMap)
-      }
-    }
-
-    // Check if user is teacher first
-    const { data: roles } = await supabase
-      .from('user_roles')
-      .select('role_id')
-      .eq('user_id', user.id)
-      .is('class_id', null)
-
+    // Resolve role
     let teacherRole = false
-    if (roles && roles.length > 0) {
+    let adminRole = false
+    const userRoles = userRolesResult.data
+    if (userRoles && userRoles.length > 0) {
       const { data: roleData } = await supabase
-        .from('roles')
-        .select('name')
-        .in('id', roles.map((r: any) => r.role_id))
-
+        .from('roles').select('name').in('id', userRoles.map((r: any) => r.role_id))
       teacherRole = roleData?.some((r: any) => r.name === 'teacher' || r.name === 'administrator') || false
-      const adminRole = roleData?.some((r: any) => r.name === 'administrator') || false
+      adminRole   = roleData?.some((r: any) => r.name === 'administrator') || false
       setIsTeacher(teacherRole)
       setIsAdmin(adminRole)
     }
 
-    // Block students from viewing future challenges (not applicable to bank items)
+    // Block students from viewing future challenges
     if (!teacherRole && challengeData && challengeData.challenge_date) {
       const today = localDateString()
       if (challengeData.challenge_date > today) {
@@ -422,123 +297,166 @@ export default function ChallengePage() {
       }
     }
 
-    // Determine the bank_item_id for this challenge (if it was published from the bank)
-    // When viewing a bank item directly (is_bank_item = true), the item itself is the bank id.
+    // Resolve default book skin
+    const skinData = (defaultSkinsResult as any).data as any[] | null
+    const defCover = skinData?.find((s: any) => s.skin_type === 'cover')
+    const defPage  = skinData?.find((s: any) => s.skin_type === 'page')
+    let resolvedCoverUrl: string | undefined = defCover?.image_url
+    let resolvedPageUrl: string | undefined  = defPage?.image_url
+    if (defCover?.cover_layout) setDefaultCoverLayout(defCover.cover_layout)
+
+    const userPrefData = (userPrefResult as any).data
+
+    // bankItemId needed for submission lookup
     const bankItemId: string | null = challengeData?.is_bank_item
       ? (params.id as string)
       : (challengeData?.source_bank_id ?? null)
 
-    // Load user's submission.
-    // For bank-sourced challenges: look up by bank_item_id (survives delete/republish).
-    // Fallback: if not found by bank_item_id, try challenge_id (for submissions created
-    // before the bank_item_id migration ran). If found via fallback, auto-patch bank_item_id
-    // so future lookups work correctly.
-    // For ad-hoc challenges: look up by challenge_id only.
-    let submissionData: any = null
-    if (bankItemId) {
-      const { data } = await supabase
-        .from('challenge_submissions')
-        .select(`*, profiles!inner(full_name, nickname)`)
-        .eq('bank_item_id', bankItemId)
-        .eq('user_id', user.id)
-        .maybeSingle()
-      submissionData = data
+    // ── Round 2: fire all secondary queries in parallel ───────────────────
+    // (skin frames/overlays, user pref skin details, tags, user's submission)
+    const defCoverSkinId: string | null = defCover?.id ?? null
+    const userCoverSkinId: string | null = userPrefData?.cover_skin_id ?? null
+    const userPageSkinId: string | null  = userPrefData?.page_skin_id ?? null
 
-      // Fallback: old submission that predates the bank_item_id migration
-      if (!submissionData) {
-        const { data: fallback } = await supabase
-          .from('challenge_submissions')
-          .select(`*, profiles!inner(full_name, nickname)`)
-          .eq('challenge_id', params.id)
-          .eq('user_id', user.id)
-          .maybeSingle()
-        if (fallback) {
-          submissionData = fallback
-          // Auto-patch bank_item_id so future lookups don't need the fallback
-          void Promise.resolve(
-            supabase
-              .from('challenge_submissions')
-              .update({ bank_item_id: bankItemId })
-              .eq('id', fallback.id)
-          )
-        }
+    const [
+      defFramesResult,
+      defOverlaysResult,
+      userCoverSkinResult,
+      userPageSkinResult,
+      tagsResult,
+      userSubmissionResult,
+    ] = await Promise.all([
+      // Default cover frames (only if animated)
+      defCover?.is_animated && defCoverSkinId
+        ? supabase.from('book_skin_frames').select('image_url').eq('skin_id', defCoverSkinId).order('sort_order', { ascending: true })
+        : Promise.resolve({ data: null }),
+      // Default cover overlays
+      defCover?.has_overlays && defCoverSkinId
+        ? supabase.from('book_skin_overlays').select('*').eq('skin_id', defCoverSkinId).order('sort_order', { ascending: true })
+        : Promise.resolve({ data: null }),
+      // User's personal cover skin detail
+      userCoverSkinId
+        ? supabase.from('book_skins').select('image_url, has_overlays').eq('id', userCoverSkinId).eq('is_active', true).maybeSingle()
+        : Promise.resolve({ data: null }),
+      // User's personal page skin detail
+      userPageSkinId
+        ? supabase.from('book_skins').select('image_url').eq('id', userPageSkinId).eq('is_active', true).maybeSingle()
+        : Promise.resolve({ data: null }),
+      // Tags
+      challengeData?.tag_ids?.length > 0
+        ? supabase.from('challenge_tags').select('id, challenge_tag_names(language, name)').in('id', challengeData.tag_ids)
+        : Promise.resolve({ data: null }),
+      // User's own submission
+      bankItemId
+        ? supabase.from('challenge_submissions').select('*, profiles!inner(full_name, nickname)').eq('bank_item_id', bankItemId).eq('user_id', user.id).maybeSingle()
+        : supabase.from('challenge_submissions').select('*, profiles!inner(full_name, nickname)').eq('challenge_id', params.id).eq('user_id', user.id).maybeSingle(),
+    ])
+
+    // Apply default cover frames
+    const defFrames = (defFramesResult as any).data
+    if (defFrames && defFrames.length >= 2) setDefaultCoverFrameUrls(defFrames.map((f: any) => f.image_url))
+
+    // Apply default cover overlays (may be overridden by user pref below)
+    const defOverlays = (defOverlaysResult as any).data
+    if (defOverlays && defOverlays.length > 0) setDefaultCoverOverlays(defOverlays)
+
+    // Apply user's personal skin (overrides defaults)
+    const userCoverSkin = (userCoverSkinResult as any).data
+    if (userCoverSkin) {
+      resolvedCoverUrl = userCoverSkin.image_url
+      if (!userCoverSkin.has_overlays) {
+        setDefaultCoverOverlays([])
       }
-    } else {
-      const { data } = await supabase
-        .from('challenge_submissions')
-        .select(`*, profiles!inner(full_name, nickname)`)
-        .eq('challenge_id', params.id)
-        .eq('user_id', user.id)
-        .maybeSingle()
-      submissionData = data
+    }
+    const userPageSkin = (userPageSkinResult as any).data
+    if (userPageSkin) resolvedPageUrl = userPageSkin.image_url
+
+    // If user has a cover skin with overlays, fetch them (couldn't batch above without knowing has_overlays)
+    if (userCoverSkin?.has_overlays && userCoverSkinId) {
+      const { data: userOverlays } = await supabase
+        .from('book_skin_overlays').select('*').eq('skin_id', userCoverSkinId).order('sort_order', { ascending: true })
+      if (userOverlays && userOverlays.length > 0) setDefaultCoverOverlays(userOverlays)
+    }
+
+    if (resolvedCoverUrl) setDefaultCoverUrl(resolvedCoverUrl)
+    if (resolvedPageUrl)  setDefaultPageUrl(resolvedPageUrl)
+
+    // Apply tags
+    const tagsData = (tagsResult as any).data
+    if (tagsData) {
+      const namesMap: Record<string, Record<string, string>> = {}
+      tagsData.forEach((t: any) => {
+        const langMap: Record<string, string> = {}
+        t.challenge_tag_names?.forEach((n: any) => { langMap[n.language] = n.name })
+        namesMap[t.id] = langMap
+      })
+      setTagNames(namesMap)
+    }
+
+    // Handle user's submission
+    let submissionData: any = (userSubmissionResult as any).data
+
+    // Fallback for bank submissions: old row created before bank_item_id migration
+    if (!submissionData && bankItemId) {
+      const { data: fallback } = await supabase
+        .from('challenge_submissions').select('*, profiles!inner(full_name, nickname)')
+        .eq('challenge_id', params.id).eq('user_id', user.id).maybeSingle()
+      if (fallback) {
+        submissionData = fallback
+        void supabase.from('challenge_submissions').update({ bank_item_id: bankItemId }).eq('id', fallback.id)
+      }
     }
 
     if (submissionData) {
       setUserSubmission(submissionData)
       setSolution(submissionData.content)
-      // Mark all teacher comments on this submission as seen (clears "New comment" badge on dashboard)
-      try {
-        localStorage.setItem(`comment_seen_${submissionData.id}`, new Date().toISOString())
-      } catch (_) {}
-      // Load comments for user's own submission
-      await loadCommentsForSubmissions([submissionData.id])
+      try { localStorage.setItem(`comment_seen_${submissionData.id}`, new Date().toISOString()) } catch (_) {}
     }
 
-    // Teachers always see all submissions; for bank items (viewed directly from bank),
-    // also always load all submissions since that's the whole point of this view.
+    // ── Round 3: teacher-only and submission-dependent queries ────────────
     if (teacherRole || challengeData?.is_bank_item) {
-      await loadOtherSubmissions(user.id, true, bankItemId)
-      
-      // Get total number of students in classes this challenge is assigned to
-      const { data: assignments } = await supabase
-        .from('challenge_assignments')
-        .select('class_id')
-        .eq('challenge_id', params.id)
+      // Parallelize: all submissions + class assignment info for student count
+      const [, assignmentsResult] = await Promise.all([
+        loadOtherSubmissions(user.id, true, bankItemId),
+        supabase.from('challenge_assignments').select('class_id').eq('challenge_id', params.id),
+      ])
 
+      const assignments = (assignmentsResult as any).data
       if (assignments && assignments.length > 0) {
-        const classIds = assignments.map(a => a.class_id)
-        
-        const { data: memberData } = await supabase
-          .from('class_members')
-          .select('user_id')
-          .in('class_id', classIds)
-
-        const uniqueStudents = new Set(memberData?.map(m => m.user_id) || [])
-        
-        // Also include individually assigned students
-        const { data: individualAssignments } = await supabase
-          .from('challenge_student_assignments')
-          .select('student_id')
-          .eq('challenge_id', params.id)
-        
-        individualAssignments?.forEach(a => uniqueStudents.add(a.student_id))
+        const classIds = assignments.map((a: any) => a.class_id)
+        const [{ data: memberData }, { data: individualAssignments }] = await Promise.all([
+          supabase.from('class_members').select('user_id').in('class_id', classIds),
+          supabase.from('challenge_student_assignments').select('student_id').eq('challenge_id', params.id),
+        ])
+        const uniqueStudents = new Set(memberData?.map((m: any) => m.user_id) || [])
+        individualAssignments?.forEach((a: any) => uniqueStudents.add(a.student_id))
         setTotalStudents(uniqueStudents.size)
       } else {
         const { data: individualAssignments } = await supabase
-          .from('challenge_student_assignments')
-          .select('student_id')
-          .eq('challenge_id', params.id)
-        
-        if (individualAssignments && individualAssignments.length > 0) {
-          setTotalStudents(individualAssignments.length)
-        }
+          .from('challenge_student_assignments').select('student_id').eq('challenge_id', params.id)
+        if (individualAssignments && individualAssignments.length > 0) setTotalStudents(individualAssignments.length)
       }
     } else if (submissionData) {
       await loadOtherSubmissions(user.id, false, bankItemId)
     }
 
-    // Load total submission count.
-    // For bank-sourced challenges count by bank_item_id (all instances combined).
+    // Load comments + submission count in parallel
     const countQuery = bankItemId
       ? supabase.from('challenge_submissions').select('*', { count: 'exact', head: true }).eq('bank_item_id', bankItemId)
       : supabase.from('challenge_submissions').select('*', { count: 'exact', head: true }).eq('challenge_id', params.id)
-    const { count: totalCount } = await countQuery
-    
+
+    const submissionIdsForComments = [
+      ...(submissionData ? [submissionData.id] : []),
+    ]
+    const [{ count: totalCount }] = await Promise.all([
+      countQuery,
+      submissionIdsForComments.length > 0 ? loadCommentsForSubmissions(submissionIdsForComments) : Promise.resolve(),
+    ])
     setTotalSubmissionCount(totalCount || 0)
 
     setLoading(false)
 
-    // Scroll to targeted submission if ?submission= param is present
+    // Scroll to targeted submission
     if (targetSubmissionId) {
       setTimeout(() => {
         const el = document.getElementById(`submission-${targetSubmissionId}`)
