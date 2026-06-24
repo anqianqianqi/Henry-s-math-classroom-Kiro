@@ -2140,11 +2140,12 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, OV_ANIM_OPTIONS, overlayWidthPct } from '@/lib/overlayAnimations'
 import { BurstPolygonEditor } from '@/components/BurstPolygonEditor'
+import { ClipPolygonEditor, clipPolygonToCssPath, type ClipPolygonPoint } from '@/components/ClipPolygonEditor'
 import type { BurstConfig } from '@/components/OverlayBurstRenderer'
 import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
 import { OverlayShadowCanvas, DEFAULT_OVERLAY_SHADOW, type OverlayShadowConfig } from '@/components/OverlayShadowCanvas'
 type OverlayAnim = 'none' | 'float' | 'pulse' | 'rotate' | 'shimmer' | 'bounce' | 'sway' | 'flicker' | 'bling' | 'burst'
-interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig; shadow?: OverlayShadowConfig }
+interface OvConfig { x: number; y: number; scale: number; animation: OverlayAnim; speed: number; burst?: BurstConfig; shadow?: OverlayShadowConfig; clipPolygon?: ClipPolygonPoint[] }
 const DEFAULT_OV: OvConfig = { x: 15, y: 15, scale: 1.0, animation: 'float', speed: 1.0, shadow: undefined }
 const DEFAULT_BURST: BurstConfig = {
   polygon: [],
@@ -2371,7 +2372,7 @@ function OverlayEditorInline({
                         )
                       })()}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={o.image_url} alt={o.label} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS_FN(c.animation, speed) : undefined, transformOrigin: getTransformOrigin(c.animation), pointerEvents: 'none' }} draggable={false} />
+                      <img src={o.image_url} alt={o.label} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', animation: c.animation !== 'none' ? OV_CSS_FN(c.animation, speed) : undefined, transformOrigin: getTransformOrigin(c.animation), pointerEvents: 'none', clipPath: clipPolygonToCssPath(c.clipPolygon) }} draggable={false} />
                     </div>
                   )
                 })}
@@ -2456,6 +2457,24 @@ function OverlayEditorInline({
                       imageUrl={sel.image_url}
                       burst={cfg.burst ?? DEFAULT_BURST}
                       onChange={b => upd(sel.id, { burst: b })}
+                    />
+                  )}
+                  {/* Clip polygon editor — shown for sway / shimmer / flicker */}
+                  {(cfg.animation === 'sway' || cfg.animation === 'shimmer' || cfg.animation === 'flicker') && (
+                    <ClipPolygonEditor
+                      imageUrl={sel.image_url}
+                      polygon={cfg.clipPolygon ?? []}
+                      onChange={poly => upd(sel.id, { clipPolygon: poly.length > 0 ? poly : undefined })}
+                      label={
+                        cfg.animation === 'sway'    ? '🌿 Sway crop'    :
+                        cfg.animation === 'shimmer' ? '✨ Shimmer crop' :
+                                                      '🕯 Flicker crop'
+                      }
+                      color={
+                        cfg.animation === 'sway'    ? 'emerald' :
+                        cfg.animation === 'shimmer' ? 'teal'    :
+                                                      'indigo'
+                      }
                     />
                   )}
 

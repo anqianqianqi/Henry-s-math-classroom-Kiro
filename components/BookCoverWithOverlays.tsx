@@ -9,6 +9,7 @@ import { useEffect, useRef } from 'react'
 import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, type OverlayAnim, overlayWidthPct } from '@/lib/overlayAnimations'
 import { OverlayBurstRenderer } from './OverlayBurstRenderer'
 import { OverlayShadowCanvas } from './OverlayShadowCanvas'
+import { clipPolygonToCssPath } from './ClipPolygonEditor'
 
 export interface OverlayObject {
   id: string
@@ -151,6 +152,7 @@ export function BookCoverWithOverlays({
                 position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain',
                 animation: anim, transformOrigin,
                 animationPlayState: overlayAnimationPaused ? 'paused' : 'running',
+                clipPath: clipPolygonToCssPath((cfg as any).clipPolygon),
                 zIndex: 1,
               }}
             />
