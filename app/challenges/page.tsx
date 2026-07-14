@@ -169,7 +169,7 @@ export default function ChallengesPage() {
       loadWeekGrid()
 
       // ── Bulk load all stats in 5 queries instead of N×4 queries ─────────
-      const challengeIds = challengesData.map((c: any) => c.id)
+      const challengeIds = (challengesData || []).map((c: any) => c.id)
 
       // Fetch everything in parallel
       const [
@@ -224,7 +224,7 @@ export default function ChallengesPage() {
       }
 
       // Now build per-challenge stats entirely in JS — zero extra queries
-      const challengesWithStats = challengesData.map((challenge: any) => {
+      const challengesWithStats = (challengesData || []).map((challenge: any) => {
         const classIds = classIdsByChallengeMap.get(challenge.id) || []
         const studentSet = new Set<string>()
         for (const cid of classIds) {
