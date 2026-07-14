@@ -83,14 +83,17 @@ export default function DashboardPage() {
       setIsAdmin(false)
     }
 
-    // ── Parallel: stats + today's challenges + pet room ───────────────────
-    await Promise.all([
+    // ── Show the page immediately — don't wait for stats/challenges/pet room ─
+    // The page renders as soon as we have profile + role. Stats and challenges
+    // populate in the background without blocking the initial paint.
+    setLoading(false)
+
+    // ── Parallel: stats + today's challenges + pet room (non-blocking) ────
+    Promise.all([
       loadStats(user.id, hasTeacherRole || hasAdminRole),
       loadTodayChallenge(user.id, hasTeacherRole || hasAdminRole),
       loadPetRoom(user.id),
     ])
-
-    setLoading(false)
   }
 
   async function loadPetRoom(userId: string) {
@@ -342,56 +345,48 @@ export default function DashboardPage() {
       ])
 
       let classAssignedIds: string[] = []
-      if (classIds && classIds.length > 0) {
-        const { data: assignments } = await supabase
-          .from('challenge_assignments')
-          .select('challenge_id')
-          .in('class_id', classIds.map((m: any) => m.class_id))
-        classAssignedIds = assignments?.map((a: any) => a.challenge_id) || []
-      }
+      // Fetch class challenge assignments and user_roles lookup in parallel
+      const [classAssignmentsResult, teacherUserIdsResult] = await Promise.all([
+        classIds && classIds.length > 0
+          ? supabase.from('challenge_assignments').select('challenge_id').in('class_id', classIds.map((m: any) => m.class_id))
+          : Promise.resolve({ data: [] }),
+        // Resolve teacher user IDs from pre-fetched role IDs
+        (async () => {
+          try {
+            const teacherRoleIds = ((teacherRoleResult as any)?.data || []).map((r: any) => r.id)
+            if (teacherRoleIds.length === 0) return []
+            const { data: rows } = await supabase.from('user_roles').select('user_id').in('role_id', teacherRoleIds).is('class_id', null)
+            return [...new Set((rows || []).map((r: any) => r.user_id))]
+          } catch (_) { return [] }
+        })(),
+      ])
+      classAssignedIds = (classAssignmentsResult as any).data?.map((a: any) => a.challenge_id) || []
+      const teacherUserIds: string[] = teacherUserIdsResult as string[]
 
       const individualIds = individualAssignments?.map((a: any) => a.challenge_id) || []
       const allAssignedIds = [...new Set([...classAssignedIds, ...individualIds])]
       if (allAssignedIds.length === 0) return
 
-      // 1. All submissions by this student for their assigned challenges
-      const { data: submissions } = await supabase
-        .from('challenge_submissions')
-        .select('id, challenge_id')
-        .in('challenge_id', allAssignedIds)
-        .eq('user_id', userId)
+      // 1. Submissions + today's challenges in parallel (both depend only on allAssignedIds)
+      const [submissionsResult, todayChallengesResult] = await Promise.all([
+        supabase.from('challenge_submissions').select('id, challenge_id').in('challenge_id', allAssignedIds).eq('user_id', userId),
+        supabase.from('daily_challenges').select('id, title, challenge_date').in('id', allAssignedIds).eq('challenge_date', today).order('created_at', { ascending: false }),
+      ])
+      const submissions = submissionsResult.data
       if (!submissions || submissions.length === 0) return
 
       const submittedMap = new Map((submissions).map((s: any) => [s.challenge_id, s.id]))
       const submissionIds = submissions.map((s: any) => s.id)
-
-      // 2. Find teacher/admin user IDs (use pre-fetched teacher roles from parallel fetch)
-      let teacherUserIds: string[] = []
-      try {
-        const teacherRoleIds = ((teacherRoleResult as any)?.data || []).map((r: any) => r.id)
-        if (teacherRoleIds.length > 0) {
-          const { data: teacherUserRows } = await supabase
-            .from('user_roles').select('user_id')
-            .in('role_id', teacherRoleIds).is('class_id', null)
-          teacherUserIds = [...new Set((teacherUserRows || []).map((r: any) => r.user_id))]
-        }
-      } catch (_) {}
-
-      // 3. Get latest teacher comment per submission + today's challenges in parallel
       const latestTeacherCommentAt: Record<string, string> = {}
-      const [teacherCommentsResult, todayChallengesResult] = await Promise.all([
-        teacherUserIds.length > 0 && submissionIds.length > 0
-          ? supabase.from('submission_comments').select('submission_id, created_at')
-              .in('submission_id', submissionIds).in('user_id', teacherUserIds)
-              .order('created_at', { ascending: false })
-          : Promise.resolve({ data: [] }),
-        supabase.from('daily_challenges').select('id, title, challenge_date')
-          .in('id', allAssignedIds).eq('challenge_date', today)
-          .order('created_at', { ascending: false }),
-      ])
-      for (const c of (teacherCommentsResult as any).data || []) {
-        if (!latestTeacherCommentAt[c.submission_id]) {
-          latestTeacherCommentAt[c.submission_id] = c.created_at
+      // Fetch teacher comments (today's challenges already fetched above in parallel with submissions)
+      if (teacherUserIds.length > 0 && submissionIds.length > 0) {
+        const { data: teacherComments } = await supabase.from('submission_comments').select('submission_id, created_at')
+          .in('submission_id', submissionIds).in('user_id', teacherUserIds)
+          .order('created_at', { ascending: false })
+        for (const c of teacherComments || []) {
+          if (!latestTeacherCommentAt[c.submission_id]) {
+            latestTeacherCommentAt[c.submission_id] = c.created_at
+          }
         }
       }
 
