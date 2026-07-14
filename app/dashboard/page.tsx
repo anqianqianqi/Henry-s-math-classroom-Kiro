@@ -119,9 +119,9 @@ export default function DashboardPage() {
           supabase.from('pet_room_backgrounds')
             .select('image_url, is_active, frame_overlay_url, frame_slot')
             .eq('id', bgId).maybeSingle(),
-          supabase.from('pet_room_backgrounds')
+          Promise.resolve(supabase.from('pet_room_backgrounds')
             .select('animation_zones')
-            .eq('id', bgId).maybeSingle().then(r => r).catch(() => ({ data: null })),
+            .eq('id', bgId).maybeSingle()).catch(() => ({ data: null })),
         ])
         if (bg?.image_url && bg.is_active) {
           setPetRoomBgUrl(bg.image_url)
