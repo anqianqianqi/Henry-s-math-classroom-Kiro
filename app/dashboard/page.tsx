@@ -121,7 +121,7 @@ export default function DashboardPage() {
             .eq('id', bgId).maybeSingle(),
           supabase.from('pet_room_backgrounds')
             .select('animation_zones')
-            .eq('id', bgId).maybeSingle().catch(() => ({ data: null })),
+            .eq('id', bgId).maybeSingle().then(r => r).catch(() => ({ data: null })),
         ])
         if (bg?.image_url && bg.is_active) {
           setPetRoomBgUrl(bg.image_url)
@@ -200,7 +200,7 @@ export default function DashboardPage() {
       ] = await Promise.all([
         supabase.from('class_members').select('class_id').eq('user_id', userId),
         supabase.from('challenge_submissions').select('submitted_at').eq('user_id', userId).order('submitted_at', { ascending: false }),
-        supabase.from('student_wallets').select('total_earned, spendable_balance').eq('user_id', userId).single().catch(() => ({ data: null })),
+        Promise.resolve(supabase.from('student_wallets').select('total_earned, spendable_balance').eq('user_id', userId).single()).catch(() => ({ data: null })),
       ])
 
       const memberCount = userClassMemberships?.length ?? 0
@@ -338,7 +338,7 @@ export default function DashboardPage() {
         supabase.from('class_members').select('class_id').eq('user_id', userId),
         supabase.from('challenge_student_assignments').select('challenge_id').eq('student_id', userId),
         // Pre-fetch teacher role ids for comment badge calculation
-        supabase.from('roles').select('id').in('name', ['teacher', 'administrator']).catch(() => ({ data: null })),
+        Promise.resolve(supabase.from('roles').select('id').in('name', ['teacher', 'administrator'])).catch(() => ({ data: null })),
       ])
 
       let classAssignedIds: string[] = []

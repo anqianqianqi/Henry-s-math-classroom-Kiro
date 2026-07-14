@@ -262,8 +262,8 @@ export default function ChallengePage() {
       userRolesResult,
     ] = await Promise.all([
       supabase.from('daily_challenges').select('*').eq('id', params.id).single(),
-      supabase.from('book_skins').select('skin_type, image_url, cover_layout, is_animated, has_overlays, id').eq('is_default', true).eq('is_active', true).catch(() => ({ data: null })),
-      supabase.from('user_book_skin_preferences').select('cover_skin_id, page_skin_id').eq('user_id', user.id).maybeSingle().catch(() => ({ data: null })),
+      Promise.resolve(supabase.from('book_skins').select('skin_type, image_url, cover_layout, is_animated, has_overlays, id').eq('is_default', true).eq('is_active', true)).catch(() => ({ data: null })),
+      Promise.resolve(supabase.from('user_book_skin_preferences').select('cover_skin_id, page_skin_id').eq('user_id', user.id).maybeSingle()).catch(() => ({ data: null })),
       supabase.from('user_roles').select('role_id').eq('user_id', user.id).is('class_id', null),
     ])
 
