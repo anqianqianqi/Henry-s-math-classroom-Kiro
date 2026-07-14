@@ -142,23 +142,18 @@ export default function ChallengesPage() {
     setIsTeacher(canSeeAll)
 
     if (canSeeAll) {
-      // Load all classes for filter
-      const { data: classesData } = await supabase
-        .from('classes')
-        .select('id, name')
-        .eq('is_active', true)
-        .order('name')
-      
+      // Parallel: classes list + tags + all challenges + week grid
+      const [
+        { data: classesData },
+        { data: tagsData },
+        { data: challengesData },
+      ] = await Promise.all([
+        supabase.from('classes').select('id, name').eq('is_active', true).order('name'),
+        supabase.from('challenge_tags').select('id, challenge_tag_names(language, name)').order('created_at'),
+        supabase.from('daily_challenges').select('*').eq('is_hidden', false).order('challenge_date', { ascending: false }),
+      ])
+
       setClasses(classesData || [])
-
-      // Load week grid for the schedule overview
-      await loadWeekGrid()
-
-      // Load tag names for filter
-      const { data: tagsData } = await supabase
-        .from('challenge_tags')
-        .select('id, challenge_tag_names(language, name)')
-        .order('created_at')
       setAllTagData(tagsData || [])
       const tagMap: Record<string, string> = {}
       tagsData?.forEach((t: any) => {
@@ -170,28 +165,81 @@ export default function ChallengesPage() {
       })
       setAvailableTagsMap(tagMap)
 
-      // Teachers and admins see all published challenges (not pool/bank items)
-      const { data: challengesData } = await supabase
-        .from('daily_challenges')
-        .select('*')
-        .eq('is_hidden', false)
-        .order('challenge_date', { ascending: false })
+      // Load week grid in the background — don't block challenge list rendering
+      loadWeekGrid()
 
-      if (challengesData) {
-        // Load stats for each challenge
-        const challengesWithStats = await Promise.all(
-          challengesData.map(async (challenge) => {
-            const stats = await loadChallengeStats(challenge.id)
-            const classNames = await loadChallengeClasses(challenge.id)
-            return {
-              ...challenge,
-              ...stats,
-              class_names: classNames
-            }
-          })
-        )
-        setChallenges(challengesWithStats)
+      // ── Bulk load all stats in 5 queries instead of N×4 queries ─────────
+      const challengeIds = challengesData.map((c: any) => c.id)
+
+      // Fetch everything in parallel
+      const [
+        { data: allAssignments },
+        { data: allSubmissions },
+        { data: allIndivAssignments },
+        { data: allClasses },
+      ] = await Promise.all([
+        supabase.from('challenge_assignments').select('challenge_id, class_id').in('challenge_id', challengeIds),
+        supabase.from('challenge_submissions').select('challenge_id').in('challenge_id', challengeIds),
+        supabase.from('challenge_student_assignments').select('challenge_id, student_id').in('challenge_id', challengeIds),
+        supabase.from('classes').select('id, name').eq('is_active', true),
+      ])
+
+      // Build lookup maps
+      const classNameMap = new Map((allClasses || []).map((c: any) => [c.id, c.name]))
+
+      // submissions per challenge
+      const submissionCountMap = new Map<string, number>()
+      for (const s of allSubmissions || []) {
+        submissionCountMap.set(s.challenge_id, (submissionCountMap.get(s.challenge_id) || 0) + 1)
       }
+
+      // class_ids per challenge
+      const classIdsByChallengeMap = new Map<string, string[]>()
+      for (const a of allAssignments || []) {
+        const list = classIdsByChallengeMap.get(a.challenge_id) || []
+        list.push(a.class_id)
+        classIdsByChallengeMap.set(a.challenge_id, list)
+      }
+
+      // individual student_ids per challenge
+      const indivStudentsByChallengeMap = new Map<string, Set<string>>()
+      for (const a of allIndivAssignments || []) {
+        const set = indivStudentsByChallengeMap.get(a.challenge_id) || new Set<string>()
+        set.add(a.student_id)
+        indivStudentsByChallengeMap.set(a.challenge_id, set)
+      }
+
+      // Fetch class members for all class IDs in one query
+      const allClassIds = [...new Set((allAssignments || []).map((a: any) => a.class_id))]
+      const { data: allClassMembers } = allClassIds.length > 0
+        ? await supabase.from('class_members').select('class_id, user_id').in('class_id', allClassIds)
+        : { data: [] }
+
+      // members per class
+      const membersByClassMap = new Map<string, string[]>()
+      for (const m of allClassMembers || []) {
+        const list = membersByClassMap.get(m.class_id) || []
+        list.push(m.user_id)
+        membersByClassMap.set(m.class_id, list)
+      }
+
+      // Now build per-challenge stats entirely in JS — zero extra queries
+      const challengesWithStats = challengesData.map((challenge: any) => {
+        const classIds = classIdsByChallengeMap.get(challenge.id) || []
+        const studentSet = new Set<string>()
+        for (const cid of classIds) {
+          for (const uid of (membersByClassMap.get(cid) || [])) studentSet.add(uid)
+        }
+        for (const uid of (indivStudentsByChallengeMap.get(challenge.id) || new Set())) {
+          studentSet.add(uid)
+        }
+        const submissionCount = submissionCountMap.get(challenge.id) || 0
+        const totalStudents = studentSet.size
+        const completionRate = totalStudents > 0 ? Math.round((submissionCount / totalStudents) * 100) : 0
+        const classNames = classIds.map((cid: string) => classNameMap.get(cid)).filter(Boolean)
+        return { ...challenge, submission_count: submissionCount, total_students: totalStudents, completion_rate: completionRate, class_names: classNames }
+      })
+      setChallenges(challengesWithStats)
     } else {
       // Students see challenges assigned to their classes
       const { data: classMembers } = await supabase
@@ -408,9 +456,23 @@ export default function ChallengesPage() {
           deduped.push(c)
         }
 
-        const withExtras = await Promise.all(
-          deduped.map(async (c) => {
-            const names = await loadChallengeClasses(c.id)
+        // Bulk-fetch class names for all deduped challenges (one query instead of N)
+        const dedupedIds = deduped.map(c => c.id)
+        const { data: bulkAssignments } = dedupedIds.length > 0
+          ? await supabase.from('challenge_assignments').select('challenge_id, class_id').in('challenge_id', dedupedIds)
+          : { data: [] }
+        const { data: bulkClasses } = await supabase.from('classes').select('id, name')
+        const bulkClassNameMap = new Map((bulkClasses || []).map((c: any) => [c.id, c.name]))
+        const classNamesByChallengeMap = new Map<string, string[]>()
+        for (const a of bulkAssignments || []) {
+          const list = classNamesByChallengeMap.get(a.challenge_id) || []
+          const name = bulkClassNameMap.get(a.class_id)
+          if (name) list.push(name)
+          classNamesByChallengeMap.set(a.challenge_id, list)
+        }
+
+        const withExtras = deduped.map((c) => {
+            const names = classNamesByChallengeMap.get(c.id) || []
             const sub = findSub(c)
             const allDates = c.source_bank_id
               ? (bankIdToDates.get(c.source_bank_id) || [c.challenge_date]).sort()
@@ -424,7 +486,6 @@ export default function ChallengesPage() {
               my_is_locked: sub?.is_locked ?? false,
             }
           })
-        )
         setChallenges(withExtras)
       } else {
         setChallenges([])
