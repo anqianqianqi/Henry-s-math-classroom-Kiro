@@ -4,5 +4,12 @@
       "path": "/api/cron/scheduler",
       "schedule": "0 6 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "app/api/generate-single-object/route.ts": { "maxDuration": 300 },
+    "app/api/preview-book-skin/route.ts": { "maxDuration": 300 },
+    "app/api/generate-theme-objects/route.ts": { "maxDuration": 300 },
+    "app/api/generate-cluster-objects/route.ts": { "maxDuration": 300 },
+    "app/api/enrich-cluster-items/route.ts": { "maxDuration": 30 }
+  }
 }

@@ -17,6 +17,89 @@ import type { ShopItem, Redemption } from '@/lib/types/shop'
 
 const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/AnimatedRoomLayer'), { ssr: false })
 
+// ── ShopCoverZoom — simple reliable zoom preview for book cover skins ─────────
+// Image in normal flow sets height; overlays + title absolute on top.
+import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct } from '@/lib/overlayAnimations'
+import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
+const SHOP_ZP_KEYFRAMES = buildKeyframesCSS('szp') + `
+@keyframes szp-pulse-glow { 0%,100%{opacity:1} 50%{opacity:0.7} }
+`
+function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
+  const [overlays, setOverlays] = useState<any[]>([])
+  const tl = (skin as any).cover_layout?.title
+  const pl = (skin as any).cover_layout?.prompt
+
+  // Inject keyframes into document head (reliable across modal portals)
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (document.getElementById('szp-keyframes')) return
+    const el = document.createElement('style')
+    el.id = 'szp-keyframes'
+    el.textContent = SHOP_ZP_KEYFRAMES
+    document.head.appendChild(el)
+  }, [])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.from('book_skin_overlays').select('*').eq('skin_id', skin.id)
+      .order('sort_order', { ascending: true })
+      .then(({ data, error }) => {
+        console.log('[ShopCoverZoom] overlays for', skin.id, ':', data?.length, error?.message)
+        setOverlays(data ?? [])
+      })
+  }, [skin.id])
+
+  return (
+    <>
+      <style id="szp-kf">{SHOP_ZP_KEYFRAMES}</style>
+      <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={skin.image_url} alt={skin.name} style={{ display: 'block', width: '100%', height: 'auto' }} draggable={false} />
+        {overlays.map(obj => {
+          const cfg = obj.overlay_config
+          if (!cfg) return null
+          const sz = overlayWidthPct(cfg.scale ?? 1.0)
+          const anim = cfg.animation && cfg.animation !== 'none' ? buildAnimCSS(cfg.animation, 'szp', cfg.speed ?? 1.0) : undefined
+          const transformOrigin = getTransformOrigin(cfg.animation)
+          if (cfg.animation === 'burst' && cfg.burst?.polygon?.length >= 3) {
+            return (
+              <OverlayBurstRenderer key={obj.id} imageUrl={obj.image_url}
+                containerWidthPx={420} scale={cfg.scale ?? 1.0}
+                speed={cfg.speed ?? 1.0} burst={cfg.burst}
+                style={{ left: `${cfg.x}%`, top: `${cfg.y}%`, transform: 'translate(-50%,-50%)' }} />
+            )
+          }
+          return (
+            <div
+              key={obj.id}
+              style={{
+                position: 'absolute', left: `${cfg.x}%`, top: `${cfg.y}%`,
+                transform: 'translate(-50%,-50%)', width: sz, height: sz,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={obj.image_url} alt={obj.label} draggable={false}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', animation: anim, transformOrigin }} />
+            </div>
+          )
+        })}
+        <div className="absolute text-center px-4 w-full" style={{ left: `${tl?.x ?? 50}%`, top: `${tl?.y ?? 22}%`, transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
+          <h2 className="font-bold leading-snug" style={{ fontSize: tl?.fontSize ?? 20, color: tl?.color ?? '#2d1a00', fontFamily: '"Georgia","Times New Roman",serif', textShadow: (tl?.shadow ?? true) ? '0 1px 8px rgba(255,255,255,0.6),0 0 16px rgba(0,0,0,0.4)' : undefined, letterSpacing: '0.04em' }}>
+            Challenge Title Preview
+          </h2>
+        </div>
+        <div className="absolute flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap"
+          style={{ left: `${pl?.x ?? 50}%`, top: `${pl?.y ?? 82}%`, transform: 'translate(-50%,-50%)',
+            fontSize: pl?.fontSize ?? 14, color: pl?.color ?? 'rgba(240,215,140,0.97)',
+            textShadow: '0 1px 4px rgba(0,0,0,0.8)', background: 'rgba(40,25,5,0.72)', border: '1px solid rgba(200,160,60,0.55)',
+            backdropFilter: 'blur(6px)', pointerEvents: 'none' }}>
+          <span>📜</span><span style={{ letterSpacing: '0.06em' }}>Open the Book</span>
+        </div>
+      </div>
+    </>
+  )
+}
+
 interface ShopItemWithCount extends ShopItem {
   redemption_count: number
   blindbox_remaining?: number
@@ -90,14 +173,14 @@ function BookCoverBrowseModal({
                 const canAfford = balance >= si.cost
                 return (
                   <div key={skin.id} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100 hover:border-amber-300 transition-colors flex flex-col">
-                    {/* Portrait image — click to zoom preview */}
-                    <div className="relative cursor-zoom-in group" style={{ aspectRatio: '400/620' }}
+                    {/* Portrait thumbnail — click to open full live preview */}
+                    <div className="relative group cursor-pointer" style={{ aspectRatio: '400/620' }}
                       onClick={() => setPreviewSkin(skin)}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={skin.image_url} alt={skin.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                        <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">🔍 Zoom</span>
+                        className="absolute inset-0 w-full h-full object-contain" />
+                      <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">🔍 Preview</span>
                       </div>
                       {isOwned && (
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
@@ -131,19 +214,17 @@ function BookCoverBrowseModal({
         </div>
       </div>
 
-      {/* Fullscreen zoom preview — portrait aspect */}
+      {/* Fullscreen zoom preview — full live preview with title + animations */}
       {previewSkin && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4" onClick={() => setPreviewSkin(null)}>
-          <div className="relative max-h-full" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={previewSkin.image_url} alt={previewSkin.name}
-              className="max-h-[85vh] w-auto rounded-xl shadow-2xl" />
+          <div className="relative flex flex-col items-center gap-3" style={{ maxWidth: 420, width: '100%' }} onClick={e => e.stopPropagation()}>
+            <ShopCoverZoom skin={previewSkin} />
             <button onClick={() => setPreviewSkin(null)}
               className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
               ✕
             </button>
-            <div className="absolute bottom-2 left-2 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-xl text-xs font-semibold">
-              {previewSkin.name} — {previewSkin.shopItem?.cost} pts
+            <div className="flex items-center justify-between w-full px-1">
+              <span className="text-white text-sm font-semibold drop-shadow">{previewSkin.name} — {previewSkin.shopItem?.cost} pts</span>
             </div>
           </div>
         </div>
@@ -218,13 +299,13 @@ function RoomBrowseModal({
                 return (
                   <div key={bg.id} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100 hover:border-primary-300 transition-colors">
                     {/* Image — click to animate preview */}
-                    <div className="relative w-full aspect-video cursor-zoom-in group overflow-hidden"
+                    <div className="relative w-full aspect-video group overflow-hidden cursor-pointer"
                       onClick={() => setPreviewBg(bg)}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={bg.image_url} alt={bg.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                        <span className="bg-black/60 text-white text-xs font-semibold px-2.5 py-1 rounded-full">▶ Preview</span>
+                      <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/10">
+                        <span className="bg-black/60 text-white text-xs font-semibold px-2.5 py-1 rounded-full">🔍 Preview</span>
                       </div>
                       {isOwned && (
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
@@ -765,7 +846,7 @@ export default function ShopPage() {
     try {
       const { data: skinRows } = await supabase
         .from('book_skins')
-        .select('id, name, description, image_url, skin_type, shop_item_id')
+        .select('id, name, description, image_url, skin_type, shop_item_id, cover_layout, has_overlays')
         .eq('is_active', true)
         .eq('skin_type', 'cover')
         .not('shop_item_id', 'is', null)

@@ -52,21 +52,13 @@ export default function DashboardPage() {
 
     setUser(user)
 
-    // Get user profile
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+    // ── Parallel: profile + user_roles ────────────────────────────────────
+    const [{ data: profile }, { data: userRoles, error: rolesError }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', user.id).single(),
+      supabase.from('user_roles').select('role_id').eq('user_id', user.id).is('class_id', null),
+    ])
 
     setProfile(profile)
-
-    // Check if user is a teacher - using RPC for reliable role check
-    const { data: userRoles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('role_id')
-      .eq('user_id', user.id)
-      .is('class_id', null)
 
     console.log('User roles:', { userRoles, rolesError, userId: user.id })
 
@@ -91,22 +83,30 @@ export default function DashboardPage() {
       setIsAdmin(false)
     }
 
-    // Load stats - pass role directly since setState is async
-    await loadStats(user.id, hasTeacherRole || hasAdminRole)
-    await loadTodayChallenge(user.id, hasTeacherRole || hasAdminRole)
+    // ── Show the page immediately — don't wait for stats/challenges/pet room ─
+    // The page renders as soon as we have profile + role. Stats and challenges
+    // populate in the background without blocking the initial paint.
+    setLoading(false)
 
-    // Load pet room background
+    // ── Parallel: stats + today's challenges + pet room (non-blocking) ────
+    Promise.all([
+      loadStats(user.id, hasTeacherRole || hasAdminRole),
+      loadTodayChallenge(user.id, hasTeacherRole || hasAdminRole),
+      loadPetRoom(user.id),
+    ])
+  }
+
+  async function loadPetRoom(userId: string) {
     try {
       const { data: userRoom } = await supabase
         .from('user_pet_room')
         .select('background_id, selected_photo_url')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle()
 
       let bgId = userRoom?.background_id ?? null
 
       if (!bgId) {
-        // Fall back to the default room
         const { data: defaultRoom } = await supabase
           .from('pet_room_backgrounds')
           .select('id')
@@ -117,56 +117,44 @@ export default function DashboardPage() {
       }
 
       if (bgId) {
-        const { data: bg } = await supabase
-          .from('pet_room_backgrounds')
-          .select('image_url, is_active, frame_overlay_url, frame_slot')
-          .eq('id', bgId)
-          .maybeSingle()
-        // Only show if the room is still active — deactivated rooms are hidden even for owners
+        // Parallel: background data + animation zones
+        const [{ data: bg }, { data: bgAnim }] = await Promise.all([
+          supabase.from('pet_room_backgrounds')
+            .select('image_url, is_active, frame_overlay_url, frame_slot')
+            .eq('id', bgId).maybeSingle(),
+          Promise.resolve(supabase.from('pet_room_backgrounds')
+            .select('animation_zones')
+            .eq('id', bgId).maybeSingle()).catch(() => ({ data: null })),
+        ])
         if (bg?.image_url && bg.is_active) {
           setPetRoomBgUrl(bg.image_url)
           setPetRoomFrameUrl(bg.frame_overlay_url ?? null)
           setPetRoomFrameSlot(bg.frame_slot ?? null)
-          // Fetch animation zones separately so a missing column never breaks the background
-          try {
-            const { data: bgAnim } = await supabase
-              .from('pet_room_backgrounds')
-              .select('animation_zones')
-              .eq('id', bgId)
-              .maybeSingle()
-            setPetRoomAnimZones((bgAnim as any)?.animation_zones ?? [])
-          } catch (_) { setPetRoomAnimZones([]) }
+          setPetRoomAnimZones((bgAnim as any)?.animation_zones ?? [])
         }
       }
 
-      // Load the user's selected frame photo from user_pet_room
       if (userRoom?.selected_photo_url) {
         setUserPhotoUrl(userRoom.selected_photo_url)
       }
     } catch (_) {
       // pet_room_backgrounds table may not exist yet — ignore
     }
-
-    setLoading(false)
   }
 
   async function loadStats(userId: string, teacherRole: boolean = false) {
     try {
       if (teacherRole) {
-        // Teachers see all classes and all challenges
-        const { count: classesCount } = await supabase
-          .from('classes')
-          .select('*', { count: 'exact', head: true })
-
-        const { count: challengesCount } = await supabase
-          .from('daily_challenges')
-          .select('*', { count: 'exact', head: true })
-
-        // Count pending join requests across all classes
-        const { count: pendingRequests } = await supabase
-          .from('class_join_requests')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'pending')
+        // Teachers see all classes and all challenges — run counts in parallel
+        const [
+          { count: classesCount },
+          { count: challengesCount },
+          { count: pendingRequests },
+        ] = await Promise.all([
+          supabase.from('classes').select('*', { count: 'exact', head: true }),
+          supabase.from('daily_challenges').select('*', { count: 'exact', head: true }),
+          supabase.from('class_join_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        ])
 
         // Count ungraded homework submissions for teacher's assignments
         try {
@@ -207,23 +195,25 @@ export default function DashboardPage() {
         return
       }
 
-      // Students: count only their classes and challenges
-      const { count: memberCount } = await supabase
-        .from('class_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
+      // Students: count only their classes and challenges — run class membership + submissions + wallet in parallel
+      const [
+        { data: userClassMemberships },
+        { data: submissionsForStreak },
+        walletResult,
+      ] = await Promise.all([
+        supabase.from('class_members').select('class_id').eq('user_id', userId),
+        supabase.from('challenge_submissions').select('submitted_at').eq('user_id', userId).order('submitted_at', { ascending: false }),
+        Promise.resolve(supabase.from('student_wallets').select('total_earned, spendable_balance').eq('user_id', userId).single()).catch(() => ({ data: null })),
+      ])
 
-      const { data: userClassIds } = await supabase
-        .from('class_members')
-        .select('class_id')
-        .eq('user_id', userId)
+      const memberCount = userClassMemberships?.length ?? 0
 
       let challengesCount = 0
-      if (userClassIds && userClassIds.length > 0) {
+      if (userClassMemberships && userClassMemberships.length > 0) {
         const { data: assignmentData } = await supabase
           .from('challenge_assignments')
           .select('challenge_id')
-          .in('class_id', userClassIds.map(m => m.class_id))
+          .in('class_id', userClassMemberships.map(m => m.class_id))
         const allChallengeIds = [...new Set(assignmentData?.map(a => a.challenge_id) || [])]
         if (allChallengeIds.length > 0) {
           const today = localDateString()
@@ -235,12 +225,9 @@ export default function DashboardPage() {
           challengesCount = visibleChallenges?.length || 0
         }
       }
+
       // Calculate day streak from challenge submissions
-      const { data: submissions } = await supabase
-        .from('challenge_submissions')
-        .select('submitted_at')
-        .eq('user_id', userId)
-        .order('submitted_at', { ascending: false })
+      const submissions = submissionsForStreak
 
       let dayStreak = 0
       if (submissions && submissions.length > 0) {
@@ -278,16 +265,11 @@ export default function DashboardPage() {
         }
       }
 
-      // Read total score and spendable balance from student_wallets (single row read)
+      // Read total score and spendable balance — already fetched in parallel above
       let totalScore = 0
       let spendableBalance = 0
       try {
-        const { data: walletData } = await supabase
-          .from('student_wallets')
-          .select('total_earned, spendable_balance')
-          .eq('user_id', userId)
-          .single()
-
+        const walletData = (walletResult as any)?.data
         if (walletData) {
           totalScore = walletData.total_earned ?? 0
           spendableBalance = walletData.spendable_balance ?? 0
@@ -350,70 +332,62 @@ export default function DashboardPage() {
       }
 
       // ── Student path ──
-      const { data: classIds } = await supabase
-        .from('class_members')
-        .select('class_id')
-        .eq('user_id', userId)
+      // Fetch class memberships, individual assignments, and teacher roles in parallel
+      const [
+        { data: classIds },
+        { data: individualAssignments },
+        teacherRoleResult,
+      ] = await Promise.all([
+        supabase.from('class_members').select('class_id').eq('user_id', userId),
+        supabase.from('challenge_student_assignments').select('challenge_id').eq('student_id', userId),
+        // Pre-fetch teacher role ids for comment badge calculation
+        Promise.resolve(supabase.from('roles').select('id').in('name', ['teacher', 'administrator'])).catch(() => ({ data: null })),
+      ])
 
       let classAssignedIds: string[] = []
-      if (classIds && classIds.length > 0) {
-        const { data: assignments } = await supabase
-          .from('challenge_assignments')
-          .select('challenge_id')
-          .in('class_id', classIds.map((m: any) => m.class_id))
-        classAssignedIds = assignments?.map((a: any) => a.challenge_id) || []
-      }
+      // Fetch class challenge assignments and user_roles lookup in parallel
+      const [classAssignmentsResult, teacherUserIdsResult] = await Promise.all([
+        classIds && classIds.length > 0
+          ? supabase.from('challenge_assignments').select('challenge_id').in('class_id', classIds.map((m: any) => m.class_id))
+          : Promise.resolve({ data: [] }),
+        // Resolve teacher user IDs from pre-fetched role IDs
+        (async () => {
+          try {
+            const teacherRoleIds = ((teacherRoleResult as any)?.data || []).map((r: any) => r.id)
+            if (teacherRoleIds.length === 0) return []
+            const { data: rows } = await supabase.from('user_roles').select('user_id').in('role_id', teacherRoleIds).is('class_id', null)
+            return [...new Set((rows || []).map((r: any) => r.user_id))]
+          } catch (_) { return [] }
+        })(),
+      ])
+      classAssignedIds = (classAssignmentsResult as any).data?.map((a: any) => a.challenge_id) || []
+      const teacherUserIds: string[] = teacherUserIdsResult as string[]
 
-      const { data: individualAssignments } = await supabase
-        .from('challenge_student_assignments')
-        .select('challenge_id')
-        .eq('student_id', userId)
       const individualIds = individualAssignments?.map((a: any) => a.challenge_id) || []
-
       const allAssignedIds = [...new Set([...classAssignedIds, ...individualIds])]
       if (allAssignedIds.length === 0) return
 
-      // 1. All submissions by this student for their assigned challenges
-      const { data: submissions } = await supabase
-        .from('challenge_submissions')
-        .select('id, challenge_id')
-        .in('challenge_id', allAssignedIds)
-        .eq('user_id', userId)
+      // 1. Submissions + today's challenges in parallel (both depend only on allAssignedIds)
+      const [submissionsResult, todayChallengesResult] = await Promise.all([
+        supabase.from('challenge_submissions').select('id, challenge_id').in('challenge_id', allAssignedIds).eq('user_id', userId),
+        supabase.from('daily_challenges').select('id, title, challenge_date').in('id', allAssignedIds).eq('challenge_date', today).order('created_at', { ascending: false }),
+      ])
+      const submissions = submissionsResult.data
       if (!submissions || submissions.length === 0) return
 
       const submittedMap = new Map((submissions).map((s: any) => [s.challenge_id, s.id]))
       const submissionIds = submissions.map((s: any) => s.id)
-
-      // 2. Find teacher/admin user IDs
-      let teacherUserIds: string[] = []
-      try {
-        const { data: teacherRoleRows } = await supabase
-          .from('roles').select('id').in('name', ['teacher', 'administrator'])
-        const teacherRoleIds = (teacherRoleRows || []).map((r: any) => r.id)
-        if (teacherRoleIds.length > 0) {
-          const { data: teacherUserRows } = await supabase
-            .from('user_roles').select('user_id')
-            .in('role_id', teacherRoleIds).is('class_id', null)
-          teacherUserIds = [...new Set((teacherUserRows || []).map((r: any) => r.user_id))]
-        }
-      } catch (_) {}
-
-      // 3. Get latest teacher comment per submission
-      const latestTeacherCommentAt: Record<string, string> = {} // submissionId → ISO timestamp
+      const latestTeacherCommentAt: Record<string, string> = {}
+      // Fetch teacher comments (today's challenges already fetched above in parallel with submissions)
       if (teacherUserIds.length > 0 && submissionIds.length > 0) {
-        try {
-          const { data: teacherComments } = await supabase
-            .from('submission_comments')
-            .select('submission_id, created_at')
-            .in('submission_id', submissionIds)
-            .in('user_id', teacherUserIds)
-            .order('created_at', { ascending: false })
-          for (const c of teacherComments || []) {
-            if (!latestTeacherCommentAt[c.submission_id]) {
-              latestTeacherCommentAt[c.submission_id] = c.created_at
-            }
+        const { data: teacherComments } = await supabase.from('submission_comments').select('submission_id, created_at')
+          .in('submission_id', submissionIds).in('user_id', teacherUserIds)
+          .order('created_at', { ascending: false })
+        for (const c of teacherComments || []) {
+          if (!latestTeacherCommentAt[c.submission_id]) {
+            latestTeacherCommentAt[c.submission_id] = c.created_at
           }
-        } catch (_) {}
+        }
       }
 
       // 4. Use localStorage to check if student has seen the comment
@@ -428,13 +402,8 @@ export default function DashboardPage() {
         } catch (_) { return true }
       }
 
-      // 5. Load today's challenges
-      const { data: todayChallengesData } = await supabase
-        .from('daily_challenges')
-        .select('id, title, challenge_date')
-        .in('id', allAssignedIds)
-        .eq('challenge_date', today)
-        .order('created_at', { ascending: false })
+      // 5. Use today's challenges from parallel fetch above
+      const todayChallengesData = (todayChallengesResult as any).data || []
 
       // 6. Load past challenges that have an unread teacher comment
       //    (submitted + has comment that was posted after student last viewed)
