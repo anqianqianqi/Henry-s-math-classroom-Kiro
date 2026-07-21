@@ -32,9 +32,13 @@ function StudyCurveSection({ userId }: { userId: string }) {
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">📊 My Study Curve</h2>
+          <h2 className="text-xl font-bold text-gray-900">
+            {lang === 'zh' ? '📊 我的学习曲线' : '📊 My Study Curve'}
+          </h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            Score &amp; completion breakdown by topic — click a topic to see challenges
+            {lang === 'zh'
+              ? '按主题查看得分与完成度 — 点击主题查看挑战题'
+              : 'Score & completion breakdown by topic — click a topic to see challenges'}
           </p>
         </div>
         {/* Language toggle */}
