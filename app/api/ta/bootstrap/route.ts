@@ -64,7 +64,7 @@ async function fetchGradedSubmissions(supabase: any) {
 
   return submissions
     .map((s: any) => {
-      const ch = challengeMap.get(s.challenge_id)
+      const ch = challengeMap.get(s.challenge_id) as any
       if (!ch) return null
       return {
         challenge_title:       ch.title,
