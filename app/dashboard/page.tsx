@@ -12,6 +12,56 @@ import { localDateString } from '@/lib/utils/date'
 import dynamicImport from 'next/dynamic'
 import StudentStudyCurve from '@/components/StudentStudyCurve'
 
+// ── Study Curve section with lang toggle ────────────────────────────────────
+function StudyCurveSection({ userId }: { userId: string }) {
+  const [lang, setLang] = useState<'en' | 'zh'>('en')
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('lang') as 'en' | 'zh' | null
+      if (stored === 'en' || stored === 'zh') setLang(stored)
+    } catch (_) {}
+  }, [])
+
+  function switchLang(next: 'en' | 'zh') {
+    setLang(next)
+    try { localStorage.setItem('lang', next) } catch (_) {}
+  }
+
+  return (
+    <div className="mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">📊 My Study Curve</h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Score &amp; completion breakdown by topic — click a topic to see challenges
+          </p>
+        </div>
+        {/* Language toggle */}
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+          <button
+            onClick={() => switchLang('en')}
+            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+              lang === 'en' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            EN
+          </button>
+          <button
+            onClick={() => switchLang('zh')}
+            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+              lang === 'zh' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            中文
+          </button>
+        </div>
+      </div>
+      <StudentStudyCurve userId={userId} lang={lang} />
+    </div>
+  )
+}
+
 const InlinePet = dynamicImport(() => import('@/components/desktop-pet/InlinePet'), { ssr: false })
 const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/AnimatedRoomLayer'), { ssr: false })
 
@@ -815,17 +865,7 @@ export default function DashboardPage() {
 
         {/* ── Study Curve — students only ─────────────────────────────── */}
         {!isTeacher && !isAdmin && user && (
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">📊 My Study Curve</h2>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  Score &amp; completion breakdown by topic — click a topic to see challenges
-                </p>
-              </div>
-            </div>
-            <StudentStudyCurve userId={user.id} />
-          </div>
+          <StudyCurveSection userId={user.id} />
         )}
 
       </main>

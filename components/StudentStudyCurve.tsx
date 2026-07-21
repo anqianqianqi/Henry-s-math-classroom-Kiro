@@ -58,7 +58,7 @@ const COLLAPSED_TAG_COUNT = 2
 
 // ─── Component ─────────────────────────────────────────────────────────────
 
-export default function StudentStudyCurve({ userId }: { userId: string }) {
+export default function StudentStudyCurve({ userId, lang = 'en' }: { userId: string; lang?: 'en' | 'zh' }) {
   const [tagStats, setTagStats] = useState<TagStat[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedTags, setExpandedTags] = useState<Set<string>>(new Set())
@@ -68,7 +68,7 @@ export default function StudentStudyCurve({ userId }: { userId: string }) {
 
   useEffect(() => {
     if (userId) loadStats()
-  }, [userId])
+  }, [userId, lang])
 
   async function loadStats() {
     try {
@@ -136,8 +136,8 @@ export default function StudentStudyCurve({ userId }: { userId: string }) {
 
       if (allTagIds.size === 0) { setTagStats([]); setLoading(false); return }
 
-      let lang = 'en'
-      try { lang = localStorage.getItem('lang') || 'en' } catch (_) {}
+      let resolvedLang = lang
+      try { resolvedLang = (localStorage.getItem('lang') as 'en' | 'zh') || lang } catch (_) {}
 
       const { data: tagNames } = await supabase
         .from('challenge_tag_names')
@@ -147,10 +147,10 @@ export default function StudentStudyCurve({ userId }: { userId: string }) {
       const tagNameMap = new Map<string, string>()
       for (const tn of tagNames ?? []) {
         const existing = tagNameMap.get(tn.tag_id)
-        if (!existing || tn.language === lang || (tn.language === 'en' && existing === undefined)) {
+        if (!existing || tn.language === resolvedLang || (tn.language === 'en' && existing === undefined)) {
           tagNameMap.set(tn.tag_id, tn.name)
         }
-        if (tn.language === lang) tagNameMap.set(tn.tag_id, tn.name)
+        if (tn.language === resolvedLang) tagNameMap.set(tn.tag_id, tn.name)
       }
 
       const tagMap = new Map<string, TagStat>()
