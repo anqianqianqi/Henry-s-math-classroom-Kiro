@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { HomeButton } from '@/components/ui/HomeButton'
+import StudentStudyCurve from '@/components/StudentStudyCurve'
 
 interface StudentProfile {
   id: string
@@ -171,6 +172,17 @@ export default function StudentHistoryPage() {
             <div className="text-sm text-gray-500 mt-1">Avg Score</div>
           </Card>
         </div>
+
+        {/* Study Curve — per-tag breakdown */}
+        {student && (
+          <div className="mb-8">
+            <div className="mb-3">
+              <h2 className="text-lg font-bold text-gray-900">📊 Study Curve</h2>
+              <p className="text-sm text-gray-500">Score &amp; completion breakdown by topic</p>
+            </div>
+            <StudentStudyCurve userId={studentId} />
+          </div>
+        )}
 
         {/* Submission list */}
         {submissions.length === 0 ? (

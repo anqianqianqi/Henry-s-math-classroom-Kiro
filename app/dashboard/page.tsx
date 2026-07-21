@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import NotificationBell from '@/components/NotificationBell'
 import { localDateString } from '@/lib/utils/date'
 import dynamicImport from 'next/dynamic'
+import StudentStudyCurve from '@/components/StudentStudyCurve'
 
 const InlinePet = dynamicImport(() => import('@/components/desktop-pet/InlinePet'), { ssr: false })
 const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/AnimatedRoomLayer'), { ssr: false })
@@ -810,6 +811,21 @@ export default function DashboardPage() {
               </div>
             </Card.Body>
           </Card>
+        )}
+
+        {/* ── Study Curve — students only ─────────────────────────────── */}
+        {!isTeacher && !isAdmin && user && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">📊 My Study Curve</h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Score &amp; completion breakdown by topic — click a topic to see challenges
+                </p>
+              </div>
+            </div>
+            <StudentStudyCurve userId={user.id} />
+          </div>
         )}
 
       </main>
