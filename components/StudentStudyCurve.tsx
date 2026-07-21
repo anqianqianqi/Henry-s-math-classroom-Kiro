@@ -29,7 +29,34 @@ interface TagStat {
 
 // ─── Translations ──────────────────────────────────────────────────────────
 
-const T = {
+type Translations = {
+  growthArea: string
+  completion: string
+  avgScore: string
+  strongData: string
+  someData: string
+  limitedData: string
+  attempts: (n: number) => string
+  graded: (n: number) => string
+  ungraded: string
+  notDone: string
+  pendingGrade: string
+  done: (a: number, t: number) => string
+  showAll: (total: number, hidden: number) => string
+  showLess: string
+  noStatsTitle: string
+  noStatsDesc: string
+  recTitle: string
+  recFocus: (name: string, pct: number) => string
+  recStrong: (name: string, pct: number) => string
+  recLowComp: (a: number, t: number, name: string) => string
+  excellent: string
+  good: string
+  developing: string
+  needsWork: string
+}
+
+const T: Record<string, Translations> = {
   en: {
     growthArea: 'Growth area',
     completion: 'Completion',
@@ -82,9 +109,7 @@ const T = {
     developing: '进步中',
     needsWork: '需加强',
   },
-} as const
-
-type Lang = keyof typeof T
+}
 
 function scoreColor(pct: number): string {
   if (pct >= 85) return 'bg-green-500'
@@ -92,14 +117,14 @@ function scoreColor(pct: number): string {
   return 'bg-red-400'
 }
 
-function scoreLabel(pct: number, t: typeof T['en']): string {
+function scoreLabel(pct: number, t: Translations): string {
   if (pct >= 90) return t.excellent
   if (pct >= 75) return t.good
   if (pct >= 60) return t.developing
   return t.needsWork
 }
 
-function reliabilityLabel(attempted: number, t: typeof T['en']): string {
+function reliabilityLabel(attempted: number, t: Translations): string {
   if (attempted >= 8) return t.strongData
   if (attempted >= 4) return t.someData
   return t.limitedData
@@ -305,7 +330,7 @@ export default function StudentStudyCurve({ userId, lang = 'en' }: { userId: str
   const visibleTags = showAllTags ? tagStats : tagStats.slice(0, COLLAPSED_TAG_COUNT)
   const hiddenCount = tagStats.length - COLLAPSED_TAG_COUNT
 
-  const t = T[lang as Lang] ?? T.en
+  const t: Translations = T[lang as string] ?? T.en
 
   // ── Loading skeleton ──────────────────────────────────────────────────────
   if (loading) {
