@@ -169,30 +169,37 @@ ${entries}
 // ── Route handler ──────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  // Basic auth check — only admin can run bootstrap
+  // Auth check — admin session token OR a one-time bootstrap secret
   const authHeader = req.headers.get('authorization')
   if (!authHeader) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const token = authHeader.replace('Bearer ', '')
+
+  // Allow a simple secret key as an alternative to a full session token
+  const bootstrapSecret = process.env.BOOTSTRAP_SECRET
+  const isSecretAuth = bootstrapSecret && token === bootstrapSecret
+
   const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_KEY)
 
-  // Verify the caller is an admin via their token
-  const token = authHeader.replace('Bearer ', '')
-  const supabaseUser = createClient(SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    global: { headers: { Authorization: `Bearer ${token}` } }
-  })
-  const { data: { user } } = await supabaseUser.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+  if (!isSecretAuth) {
+    // Fall back to verifying via Supabase session token
+    const supabaseUser = createClient(SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    })
+    const { data: { user } } = await supabaseUser.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
-  const { data: roles } = await supabaseAdmin
-    .from('user_roles')
-    .select('roles!inner(name)')
-    .eq('user_id', user.id)
-    .is('class_id', null)
+    const { data: roles } = await supabaseAdmin
+      .from('user_roles')
+      .select('roles!inner(name)')
+      .eq('user_id', user.id)
+      .is('class_id', null)
 
-  const isAdmin = (roles as any[])?.some((r: any) => r.roles?.name === 'administrator')
-  if (!isAdmin) return NextResponse.json({ error: 'Admin only' }, { status: 403 })
+    const isAdmin = (roles as any[])?.some((r: any) => r.roles?.name === 'administrator')
+    if (!isAdmin) return NextResponse.json({ error: 'Admin only' }, { status: 403 })
+  }
 
   try {
     // 1. Fetch data
