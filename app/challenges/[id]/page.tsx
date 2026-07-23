@@ -1780,7 +1780,7 @@ export default function ChallengePage() {
                                   <p><span className="font-medium text-gray-700">Henry&apos;s view: </span>{taGrades[submission.id].reasoning.step4_henry_perspective}</p>
                                 )}
                                 {taGrades[submission.id].critic?.what_student_did && taGrades[submission.id].critic?.grade_changed && (
-                                  <p><span className="font-medium text-orange-700">Critic&apos;s read: </span>{taGrades[submission.id].critic.what_student_did}</p>
+                                  <p><span className="font-medium text-orange-700">Critic&apos;s read: </span>{taGrades[submission.id].critic!.what_student_did}</p>
                                 )}
                               </div>
                               <div className="p-2 bg-white rounded-lg border border-indigo-100 text-xs italic text-gray-700 mb-2">
