@@ -106,6 +106,7 @@ export default function ChallengePage() {
   const [taGrades, setTaGrades] = useState<Record<string, {
     suggested_score: number; max_score: number; confidence: number
     comment: string; reasoning: any; suggested_solution?: string
+    topic_module_used?: string | null
     loading?: boolean; progress?: { step: number; pct: number; label: string }
     critic?: { upheld: boolean; draft_score: number; final_score: number; grade_changed: boolean; reasoning: string; what_student_did: string; main_issue: string }
     anqi?: { upheld: boolean; comment_assessment: string; revised_comment: string; anqi_question: string }
