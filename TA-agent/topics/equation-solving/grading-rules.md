@@ -31,9 +31,18 @@ Award full marks when the student:
 - Used any valid method — unexpected approaches that reach the right answer
   get full marks. Creativity is rewarded.
 
-Brief correct answers earn full marks. A student who writes *"b可以等于任何数"*
-(b can be any number) after correctly solving has given a complete answer.
-Do not penalize conciseness.
+**CRITICAL: Brief correct answers earn full marks.**
+If a student writes `a=1, a=2, a=3` or `a=b=1` or `a=2/3` and their reasoning
+(even if short) is mathematically sound, that is full marks. Do NOT penalize:
+- Not using the "standard" method
+- Not showing every intermediate step if the result is clearly correct
+- Brief answers on concept or computation problems
+- Answering in a different style than expected
+
+Examples from Henry:
+- "a=b=1" with "79+99=178" → 3/3 (saw the structure, got the right answer)
+- "1/a - 3/a = 2-5 → -2/a = -3 → a=2/3" → 3/3 (valid algebra, correct answer)
+- "a=1,2,3 因为...有一个等于零" → 3/3 (brief but correct reasoning)
 
 ---
 
@@ -61,9 +70,16 @@ Award partial marks (roughly 2/3) when:
 
 Award minimal marks (roughly 1/3) when:
 
+- The student **confused the variable structure** — e.g., treated `1/a` as if it
+  were `a`, or misread the equation form entirely. This shows they couldn't
+  engage with what the equation was actually asking.
+  Example: writing `1/a + 5a = 3 + 2a` when the problem has `1/a + 5 = 3 + 2/a`
+  — this means the student thought `5` meant `5a` and `1/a` and `2/a` were different
+  kinds of terms. The confusion is at the level of reading the equation, not solving it.
 - The student identified the equation type correctly but made a fatal algebraic
   error that prevents reaching any valid solution.
-- The student showed only the first correct step with no progression.
+- The student showed only the first correct step with no progression and
+  the result is wrong.
 
 ---
 
