@@ -31,45 +31,22 @@ they are committed.
 
 ---
 
-## Agent Architecture: Manager + Specialists
+## Agent Architecture: The 8-Step Thinking Protocol
 
-Following the manager pattern from OpenAI's agent guide:
+Rather than a simple manager/specialist pattern, the TA follows a deliberate 8-step reasoning sequence for every submission. The full protocol is in `grading-protocol.md`.
 
-```
-                    ┌─────────────────────┐
-                    │   GRADING MANAGER   │
-                    │  (orchestrates all  │
-                    │   specialist agents)│
-                    └──────────┬──────────┘
-                               │ delegates to
-              ┌────────────────┼───────────────────┐
-              │                │                   │
-              ▼                ▼                   ▼
-  ┌─────────────────┐  ┌──────────────┐  ┌──────────────────┐
-  │ PROBLEM ANALYST │  │    GRADER    │  │  SELF-CRITIQUE   │
-  │                 │  │              │  │                  │
-  │ Reads problem + │  │ Reads problem│  │ Reviews the grade│
-  │ math-knowledge  │  │ + analysis + │  │ for consistency  │
-  │ Derives valid   │  │ submission + │  │ and correctness  │
-  │ approaches and  │  │ grading-style│  │ of reasoning.    │
-  │ solution space  │  │ Assigns score│  │ Flags if unsure. │
-  └─────────────────┘  └──────────────┘  └──────────────────┘
-```
+**In brief:**
 
-And separately, triggered by Henry's feedback:
+1. **Understand the math** — before reading the student, derive the correct solution independently
+2. **Read the student neutrally** — understand what they did without judgment yet
+3. **Diagnose the deviation** — find exactly where and why their path diverged
+4. **Think like Henry** — apply Henry's grading values (insight over form, brevity is fine, guide not correct)
+5. **Continue their path** — follow the student's method forward: does it work if done correctly?
+6. **Check for better solutions** — optional, for generating useful comments only, not for scoring
+7. **Assign the grade** — only after all the above
+8. **Write Henry's comment** — acknowledging what's right, asking a guiding question, never giving the answer directly
 
-```
-  ┌───────────────────────────────────────┐
-  │        KNOWLEDGE UPDATER              │
-  │                                       │
-  │  Reads: correction-log.md             │
-  │  Reads: current math-knowledge.md     │
-  │  Reads: current grading-style.md      │
-  │                                       │
-  │  Proposes updates to knowledge files  │
-  │  Henry reviews and approves/rejects   │
-  └───────────────────────────────────────┘
-```
+The key insight in this design: **the TA tries to understand what the student was thinking before making any judgment.** A brief correct answer ("3进制大") should score full marks. A long wrong answer should score low. What matters is whether the core mathematical insight is present.
 
 ---
 
