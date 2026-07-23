@@ -840,7 +840,43 @@ export default function ChallengePage() {
     }
   }
 
-  async function handleRevealOthers() {
+  const [taGrades, setTaGrades] = useState<Record<string, {
+    suggested_score: number
+    max_score: number
+    confidence: number
+    comment: string
+    reasoning: any
+    loading?: boolean
+  }>>({})
+
+  async function askTA(submissionId: string) {
+    setTaGrades(prev => ({ ...prev, [submissionId]: { ...prev[submissionId], loading: true } as any }))
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      const res = await fetch('/api/ta/grade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ submission_id: submissionId }),
+      })
+      const json = await res.json()
+      if (json.ok && json.grade) {
+        setTaGrades(prev => ({ ...prev, [submissionId]: { ...json.grade, loading: false } }))
+        // Pre-fill the grade input with AI suggestion
+        const input = document.getElementById(`grade-${submissionId}`) as HTMLInputElement
+        if (input) input.value = String(json.grade.suggested_score)
+      } else {
+        alert('TA error: ' + (json.error || 'Unknown error'))
+        setTaGrades(prev => ({ ...prev, [submissionId]: { ...prev[submissionId], loading: false } as any }))
+      }
+    } catch (err: any) {
+      alert('TA call failed: ' + err.message)
+      setTaGrades(prev => ({ ...prev, [submissionId]: { ...prev[submissionId], loading: false } as any }))
+    }
+  }
     if (!userSubmission || !userId) return
     const grade = userSubmission.points ?? 0
     if (!confirm(`⚠️ This will lock your current submission and grade (${grade}/${challenge?.max_points || 100}). You won't be able to edit your answer after this. Continue?`)) return
@@ -1700,10 +1736,84 @@ export default function ChallengePage() {
                               >
                                 Publish Grade
                               </button>
+                              {/* Ask TA button */}
+                              <button
+                                onClick={() => askTA(submission.id)}
+                                disabled={taGrades[submission.id]?.loading}
+                                className="px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                                title="Ask the AI TA to suggest a grade using Henry's grading style"
+                              >
+                                {taGrades[submission.id]?.loading ? (
+                                  <><span className="animate-spin">⟳</span> Thinking...</>
+                                ) : (
+                                  <>🤖 Ask TA</>
+                                )}
+                              </button>
                               {submission.points != null && (
                                 <span className="text-xs text-green-600 font-medium">Current: {submission.points}/{challenge?.max_points || 100}</span>
                               )}
                             </div>
+
+                            {/* TA suggestion panel */}
+                            {taGrades[submission.id] && !taGrades[submission.id]?.loading && (
+                              <div className={`mb-3 p-3 rounded-xl border-2 text-sm ${
+                                taGrades[submission.id].confidence >= 0.85
+                                  ? 'bg-indigo-50 border-indigo-200'
+                                  : 'bg-amber-50 border-amber-200'
+                              }`}>
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="font-semibold text-indigo-800">
+                                    🤖 TA Suggestion: {taGrades[submission.id].suggested_score}/{taGrades[submission.id].max_score}
+                                  </span>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                    taGrades[submission.id].confidence >= 0.85
+                                      ? 'bg-green-100 text-green-700'
+                                      : 'bg-amber-100 text-amber-700'
+                                  }`}>
+                                    {Math.round(taGrades[submission.id].confidence * 100)}% confidence
+                                    {taGrades[submission.id].confidence < 0.85 ? ' ⚠️ needs review' : ''}
+                                  </span>
+                                </div>
+                                {/* Reasoning steps */}
+                                <div className="space-y-1 mb-2 text-xs text-gray-600">
+                                  {taGrades[submission.id].reasoning?.step3_deviation && (
+                                    <p><span className="font-medium text-gray-700">Deviation:</span> {taGrades[submission.id].reasoning.step3_deviation}</p>
+                                  )}
+                                  {taGrades[submission.id].reasoning?.step4_henry_perspective && (
+                                    <p><span className="font-medium text-gray-700">Henry's view:</span> {taGrades[submission.id].reasoning.step4_henry_perspective}</p>
+                                  )}
+                                  {taGrades[submission.id].reasoning?.step5_path_continuation && (
+                                    <p><span className="font-medium text-gray-700">Path:</span> {taGrades[submission.id].reasoning.step5_path_continuation}</p>
+                                  )}
+                                </div>
+                                {/* Suggested comment */}
+                                <div className="p-2 bg-white rounded-lg border border-indigo-100 text-xs italic text-gray-700 mb-2">
+                                  <span className="font-medium not-italic text-indigo-700">Suggested comment: </span>
+                                  {taGrades[submission.id].comment}
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => {
+                                      const ta = taGrades[submission.id]
+                                      handleGradeSubmission(submission.id, ta.suggested_score)
+                                      // Post suggested comment as a teacher comment
+                                      if (ta.comment) {
+                                        setNewComment(prev => ({ ...prev, [submission.id]: ta.comment }))
+                                      }
+                                    }}
+                                    className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700"
+                                  >
+                                    ✓ Accept TA grade
+                                  </button>
+                                  <button
+                                    onClick={() => setTaGrades(prev => { const n = { ...prev }; delete n[submission.id]; return n })}
+                                    className="px-3 py-1.5 bg-white text-gray-600 text-xs font-medium rounded-lg border hover:bg-gray-50"
+                                  >
+                                    Dismiss
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                             )
                           )}
                           {/* Show points to students */}
