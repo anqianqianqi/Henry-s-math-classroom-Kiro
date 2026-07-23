@@ -1,0 +1,202 @@
+[
+  {
+    "id": "eq-001",
+    "problem_title": "方程化简3",
+    "problem_description": "Find all integer values of a such that (a-1)(a-2)(a-3) = 0",
+    "student_submission": "a可以是大于等于1并且小于等于3的整数\n因为 a-1 a-2 a-3 里面肯定有一个等于零\n1-1=0\n2-2=0\n3-3=0",
+    "henry_grade": 3,
+    "max_points": 3,
+    "henry_comment": "沒錯主要就是其中一個要是0",
+    "note": "Brief correct answer with clear reasoning — full marks"
+  },
+  {
+    "id": "eq-002",
+    "problem_title": "方程化简 4",
+    "problem_description": "Solve for a and b: (a-1)b = b",
+    "student_submission": "等式两边直接都除以b\na-1=1\na=2\n（2-1）*b=b\nb=b\nb可以等于任何数",
+    "henry_grade": 2,
+    "max_points": 3,
+    "henry_comment": "除以b是一個很棒的想法!!但是....還有一種可能....是不能除以b的",
+    "note": "Correct method but missed b=0 case — partial marks"
+  },
+  {
+    "id": "eq-003",
+    "problem_title": "方程化简 4",
+    "problem_description": "Solve for a and b: (a-1)b = b",
+    "student_submission": "A-1 =b/b a-1 = 1 a=2  a-1 must be 1 so a only can be 2 but b can be any number \nOr ab -b = b ab =2b a =2 b can be any number",
+    "henry_grade": 2,
+    "max_points": 3,
+    "henry_comment": "除以b是一個很棒的想法!!但是....還有一種可能....是不能除以b的",
+    "note": "Same pattern as eq-002, tried multiple approaches but both miss b=0"
+  },
+  {
+    "id": "eq-004",
+    "problem_title": "方程化简3",
+    "problem_description": "Find all values of a such that (a-1)(a-2)(a-3) = 0",
+    "student_submission": "when a-1 =0 a = 1\n(1-1)x(1-2)x(1-3)=0 it s possible\nWhen a-2 =0 a=2 \n(2-1)x(2-2)x(2-3)=0 it's possible\nWhen a-3=0 a=3\n(3-1)x(3-2)x(3-3)= 0 it's possible\nSo a equal to 1,2,3",
+    "henry_grade": 3,
+    "max_points": 3,
+    "henry_comment": "沒錯主要就是其中一個要是0!",
+    "note": "Step-by-step verification of all 3 cases — full marks"
+  },
+  {
+    "id": "eq-005",
+    "problem_title": "方程化简 1",
+    "problem_description": "Simplify and solve: 3(a-5) = 6(a-5)",
+    "student_submission": "3*(a-5)/3=6*(a-5)/3\na-5=2a-10\na=5",
+    "henry_grade": 3,
+    "max_points": 3,
+    "henry_comment": "沒錯!! 或者另一種辦法是把a-5當成一個數",
+    "note": "Correct solution; Henry notes substitution trick as alternative"
+  },
+  {
+    "id": "eq-006",
+    "problem_title": "方程化简 1",
+    "problem_description": "Simplify and solve: 3(a-5) = 6(a-5)",
+    "student_submission": "   A-5=2a-10\nA-2a=-5\n   \n-a= -5 a= 5",
+    "henry_grade": 3,
+    "max_points": 3,
+    "henry_comment": "hmmmm 好像不太對喔 再檢查一下! 第一個算式",
+    "note": "Got the right answer but first step has an error — Henry says check again (still gave 3)"
+  },
+  {
+    "id": "eq-007",
+    "problem_title": "方程化简2",
+    "problem_description": "Solve: 1/a + 5 = 3 + 2/a",
+    "student_submission": "1/a －3/a = 2-5\n-2/a =- 3  cross multiplication\n-2 =-3a\n2/3=a",
+    "henry_grade": 3,
+    "max_points": 3,
+    "henry_comment": "很棒!那如果我把 1/a整個當一個未知數呢",
+    "note": "Correct answer; Henry suggests substitution trick as a cleaner approach"
+  },
+  {
+    "id": "eq-008",
+    "problem_title": "方程化简2",
+    "problem_description": "Solve: 1/a + 5 = 3 + 2/a",
+    "student_submission": "1+5a=3+2a\n3-1=3a\n3a=2\na=2/3",
+    "henry_grade": 3,
+    "max_points": 3,
+    "henry_comment": "很棒!那如果我把 1/a整個當一個未知數呢 | b+5=3b+2 | 2b=3 | b=3/2 | a=2/3",
+    "note": "Used substitution naturally (treating 1/a as a unit) — full marks"
+  },
+  {
+    "id": "eq-009",
+    "problem_title": "方程化简 5",
+    "problem_description": "Find a and b such that 79a + 99b = 178 and 99a + 79b = 178",
+    "student_submission": "a = b\n79 + 99 = 178\na = b = 1\nP.S: Nice stationery.",
+    "henry_grade": 3,
+    "max_points": 3,
+    "henry_comment": "Verygood trick! to add up them. Altough i am not too sure about the thing you add",
+    "note": "Noticed structure (adding equations), got a=b=1 — full marks despite unclear explanation"
+  },
+  {
+    "id": "eq-010",
+    "problem_title": "方程化简 5",
+    "problem_description": "Find a and b such that 79a + 99b = 178 and 99a + 79b = 178",
+    "student_submission": "A = 1, B = 1. 178a + 178b = 356. A + b = 2. A = B, therefore, A = 1 and B = 1.",
+    "henry_grade": 3,
+    "max_points": 3,
+    "henry_comment": "why A=B? Very good though!",
+    "note": "Correct answer, Henry questions the reasoning for A=B but still gives full marks"
+  },
+  {
+    "id": "eq-011",
+    "problem_title": "解解方程 0",
+    "problem_description": "Solve for a: a(b+1) + b + 1 = 5",
+    "student_submission": "①把b=1代入方程得a=4\n②由方程得a=5-b/b\n把b=1代入得a=4",
+    "henry_grade": 5,
+    "max_points": 5,
+    "henry_comment": "的確算不同方法!我很喜歡妳開始嘗試不同方法了",
+    "note": "Multiple methods — full marks, Henry praises trying different approaches"
+  },
+  {
+    "id": "eq-012",
+    "problem_title": "解解方程 0",
+    "problem_description": "Solve for a: a(b+1) + b + 1 = 5",
+    "student_submission": "b=1\n(5-1）÷1\n=4÷1\n=4",
+    "henry_grade": 5,
+    "max_points": 5,
+    "henry_comment": "很棒!! 其實 b = 1直接讓方程式變得很簡單",
+    "note": "Smart substitution b=1 immediately simplifies — full marks"
+  },
+  {
+    "id": "eq-013",
+    "problem_title": "解解方程 1",
+    "problem_description": "Solve for a: a(b+1) + b+1 = 5",
+    "student_submission": "2a+2=5\n2a=3\na=1.5",
+    "henry_grade": 5,
+    "max_points": 5,
+    "henry_comment": "This is good. 還有一種方法是一開始就把b+1除掉",
+    "note": "Correct (presumably b=1 used), full marks; Henry notes factoring approach"
+  },
+  {
+    "id": "eq-014",
+    "problem_title": "解解方程 1",
+    "problem_description": "Solve for a: a(b+1) + b+1 = 5",
+    "student_submission": "We can find out: ax(b+1) +b+1=5 b =1 ax 2 +1+1=5 2a = 5-2 2a=3 a=3/2",
+    "henry_grade": 5,
+    "max_points": 5,
+    "henry_comment": "還有一種方法是一開始就把b+1除掉",
+    "note": "Correct with b=1 substitution — full marks"
+  },
+  {
+    "id": "eq-015",
+    "problem_title": "解解方程 0",
+    "problem_description": "Solve for a: a(b+1) + b + 1 = 5",
+    "student_submission": "我们会知道ax1 +1 =5 ax1 = 5-1 a=4",
+    "henry_grade": 5,
+    "max_points": 5,
+    "henry_comment": "很棒! 如果我們這樣做呢 | 由方程得a=5-b/b",
+    "note": "Correct with b=1 substitution — full marks, Henry shows another approach"
+  },
+  {
+    "id": "eq-016",
+    "problem_title": "找找未知数的位置 2",
+    "problem_description": "Find approximate value of a where a*a + a = 3",
+    "student_submission": "a×a+a=a(a+1)=3\n1*(1+1)=2＜3＜2*(2+1)=6\n∴1＜a＜2\n1.3*2.3=2.99＜3＜1.4*2.4=3.36\n∴1.3＜a＜1.4，且a更接近1.3\n∴a≈1.3",
+    "henry_grade": 3,
+    "max_points": 3,
+    "henry_comment": "非常棒!你是真正去嘗試慢慢增加",
+    "note": "Systematic numerical approximation — full marks"
+  },
+  {
+    "id": "eq-017",
+    "problem_title": "找找未知数的位置 2",
+    "problem_description": "Find approximate value of a where a*a + a = 3",
+    "student_submission": "如图：\n1 .a的平方+a =3 1的平方=1如果a是1, 1x1 ＋1 =2所以a比1 大 如果a= 1.5 那么就比3大了. 如果a=1.3 那么就很接近了我们再试一下1.4那么就等于3.36, 比起以的2.99 1.3就更近",
+    "henry_grade": 3,
+    "max_points": 3,
+    "henry_comment": "Very good! 你是真正去嘗試慢慢增加",
+    "note": "Same systematic trial approach — full marks"
+  },
+  {
+    "id": "eq-018",
+    "problem_title": "找找未知数的位置 2",
+    "problem_description": "Find approximate value of a where a*a + a = 3",
+    "student_submission": "如图：",
+    "henry_grade": 2,
+    "max_points": 3,
+    "henry_comment": "阿那能不能再找得更細一點呢? 1 到 3之間有點太寬了 去嘗試更多不同的數字 譬如 1.4 x 1.4",
+    "note": "Image submitted, presumably showed a range but not precise enough — partial marks"
+  },
+  {
+    "id": "eq-019",
+    "problem_title": "找找未知数的位置 1",
+    "problem_description": "Find approximate value of a where a*a = 2",
+    "student_submission": "smaller then 1.5 \n1.4 x1.4 = 1.96 so 1.4 is the closest to a",
+    "henry_grade": 3,
+    "max_points": 3,
+    "henry_comment": "很棒很棒!",
+    "note": "Correct numerical approximation — full marks"
+  },
+  {
+    "id": "eq-020",
+    "problem_title": "方程化简2",
+    "problem_description": "Solve: 1 + 5/a = 3 + 2/a (treating 1/a as a single unknown)",
+    "student_submission": "1/a+5a=3+2a\n没有解？",
+    "henry_grade": 1,
+    "max_points": 3,
+    "henry_comment": "想一想 如果1/a是一個新的未知數 那5a跟5*(1/a)是一樣的嗎",
+    "note": "Confused multiplication with the substitution variable — minimal marks"
+  }
+]

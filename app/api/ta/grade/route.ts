@@ -1,28 +1,79 @@
 /**
  * POST /api/ta/grade
  *
- * Grades a single student challenge submission using the TA's 8-step
- * thinking protocol. Saves the suggested grade to `ta_grades` for
- * Henry to review.
+ * Grades a student challenge submission using:
+ *   1. TA Agent (8-step protocol + topic knowledge)
+ *   2. Math Critic (challenges the grade)  
+ *   3. Anqi Critique Agent (challenges the comment + pedagogy)
  *
- * Body:
+ * Body (normal mode):
  *   { submission_id: string }
  *
- * Returns:
- *   { ok: true, grade: { suggested_score, max_score, confidence, comment, reasoning } }
+ * Body (test mode — for eval script, no DB needed):
+ *   { test_mode: true, problem_title, problem_description, student_submission, max_points }
  *
  * Auth: teacher/admin session token OR BOOTSTRAP_SECRET
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const OPENAI_KEY   = process.env.OPENAI_API_KEY!
 const TA_DIR       = join(process.cwd(), 'TA-agent')
+
+// ── Topic classifier ──────────────────────────────────────────────────────
+
+const TOPIC_KEYWORDS: Record<string, string[]> = {
+  'equation-solving': [
+    '解方程', '方程化简', '方程', 'solve', 'equation', '求解', '化简',
+    '求x', '求a', '求b', '找x', '找a', '= 0', '等于0', 'simplify',
+  ],
+}
+
+function classifyTopic(tagNames: string[], title: string, description: string): {
+  slug: string | null
+  confidence: number
+  method: 'tag' | 'keyword' | 'none'
+} {
+  const lowerTitle = title.toLowerCase()
+  const lowerDesc  = (description || '').toLowerCase()
+
+  // Priority 1: exact tag match
+  for (const slug of Object.keys(TOPIC_KEYWORDS)) {
+    if (tagNames.some(t => t.toLowerCase().replace(/\s+/g, '-') === slug ||
+                          t.toLowerCase().includes(slug.replace(/-/g, ' ')))) {
+      return { slug, confidence: 1.0, method: 'tag' }
+    }
+  }
+
+  // Priority 2: keyword match
+  for (const [slug, keywords] of Object.entries(TOPIC_KEYWORDS)) {
+    const matches = keywords.filter(kw =>
+      lowerTitle.includes(kw.toLowerCase()) || lowerDesc.includes(kw.toLowerCase())
+    )
+    if (matches.length >= 1) {
+      return { slug, confidence: 0.8, method: 'keyword' }
+    }
+  }
+
+  return { slug: null, confidence: 0, method: 'none' }
+}
+
+// ── Topic knowledge loader (per-request) ─────────────────────────────────
+
+function readTopicKnowledge(slug: string): { mathKnowledge: string; gradingRules: string } {
+  const base = join(TA_DIR, 'topics', slug)
+  const mkPath = join(base, 'math-knowledge.md')
+  const grPath = join(base, 'grading-rules.md')
+  return {
+    mathKnowledge: existsSync(mkPath) ? readFileSync(mkPath, 'utf-8') : '',
+    gradingRules:  existsSync(grPath) ? readFileSync(grPath, 'utf-8') : '',
+  }
+}
 
 // ── Load knowledge files (cached per cold start) ──────────────────────────
 
@@ -38,15 +89,30 @@ const GRADING_PROTOCOL   = readKnowledge('grading-protocol.md')
 const GRADING_STYLE      = readKnowledge('grading-style.md')
 const MATH_CORRECTNESS   = readKnowledge('math-correctness.md')
 const CORRECTION_LOG_RAW = readKnowledge('correction-log.md')
-
-// Use first 4000 chars of correction log to stay within context
 const CORRECTION_LOG = CORRECTION_LOG_RAW.slice(0, 4000)
 
-// ── System prompt ─────────────────────────────────────────────────────────
+// ── Dynamic system prompt (includes topic module when available) ───────────
 
-const SYSTEM_PROMPT = `You are Henry's math Teaching Assistant (TA). Your job is to grade student submissions exactly as Henry would.
+function buildSystemPrompt(topicModule: { mathKnowledge: string; gradingRules: string } | null): string {
+  const topicSection = topicModule?.mathKnowledge ? `
+---
+## TOPIC-SPECIFIC MATH KNOWLEDGE
+Read this before looking at the student's work. Use it to understand what a
+complete solution looks like and what habits a good mathematician applies here.
 
-You have four knowledge sources to guide you:
+${topicModule.mathKnowledge}
+
+---
+## TOPIC-SPECIFIC GRADING RULES
+Use this to calibrate your grade and write your comment.
+
+${topicModule.gradingRules}
+
+---` : ''
+
+  return `You are Henry's math Teaching Assistant (TA). Your job is to grade student submissions exactly as Henry would.
+
+You have the following knowledge sources:
 
 ---
 ## GRADING PROTOCOL (8-step thinking process — follow this exactly, in order)
@@ -63,14 +129,13 @@ ${MATH_CORRECTNESS}
 ---
 ## REAL EXAMPLES OF HENRY'S GRADES (correction log)
 ${CORRECTION_LOG}
-
----
+${topicSection}
 
 IMPORTANT OUTPUT RULES:
 - Output ONLY a valid JSON object, no markdown code blocks, no extra text
 - The JSON must match this exact structure:
 {
-  "step1_math_understanding": "what the problem asks and correct solution",
+  "step1_math_understanding": "what the problem asks and what a complete solution looks like",
   "step2_student_approach": "what the student did, described neutrally",
   "step3_deviation": "where exactly the student's path diverged, and why",
   "step4_henry_perspective": "what henry would see — what's right, what's the gap",
@@ -79,7 +144,50 @@ IMPORTANT OUTPUT RULES:
   "score": <integer>,
   "max_score": <integer>,
   "confidence": <float 0.0-1.0>,
-  "comment": "the comment henry would write to the student"
+  "comment": "the comment henry would write to the student",
+  "failed_at_step": "free-text description of where the student went wrong, or null if correct",
+  "topic_module_used": "equation-solving or null"
+}`
+}
+
+// ── Anqi Critique Agent prompt ────────────────────────────────────────────
+
+const ANQI_CRITIQUE_PROMPT = `You are Anqi, a senior math educator reviewing a TA's draft grade and comment.
+Your job is NOT to re-grade the math. Your job is to challenge whether the TA's
+response will actually help the student learn.
+
+Anqi's five questions:
+
+1. Did the TA understand what the student was actually trying to do?
+   Read the submission charitably. Is there a reasonable interpretation the TA missed?
+   Did the TA assume incompetence when the student might have understood concisely?
+
+2. Is the grade proportional to the actual gap?
+   If the TA said "missing one case" but gave 0/3, that is too harsh.
+   If the student showed the right method with a small slip, was partial credit given?
+
+3. Does the comment actually help the student take the next step?
+   A good comment: acknowledges the good idea → "但是" / "but" → asks a question.
+   A bad comment: only says what's wrong, or gives the answer directly.
+   Henry's pattern: "除以b是一個很棒的想法!! 但是....還有一種可能"
+
+4. Is there a more interesting question to ask?
+   Can the comment nudge toward a deeper insight, not just correct the error?
+   Example: "你找到了 a=1,2,3 — 為什麼不可能有第4個解呢?" (Why can't there be a 4th solution?)
+
+5. What would a student who read this comment actually do next?
+   Imagine the student reading the TA's comment. Would they know what to do?
+   Or would they just resubmit the same thing?
+
+OUTPUT RULES:
+- Output ONLY valid JSON, no markdown, no extra text
+{
+  "upheld": <true if grade and comment are both good, false if either should change>,
+  "grade_revision": null | { "new_score": <integer>, "reason": "..." },
+  "comment_assessment": "helpful" | "too_vague" | "too_direct" | "misses_opportunity",
+  "revised_comment": "improved comment (empty string if comment_assessment is helpful)",
+  "anqi_question": "the deeper question Anqi would ask to extend the student's thinking",
+  "what_ta_missed": "..." | null
 }`
 
 // ── Critic system prompt ──────────────────────────────────────────────────
@@ -207,7 +315,9 @@ async function callCritic(
 
 
 
-async function callGPT(userMessage: string): Promise<any> {
+// ── GPT calls ─────────────────────────────────────────────────────────────
+
+async function callGPT(systemPrompt: string, userMessage: string): Promise<any> {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -217,11 +327,11 @@ async function callGPT(userMessage: string): Promise<any> {
     body: JSON.stringify({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         { role: 'user',   content: userMessage },
       ],
       max_tokens: 1500,
-      temperature: 0.2,  // Low temperature for consistent grading
+      temperature: 0.2,
     }),
   })
 
@@ -243,7 +353,71 @@ async function callGPT(userMessage: string): Promise<any> {
   }
 }
 
-// ── Route handler ─────────────────────────────────────────────────────────
+// ── Anqi Critique call (Call 3) ───────────────────────────────────────────
+
+async function callAnqiCritique(
+  problemTitle: string,
+  problemDescription: string,
+  submissionText: string,
+  maxPoints: number,
+  draftResult: any,
+  criticResult: any
+): Promise<any> {
+  const userMessage = [
+    `Problem: ${problemTitle}`,
+    problemDescription ? `Problem description: ${problemDescription}` : null,
+    `Max points: ${maxPoints}`,
+    ``,
+    `Student submission:`,
+    submissionText || '(no text — student submitted an image)',
+    ``,
+    `--- TA DRAFT GRADE ---`,
+    `Score: ${draftResult.score ?? draftResult.suggested_score}/${maxPoints}`,
+    `TA's understanding: "${draftResult.step1_math_understanding}"`,
+    `TA's read of student: "${draftResult.step2_student_approach}"`,
+    `TA's deviation: "${draftResult.step3_deviation}"`,
+    `TA's comment: "${draftResult.comment}"`,
+    criticResult ? `Critic revised: ${criticResult.grade_changed ? `yes (${criticResult.draft_score}→${criticResult.final_score})` : 'no'}` : null,
+    criticResult?.reasoning ? `Critic note: "${criticResult.reasoning}"` : null,
+  ].filter(Boolean).join('\n')
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENAI_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: ANQI_CRITIQUE_PROMPT },
+        { role: 'user',   content: userMessage },
+      ],
+      max_tokens: 700,
+      temperature: 0.4,
+    }),
+  })
+
+  if (!res.ok) throw new Error(`Anqi critique error ${res.status}`)
+  const data = await res.json()
+  const raw = data.choices[0].message.content as string
+  const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
+
+  try {
+    return JSON.parse(cleaned)
+  } catch {
+    return {
+      upheld: true,
+      grade_revision: null,
+      comment_assessment: 'helpful',
+      revised_comment: '',
+      anqi_question: '',
+      what_ta_missed: null,
+    }
+  }
+}
+
+
 
 export const maxDuration = 120  // 120s — two sequential GPT-4o calls
 
@@ -280,11 +454,102 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Parse body ────────────────────────────────────────────────────────
-  let body: { submission_id?: string }
+  let body: { submission_id?: string; test_mode?: boolean; problem_title?: string; problem_description?: string; student_submission?: string; max_points?: number }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  // ── Test mode: directly accept problem/submission text (for eval script) ──
+  if (body.test_mode) {
+    if (!body.problem_title || body.student_submission === undefined) {
+      return NextResponse.json({ error: 'test_mode requires problem_title and student_submission' }, { status: 400 })
+    }
+    const testTitle       = body.problem_title
+    const testDescription = body.problem_description || ''
+    const testSubmission  = body.student_submission
+    const testMaxPoints   = body.max_points ?? 3
+
+    const testClassification = classifyTopic([], testTitle, testDescription)
+    const testTopicModule = testClassification.slug ? readTopicKnowledge(testClassification.slug) : null
+    const testPrompt = buildSystemPrompt(testTopicModule)
+    const testUserMsg = [
+      `Problem: ${testTitle}`,
+      testDescription ? `Problem description: ${testDescription}` : null,
+      `Max points: ${testMaxPoints}`,
+      ``,
+      `Student submission:`,
+      testSubmission || '(no text)',
+    ].filter(Boolean).join('\n')
+
+    try {
+      const draftResult = await callGPT(testPrompt, testUserMsg)
+      const draftScore = Math.max(0, Math.min(testMaxPoints, Math.round(draftResult.score ?? 0)))
+
+      let criticResult: any = null
+      try {
+        criticResult = await callCritic(testTitle, testDescription, testSubmission, false, testMaxPoints, { ...draftResult, score: draftScore })
+      } catch (_) {}
+
+      const gradeChanged = criticResult && !criticResult.upheld && typeof criticResult.final_score === 'number' && criticResult.final_score !== draftScore
+      const finalScore = gradeChanged ? Math.max(0, Math.min(testMaxPoints, Math.round(criticResult.final_score))) : draftScore
+      const baseConf = Math.max(0, Math.min(1, draftResult.confidence ?? 0.7))
+      const finalConf = gradeChanged ? Math.max(0.5, baseConf - 0.2) : baseConf
+      const finalComment = (gradeChanged && criticResult?.revised_comment) ? criticResult.revised_comment : (draftResult.comment || '')
+
+      let anqiResult: any = null
+      try {
+        anqiResult = await callAnqiCritique(testTitle, testDescription, testSubmission, testMaxPoints, { ...draftResult, score: draftScore }, criticResult ? { grade_changed: gradeChanged, draft_score: draftScore, final_score: finalScore, reasoning: criticResult.critic_reasoning } : null)
+      } catch (_) {}
+
+      // Apply Anqi grade revision if any
+      let displayScore = finalScore
+      let displayComment = finalComment
+      if (anqiResult?.grade_revision && !anqiResult.upheld) {
+        displayScore = Math.max(0, Math.min(testMaxPoints, Math.round(anqiResult.grade_revision.new_score)))
+      }
+      if (anqiResult?.revised_comment && anqiResult.comment_assessment !== 'helpful') {
+        displayComment = anqiResult.revised_comment
+      }
+
+      return NextResponse.json({
+        ok: true,
+        grade: {
+          suggested_score: displayScore,
+          max_score: testMaxPoints,
+          confidence: finalConf,
+          comment: displayComment,
+          high_confidence: finalConf >= 0.85,
+          failed_at_step: draftResult.failed_at_step ?? null,
+          topic_module_used: testClassification.slug,
+          reasoning: {
+            step3_deviation:         draftResult.step3_deviation,
+            step4_henry_perspective: draftResult.step4_henry_perspective,
+            step5_path_continuation: draftResult.step5_path_continuation,
+          },
+          critic: criticResult ? {
+            upheld: criticResult.upheld,
+            draft_score: draftScore,
+            final_score: finalScore,
+            grade_changed: gradeChanged,
+            reasoning: criticResult.critic_reasoning,
+            what_student_did: criticResult.what_student_actually_did,
+            main_issue: criticResult.main_issue,
+          } : null,
+          anqi: anqiResult ? {
+            upheld: anqiResult.upheld,
+            comment_assessment: anqiResult.comment_assessment,
+            revised_comment: anqiResult.revised_comment,
+            anqi_question: anqiResult.anqi_question,
+            what_ta_missed: anqiResult.what_ta_missed,
+            grade_revision: anqiResult.grade_revision,
+          } : null,
+        },
+      })
+    } catch (err: any) {
+      return NextResponse.json({ error: err.message }, { status: 500 })
+    }
   }
 
   const { submission_id } = body
@@ -347,8 +612,13 @@ export async function POST(req: NextRequest) {
       hasImage ? `[Note: Student also submitted an image. Treat this as a potentially complete answer.]` : null,
     ].filter(Boolean).join('\n')
 
+    // ── Classify topic + load topic module ────────────────────────────
+    const classification = classifyTopic([], problemTitle, problemDescription)
+    const topicModule = classification.slug ? readTopicKnowledge(classification.slug) : null
+    const systemPrompt = buildSystemPrompt(topicModule)
+
     // ── Call GPT Grader (Call 1) ───────────────────────────────────────
-    const draftResult = await callGPT(userMessage)
+    const draftResult = await callGPT(systemPrompt, userMessage)
 
     // Validate required fields
     if (typeof draftResult.score !== 'number' || typeof draftResult.confidence !== 'number') {
@@ -395,32 +665,59 @@ export async function POST(req: NextRequest) {
       ? criticResult.revised_comment
       : (draftResult.comment || '')
 
-    // ── Save to ta_grades ──────────────────────────────────────────────
+    // ── Call Anqi Critique Agent (Call 3) ─────────────────────────────
+    let anqiResult: any = null
+    try {
+      anqiResult = await callAnqiCritique(
+        problemTitle, problemDescription, submissionText, maxPoints,
+        { ...draftResult, score: draftScore },
+        criticResult ? { grade_changed: gradeChanged, draft_score: draftScore, final_score: finalScore, reasoning: criticResult?.critic_reasoning } : null
+      )
+    } catch (anqiErr: any) {
+      console.error('Anqi critique failed:', anqiErr.message)
+    }
+
+    // Apply Anqi grade revision if it disagrees
+    let displayScore   = finalScore
+    let displayComment = finalComment
+    let displayConf    = finalConfidence
+    if (anqiResult && !anqiResult.upheld) {
+      if (anqiResult.grade_revision?.new_score != null) {
+        displayScore = Math.max(0, Math.min(maxPoints, Math.round(anqiResult.grade_revision.new_score)))
+        displayConf  = Math.max(0.5, displayConf - 0.1) // further reduce confidence
+      }
+      if (anqiResult.revised_comment && anqiResult.comment_assessment !== 'helpful') {
+        displayComment = anqiResult.revised_comment
+      }
+    }
+
     const { data: saved, error: saveError } = await supabase
       .from('ta_grades')
       .upsert({
         submission_id,
         challenge_id:       (submission as any).challenge_id,
         student_id:         (submission as any).user_id,
-        suggested_score:    finalScore,
+        suggested_score:    displayScore,
         max_score:          maxPoints,
-        confidence:         finalConfidence,
-        suggested_comment:  finalComment,
+        confidence:         displayConf,
+        suggested_comment:  displayComment,
         reasoning: {
-          // Grader reasoning
           step1_math_understanding: draftResult.step1_math_understanding,
           step2_student_approach:   draftResult.step2_student_approach,
           step3_deviation:          draftResult.step3_deviation,
           step4_henry_perspective:  draftResult.step4_henry_perspective,
           step5_path_continuation:  draftResult.step5_path_continuation,
           step6_better_solution:    draftResult.step6_better_solution,
-          // Draft before critique
           draft_score:              draftScore,
-          // Critic output
           critic_upheld:            criticResult ? criticResult.upheld : true,
           critic_reasoning:         criticResult?.critic_reasoning || null,
           critic_what_student_did:  criticResult?.what_student_actually_did || null,
           grade_changed_by_critic:  gradeChanged,
+          topic_module_used:        classification.slug,
+          failed_at_step:           draftResult.failed_at_step ?? null,
+          anqi_upheld:              anqiResult?.upheld ?? true,
+          anqi_comment_assessment:  anqiResult?.comment_assessment ?? null,
+          anqi_what_ta_missed:      anqiResult?.what_ta_missed ?? null,
         },
         status: 'pending',
       }, {
@@ -437,18 +734,18 @@ export async function POST(req: NextRequest) {
       ok: true,
       grade: {
         id:                   (saved as any)?.id,
-        suggested_score:      finalScore,
+        suggested_score:      displayScore,
         max_score:            maxPoints,
-        confidence:           finalConfidence,
-        comment:              finalComment,
-        high_confidence:      finalConfidence >= 0.85,
-        // Grader reasoning (for display)
+        confidence:           displayConf,
+        comment:              displayComment,
+        high_confidence:      displayConf >= 0.85,
+        failed_at_step:       draftResult.failed_at_step ?? null,
+        topic_module_used:    classification.slug,
         reasoning: {
           step3_deviation:         draftResult.step3_deviation,
           step4_henry_perspective: draftResult.step4_henry_perspective,
           step5_path_continuation: draftResult.step5_path_continuation,
         },
-        // Critic summary
         critic: criticResult ? {
           upheld:            criticResult.upheld,
           draft_score:       draftScore,
@@ -457,6 +754,14 @@ export async function POST(req: NextRequest) {
           reasoning:         criticResult.critic_reasoning,
           what_student_did:  criticResult.what_student_actually_did,
           main_issue:        criticResult.main_issue,
+        } : null,
+        anqi: anqiResult ? {
+          upheld:             anqiResult.upheld,
+          comment_assessment: anqiResult.comment_assessment,
+          revised_comment:    anqiResult.revised_comment,
+          anqi_question:      anqiResult.anqi_question,
+          what_ta_missed:     anqiResult.what_ta_missed,
+          grade_revision:     anqiResult.grade_revision,
         } : null,
       },
     })
