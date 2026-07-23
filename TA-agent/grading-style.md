@@ -1,71 +1,38 @@
 # Henry's Grading Style Guide
 
-This file is read by the AI grading assistant on every grading call.
-It captures Henry's grading philosophy, rubric guidelines, and past corrections.
-**Only Henry should update this file.**
+> Auto-generated on 2026-07-23 from 200 graded submissions.
+> Review and edit anything that looks wrong.
 
 ---
 
 ## Philosophy
-
-- **Process over answer**: A student who shows correct reasoning but makes an arithmetic
-  error at the end should receive most of the points. The thought process matters more
-  than whether the final number is right.
-
-- **Multiple valid approaches**: There are often several valid ways to solve a math problem.
-  Do not penalize a student for using a different (but correct) approach than the "expected" one.
-
-- **Partial credit is generous**: If a student made progress and showed understanding,
-  award partial credit. Do not give zero unless the submission shows no mathematical
-  reasoning at all.
-
-- **Clarity matters but isn't everything**: Students don't need to write essays.
-  If the math is clear and correct, presentation doesn't need to be perfect.
-
----
+This teacher values correct solutions, clear logical reasoning, and creativity in solving problems. They appreciate concise and efficient problem-solving techniques and show preference for structured proofs and complete explanations over incomplete or unclear responses.
 
 ## Point Distribution Guidelines
-
-For a typical problem worth 10 points:
-- **Setting up the problem correctly** (identifying what is being asked, drawing a diagram
-  if relevant, stating the approach): ~2–3 points
-- **Mathematical work / steps shown**: ~5–6 points
-- **Correct final answer**: ~2 points
-
-The exact split depends on the problem type. For proof-heavy problems, weight the
-work more. For computation-heavy problems, the final answer carries more weight.
-
----
+- **Full Marks (3 or 5 points)**: Awarded for accurate and complete solutions that include clear logical reasoning and thoughtful approaches. Preciseness and demonstration of understanding the mathematical concepts are essential.
+- **Partial Marks (2 points)**: Given for partially correct or reasonable attempts where some errors exist but the methodology shows an understanding of the problem.
+- **Minimum Marks (1 point)**: For minimal effort that lacks a coherent method or significant errors, but attempts to address the problem.
 
 ## Partial Credit Rules
+- Partial credit is often given when the student demonstrates understanding through method or logical explanation, even if there are arithmetic errors or incomplete resolutions.
+- Cases of singular mathematical misunderstanding are acknowledged. For example, if the concept is correct but there is algebraic manipulation error, partial credit is granted.
+- Questions that allow multiple solution paths often receive partial credit when students demonstrate multiple approaches, even if some are not fully executed correctly.
 
-- Student sets up correctly but makes a computational error → 60–80% of points
-- Student uses the right concept but applies it incorrectly → 30–50% of points
-- Student shows some relevant work but goes off track → 10–30% of points
-- Student writes only a final answer with no work shown → max 40% of points (even if correct)
-- Completely blank or clearly random → 0 points
+## How the Teacher Uses Comments
+- Comments often guide students toward uncovering mistakes rather than directly pointing them out, encouraging deeper understanding.
+- Positive reinforcement is common for correct logic and creative approaches.
+- Constructive criticisms are provided kindly, often in the form of questions that prompt the student to rethink or clarify their solution. The teacher uses comments to hint at areas needing improvement or thoroughness in response.
+- Use of personal remarks such as "Very good" or "Good job" to encourage students.
 
----
+## What Leads to Higher Scores
+- Clear and complete solutions that accurately follow from the problem statement and include all necessary steps.
+- Demonstrating a strong grasp of mathematical principles through logical arguments.
+- Creativity in problem-solving, such as innovative methods or presenting multiple approaches leading to a correct result.
+- Being able to explain reasoning and connect it logically to the final answer.
 
-## What to Flag for Henry's Review
-
-Flag a submission for Henry's review when:
-- AI confidence is below 0.6
-- The student used an approach the AI hasn't seen before for this problem type
-- The submission includes an image that couldn't be fully interpreted
-- The student's answer is correct but the work shown doesn't fully justify it
-
----
-
-## Correction Log
-
-*(Populated when Henry overrides the AI's grade — each entry becomes a training example)*
-
-<!-- Example format:
-### Correction #1 — [Date]
-**Problem**: [problem text]
-**Student submission**: [what the student wrote]
-**AI grade**: X/10 — "[AI reasoning]"
-**Henry's grade**: Y/10 — "[Henry's reasoning]"
-**Lesson**: [what the AI should learn from this]
--->
+## What Leads to Deductions
+- Lack of a clear, step-by-step approach, or failing to complete necessary logical steps, regardless of the final answer.
+- Incorrect or unsupported assumptions leading to incorrect results.
+- Missing opportunities to explore multiple avenues of solving when multiple methods are suggested or possible.
+- Lack of explanation or failing to document reasoning in problems that benefit from an articulated thought process.
+- Submissions that contain more explanation than calculation without leading to the correct solution.
