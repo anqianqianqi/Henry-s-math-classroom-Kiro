@@ -1,10 +1,11 @@
 /**
  * POST /api/ta/grade
  *
- * Grades a student challenge submission using:
- *   1. TA Agent (8-step protocol + topic knowledge)
- *   2. Math Critic (challenges the grade)  
- *   3. Anqi Critique Agent (challenges the comment + pedagogy)
+ * Grades a student challenge submission using a 3-agent pipeline:
+ *   1. TA Grader      — 8-step protocol + topic knowledge → draft grade
+ *   2. Grade Reviewer — adversarially challenges the grade; loops with Grader
+ *                       until they converge (max 3 rounds, stops when upheld=true)
+ *   3. Pedagogy Reviewer — challenges comment quality and helpfulness
  *
  * Body (normal mode):
  *   { submission_id: string }
@@ -150,9 +151,9 @@ IMPORTANT OUTPUT RULES:
 }`
 }
 
-// ── Anqi Critique Agent prompt ────────────────────────────────────────────
+// ── Pedagogy Reviewer prompt ──────────────────────────────────────────────
 
-const ANQI_CRITIQUE_PROMPT = `You are Anqi, a senior math educator reviewing a TA's draft grade and comment.
+const PEDAGOGY_REVIEWER_PROMPT = `You are a Pedagogy Reviewer — a senior math educator reviewing a TA's draft grade and comment.
 Your job is NOT to re-grade the math. Your job is to challenge whether the TA's
 response will actually help the student learn.
 
@@ -190,9 +191,9 @@ OUTPUT RULES:
   "what_ta_missed": "..." | null
 }`
 
-// ── Critic system prompt ──────────────────────────────────────────────────
+// ── Grade Reviewer prompt ─────────────────────────────────────────────────
 
-const CRITIC_PROMPT = `You are a senior math educator reviewing a TA's draft grade. Your job is to challenge it.
+const GRADE_REVIEWER_PROMPT = `You are the Grade Reviewer — a senior math educator reviewing a TA's draft grade. Your job is to challenge it.
 
 You will receive:
 - The math problem
@@ -242,9 +243,14 @@ OUTPUT RULES:
   "revised_comment": "improved comment for the student (only if grade changed, otherwise empty string)"
 }`
 
-// ── Critic call ───────────────────────────────────────────────────────────
+// ── Grade Reviewer call (iterative, max 3 rounds) ─────────────────────────
+//
+// The Grade Reviewer loops with the Grader output until it upholds the grade
+// or max rounds are exhausted. On each round it receives the latest draft
+// and may revise the score. If it revises, the Grader does NOT re-run —
+// the Reviewer converges on its own final judgment within max rounds.
 
-async function callCritic(
+async function callGradeReviewer(
   problemTitle: string,
   problemDescription: string,
   submissionText: string,
@@ -252,65 +258,84 @@ async function callCritic(
   maxPoints: number,
   draftResult: any
 ): Promise<any> {
-  const userMessage = [
-    `Problem: ${problemTitle}`,
-    problemDescription ? `Problem description: ${problemDescription}` : null,
-    `Max points: ${maxPoints}`,
-    ``,
-    `Student submission:`,
-    submissionText || '(no text — student submitted an image)',
-    hasImage ? `[Note: Student also submitted an image.]` : null,
-    ``,
-    `--- TA DRAFT GRADE ---`,
-    `Score: ${draftResult.score}/${maxPoints}`,
-    `TA's interpretation of student: "${draftResult.step2_student_approach}"`,
-    `TA's deviation analysis: "${draftResult.step3_deviation}"`,
-    `TA's Henry-perspective: "${draftResult.step4_henry_perspective}"`,
-    `TA's comment to student: "${draftResult.comment}"`,
-    `TA's confidence: ${Math.round((draftResult.confidence || 0.5) * 100)}%`,
-  ].filter(Boolean).join('\n')
+  let currentDraft = { ...draftResult }
+  let lastReviewerResult: any = null
+  const MAX_ROUNDS = 3
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${OPENAI_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: CRITIC_PROMPT },
-        { role: 'user',   content: userMessage },
-      ],
-      max_tokens: 800,
-      temperature: 0.3,
-    }),
-  })
+  for (let round = 1; round <= MAX_ROUNDS; round++) {
+    const userMessage = [
+      `Problem: ${problemTitle}`,
+      problemDescription ? `Problem description: ${problemDescription}` : null,
+      `Max points: ${maxPoints}`,
+      ``,
+      `Student submission:`,
+      submissionText || '(no text — student submitted an image)',
+      hasImage ? `[Note: Student also submitted an image.]` : null,
+      ``,
+      `--- TA DRAFT GRADE (Round ${round}) ---`,
+      `Score: ${currentDraft.score}/${maxPoints}`,
+      `TA's interpretation of student: "${currentDraft.step2_student_approach}"`,
+      `TA's deviation analysis: "${currentDraft.step3_deviation}"`,
+      `TA's Henry-perspective: "${currentDraft.step4_henry_perspective}"`,
+      `TA's comment to student: "${currentDraft.comment}"`,
+      `TA's confidence: ${Math.round((currentDraft.confidence || 0.5) * 100)}%`,
+      round > 1 && lastReviewerResult ? `\n--- PREVIOUS REVIEW (Round ${round - 1}) ---\nPrevious verdict: ${lastReviewerResult.upheld ? 'upheld' : 'overridden'}\nPrevious reasoning: ${lastReviewerResult.critic_reasoning}` : null,
+    ].filter(Boolean).join('\n')
 
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`Critic OpenAI error ${res.status}: ${err}`)
-  }
+    let reviewerResult: any
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: GRADE_REVIEWER_PROMPT },
+            { role: 'user',   content: userMessage },
+          ],
+          max_tokens: 800,
+          temperature: 0.3,
+        }),
+      })
 
-  const data = await res.json()
-  const raw = data.choices[0].message.content as string
-  const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
+      if (!res.ok) {
+        const err = await res.text()
+        throw new Error(`Grade Reviewer OpenAI error ${res.status}: ${err}`)
+      }
 
-  try {
-    return JSON.parse(cleaned)
-  } catch {
-    // If critic fails to parse, return a pass-through that upholds the original
-    return {
-      upheld: true,
-      original_score: draftResult.score,
-      final_score: draftResult.score,
-      max_score: maxPoints,
-      critic_reasoning: 'Critic response could not be parsed — original grade stands.',
-      what_student_actually_did: draftResult.step2_student_approach,
-      main_issue: '',
-      revised_comment: '',
+      const data = await res.json()
+      const raw = data.choices[0].message.content as string
+      const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
+      reviewerResult = JSON.parse(cleaned)
+    } catch {
+      // Parse failure — treat as uphold so we don't loop forever
+      reviewerResult = {
+        upheld: true,
+        original_score: currentDraft.score,
+        final_score: currentDraft.score,
+        max_score: maxPoints,
+        critic_reasoning: 'Grade Reviewer response could not be parsed — original grade stands.',
+        what_student_actually_did: currentDraft.step2_student_approach,
+        main_issue: '',
+        revised_comment: '',
+      }
+    }
+
+    lastReviewerResult = reviewerResult
+
+    // If the reviewer upholds the grade, we've converged — stop early
+    if (reviewerResult.upheld) break
+
+    // If the reviewer overrides, update the working score for context in next round
+    if (typeof reviewerResult.final_score === 'number') {
+      currentDraft = { ...currentDraft, score: Math.max(0, Math.min(maxPoints, Math.round(reviewerResult.final_score))) }
     }
   }
+
+  return lastReviewerResult
 }
 
 
@@ -353,15 +378,15 @@ async function callGPT(systemPrompt: string, userMessage: string): Promise<any> 
   }
 }
 
-// ── Anqi Critique call (Call 3) ───────────────────────────────────────────
+// ── Pedagogy Reviewer call (Call 3) ──────────────────────────────────────
 
-async function callAnqiCritique(
+async function callPedagogyReviewer(
   problemTitle: string,
   problemDescription: string,
   submissionText: string,
   maxPoints: number,
   draftResult: any,
-  criticResult: any
+  gradeReviewerResult: any
 ): Promise<any> {
   const userMessage = [
     `Problem: ${problemTitle}`,
@@ -377,8 +402,8 @@ async function callAnqiCritique(
     `TA's read of student: "${draftResult.step2_student_approach}"`,
     `TA's deviation: "${draftResult.step3_deviation}"`,
     `TA's comment: "${draftResult.comment}"`,
-    criticResult ? `Critic revised: ${criticResult.grade_changed ? `yes (${criticResult.draft_score}→${criticResult.final_score})` : 'no'}` : null,
-    criticResult?.reasoning ? `Critic note: "${criticResult.reasoning}"` : null,
+    gradeReviewerResult ? `Grade Reviewer revised: ${gradeReviewerResult.grade_changed ? `yes (${gradeReviewerResult.draft_score}→${gradeReviewerResult.final_score})` : 'no'}` : null,
+    gradeReviewerResult?.reasoning ? `Grade Reviewer note: "${gradeReviewerResult.reasoning}"` : null,
   ].filter(Boolean).join('\n')
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -390,7 +415,7 @@ async function callAnqiCritique(
     body: JSON.stringify({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: ANQI_CRITIQUE_PROMPT },
+        { role: 'system', content: PEDAGOGY_REVIEWER_PROMPT },
         { role: 'user',   content: userMessage },
       ],
       max_tokens: 700,
@@ -398,7 +423,7 @@ async function callAnqiCritique(
     }),
   })
 
-  if (!res.ok) throw new Error(`Anqi critique error ${res.status}`)
+  if (!res.ok) throw new Error(`Pedagogy Reviewer error ${res.status}`)
   const data = await res.json()
   const raw = data.choices[0].message.content as string
   const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
@@ -489,7 +514,7 @@ export async function POST(req: NextRequest) {
 
       let criticResult: any = null
       try {
-        criticResult = await callCritic(testTitle, testDescription, testSubmission, false, testMaxPoints, { ...draftResult, score: draftScore })
+        criticResult = await callGradeReviewer(testTitle, testDescription, testSubmission, false, testMaxPoints, { ...draftResult, score: draftScore })
       } catch (_) {}
 
       const gradeChanged = criticResult && !criticResult.upheld && typeof criticResult.final_score === 'number' && criticResult.final_score !== draftScore
@@ -500,7 +525,7 @@ export async function POST(req: NextRequest) {
 
       let anqiResult: any = null
       try {
-        anqiResult = await callAnqiCritique(testTitle, testDescription, testSubmission, testMaxPoints, { ...draftResult, score: draftScore }, criticResult ? { grade_changed: gradeChanged, draft_score: draftScore, final_score: finalScore, reasoning: criticResult.critic_reasoning } : null)
+        anqiResult = await callPedagogyReviewer(testTitle, testDescription, testSubmission, testMaxPoints, { ...draftResult, score: draftScore }, criticResult ? { grade_changed: gradeChanged, draft_score: draftScore, final_score: finalScore, reasoning: criticResult.critic_reasoning } : null)
       } catch (_) {}
 
       // Apply Anqi grade revision if any
@@ -627,10 +652,10 @@ export async function POST(req: NextRequest) {
 
     const draftScore = Math.max(0, Math.min(maxPoints, Math.round(draftResult.score)))
 
-    // ── Call GPT Critic (Call 2) — adversarial self-critique ──────────
+    // ── Call Grade Reviewer (Call 2) — iterative adversarial review ──────
     let criticResult: any = null
     try {
-      criticResult = await callCritic(
+      criticResult = await callGradeReviewer(
         problemTitle,
         problemDescription,
         submissionText,
@@ -639,8 +664,8 @@ export async function POST(req: NextRequest) {
         { ...draftResult, score: draftScore }
       )
     } catch (criticErr: any) {
-      // Critic failure is non-fatal — use draft result
-      console.error('Critic call failed:', criticErr.message)
+      // Grade Reviewer failure is non-fatal — use draft result
+      console.error('Grade Reviewer call failed:', criticErr.message)
     }
 
     // ── Resolve final score ────────────────────────────────────────────
@@ -665,16 +690,16 @@ export async function POST(req: NextRequest) {
       ? criticResult.revised_comment
       : (draftResult.comment || '')
 
-    // ── Call Anqi Critique Agent (Call 3) ─────────────────────────────
+    // ── Call Pedagogy Reviewer (Call 3) ──────────────────────────────────
     let anqiResult: any = null
     try {
-      anqiResult = await callAnqiCritique(
+      anqiResult = await callPedagogyReviewer(
         problemTitle, problemDescription, submissionText, maxPoints,
         { ...draftResult, score: draftScore },
         criticResult ? { grade_changed: gradeChanged, draft_score: draftScore, final_score: finalScore, reasoning: criticResult?.critic_reasoning } : null
       )
     } catch (anqiErr: any) {
-      console.error('Anqi critique failed:', anqiErr.message)
+      console.error('Pedagogy Reviewer failed:', anqiErr.message)
     }
 
     // Apply Anqi grade revision if it disagrees

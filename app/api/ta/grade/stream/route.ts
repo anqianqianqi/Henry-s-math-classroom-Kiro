@@ -8,8 +8,8 @@
  * Events emitted:
  *   { type: "step", step: 1, label: "...", pct: 10 }
  *   { type: "step", step: 2, label: "...", pct: 40 }
- *   { type: "step", step: 3, label: "...", pct: 70 }
- *   { type: "step", step: 4, label: "...", pct: 90 }
+ *   { type: "step", step: 3, label: "...", pct: 70 }   ← Grade Reviewer (iterative)
+ *   { type: "step", step: 4, label: "...", pct: 90 }   ← Pedagogy Reviewer
  *   { type: "done",  grade: { ...full result... } }
  *   { type: "error", message: "..." }
  *
@@ -90,7 +90,7 @@ IMPORTANT: Output ONLY valid JSON — no markdown, no code blocks:
 }`
 }
 
-const CRITIC_PROMPT = `You are a senior math educator reviewing a TA's draft grade. Challenge it.
+const GRADE_REVIEWER_PROMPT = `You are the Grade Reviewer — a senior math educator reviewing a TA's draft grade. Challenge it.
 Ask: Did the TA read the student charitably? Is the grade proportional? Is the score consistent with the reasoning?
 Output ONLY valid JSON:
 {
@@ -101,7 +101,7 @@ Output ONLY valid JSON:
   "revised_comment": ""
 }`
 
-const ANQI_PROMPT = `You are Anqi, reviewing whether the TA's comment will actually help the student learn.
+const PEDAGOGY_REVIEWER_PROMPT = `You are the Pedagogy Reviewer — reviewing whether the TA's comment will actually help the student learn.
 Ask: Does it acknowledge the good idea first? Does it ask a question rather than give the answer? Is there a deeper question worth adding?
 Output ONLY valid JSON:
 {
@@ -204,24 +204,46 @@ export async function GET(req: NextRequest) {
         const draftScore = Math.max(0, Math.min(maxPoints, Math.round(draft.score ?? 0)))
         sseEvent(controller, { type: 'step', step: 2, pct: 50, label: `TA grade: ${draftScore}/${maxPoints} (${Math.round((draft.confidence ?? 0.7) * 100)}% confident)` })
 
-        // Step 3 — Critic
-        sseEvent(controller, { type: 'step', step: 3, pct: 52, label: 'Critic checking the grade...' })
+        // Step 3 — Grade Reviewer (iterative, max 3 rounds)
+        sseEvent(controller, { type: 'step', step: 3, pct: 52, label: 'Grade Reviewer checking the grade...' })
         let criticResult: any = null
         try {
-          const criticUser = [`Problem: ${problemTitle}`, `Max: ${maxPoints}`, `Student: ${studentSubmission}`, ``, `TA draft: Score ${draftScore}/${maxPoints}`, `TA's read: "${draft.step2_student_approach}"`, `TA's deviation: "${draft.step3_deviation}"`, `TA's comment: "${draft.comment}"`].join('\n')
-          criticResult = await callGPT(CRITIC_PROMPT, criticUser, 600)
+          let currentDraft = { ...draft, score: draftScore }
+          let lastResult: any = null
+          const MAX_ROUNDS = 3
+
+          for (let round = 1; round <= MAX_ROUNDS; round++) {
+            if (round > 1) {
+              sseEvent(controller, { type: 'step', step: 3, pct: 52 + round * 4, label: `Grade Reviewer round ${round}...` })
+            }
+            const criticUser = [
+              `Problem: ${problemTitle}`, `Max: ${maxPoints}`, `Student: ${studentSubmission}`,
+              ``, `TA draft (Round ${round}): Score ${currentDraft.score}/${maxPoints}`,
+              `TA's read: "${currentDraft.step2_student_approach}"`,
+              `TA's deviation: "${currentDraft.step3_deviation}"`,
+              `TA's comment: "${currentDraft.comment}"`,
+              round > 1 && lastResult ? `Previous review: ${lastResult.upheld ? 'upheld' : 'overridden'} — ${lastResult.critic_reasoning}` : null,
+            ].filter(Boolean).join('\n')
+            const roundResult = await callGPT(GRADE_REVIEWER_PROMPT, criticUser, 600)
+            lastResult = roundResult
+            if (roundResult.upheld) break
+            if (typeof roundResult.final_score === 'number') {
+              currentDraft = { ...currentDraft, score: Math.max(0, Math.min(maxPoints, Math.round(roundResult.final_score))) }
+            }
+          }
+          criticResult = lastResult
         } catch (_) {}
         const gradeChanged = criticResult && !criticResult.upheld && typeof criticResult.final_score === 'number' && criticResult.final_score !== draftScore
         const finalScore = gradeChanged ? Math.max(0, Math.min(maxPoints, Math.round(criticResult.final_score))) : draftScore
-        sseEvent(controller, { type: 'step', step: 3, pct: 75, label: gradeChanged ? `Critic revised: ${draftScore}→${finalScore}` : 'Critic upheld grade ✓' })
+        sseEvent(controller, { type: 'step', step: 3, pct: 75, label: gradeChanged ? `Grade Reviewer revised: ${draftScore}→${finalScore}` : 'Grade Reviewer upheld ✓' })
 
-        // Step 4 — Anqi
-        sseEvent(controller, { type: 'step', step: 4, pct: 77, label: 'Anqi reviewing the comment...' })
+        // Step 4 — Pedagogy Reviewer
+        sseEvent(controller, { type: 'step', step: 4, pct: 77, label: 'Pedagogy Reviewer checking the comment...' })
         let anqiResult: any = null
         try {
           const baseComment = (gradeChanged && criticResult?.revised_comment) ? criticResult.revised_comment : (draft.comment || '')
           const anqiUser = [`Problem: ${problemTitle}`, `Student: ${studentSubmission}`, ``, `TA comment: "${baseComment}"`, `Grade: ${finalScore}/${maxPoints}`].join('\n')
-          anqiResult = await callGPT(ANQI_PROMPT, anqiUser, 600)
+          anqiResult = await callGPT(PEDAGOGY_REVIEWER_PROMPT, anqiUser, 600)
         } catch (_) {}
 
         const baseConf = Math.max(0, Math.min(1, draft.confidence ?? 0.7))
@@ -234,7 +256,7 @@ export async function GET(req: NextRequest) {
           displayScore = Math.max(0, Math.min(maxPoints, Math.round(anqiResult.grade_revision.new_score)))
         }
 
-        sseEvent(controller, { type: 'step', step: 4, pct: 95, label: anqiResult?.comment_assessment === 'helpful' ? 'Anqi: comment is helpful ✓' : 'Anqi: comment improved ✓' })
+        sseEvent(controller, { type: 'step', step: 4, pct: 95, label: anqiResult?.comment_assessment === 'helpful' ? 'Pedagogy Reviewer: comment is helpful ✓' : 'Pedagogy Reviewer: comment improved ✓' })
 
         // Save to DB
         let savedId: string | null = null

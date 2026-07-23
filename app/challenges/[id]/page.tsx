@@ -1831,7 +1831,7 @@ export default function ChallengePage() {
                               </div>
                               {/* Step indicators */}
                               <div className="flex gap-1.5 text-[10px] text-indigo-500">
-                                {['Topic', 'TA grades', 'Critic', 'Anqi'].map((label, i) => {
+                                {['Topic', 'TA grades', 'Grade Reviewer', 'Pedagogy Reviewer'].map((label, i) => {
                                   const step = taGrades[submission.id].progress?.step ?? 0
                                   const done = i + 1 < step
                                   const active = i + 1 === step
@@ -1873,10 +1873,10 @@ export default function ChallengePage() {
                                   </div>
                                 )}
 
-                                {/* Critic badge */}
+                                {/* Grade Reviewer badge */}
                                 {taGrades[submission.id].critic?.grade_changed && (
                                   <div className="p-2 bg-orange-50 border border-orange-200 rounded-lg text-xs">
-                                    <span className="font-semibold text-orange-700">🔁 Critic revised: </span>
+                                    <span className="font-semibold text-orange-700">🔁 Grade Reviewer revised: </span>
                                     <span className="text-orange-700">{taGrades[submission.id].critic!.draft_score} → {taGrades[submission.id].critic!.final_score} — {taGrades[submission.id].critic!.reasoning}</span>
                                   </div>
                                 )}
@@ -1897,10 +1897,10 @@ export default function ChallengePage() {
                                   <p className="text-xs italic text-gray-700">{taGrades[submission.id].comment}</p>
                                 </div>
 
-                                {/* Anqi's deeper question */}
+                                {/* Pedagogy Reviewer deeper question */}
                                 {taGrades[submission.id].anqi?.anqi_question && (
                                   <div className="p-2 bg-purple-50 rounded-lg border border-purple-100">
-                                    <p className="text-[10px] font-semibold text-purple-600 mb-1">🧠 Anqi&apos;s deeper question (optional)</p>
+                                    <p className="text-[10px] font-semibold text-purple-600 mb-1">🧠 Pedagogy Reviewer: deeper question (optional)</p>
                                     <p className="text-xs italic text-gray-700">{taGrades[submission.id].anqi!.anqi_question}</p>
                                   </div>
                                 )}
