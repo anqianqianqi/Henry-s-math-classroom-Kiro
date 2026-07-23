@@ -877,6 +877,8 @@ export default function ChallengePage() {
       setTaGrades(prev => ({ ...prev, [submissionId]: { ...prev[submissionId], loading: false } as any }))
     }
   }
+
+  async function handleRevealOthers() {
     if (!userSubmission || !userId) return
     const grade = userSubmission.points ?? 0
     if (!confirm(`⚠️ This will lock your current submission and grade (${grade}/${challenge?.max_points || 100}). You won't be able to edit your answer after this. Continue?`)) return
