@@ -1,1 +1,23 @@
-[]
+[
+  {
+    "date": "2026-07-23",
+    "exact_accuracy": 45.0,
+    "within_one": 65.0,
+    "passed_gate": false,
+    "n": 20
+  },
+  {
+    "date": "2026-07-23",
+    "exact_accuracy": 70.0,
+    "passed_gate": false,
+    "n": 20,
+    "run": 2
+  },
+  {
+    "date": "2026-07-23",
+    "exact_accuracy": 95.0,
+    "passed_gate": true,
+    "n": 20,
+    "run": 3
+  }
+]

@@ -137,3 +137,65 @@ Never write a comment that only says what's wrong. Always name the right idea fi
 
 Language: Chinese and English are both acceptable. Mixed is fine. Match the language
 the student used in their submission.
+
+
+---
+
+## Special patterns observed in Henry's grading
+
+### 5-point problems with elegant substitution
+Some problems (e.g., `a(b+1) + b + 1 = 5`) have a max of 5 points and an
+elegant solution: try b=1, which makes the equation `2a + 2 = 5 → a = 3/2`.
+Henry gives 5/5 for this because the student found the simplifying substitution.
+
+**Rule**: When a student correctly tries a specific value (like b=1) that
+immediately simplifies the equation to an easy single-variable solve, and
+gets the right answer — that earns FULL MARKS regardless of brevity.
+
+Examples Henry gave 5/5:
+- `b=1 → (5-1)÷1 = 4 → a=4` (two lines, correct) → 5/5
+- `我们会知道ax1+1=5 → ax1=4 → a=4` (three lines) → 5/5
+- `We can find: ax(b+1)+b+1=5, b=1 → 2a+2=5 → a=3/2` → 5/5
+
+Do NOT give 1 or 2 out of 5 for "not enough working shown" when the
+result is clearly correct. Henry rewards the insight of finding the simplifying
+substitution with maximum points.
+
+### Henry gives full marks despite presentation issues
+Henry is generous with full marks when the student's final answer is correct,
+even if there are minor presentation issues, unclear notation, or the student
+used a slightly roundabout path:
+
+- eq-005: `3*(a-5)/3 = a-5 = 2a-10 → a=5` — minor algebra shorthand, correct → 3/3
+- eq-006: Student got a=5 via a=5, even with an error noted in first step → 3/3
+- eq-008: Student wrote `1+5a=3+2a → a=2/3` treating equation as if 1/a → a, BUT
+  got the right answer and showed algebraic reasoning → 3/3
+
+Henry's comment on eq-006: "hmmmm 好像不太對喔 再檢查一下! 第一個算式" (seems wrong, check again)
+— he gave 3/3 anyway. The answer was right even though the first step notation was messy.
+
+**Rule**: If the student reaches the correct final answer via a recognizable
+algebraic path, give full marks. Only deduct for missing cases (b=0 type),
+not for imperfect notation or intermediate step messiness.
+
+### Numerical approximation problems (找未知数的位置)
+For problems asking to approximate a value (e.g., "find a where a² ≈ 2"),
+systematic trial-and-error is a completely valid and full-mark approach.
+A student who:
+1. Identifies that a is between two integers
+2. Tries a few values to narrow it down
+3. Finds a reasonable approximation
+
+gets full marks (3/3), even with minimal written explanation.
+Henry comment for this type: "非常棒!你是真正去嘗試慢慢增加" (Excellent! You really tried increasing gradually)
+
+Do NOT give 2/3 for not showing a formal algebraic derivation. Trial-and-error
+IS the expected method for these problems.
+
+### Image submissions
+When a student writes only "Please check the attached" or "如图" or "详见附件"
+(see attached), treat the submission as potentially containing a complete
+and correct answer that cannot be verified from text alone.
+- Do NOT give 0
+- Assign partial marks (2/3 or 3/5 depending on context) and flag for Henry
+- Comment: "Looks good! Can you also write out your steps in text next time?"
