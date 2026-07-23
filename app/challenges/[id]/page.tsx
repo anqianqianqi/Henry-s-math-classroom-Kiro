@@ -1761,12 +1761,12 @@ export default function ChallengePage() {
                                 <div className="mb-2 p-2 bg-orange-50 border border-orange-200 rounded-lg text-xs">
                                   <span className="font-semibold text-orange-700">🔁 Critic revised: </span>
                                   <span className="text-orange-700">
-                                    {taGrades[submission.id].critic.draft_score} → {taGrades[submission.id].critic.final_score}
-                                    {' '}— {taGrades[submission.id].critic.reasoning}
+                                    {taGrades[submission.id].critic!.draft_score} → {taGrades[submission.id].critic!.final_score}
+                                    {' '}— {taGrades[submission.id].critic!.reasoning}
                                   </span>
                                 </div>
                               )}
-                              {taGrades[submission.id].critic && !taGrades[submission.id].critic.grade_changed && (
+                              {taGrades[submission.id].critic && !taGrades[submission.id].critic!.grade_changed && (
                                 <div className="mb-2 text-[10px] text-green-600">
                                   ✓ Critic reviewed and upheld this grade
                                 </div>
