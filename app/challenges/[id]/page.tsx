@@ -102,6 +102,15 @@ export default function ChallengePage() {
   const [defaultCoverLayout, setDefaultCoverLayout] = useState<any>(undefined)
   const [defaultCoverFrameUrls, setDefaultCoverFrameUrls] = useState<string[] | undefined>(undefined)
   const [defaultCoverOverlays, setDefaultCoverOverlays] = useState<any[]>([])
+  // TA grading suggestions
+  const [taGrades, setTaGrades] = useState<Record<string, {
+    suggested_score: number
+    max_score: number
+    confidence: number
+    comment: string
+    reasoning: any
+    loading?: boolean
+  }>>({})
 
   useEffect(() => {
     loadChallenge()
@@ -839,15 +848,6 @@ export default function ChallengePage() {
       setSubmitting(false)
     }
   }
-
-  const [taGrades, setTaGrades] = useState<Record<string, {
-    suggested_score: number
-    max_score: number
-    confidence: number
-    comment: string
-    reasoning: any
-    loading?: boolean
-  }>>({})
 
   async function askTA(submissionId: string) {
     setTaGrades(prev => ({ ...prev, [submissionId]: { ...prev[submissionId], loading: true } as any }))
