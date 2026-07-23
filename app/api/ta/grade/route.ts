@@ -82,7 +82,130 @@ IMPORTANT OUTPUT RULES:
   "comment": "the comment henry would write to the student"
 }`
 
-// ── OpenAI call ───────────────────────────────────────────────────────────
+// ── Critic system prompt ──────────────────────────────────────────────────
+
+const CRITIC_PROMPT = `You are a senior math educator reviewing a TA's draft grade. Your job is to challenge it.
+
+You will receive:
+- The math problem
+- The student's submission  
+- The TA's draft grade and reasoning
+
+Your task is to challenge the grade by asking these specific questions in order:
+
+**1. Did the TA understand what the student was actually saying?**
+   - Read the student submission fresh, without looking at the TA's interpretation first.
+   - What is the most charitable reasonable interpretation of what this student wrote?
+   - Did the TA read it that way, or did it read it more harshly?
+
+**2. Does the student's answer capture the correct mathematical insight?**
+   - Even if stated briefly, clumsily, or incompletely — is the core idea right?
+   - A student writing "3进制大" (base-3 is bigger) is correct. Don't penalize brevity.
+   - A student writing the right answer in Chinese when the problem is in English is still correct.
+
+**3. Did the TA penalize an unexpected but valid method?**
+   - If the student used a different approach than expected, was it mathematically valid?
+   - An unconventional correct method should earn full credit.
+
+**4. Is the TA's score consistent with its own stated reasoning?**
+   - If the TA said "mostly correct" but gave 40%, that is internally inconsistent.
+   - If the TA said "missing one case" but gave 0%, that is too harsh.
+
+**5. Is the deduction proportional to the actual error?**
+   - Missing b=0 case → partial deduction (not zero)
+   - Correct concept, no full working → depends on what the problem asks for
+   - Completely wrong approach → larger deduction
+
+After challenging the grade:
+- If the grade is FAIR: explain clearly why each criticism doesn't apply
+- If the grade should change: state the revised score and explain exactly what the TA got wrong
+
+OUTPUT RULES:
+- Output ONLY valid JSON, no markdown, no extra text
+- Structure:
+{
+  "upheld": <true if grade stands, false if it should change>,
+  "original_score": <the TA's score>,
+  "final_score": <revised score, same as original if upheld>,
+  "max_score": <max points>,
+  "critic_reasoning": "2-3 sentences explaining the critique decision",
+  "what_student_actually_did": "the critic's own interpretation of the student's answer",
+  "main_issue": "the single most important thing the TA got right or wrong",
+  "revised_comment": "improved comment for the student (only if grade changed, otherwise empty string)"
+}`
+
+// ── Critic call ───────────────────────────────────────────────────────────
+
+async function callCritic(
+  problemTitle: string,
+  problemDescription: string,
+  submissionText: string,
+  hasImage: boolean,
+  maxPoints: number,
+  draftResult: any
+): Promise<any> {
+  const userMessage = [
+    `Problem: ${problemTitle}`,
+    problemDescription ? `Problem description: ${problemDescription}` : null,
+    `Max points: ${maxPoints}`,
+    ``,
+    `Student submission:`,
+    submissionText || '(no text — student submitted an image)',
+    hasImage ? `[Note: Student also submitted an image.]` : null,
+    ``,
+    `--- TA DRAFT GRADE ---`,
+    `Score: ${draftResult.score}/${maxPoints}`,
+    `TA's interpretation of student: "${draftResult.step2_student_approach}"`,
+    `TA's deviation analysis: "${draftResult.step3_deviation}"`,
+    `TA's Henry-perspective: "${draftResult.step4_henry_perspective}"`,
+    `TA's comment to student: "${draftResult.comment}"`,
+    `TA's confidence: ${Math.round((draftResult.confidence || 0.5) * 100)}%`,
+  ].filter(Boolean).join('\n')
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENAI_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: CRITIC_PROMPT },
+        { role: 'user',   content: userMessage },
+      ],
+      max_tokens: 800,
+      temperature: 0.3,
+    }),
+  })
+
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Critic OpenAI error ${res.status}: ${err}`)
+  }
+
+  const data = await res.json()
+  const raw = data.choices[0].message.content as string
+  const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
+
+  try {
+    return JSON.parse(cleaned)
+  } catch {
+    // If critic fails to parse, return a pass-through that upholds the original
+    return {
+      upheld: true,
+      original_score: draftResult.score,
+      final_score: draftResult.score,
+      max_score: maxPoints,
+      critic_reasoning: 'Critic response could not be parsed — original grade stands.',
+      what_student_actually_did: draftResult.step2_student_approach,
+      main_issue: '',
+      revised_comment: '',
+    }
+  }
+}
+
+
 
 async function callGPT(userMessage: string): Promise<any> {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -122,7 +245,7 @@ async function callGPT(userMessage: string): Promise<any> {
 
 // ── Route handler ─────────────────────────────────────────────────────────
 
-export const maxDuration = 60  // 60s timeout for Vercel
+export const maxDuration = 120  // 120s — two sequential GPT-4o calls
 
 export async function POST(req: NextRequest) {
   // ── Auth ──────────────────────────────────────────────────────────────
@@ -224,17 +347,53 @@ export async function POST(req: NextRequest) {
       hasImage ? `[Note: Student also submitted an image. Treat this as a potentially complete answer.]` : null,
     ].filter(Boolean).join('\n')
 
-    // ── Call GPT ───────────────────────────────────────────────────────
-    const result = await callGPT(userMessage)
+    // ── Call GPT Grader (Call 1) ───────────────────────────────────────
+    const draftResult = await callGPT(userMessage)
 
     // Validate required fields
-    if (typeof result.score !== 'number' || typeof result.confidence !== 'number') {
+    if (typeof draftResult.score !== 'number' || typeof draftResult.confidence !== 'number') {
       throw new Error('GPT response missing required score or confidence fields')
     }
 
-    // Clamp score to valid range
-    const score    = Math.max(0, Math.min(maxPoints, Math.round(result.score)))
-    const confidence = Math.max(0, Math.min(1, result.confidence))
+    const draftScore = Math.max(0, Math.min(maxPoints, Math.round(draftResult.score)))
+
+    // ── Call GPT Critic (Call 2) — adversarial self-critique ──────────
+    let criticResult: any = null
+    try {
+      criticResult = await callCritic(
+        problemTitle,
+        problemDescription,
+        submissionText,
+        hasImage,
+        maxPoints,
+        { ...draftResult, score: draftScore }
+      )
+    } catch (criticErr: any) {
+      // Critic failure is non-fatal — use draft result
+      console.error('Critic call failed:', criticErr.message)
+    }
+
+    // ── Resolve final score ────────────────────────────────────────────
+    // If the critic overrides, use its score; else use the draft
+    const gradeChanged = criticResult && !criticResult.upheld &&
+      typeof criticResult.final_score === 'number' &&
+      criticResult.final_score !== draftScore
+
+    const finalScore = gradeChanged
+      ? Math.max(0, Math.min(maxPoints, Math.round(criticResult.final_score)))
+      : draftScore
+
+    // Confidence: if grader and critic agreed → keep grader confidence
+    //             if critic overrode → lower confidence (needs Henry review)
+    const baseConfidence = Math.max(0, Math.min(1, draftResult.confidence))
+    const finalConfidence = gradeChanged
+      ? Math.max(0.5, baseConfidence - 0.2)  // penalise confidence when critic disagrees
+      : baseConfidence
+
+    // Best comment: use critic's revised comment if grade changed, else grader's
+    const finalComment = (gradeChanged && criticResult.revised_comment)
+      ? criticResult.revised_comment
+      : (draftResult.comment || '')
 
     // ── Save to ta_grades ──────────────────────────────────────────────
     const { data: saved, error: saveError } = await supabase
@@ -243,17 +402,25 @@ export async function POST(req: NextRequest) {
         submission_id,
         challenge_id:       (submission as any).challenge_id,
         student_id:         (submission as any).user_id,
-        suggested_score:    score,
+        suggested_score:    finalScore,
         max_score:          maxPoints,
-        confidence,
-        suggested_comment:  result.comment || '',
+        confidence:         finalConfidence,
+        suggested_comment:  finalComment,
         reasoning: {
-          step1_math_understanding: result.step1_math_understanding,
-          step2_student_approach:   result.step2_student_approach,
-          step3_deviation:          result.step3_deviation,
-          step4_henry_perspective:  result.step4_henry_perspective,
-          step5_path_continuation:  result.step5_path_continuation,
-          step6_better_solution:    result.step6_better_solution,
+          // Grader reasoning
+          step1_math_understanding: draftResult.step1_math_understanding,
+          step2_student_approach:   draftResult.step2_student_approach,
+          step3_deviation:          draftResult.step3_deviation,
+          step4_henry_perspective:  draftResult.step4_henry_perspective,
+          step5_path_continuation:  draftResult.step5_path_continuation,
+          step6_better_solution:    draftResult.step6_better_solution,
+          // Draft before critique
+          draft_score:              draftScore,
+          // Critic output
+          critic_upheld:            criticResult ? criticResult.upheld : true,
+          critic_reasoning:         criticResult?.critic_reasoning || null,
+          critic_what_student_did:  criticResult?.what_student_actually_did || null,
+          grade_changed_by_critic:  gradeChanged,
         },
         status: 'pending',
       }, {
@@ -264,19 +431,33 @@ export async function POST(req: NextRequest) {
 
     if (saveError) {
       console.error('Failed to save ta_grade:', saveError)
-      // Still return the result even if save failed
     }
 
     return NextResponse.json({
       ok: true,
       grade: {
-        id:               (saved as any)?.id,
-        suggested_score:  score,
-        max_score:        maxPoints,
-        confidence,
-        comment:          result.comment,
-        reasoning:        result,
-        high_confidence:  confidence >= 0.85,
+        id:                   (saved as any)?.id,
+        suggested_score:      finalScore,
+        max_score:            maxPoints,
+        confidence:           finalConfidence,
+        comment:              finalComment,
+        high_confidence:      finalConfidence >= 0.85,
+        // Grader reasoning (for display)
+        reasoning: {
+          step3_deviation:         draftResult.step3_deviation,
+          step4_henry_perspective: draftResult.step4_henry_perspective,
+          step5_path_continuation: draftResult.step5_path_continuation,
+        },
+        // Critic summary
+        critic: criticResult ? {
+          upheld:            criticResult.upheld,
+          draft_score:       draftScore,
+          final_score:       finalScore,
+          grade_changed:     gradeChanged,
+          reasoning:         criticResult.critic_reasoning,
+          what_student_did:  criticResult.what_student_actually_did,
+          main_issue:        criticResult.main_issue,
+        } : null,
       },
     })
 

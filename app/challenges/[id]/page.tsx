@@ -105,6 +105,7 @@ export default function ChallengePage() {
   const [taGrades, setTaGrades] = useState<Record<string, {
     suggested_score: number; max_score: number; confidence: number
     comment: string; reasoning: any; loading?: boolean
+    critic?: { upheld: boolean; draft_score: number; final_score: number; grade_changed: boolean; reasoning: string; what_student_did: string; main_issue: string }
   }>>({})
 
   useEffect(() => {
@@ -1754,12 +1755,32 @@ export default function ChallengePage() {
                                   {Math.round(taGrades[submission.id].confidence * 100)}% confidence
                                 </span>
                               </div>
+
+                              {/* Critic badge — show if critic changed the grade */}
+                              {taGrades[submission.id].critic?.grade_changed && (
+                                <div className="mb-2 p-2 bg-orange-50 border border-orange-200 rounded-lg text-xs">
+                                  <span className="font-semibold text-orange-700">🔁 Critic revised: </span>
+                                  <span className="text-orange-700">
+                                    {taGrades[submission.id].critic.draft_score} → {taGrades[submission.id].critic.final_score}
+                                    {' '}— {taGrades[submission.id].critic.reasoning}
+                                  </span>
+                                </div>
+                              )}
+                              {taGrades[submission.id].critic && !taGrades[submission.id].critic.grade_changed && (
+                                <div className="mb-2 text-[10px] text-green-600">
+                                  ✓ Critic reviewed and upheld this grade
+                                </div>
+                              )}
+
                               <div className="space-y-1 mb-2 text-xs text-gray-600">
                                 {taGrades[submission.id].reasoning?.step3_deviation && (
                                   <p><span className="font-medium text-gray-700">Deviation: </span>{taGrades[submission.id].reasoning.step3_deviation}</p>
                                 )}
                                 {taGrades[submission.id].reasoning?.step4_henry_perspective && (
                                   <p><span className="font-medium text-gray-700">Henry&apos;s view: </span>{taGrades[submission.id].reasoning.step4_henry_perspective}</p>
+                                )}
+                                {taGrades[submission.id].critic?.what_student_did && taGrades[submission.id].critic?.grade_changed && (
+                                  <p><span className="font-medium text-orange-700">Critic&apos;s read: </span>{taGrades[submission.id].critic.what_student_did}</p>
                                 )}
                               </div>
                               <div className="p-2 bg-white rounded-lg border border-indigo-100 text-xs italic text-gray-700 mb-2">
