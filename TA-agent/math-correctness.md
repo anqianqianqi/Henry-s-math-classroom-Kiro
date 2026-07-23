@@ -121,3 +121,39 @@ Before assigning a final grade, verify:
 3. Is the final answer in the correct form (exact vs decimal, units included)?
 4. Did the student handle all cases (zero case, negative case, boundary cases)?
 5. For proofs: is there any circular reasoning or proof-by-example?
+
+---
+
+## 🔢 NOTATION VS. COMPUTED RESULT — Trust the numbers
+
+This is one of the most common grading errors. A student may write a formula imprecisely
+(missing parentheses, using informal shorthand, writing things in an ambiguous order),
+but if their stated numerical answer is correct, the computation is correct.
+
+**The verification rule:**
+
+Before marking any intermediate step wrong, independently compute the result
+using the student's established values. If your computation matches the student's
+stated answer, they computed correctly — the written formula was just imprecise.
+
+**Process:**
+1. Student writes a formula step and a numerical result
+2. The written formula looks syntactically wrong to you
+3. **Stop — compute it yourself** using the values the student had at that point
+4. If your answer = student's answer → correct, do NOT deduct
+5. If your answer ≠ student's answer → genuine error, deduct appropriately
+
+**Real example (Chloe, July 2026):**
+- X+Y+Z = 9/2, with Y+Z = 3 and X+Z = 4 already established
+- Student wrote: "Y = 9/2 - X + Z, which is 4, so Y = 1/2"
+- Written formula looks wrong (seems to add Z rather than subtract X+Z)
+- But: 9/2 − (X+Z) = 9/2 − 4 = **1/2** ✓ — matches the student's answer
+- Student also explicitly said "which is 4" — they correctly evaluated X+Z = 4
+- Correct grade: 3/3. TA initially gave 1/3. That was wrong.
+
+**Corollary — verify by substitution:**
+If a student reaches a complete set of final values (e.g. a, b, c in a system),
+substitute them back into the original equations. If all equations are satisfied,
+the answer is completely correct regardless of intermediate notation.
+
+Never penalize notation. Judge mathematical substance.

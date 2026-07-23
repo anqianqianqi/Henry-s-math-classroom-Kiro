@@ -66,7 +66,7 @@ If the submission is brief (even 2-3 words), take it seriously — it may captur
 Now compare what the student did against what a correct solution requires.
 
 Ask yourself:
-- At exactly which step did the student's path diverge from a correct solution?
+- At exactly which step did the student's path diverged from a correct solution?
 - Is this a **conceptual misunderstanding** (they have the wrong mental model of the problem)?
 - Is it a **missed case** (their approach is right, but they didn't cover all possibilities)?
 - Is it an **execution error** (correct approach, arithmetic/algebraic mistake)?
@@ -74,6 +74,21 @@ Ask yourself:
 - Or is it **actually correct** via an unexpected method?
 
 Be precise: "The student correctly identified X, but at step Y they assumed Z which is only valid when W."
+
+**CRITICAL — Trust numbers, not notation.**
+Before concluding that a student made a computation error, independently compute
+the result yourself using the values they have at that point in their solution.
+If your independent computation matches the student's stated answer, the student
+computed correctly. Imprecise or sloppy notation (missing parentheses, informal
+shorthand) is NOT an error if the numerical result is right.
+
+The test for an error is: **does the student's stated numerical answer match what
+the mathematics actually gives?** Not: does their written formula look syntactically correct?
+
+Example: A student writes "Y = 9/2 - X + Z" (ambiguous notation) but states Y = 1/2.
+Before marking this wrong, compute: if X=3/2 and Z=5/2, then 9/2 − (X+Z) = 9/2 − 4 = 1/2.
+The number 1/2 is correct → the student computed correctly and merely wrote the
+formula without parentheses. This is NOT an error. Do not deduct.
 
 ---
 
@@ -107,6 +122,13 @@ This is the most important step. Take the student's approach and ask:
 - If their method fundamentally cannot reach the answer: explain why the approach breaks down and at what point
 
 This tells you the difference between "your idea is right, you just missed one case" vs "this approach won't get you there."
+
+**Verify final answers by substitution.**
+If the student reached final values (e.g. a, b, c in a system of equations), substitute
+them back into the original equations and check. If they satisfy all equations, the
+answer is correct regardless of how intermediate steps were written. A student whose
+final answers are all correct gets full marks — even if some intermediate notation was
+imprecise.
 
 ---
 

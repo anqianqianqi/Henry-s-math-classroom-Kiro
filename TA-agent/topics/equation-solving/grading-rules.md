@@ -178,6 +178,29 @@ Henry's comment on eq-006: "hmmmm 好像不太對喔 再檢查一下! 第一個�
 algebraic path, give full marks. Only deduct for missing cases (b=0 type),
 not for imperfect notation or intermediate step messiness.
 
+### CRITICAL: Notation vs. computed result — always trust the numbers
+
+When a student writes a formula imprecisely (e.g. missing parentheses, informal
+shorthand) but their computed numerical answer is correct, that is NOT an error.
+
+**The rule**: Before marking any intermediate step wrong, compute the result
+yourself using the student's preceding values. If your independent computation
+matches the student's stated answer, they computed correctly — the notation
+was just sloppy.
+
+**The test for an error is**: does the student's stated number match what the
+math gives? NOT: does the written formula look syntactically correct?
+
+**Real example (Chloe, 2026-07-23):**
+Student wrote: "Y = 9/2 - X + Z, which is 4, so Y = 1/2"
+- The written formula "9/2 - X + Z" looks wrong (seems to add Z instead of subtract)
+- But the student said "(X+Z) which is 4" immediately after — they knew X+Z = 4
+- And Y = 9/2 − 4 = 1/2 ✓ — the computed answer is exactly right
+- The original TA gave 1/3 for this. The correct grade is 3/3.
+
+**Never penalize a student for notation when their computed answer is right.**
+The notation is communication — the math is the substance. Judge the substance.
+
 ### Numerical approximation problems (找未知数的位置)
 For problems asking to approximate a value (e.g., "find a where a² ≈ 2"),
 systematic trial-and-error is a completely valid and full-mark approach.
