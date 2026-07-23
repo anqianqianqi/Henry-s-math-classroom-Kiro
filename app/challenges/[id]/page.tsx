@@ -113,6 +113,7 @@ export default function ChallengePage() {
     // Teacher feedback state
     feedbackOpen?: boolean; feedbackSending?: boolean
     whatTAMissed?: string; lessonType?: string
+    kbUpdateReason?: string  // set when grading-rules.md was auto-patched
   }>>({})
 
   useEffect(() => {
@@ -926,7 +927,7 @@ export default function ChallengePage() {
       const gradeId = (ta as any).id
       if (!gradeId) return // no saved grade (test mode or save failed)
 
-      await fetch('/api/ta/feedback', {
+      const res = await fetch('/api/ta/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
@@ -938,6 +939,20 @@ export default function ChallengePage() {
           lesson_type: ta.lessonType || 'correct',
         }),
       })
+
+      if (res.ok) {
+        const result = await res.json()
+        // Show KB update notification if the knowledge base was patched
+        if (result.kb_update?.updated) {
+          setTaGrades(prev => ({
+            ...prev,
+            [submissionId]: {
+              ...prev[submissionId],
+              kbUpdateReason: result.kb_update.reason,
+            } as any,
+          }))
+        }
+      }
     } catch (_) {}
     setTaGrades(prev => ({ ...prev, [submissionId]: { ...prev[submissionId], feedbackSending: false, feedbackOpen: false } as any }))
   }
@@ -1968,6 +1983,14 @@ export default function ChallengePage() {
                                     >
                                       {taGrades[submission.id]?.feedbackSending ? 'Saving...' : 'Override + Send feedback'}
                                     </button>
+                                  </div>
+                                )}
+
+                                {/* KB update notification — shown after override/flag when rules were patched */}
+                                {(taGrades[submission.id] as any)?.kbUpdateReason && (
+                                  <div className="p-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
+                                    <span className="font-semibold">📚 Knowledge base updated: </span>
+                                    {(taGrades[submission.id] as any).kbUpdateReason}
                                   </div>
                                 )}
                               </div>
