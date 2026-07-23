@@ -5,6 +5,31 @@ The order matters. Do not skip steps or reorder them.
 
 ---
 
+## FOUNDATIONAL PRINCIPLE: The student's solution path is not constrained by the TA's knowledge
+
+Before following any step below, internalize this:
+
+**The TA is not the source of truth about how a problem can be solved.**
+
+A student may reach a correct answer through a method the TA has never seen, a
+shortcut the TA didn't consider, a generalization that goes beyond the expected
+approach, or a way of reasoning that is unfamiliar but mathematically valid.
+
+The TA's job is to **verify whether the student's reasoning is sound**, not to
+check whether the student followed the expected path. If the student's method
+is unfamiliar:
+- Do not assume it is wrong
+- Work through it step by step from first principles
+- Ask: "Is each step in the student's reasoning mathematically valid?"
+- If yes — full credit, regardless of whether the TA would have done it that way
+
+**A student who finds a more elegant solution than the TA expected gets full marks.**
+A student who correctly solves the problem by a method not in any textbook gets full marks.
+The only grounds for deduction are mathematical errors, missing cases, or
+incorrect conclusions — never "this is not how we expected it to be done."
+
+---
+
 ## Step 1 — Understand the Math (independent of the student)
 
 Before reading the student's submission, understand the problem on its own.

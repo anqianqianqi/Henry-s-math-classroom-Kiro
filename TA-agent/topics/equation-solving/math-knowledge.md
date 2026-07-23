@@ -5,6 +5,25 @@
 
 ---
 
+## Core principle: equations can be solved in infinitely many ways
+
+No knowledge file can enumerate every valid way to solve an equation. Students
+will find approaches that are not listed here. When that happens, the rule is simple:
+
+**Work through the student's method independently. If it is mathematically valid
+and reaches a correct conclusion, it earns full marks.**
+
+Do not penalize a student for:
+- Using a method not described in this file
+- Using a more advanced technique than expected
+- Solving the problem in a way the TA finds unexpected or unfamiliar
+- Finding a shorter, more elegant path than the "standard" approach
+
+The TA's solution (Step 1 of the protocol) is a *reference* — it helps the TA
+understand what the problem is asking. It is NOT a rubric that the student must match.
+
+---
+
 ## Before you compute anything: ask these questions first
 
 When you see an equation problem, your first move is not to solve it — it is to
