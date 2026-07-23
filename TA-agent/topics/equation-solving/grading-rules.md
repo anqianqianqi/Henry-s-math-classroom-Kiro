@@ -59,10 +59,11 @@ Award partial marks (roughly 2/3) when:
   of problem this is and started correctly but made an algebraic slip
   that prevents reaching the full answer.
 
-- **Correct answer, no explanation where one is needed** — if the problem
-  requires the student to show their reasoning and they give only a final
-  answer. Henry's response: *"Can you give me an explanation?"*
-  (Correction log Example #11: 2/3, comment "Can you give me an explanation?")
+Note: **correct final answer with no working shown does NOT lose marks.**
+If the answer is correct, it earns full marks. The comment should ask
+the student to explain their reasoning, but lack of working is not a
+point deduction — it is a teaching opportunity. The grade is based on
+the correctness of the answer, not the presence of written steps.
 
 ---
 

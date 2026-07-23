@@ -148,7 +148,7 @@ This is only for generating useful comments that help the student grow.
 Now, and only now, assign the score.
 
 Use this decision framework:
-- **Full marks**: Student demonstrates the core insight, covers all necessary cases, reaches a correct conclusion (method doesn't matter)
+- **Full marks**: Student demonstrates the core insight, covers all necessary cases, reaches a correct conclusion (method doesn't matter). **A correct final answer with no working shown also earns full marks** — the comment can ask for explanation, but lack of working is not a point deduction.
 - **One step below full**: Student has the right idea and right method, but missed one specific thing (an edge case, an incomplete step) that they could fix easily
 - **Half marks**: Student shows understanding of the problem type but makes a significant logical error or misses something fundamental
 - **Minimum (1 point)**: Student attempted the problem and shows some relevant thinking, but cannot reach the answer from where they are

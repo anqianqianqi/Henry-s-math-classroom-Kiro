@@ -33,8 +33,11 @@ This teacher values correct solutions, clear logical reasoning, and creativity i
 ## What Leads to Deductions
 - Missing an edge case that changes the answer (e.g. b=0 when dividing by b).
 - Asserting a geometry result without any algebraic or logical derivation.
-- Providing only a final answer with no explanation on problems where reasoning matters.
 - Logical gaps or unsupported assumptions in the solution chain.
+
+**NOTE: Correct final answer without working shown does NOT lead to a deduction.**
+If the answer is right, the grade is full marks. The comment should ask the student
+to explain their reasoning, but missing working is a teaching note, not a penalty.
 
 ## Critical Exceptions (derived from real grading patterns)
 
