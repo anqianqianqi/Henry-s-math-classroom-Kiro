@@ -369,7 +369,7 @@ async function getCachedSolution(
   bankItemId: string | null,
 ): Promise<string | null> {
   if (!challengeId && !bankItemId) return null
-  let query = supabase.from('ta_suggested_solutions').select('solution_text').order('created_at', { ascending: true }).limit(1)
+  let query = (supabase as any).from('ta_suggested_solutions').select('solution_text').order('created_at', { ascending: true }).limit(1)
   if (bankItemId) {
     query = query.eq('bank_item_id', bankItemId)
   } else if (challengeId) {
@@ -385,7 +385,7 @@ async function saveSolution(
   bankItemId: string | null,
   solutionText: string,
 ): Promise<void> {
-  await supabase.from('ta_suggested_solutions').insert({ challenge_id: challengeId, bank_item_id: bankItemId, solution_text: solutionText })
+  await (supabase as any).from('ta_suggested_solutions').insert({ challenge_id: challengeId, bank_item_id: bankItemId, solution_text: solutionText })
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────
