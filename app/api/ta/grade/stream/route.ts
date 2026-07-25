@@ -5,11 +5,21 @@
  * Streams step completion events as each agent finishes, so the client
  * can show a live progress bar.
  *
+ * Two-pass grading architecture:
+ *   Pass 1A — Submission Reader: reads only the student's work, extracts what they did
+ *   Pass 1B — Grader: receives the reader's interpretation + max_score, verifies & scores
+ *
+ * Suggested solution caching:
+ *   - Before generating a suggested solution, check ta_suggested_solutions in DB
+ *   - If found: use cached (skip generation)
+ *   - If not found: generate from Pass 1A, save to DB for next time
+ *
  * Events emitted:
  *   { type: "step", step: 1, label: "...", pct: 10 }
- *   { type: "step", step: 2, label: "...", pct: 40 }
- *   { type: "step", step: 3, label: "...", pct: 70 }   ← Grade Reviewer (iterative)
- *   { type: "step", step: 4, label: "...", pct: 90 }   ← Pedagogy Reviewer
+ *   { type: "step", step: 2, label: "...", pct: 25 }   ← Reading submission
+ *   { type: "step", step: 3, label: "...", pct: 50 }   ← Grading
+ *   { type: "step", step: 4, label: "...", pct: 70 }   ← Grade Reviewer
+ *   { type: "step", step: 5, label: "...", pct: 90 }   ← Pedagogy Reviewer
  *   { type: "done",  grade: { ...full result... } }
  *   { type: "error", message: "..." }
  *
@@ -19,32 +29,15 @@
 
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const OPENAI_KEY   = process.env.OPENAI_API_KEY!
-const TA_DIR       = join(process.cwd(), 'TA-agent')
 
 export const maxDuration = 120
 
-// ── Knowledge helpers ─────────────────────────────────────────────────────
-
-function readKnowledge(filename: string): string {
-  try { return readFileSync(join(TA_DIR, filename), 'utf-8') } catch { return `(${filename} not found)` }
-}
-function readTopicFile(slug: string, fname: string): string {
-  const p = join(TA_DIR, 'topics', slug, fname)
-  try { return existsSync(p) ? readFileSync(p, 'utf-8') : '' } catch { return '' }
-}
-
-// ── Knowledge files — not loaded in zero-KB mode ─────────────────────────
-
-const GRADING_PROTOCOL = ''
-const GRADING_STYLE    = ''
-const MATH_CORRECTNESS = ''
-const CORRECTION_LOG   = ''
+// ── Topic classifier ──────────────────────────────────────────────────────
 
 const TOPIC_KEYWORDS: Record<string, string[]> = {
   'equation-solving': ['解方程','方程化简','方程','solve','equation','求解','化简','求x','求a','求b','找x','找a'],
@@ -58,34 +51,131 @@ function classifyTopic(title: string, desc: string): string | null {
   return null
 }
 
-function buildSystemPrompt(_topicSlug: string | null): string {
-  return `You are a math Teaching Assistant grading a student's submission for Henry's math classroom.
+// ── GPT helper ────────────────────────────────────────────────────────────
 
-Your job:
-1. Solve the problem yourself to understand what a correct solution looks like
-2. READ THE STUDENT'S SUBMISSION ON ITS OWN TERMS — trace their logic step by step as they intended it, not as you expected it. Ask: what is this student trying to do? Follow their reasoning path forward before evaluating whether it's correct.
-3. Verify the student's final answers by substituting back into the original equations/constraints
-4. Assign a score based on mathematical correctness — correct final answer earns full marks. An unexpected but mathematically valid method is worth full marks.
-5. Write a warm, encouraging comment that acknowledges what the student got right first
+async function callGPT(system: string, user: string, maxTokens = 1200): Promise<any> {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${OPENAI_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+      max_tokens: maxTokens,
+      temperature: 0.2,
+    }),
+  })
+  if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`)
+  const raw = (await res.json()).choices[0].message.content as string
+  const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
+  return JSON.parse(cleaned)
+}
 
-CRITICAL: Trust the student's computed numbers, not their notation. If their written formula looks ambiguous but their stated answer is mathematically correct, that is full marks. Always verify numbers independently before calling something wrong.
+// ── Pass 1A — Submission Reader ───────────────────────────────────────────
+// Only sees the problem and the student's raw submission.
+// Does NOT know what the correct answer is.
+// Returns a structured interpretation of what the student did.
+
+const SUBMISSION_READER_PROMPT = `You are a Submission Reader for a math classroom. Your ONLY job is to carefully read and describe what the student wrote — not to judge whether it is correct.
+
+Rules:
+- Do NOT compute or verify anything yourself
+- Do NOT compare to any correct answer
+- Describe the student's method step by step as they wrote it
+- Extract every numerical value the student stated or computed
+- Be literal and charitable: if notation is ambiguous, pick the most reasonable reading
+- If the student wrote "X = 9/2 - (Y+Z) which is 3 so X = 3/2", extract X=3/2 as their stated value
 
 Output ONLY valid JSON — no markdown, no code blocks:
 {
-  "suggested_solution": "Your own clean solution (2-4 sentences)",
-  "step1_math_understanding": "What the problem asks and what a correct solution looks like",
-  "step2_student_approach": "What the student did, described neutrally and charitably",
-  "step3_deviation": "Where student went wrong, or null if correct",
+  "student_approach": "Describe in 2-4 sentences what the student did, following their reasoning path",
+  "student_values": {
+    "description": "All final and intermediate values the student computed or stated",
+    "values": { "<variable>": "<value>", ... }
+  },
+  "student_final_answers": "The student's final stated answers (e.g. a=2/3, b=2, c=2/5)",
+  "notation_issues": "Any places where the student's notation was ambiguous or informal — or null if clear"
+}`
+
+async function callSubmissionReader(
+  problemTitle: string,
+  problemDesc: string,
+  studentSubmission: string,
+): Promise<{ student_approach: string; student_values: any; student_final_answers: string; notation_issues: string | null }> {
+  const userMsg = [
+    `Problem: ${problemTitle}`,
+    problemDesc ? `Description: ${problemDesc}` : null,
+    ``,
+    `Student submission:`,
+    studentSubmission || '(image only — describe as potentially complete)',
+  ].filter(Boolean).join('\n')
+
+  return callGPT(SUBMISSION_READER_PROMPT, userMsg, 800)
+}
+
+// ── Pass 1B — Grader ──────────────────────────────────────────────────────
+// Receives: problem + max_score + the Reader's structured interpretation.
+// Does NOT see the student's raw text — only the interpreted values.
+// Task: verify those values by substituting into original equations, then score.
+
+const GRADER_PROMPT = `You are a math Teaching Assistant grading a student's submission for Henry's math classroom.
+
+You have been given:
+1. The problem
+2. A structured interpretation of what the student did (extracted by a separate reader)
+3. The student's stated final answers
+
+Your job:
+1. Solve the problem yourself to get the correct answer
+2. Verify the student's final answers by substituting them back into the original equations — do this numerically
+3. If the final answers satisfy all equations: FULL MARKS — regardless of how intermediate steps were written
+4. If the final answers are wrong: identify the exact step where the error occurred
+5. Write a warm encouraging comment
+
+CRITICAL: You are verifying the student's STATED VALUES (from the reader), not re-reading their raw notation. Trust the reader's extraction. If the reader says student computed X=3/2, verify 3/2 in the original equations.
+
+MANDATORY: Before claiming any error, substitute the student's final answers into every original equation and check numerically. If they all hold, score = max_score.
+
+Output ONLY valid JSON — no markdown, no code blocks:
+{
+  "suggested_solution": "Your own clean solution to this problem (2-4 sentences)",
+  "step1_math_understanding": "What the problem asks and what the correct answer is",
+  "step2_student_approach": "What the student did (use the reader's description)",
+  "step3_deviation": "Where the student went wrong — or null if final answers are correct",
   "step4_henry_perspective": "What a good teacher would observe about this submission",
   "step5_path_continuation": "If we follow the student's method forward, does it work?",
+  "verification": "Show your substitution check: plug student's final answers into original equations",
   "score": <int>,
   "max_score": <int>,
   "confidence": <float 0-1>,
-  "comment": "Encouraging comment to the student — acknowledge the good idea first, then guide toward improvement",
-  "failed_at_step": "free text description of error, or null if correct",
+  "comment": "Encouraging comment — acknowledge the good idea first, then guide toward improvement",
+  "failed_at_step": "description of where student went wrong, or null if correct",
   "topic_module_used": null
 }`
+
+async function callGrader(
+  problemTitle: string,
+  problemDesc: string,
+  maxPoints: number,
+  studentInterpretation: { student_approach: string; student_values: any; student_final_answers: string; notation_issues: string | null },
+): Promise<any> {
+  const userMsg = [
+    `Problem: ${problemTitle}`,
+    problemDesc ? `Description: ${problemDesc}` : null,
+    `Max points: ${maxPoints}`,
+    ``,
+    `--- READER'S INTERPRETATION OF STUDENT WORK ---`,
+    `Student's approach: ${studentInterpretation.student_approach}`,
+    `Student's computed values: ${JSON.stringify(studentInterpretation.student_values)}`,
+    `Student's final answers: ${studentInterpretation.student_final_answers}`,
+    studentInterpretation.notation_issues ? `Notation notes: ${studentInterpretation.notation_issues}` : null,
+    ``,
+    `Now verify these final answers by substitution and assign a grade.`,
+  ].filter(Boolean).join('\n')
+
+  return callGPT(GRADER_PROMPT, userMsg, 1500)
 }
+
+// ── Grade Reviewer prompt ─────────────────────────────────────────────────
 
 const GRADE_REVIEWER_PROMPT = `You are the Grade Reviewer — a senior math educator reviewing a TA's draft grade.
 
@@ -159,16 +249,43 @@ Output ONLY valid JSON:
   "what_ta_missed": null
 }`
 
-async function callGPT(system: string, user: string, maxTokens = 1200): Promise<any> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${OPENAI_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'gpt-4o', messages: [{ role: 'system', content: system }, { role: 'user', content: user }], max_tokens: maxTokens, temperature: 0.2 }),
+// ── Suggested solution cache helpers ─────────────────────────────────────
+
+async function getCachedSolution(
+  supabase: ReturnType<typeof createClient>,
+  challengeId: string | null,
+  bankItemId: string | null,
+): Promise<string | null> {
+  if (!challengeId && !bankItemId) return null
+
+  let query = supabase
+    .from('ta_suggested_solutions')
+    .select('solution_text')
+    .order('created_at', { ascending: true })
+    .limit(1)
+
+  // Prefer bank item lookup (more stable across challenge copies)
+  if (bankItemId) {
+    query = query.eq('bank_item_id', bankItemId)
+  } else if (challengeId) {
+    query = query.eq('challenge_id', challengeId)
+  }
+
+  const { data } = await query.single()
+  return data?.solution_text ?? null
+}
+
+async function saveSolution(
+  supabase: ReturnType<typeof createClient>,
+  challengeId: string | null,
+  bankItemId: string | null,
+  solutionText: string,
+): Promise<void> {
+  await supabase.from('ta_suggested_solutions').insert({
+    challenge_id: challengeId,
+    bank_item_id: bankItemId,
+    solution_text: solutionText,
   })
-  if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`)
-  const raw = (await res.json()).choices[0].message.content as string
-  const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
-  return JSON.parse(cleaned)
 }
 
 // ── SSE helper ────────────────────────────────────────────────────────────
@@ -203,12 +320,14 @@ export async function GET(req: NextRequest) {
 
   // Collect problem info
   let problemTitle = '', problemDesc = '', studentSubmission = '', maxPoints = 3, realSubmissionId = submissionId
+  let challengeId: string | null = null
+  let bankItemId: string | null = null
 
   if (testMode) {
-    problemTitle       = searchParams.get('problem_title') || ''
-    problemDesc        = searchParams.get('problem_description') || ''
-    studentSubmission  = searchParams.get('student_submission') || ''
-    maxPoints          = parseInt(searchParams.get('max_points') || '3')
+    problemTitle      = searchParams.get('problem_title') || ''
+    problemDesc       = searchParams.get('problem_description') || ''
+    studentSubmission = searchParams.get('student_submission') || ''
+    maxPoints         = parseInt(searchParams.get('max_points') || '3')
   } else if (submissionId) {
     const { data: sub } = await supabase
       .from('challenge_submissions')
@@ -224,19 +343,19 @@ export async function GET(req: NextRequest) {
     maxPoints         = ch?.max_points ?? 100
     studentSubmission = (sub as any).content || ''
     realSubmissionId  = sub.id
+    challengeId       = (sub as any).challenge_id ?? null
+    bankItemId        = ch?.source_bank_id ?? null
 
-    // Try to get richer info from bank item
-    if (ch?.source_bank_id) {
-      const { data: bi } = await supabase.from('challenge_bank').select('title, description, max_points').eq('id', ch.source_bank_id).single()
+    // Prefer bank item title/description if available
+    if (bankItemId) {
+      const { data: bi } = await supabase.from('challenge_bank').select('title, description, max_points').eq('id', bankItemId).single()
       if (bi) { problemTitle = bi.title; problemDesc = bi.description; maxPoints = bi.max_points ?? maxPoints }
     }
   } else {
     return new Response('submission_id required', { status: 400 })
   }
 
-  const topicSlug   = classifyTopic(problemTitle, problemDesc)
-  const systemPrompt = buildSystemPrompt(topicSlug)
-  const userMessage  = [`Problem: ${problemTitle}`, problemDesc ? `Description: ${problemDesc}` : null, `Max points: ${maxPoints}`, ``, `Student submission:`, studentSubmission || '(image only — treat as potentially complete)'].filter(Boolean).join('\n')
+  const topicSlug = classifyTopic(problemTitle, problemDesc)
 
   // Stream
   const stream = new ReadableStream({
@@ -245,14 +364,35 @@ export async function GET(req: NextRequest) {
         // Step 1 — topic classification (instant)
         sseEvent(controller, { type: 'step', step: 1, pct: 8, label: topicSlug ? `Topic: ${topicSlug} ✓` : 'General math problem' })
 
-        // Step 2 — TA grades
-        sseEvent(controller, { type: 'step', step: 2, pct: 15, label: 'TA solving and reading student work...' })
-        const draft = await callGPT(systemPrompt, userMessage, 1500)
-        const draftScore = Math.max(0, Math.min(maxPoints, Math.round(draft.score ?? 0)))
-        sseEvent(controller, { type: 'step', step: 2, pct: 50, label: `TA grade: ${draftScore}/${maxPoints} (${Math.round((draft.confidence ?? 0.7) * 100)}% confident)` })
+        // Check for cached suggested solution
+        let cachedSolution: string | null = null
+        if (!testMode) {
+          try {
+            cachedSolution = await getCachedSolution(supabase, challengeId, bankItemId)
+          } catch (_) {}
+        }
 
-        // Step 3 — Grade Reviewer (iterative, max 3 rounds)
-        sseEvent(controller, { type: 'step', step: 3, pct: 52, label: 'Grade Reviewer checking the grade...' })
+        // Step 2 — Pass 1A: Read the student's submission
+        sseEvent(controller, { type: 'step', step: 2, pct: 15, label: 'Reading student submission...' })
+        const readerResult = await callSubmissionReader(problemTitle, problemDesc, studentSubmission)
+        sseEvent(controller, { type: 'step', step: 2, pct: 35, label: `Submission read: ${readerResult.student_final_answers || 'extracted'}` })
+
+        // Step 3 — Pass 1B: Verify and grade
+        sseEvent(controller, { type: 'step', step: 3, pct: 38, label: 'Verifying and grading...' })
+        const draft = await callGrader(problemTitle, problemDesc, maxPoints, readerResult)
+        const draftScore = Math.max(0, Math.min(maxPoints, Math.round(draft.score ?? 0)))
+        sseEvent(controller, { type: 'step', step: 3, pct: 55, label: `Grade: ${draftScore}/${maxPoints} (${Math.round((draft.confidence ?? 0.7) * 100)}% confident)` })
+
+        // Save suggested solution to cache if it's new
+        if (!testMode && !cachedSolution && draft.suggested_solution) {
+          try {
+            await saveSolution(supabase, challengeId, bankItemId, draft.suggested_solution)
+          } catch (_) {}
+        }
+        const suggestedSolution = cachedSolution || draft.suggested_solution || draft.step1_math_understanding || ''
+
+        // Step 4 — Grade Reviewer (iterative, max 3 rounds)
+        sseEvent(controller, { type: 'step', step: 4, pct: 57, label: 'Grade Reviewer checking the grade...' })
         let criticResult: any = null
         try {
           let currentDraft = { ...draft, score: draftScore }
@@ -261,14 +401,16 @@ export async function GET(req: NextRequest) {
 
           for (let round = 1; round <= MAX_ROUNDS; round++) {
             if (round > 1) {
-              sseEvent(controller, { type: 'step', step: 3, pct: 52 + round * 4, label: `Grade Reviewer round ${round}...` })
+              sseEvent(controller, { type: 'step', step: 4, pct: 57 + round * 4, label: `Grade Reviewer round ${round}...` })
             }
             const criticUser = [
               `Problem: ${problemTitle}`, `Max: ${maxPoints}`, `Student: ${studentSubmission}`,
-              ``, `TA draft (Round ${round}): Score ${currentDraft.score}/${maxPoints}`,
+              ``,
+              `TA draft (Round ${round}): Score ${currentDraft.score}/${maxPoints}`,
               `TA's read: "${currentDraft.step2_student_approach}"`,
               `TA's deviation: "${currentDraft.step3_deviation}"`,
               `TA's comment: "${currentDraft.comment}"`,
+              `TA's verification: "${(currentDraft as any).verification || ''}"`,
               round > 1 && lastResult ? `Previous review: ${lastResult.upheld ? 'upheld' : 'overridden'} — ${lastResult.critic_reasoning}` : null,
             ].filter(Boolean).join('\n')
             const roundResult = await callGPT(GRADE_REVIEWER_PROMPT, criticUser, 600)
@@ -282,10 +424,10 @@ export async function GET(req: NextRequest) {
         } catch (_) {}
         const gradeChanged = criticResult && !criticResult.upheld && typeof criticResult.final_score === 'number' && criticResult.final_score !== draftScore
         const finalScore = gradeChanged ? Math.max(0, Math.min(maxPoints, Math.round(criticResult.final_score))) : draftScore
-        sseEvent(controller, { type: 'step', step: 3, pct: 75, label: gradeChanged ? `Grade Reviewer revised: ${draftScore}→${finalScore}` : 'Grade Reviewer upheld ✓' })
+        sseEvent(controller, { type: 'step', step: 4, pct: 78, label: gradeChanged ? `Grade Reviewer revised: ${draftScore}→${finalScore}` : 'Grade Reviewer upheld ✓' })
 
-        // Step 4 — Pedagogy Reviewer
-        sseEvent(controller, { type: 'step', step: 4, pct: 77, label: 'Pedagogy Reviewer checking the comment...' })
+        // Step 5 — Pedagogy Reviewer
+        sseEvent(controller, { type: 'step', step: 5, pct: 80, label: 'Pedagogy Reviewer checking the comment...' })
         let anqiResult: any = null
         try {
           const baseComment = (gradeChanged && criticResult?.revised_comment) ? criticResult.revised_comment : (draft.comment || '')
@@ -303,7 +445,7 @@ export async function GET(req: NextRequest) {
           displayScore = Math.max(0, Math.min(maxPoints, Math.round(anqiResult.grade_revision.new_score)))
         }
 
-        sseEvent(controller, { type: 'step', step: 4, pct: 95, label: anqiResult?.comment_assessment === 'helpful' ? 'Pedagogy Reviewer: comment is helpful ✓' : 'Pedagogy Reviewer: comment improved ✓' })
+        sseEvent(controller, { type: 'step', step: 5, pct: 95, label: anqiResult?.comment_assessment === 'helpful' ? 'Pedagogy Reviewer: comment is helpful ✓' : 'Pedagogy Reviewer: comment improved ✓' })
 
         // Save to DB
         let savedId: string | null = null
@@ -318,7 +460,17 @@ export async function GET(req: NextRequest) {
               max_score: maxPoints,
               confidence: finalConf,
               suggested_comment: finalComment,
-              reasoning: { ...draft, draft_score: draftScore, critic_upheld: criticResult?.upheld ?? true, critic_reasoning: criticResult?.critic_reasoning, grade_changed_by_critic: gradeChanged, topic_module_used: topicSlug, anqi_assessment: anqiResult?.comment_assessment },
+              reasoning: {
+                ...draft,
+                reader_interpretation: readerResult,
+                draft_score: draftScore,
+                critic_upheld: criticResult?.upheld ?? true,
+                critic_reasoning: criticResult?.critic_reasoning,
+                grade_changed_by_critic: gradeChanged,
+                topic_module_used: topicSlug,
+                anqi_assessment: anqiResult?.comment_assessment,
+                solution_from_cache: !!cachedSolution,
+              },
               status: 'pending',
             }, { onConflict: 'submission_id' }).select().single()
             savedId = (saved as any)?.id
@@ -334,15 +486,18 @@ export async function GET(req: NextRequest) {
             max_score: maxPoints,
             confidence: finalConf,
             comment: finalComment,
-            suggested_solution: draft.suggested_solution || draft.step1_math_understanding || '',
+            suggested_solution: suggestedSolution,
+            solution_from_cache: !!cachedSolution,
             high_confidence: finalConf >= 0.85,
             topic_module_used: topicSlug,
             failed_at_step: draft.failed_at_step ?? null,
             reasoning: {
+              reader_interpretation: readerResult,
               step1_math_understanding: draft.step1_math_understanding,
               step3_deviation: draft.step3_deviation,
               step4_henry_perspective: draft.step4_henry_perspective,
               step5_path_continuation: draft.step5_path_continuation,
+              verification: draft.verification,
             },
             critic: criticResult ? { upheld: criticResult.upheld, draft_score: draftScore, final_score: finalScore, grade_changed: gradeChanged, reasoning: criticResult.critic_reasoning } : null,
             anqi: anqiResult ? { upheld: anqiResult.upheld, comment_assessment: anqiResult.comment_assessment, revised_comment: anqiResult.revised_comment, anqi_question: anqiResult.anqi_question } : null,
