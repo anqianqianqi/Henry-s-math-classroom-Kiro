@@ -376,7 +376,7 @@ async function getCachedSolution(
     query = query.eq('challenge_id', challengeId)
   }
   const { data } = await query.single()
-  return data?.solution_text ?? null
+  return (data as any)?.solution_text ?? null
 }
 
 async function saveSolution(
