@@ -252,7 +252,7 @@ Output ONLY valid JSON:
 // ── Suggested solution cache helpers ─────────────────────────────────────
 
 async function getCachedSolution(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   challengeId: string | null,
   bankItemId: string | null,
 ): Promise<string | null> {
@@ -276,7 +276,7 @@ async function getCachedSolution(
 }
 
 async function saveSolution(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   challengeId: string | null,
   bankItemId: string | null,
   solutionText: string,
