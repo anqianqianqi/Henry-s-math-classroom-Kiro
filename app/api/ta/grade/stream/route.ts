@@ -39,10 +39,12 @@ function readTopicFile(slug: string, fname: string): string {
   try { return existsSync(p) ? readFileSync(p, 'utf-8') : '' } catch { return '' }
 }
 
-const GRADING_PROTOCOL = readKnowledge('grading-protocol.md')
-const GRADING_STYLE    = readKnowledge('grading-style.md')
-const MATH_CORRECTNESS = readKnowledge('math-correctness.md')
-const CORRECTION_LOG   = readKnowledge('correction-log.md').slice(0, 4000)
+// ── Knowledge files — not loaded in zero-KB mode ─────────────────────────
+
+const GRADING_PROTOCOL = ''
+const GRADING_STYLE    = ''
+const MATH_CORRECTNESS = ''
+const CORRECTION_LOG   = ''
 
 const TOPIC_KEYWORDS: Record<string, string[]> = {
   'equation-solving': ['解方程','方程化简','方程','solve','equation','求解','化简','求x','求a','求b','找x','找a'],
@@ -56,37 +58,32 @@ function classifyTopic(title: string, desc: string): string | null {
   return null
 }
 
-function buildSystemPrompt(topicSlug: string | null): string {
-  const topicSection = topicSlug ? `\n---\n## TOPIC MATH KNOWLEDGE\n${readTopicFile(topicSlug, 'math-knowledge.md')}\n\n---\n## TOPIC GRADING RULES\n${readTopicFile(topicSlug, 'grading-rules.md')}\n---` : ''
-  return `You are Henry's math Teaching Assistant. Grade submissions exactly as Henry would.
+function buildSystemPrompt(_topicSlug: string | null): string {
+  return `You are a math Teaching Assistant grading a student's submission for Henry's math classroom.
 
-## GRADING PROTOCOL
-${GRADING_PROTOCOL}
+Your job:
+1. Solve the problem yourself first
+2. Read the student's submission carefully and charitably
+3. Verify the student's final answers by substituting back into the original equations/constraints
+4. Assign a score based on mathematical correctness — correct final answer earns full marks
+5. Write a warm, encouraging comment in the style of a good math teacher
 
-## HENRY'S GRADING STYLE
-${GRADING_STYLE}
+CRITICAL: Trust the student's computed numbers, not their notation. If their written formula looks ambiguous but their stated answer is mathematically correct, that is full marks. Always verify numbers independently before calling something wrong.
 
-## MATH CORRECTNESS RULES
-${MATH_CORRECTNESS}
-
-## REAL EXAMPLES OF HENRY'S GRADES
-${CORRECTION_LOG}
-${topicSection}
-
-IMPORTANT: Output ONLY valid JSON — no markdown, no code blocks:
+Output ONLY valid JSON — no markdown, no code blocks:
 {
-  "suggested_solution": "The TA's own clean solution to this problem (2-4 sentences, written as if explaining to a student)",
-  "step1_math_understanding": "...",
-  "step2_student_approach": "...",
-  "step3_deviation": "where student went wrong, or null if correct",
-  "step4_henry_perspective": "...",
-  "step5_path_continuation": "...",
+  "suggested_solution": "Your own clean solution (2-4 sentences)",
+  "step1_math_understanding": "What the problem asks and what a correct solution looks like",
+  "step2_student_approach": "What the student did, described neutrally and charitably",
+  "step3_deviation": "Where student went wrong, or null if correct",
+  "step4_henry_perspective": "What a good teacher would observe about this submission",
+  "step5_path_continuation": "If we follow the student's method forward, does it work?",
   "score": <int>,
   "max_score": <int>,
   "confidence": <float 0-1>,
-  "comment": "Henry's comment to the student",
-  "failed_at_step": "free text or null",
-  "topic_module_used": "${topicSlug ?? null}"
+  "comment": "Encouraging comment to the student — acknowledge the good idea first, then guide toward improvement",
+  "failed_at_step": "free text description of error, or null if correct",
+  "topic_module_used": null
 }`
 }
 

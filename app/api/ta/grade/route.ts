@@ -86,68 +86,44 @@ function readKnowledge(filename: string): string {
   }
 }
 
-const GRADING_PROTOCOL   = readKnowledge('grading-protocol.md')
-const GRADING_STYLE      = readKnowledge('grading-style.md')
-const MATH_CORRECTNESS   = readKnowledge('math-correctness.md')
-const CORRECTION_LOG_RAW = readKnowledge('correction-log.md')
-const CORRECTION_LOG = CORRECTION_LOG_RAW.slice(0, 4000)
+// ── Knowledge files — not loaded in zero-KB mode ─────────────────────────
 
-// ── Dynamic system prompt (includes topic module when available) ───────────
+const GRADING_PROTOCOL   = ''
+const GRADING_STYLE      = ''
+const MATH_CORRECTNESS   = ''
+const CORRECTION_LOG_RAW = ''
+const CORRECTION_LOG = ''
 
-function buildSystemPrompt(topicModule: { mathKnowledge: string; gradingRules: string } | null): string {
-  const topicSection = topicModule?.mathKnowledge ? `
----
-## TOPIC-SPECIFIC MATH KNOWLEDGE
-Read this before looking at the student's work. Use it to understand what a
-complete solution looks like and what habits a good mathematician applies here.
+// ── Dynamic system prompt (zero knowledge base — model reasons from scratch) ──
 
-${topicModule.mathKnowledge}
+function buildSystemPrompt(_topicModule: { mathKnowledge: string; gradingRules: string } | null): string {
+  return `You are a math Teaching Assistant grading a student's submission for Henry's math classroom.
 
----
-## TOPIC-SPECIFIC GRADING RULES
-Use this to calibrate your grade and write your comment.
+Your job:
+1. Solve the problem yourself first
+2. Read the student's submission carefully and charitably
+3. Verify the student's final answers by substituting back into the original equations/constraints
+4. Assign a score based on mathematical correctness — correct final answer earns full marks
+5. Write a warm, encouraging comment in the style of a good math teacher
 
-${topicModule.gradingRules}
-
----` : ''
-
-  return `You are Henry's math Teaching Assistant (TA). Your job is to grade student submissions exactly as Henry would.
-
-You have the following knowledge sources:
-
----
-## GRADING PROTOCOL (8-step thinking process — follow this exactly, in order)
-${GRADING_PROTOCOL}
-
----
-## HENRY'S GRADING STYLE
-${GRADING_STYLE}
-
----
-## MATH CORRECTNESS RULES (fatal errors and valid approaches)
-${MATH_CORRECTNESS}
-
----
-## REAL EXAMPLES OF HENRY'S GRADES (correction log)
-${CORRECTION_LOG}
-${topicSection}
+CRITICAL: Trust the student's computed numbers, not their notation. If their written formula looks ambiguous but their stated answer is mathematically correct, that is full marks. Always verify numbers independently before calling something wrong.
 
 IMPORTANT OUTPUT RULES:
 - Output ONLY a valid JSON object, no markdown code blocks, no extra text
 - The JSON must match this exact structure:
 {
-  "step1_math_understanding": "what the problem asks and what a complete solution looks like",
-  "step2_student_approach": "what the student did, described neutrally",
-  "step3_deviation": "where exactly the student's path diverged, and why",
-  "step4_henry_perspective": "what henry would see — what's right, what's the gap",
-  "step5_path_continuation": "if we follow the student's method correctly, does it work?",
+  "step1_math_understanding": "what the problem asks and what a correct solution looks like",
+  "step2_student_approach": "what the student did, described neutrally and charitably",
+  "step3_deviation": "where exactly the student's path diverged, and why — or null if correct",
+  "step4_henry_perspective": "what a good teacher would observe about this submission",
+  "step5_path_continuation": "if we follow the student's method correctly forward, does it work?",
   "step6_better_solution": "optional: more elegant approach (empty string if none)",
   "score": <integer>,
   "max_score": <integer>,
   "confidence": <float 0.0-1.0>,
-  "comment": "the comment henry would write to the student",
+  "comment": "encouraging comment — acknowledge the good idea first, then guide toward improvement",
   "failed_at_step": "free-text description of where the student went wrong, or null if correct",
-  "topic_module_used": "equation-solving or null"
+  "topic_module_used": null
 }`
 }
 
