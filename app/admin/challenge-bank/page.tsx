@@ -908,6 +908,7 @@ export default function ChallengeBankPage() {
                       problem={sheet.problem}
                       graphUrl={previewChallenge.image_url}
                       onGraphClick={url => setPreviewImgLightbox(url)}
+                      zoomable
                     />
                   )
                 }

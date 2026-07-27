@@ -1564,6 +1564,7 @@ export default function ChallengePage() {
             <HenryProblemSheet
               problem={henrySheet.problem}
               graphUrl={challenge.image_url}
+              zoomable
               className="mb-1"
             />
           ) : (
