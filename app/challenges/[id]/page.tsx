@@ -114,6 +114,9 @@ export default function ChallengePage() {
     feedbackOpen?: boolean; feedbackSending?: boolean
     whatTAMissed?: string; lessonType?: string
     kbUpdateReason?: string  // set when grading-rules.md was auto-patched
+    // Language toggle
+    lang?: 'en' | 'zh'
+    zhTranslation?: { comment: string; suggested_solution: string; gap: string; henry_view: string; anqi_question: string; translating: boolean }
   }>>({})
 
   useEffect(() => {
@@ -915,6 +918,47 @@ export default function ChallengePage() {
     } catch (err: any) {
       alert('TA call failed: ' + err.message)
       setTaGrades(prev => { const n = { ...prev }; delete n[submissionId]; return n })
+    }
+  }
+
+  async function translateTAGrade(submissionId: string) {
+    const ta = taGrades[submissionId]
+    if (!ta) return
+    // If already translated, just toggle back to EN
+    if (ta.lang === 'zh') {
+      setTaGrades(prev => ({ ...prev, [submissionId]: { ...prev[submissionId], lang: 'en' } as any }))
+      return
+    }
+    // Mark as translating
+    setTaGrades(prev => ({
+      ...prev,
+      [submissionId]: { ...prev[submissionId], lang: 'zh', zhTranslation: { comment: '', suggested_solution: '', gap: '', henry_view: '', anqi_question: '', translating: true } } as any
+    }))
+    try {
+      const fields: Record<string, string> = {}
+      if (ta.comment) fields.comment = ta.comment
+      if (ta.suggested_solution) fields.suggested_solution = ta.suggested_solution
+      if (ta.reasoning?.step3_deviation) fields.gap = ta.reasoning.step3_deviation
+      if (ta.reasoning?.step4_henry_perspective) fields.henry_view = ta.reasoning.step4_henry_perspective
+      if (ta.anqi?.anqi_question) fields.anqi_question = ta.anqi.anqi_question
+
+      const res = await fetch('/api/ta/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields }),
+      })
+      if (!res.ok) throw new Error('Translation failed')
+      const { fields: translated } = await res.json()
+      setTaGrades(prev => ({
+        ...prev,
+        [submissionId]: {
+          ...prev[submissionId],
+          lang: 'zh',
+          zhTranslation: { translating: false, comment: translated.comment || '', suggested_solution: translated.suggested_solution || '', gap: translated.gap || '', henry_view: translated.henry_view || '', anqi_question: translated.anqi_question || '' },
+        } as any,
+      }))
+    } catch (err) {
+      setTaGrades(prev => ({ ...prev, [submissionId]: { ...prev[submissionId], lang: 'en', zhTranslation: undefined } as any }))
     }
   }
 
@@ -1869,13 +1913,21 @@ export default function ChallengePage() {
                                 <span className="font-semibold text-indigo-800">
                                   🤖 TA: {taGrades[submission.id].suggested_score}/{taGrades[submission.id].max_score}
                                 </span>
-                                <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2">
                                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${taGrades[submission.id].confidence >= 0.85 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                                     {Math.round(taGrades[submission.id].confidence * 100)}% conf
                                   </span>
                                   {taGrades[submission.id].topic_module_used && (
                                     <span className="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full">{taGrades[submission.id].topic_module_used}</span>
                                   )}
+                                  {/* Language toggle */}
+                                  <button
+                                    onClick={() => translateTAGrade(submission.id)}
+                                    disabled={taGrades[submission.id].zhTranslation?.translating}
+                                    className="text-[10px] px-2 py-0.5 rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 font-medium disabled:opacity-50"
+                                  >
+                                    {taGrades[submission.id].zhTranslation?.translating ? '翻譯中...' : taGrades[submission.id].lang === 'zh' ? 'EN' : '中文'}
+                                  </button>
                                 </div>
                               </div>
 
@@ -1884,7 +1936,7 @@ export default function ChallengePage() {
                                 {taGrades[submission.id].suggested_solution && (
                                   <div className="p-2 bg-gray-50 rounded-lg border border-gray-100">
                                     <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">💡 TA&apos;s suggested solution</p>
-                                    <p className="text-xs text-gray-700">{taGrades[submission.id].suggested_solution}</p>
+                                    <p className="text-xs text-gray-700">{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.suggested_solution ? taGrades[submission.id].zhTranslation!.suggested_solution : taGrades[submission.id].suggested_solution}</p>
                                   </div>
                                 )}
 
@@ -1899,24 +1951,24 @@ export default function ChallengePage() {
                                 {/* Reasoning */}
                                 <div className="space-y-1 text-xs text-gray-600">
                                   {taGrades[submission.id].reasoning?.step3_deviation && (
-                                    <p><span className="font-medium text-gray-700">Gap: </span>{taGrades[submission.id].reasoning.step3_deviation}</p>
+                                    <p><span className="font-medium text-gray-700">Gap: </span>{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.gap ? taGrades[submission.id].zhTranslation!.gap : taGrades[submission.id].reasoning.step3_deviation}</p>
                                   )}
                                   {taGrades[submission.id].reasoning?.step4_henry_perspective && (
-                                    <p><span className="font-medium text-gray-700">Henry&apos;s view: </span>{taGrades[submission.id].reasoning.step4_henry_perspective}</p>
+                                    <p><span className="font-medium text-gray-700">Henry&apos;s view: </span>{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.henry_view ? taGrades[submission.id].zhTranslation!.henry_view : taGrades[submission.id].reasoning.step4_henry_perspective}</p>
                                   )}
                                 </div>
 
                                 {/* Suggested comment */}
                                 <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100">
                                   <p className="text-[10px] font-semibold text-indigo-600 mb-1">💬 Suggested comment</p>
-                                  <p className="text-xs italic text-gray-700">{taGrades[submission.id].comment}</p>
+                                  <p className="text-xs italic text-gray-700">{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.comment ? taGrades[submission.id].zhTranslation!.comment : taGrades[submission.id].comment}</p>
                                 </div>
 
                                 {/* Pedagogy Reviewer deeper question */}
                                 {taGrades[submission.id].anqi?.anqi_question && (
                                   <div className="p-2 bg-purple-50 rounded-lg border border-purple-100">
                                     <p className="text-[10px] font-semibold text-purple-600 mb-1">🧠 Pedagogy Reviewer: deeper question (optional)</p>
-                                    <p className="text-xs italic text-gray-700">{taGrades[submission.id].anqi!.anqi_question}</p>
+                                    <p className="text-xs italic text-gray-700">{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.anqi_question ? taGrades[submission.id].zhTranslation!.anqi_question : taGrades[submission.id].anqi!.anqi_question}</p>
                                   </div>
                                 )}
 
