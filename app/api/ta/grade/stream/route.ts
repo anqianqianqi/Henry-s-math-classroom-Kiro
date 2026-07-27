@@ -187,7 +187,95 @@ async function callGrader(
   return callGPT(GRADER_PROMPT, userMsg, 1500)
 }
 
-// ── Grade Reviewer prompt ─────────────────────────────────────────────────
+// ── Vision Grader (for image submissions) ────────────────────────────────
+// Sends the image directly to GPT-4o Vision along with the problem.
+// Replaces the 2-pass text flow when the student submits a photo.
+
+const VISION_GRADER_PROMPT = `You are a math grader for Henry's math classroom. The student has submitted a photo of their work. Read the image carefully and grade it.
+
+## Henry's classroom philosophy
+Henry values creative thinking and novel approaches over complete step-by-step write-ups.
+
+- Skipped steps are fine. If a student jumps to the right answer without showing every intermediate step, assume they did the steps mentally. Do NOT penalize for missing steps.
+- Creativity and unconventional shortcuts are rewarded, not penalized.
+- The comment must NOT ask the student to show more steps or be more thorough.
+- A good comment: celebrates the interesting idea and asks a deeper question.
+
+## Your job
+1. Read the student's handwritten or typed work in the image carefully
+2. Solve the problem yourself to find the correct answer(s)
+3. Verify the student's final answers by substituting back into the original problem
+4. If the final answers are correct: FULL MARKS — regardless of how the student got there or how many steps they showed
+5. If the final answers are wrong: identify exactly where they went wrong
+
+CRITICAL: You must show your verification check explicitly with arithmetic.
+CRITICAL: An unusual method, shortcut, or leap in reasoning is NOT wrong. Only wrong final answers are wrong.
+CRITICAL: The comment must NOT ask for more steps or more thoroughness.
+
+Output ONLY valid JSON — no markdown, no code blocks:
+{
+  "suggested_solution": "your own clean solution in 2-4 sentences",
+  "correct_answer": "what the correct final answer(s) are",
+  "verification": "show your check: plug the student's final answers into the original problem, step by step",
+  "answers_correct": true,
+  "step1_math_understanding": "what the problem asks and what a correct solution looks like",
+  "step2_student_approach": "describe exactly what you can read in the image — the student's method, values computed, final answers",
+  "step3_deviation": "exactly where the student went wrong, citing specific values — or null if answers_correct is true",
+  "step4_henry_perspective": "what Henry would observe: the interesting idea, the creative move, or the insight in this submission",
+  "step5_path_continuation": "if we follow the student's method forward, does it lead to the right answer?",
+  "score": <int>,
+  "max_score": <int>,
+  "confidence": <float 0-1>,
+  "comment": "encouraging comment that celebrates the idea — do NOT ask for more steps. Ask a deeper question instead.",
+  "failed_at_step": "description of the error, or null if correct",
+  "topic_module_used": null
+}`
+
+async function callVisionGrader(
+  problemTitle: string,
+  problemDesc: string,
+  maxPoints: number,
+  imageUrl: string,
+  textContent: string,
+): Promise<any> {
+  const textPart = textContent ? `\n\nStudent also wrote: ${textContent}` : ''
+  const userContent: any[] = [
+    {
+      type: 'text',
+      text: [
+        `Problem: ${problemTitle}`,
+        problemDesc ? `Description: ${problemDesc}` : null,
+        `Max points: ${maxPoints}`,
+        ``,
+        `The student's submission is in the image below. Read it carefully and grade it.${textPart}`,
+      ].filter(Boolean).join('\n'),
+    },
+    {
+      type: 'image_url',
+      image_url: { url: imageUrl, detail: 'high' },
+    },
+  ]
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${OPENAI_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: VISION_GRADER_PROMPT },
+        { role: 'user', content: userContent },
+      ],
+      max_tokens: 1800,
+      temperature: 0.2,
+    }),
+  })
+  if (!res.ok) throw new Error(`OpenAI Vision ${res.status}: ${await res.text()}`)
+  const raw = (await res.json()).choices[0].message.content as string
+  const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
+  return JSON.parse(cleaned)
+}
+
+
 
 const GRADE_REVIEWER_PROMPT = `You are the Grade Reviewer — a senior math educator reviewing a TA's draft grade.
 
@@ -346,6 +434,7 @@ export async function GET(req: NextRequest) {
   let problemTitle = '', problemDesc = '', studentSubmission = '', maxPoints = 3, realSubmissionId = submissionId
   let challengeId: string | null = null
   let bankItemId: string | null = null
+  let imageUrl: string | null = null
 
   if (testMode) {
     problemTitle      = searchParams.get('problem_title') || ''
@@ -369,6 +458,27 @@ export async function GET(req: NextRequest) {
     realSubmissionId  = sub.id
     challengeId       = (sub as any).challenge_id ?? null
     bankItemId        = ch?.source_bank_id ?? null
+
+    // Generate a signed URL for the image if one exists
+    const rawImageUrl = (sub as any).image_url
+    if (rawImageUrl) {
+      try {
+        // Extract bucket path from the stored URL or path
+        const urlParts = rawImageUrl.split('/storage/v1/object/')
+        if (urlParts.length > 1) {
+          const pathPart = urlParts[1].replace('public/', '').replace('sign/', '')
+          const slashIdx = pathPart.indexOf('/')
+          const bucket = pathPart.substring(0, slashIdx)
+          const filePath = pathPart.substring(slashIdx + 1)
+          const { data: signed } = await supabase.storage.from(bucket).createSignedUrl(filePath, 300)
+          imageUrl = signed?.signedUrl ?? rawImageUrl
+        } else {
+          imageUrl = rawImageUrl
+        }
+      } catch (_) {
+        imageUrl = rawImageUrl
+      }
+    }
 
     // Prefer bank item title/description if available
     if (bankItemId) {
@@ -396,16 +506,28 @@ export async function GET(req: NextRequest) {
           } catch (_) {}
         }
 
-        // Step 2 — Pass 1A: Read the student's submission
-        sseEvent(controller, { type: 'step', step: 2, pct: 15, label: 'Reading student submission...' })
-        const readerResult = await callSubmissionReader(problemTitle, problemDesc, studentSubmission)
-        sseEvent(controller, { type: 'step', step: 2, pct: 35, label: `Submission read: ${readerResult.student_final_answers || 'extracted'}` })
+        // Step 2 — Read/grade the submission
+        let draft: any
+        let readerResult: any = null
 
-        // Step 3 — Pass 1B: Verify and grade
-        sseEvent(controller, { type: 'step', step: 3, pct: 38, label: 'Verifying and grading...' })
-        const draft = await callGrader(problemTitle, problemDesc, maxPoints, readerResult)
+        if (imageUrl) {
+          // ── Image path: single Vision call reads + grades directly ──────
+          sseEvent(controller, { type: 'step', step: 2, pct: 15, label: 'Reading image submission...' })
+          draft = await callVisionGrader(problemTitle, problemDesc, maxPoints, imageUrl, studentSubmission)
+          sseEvent(controller, { type: 'step', step: 2, pct: 50, label: `Vision graded: ${Math.max(0, Math.min(maxPoints, Math.round(draft.score ?? 0)))}/${maxPoints}` })
+        } else {
+          // ── Text path: 2-pass reader → grader ───────────────────────────
+          sseEvent(controller, { type: 'step', step: 2, pct: 15, label: 'Reading student submission...' })
+          readerResult = await callSubmissionReader(problemTitle, problemDesc, studentSubmission)
+          sseEvent(controller, { type: 'step', step: 2, pct: 35, label: `Submission read: ${readerResult.student_final_answers || 'extracted'}` })
+
+          // Step 3 — Pass 1B: Verify and grade
+          sseEvent(controller, { type: 'step', step: 3, pct: 38, label: 'Verifying and grading...' })
+          draft = await callGrader(problemTitle, problemDesc, maxPoints, readerResult)
+          sseEvent(controller, { type: 'step', step: 3, pct: 55, label: `Grade: ${Math.max(0, Math.min(maxPoints, Math.round(draft.score ?? 0)))}/${maxPoints} (${Math.round((draft.confidence ?? 0.7) * 100)}% confident)` })
+        }
+
         const draftScore = Math.max(0, Math.min(maxPoints, Math.round(draft.score ?? 0)))
-        sseEvent(controller, { type: 'step', step: 3, pct: 55, label: `Grade: ${draftScore}/${maxPoints} (${Math.round((draft.confidence ?? 0.7) * 100)}% confident)` })
 
         // Save suggested solution to cache if it's new
         if (!testMode && !cachedSolution && draft.suggested_solution) {
