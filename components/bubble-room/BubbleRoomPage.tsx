@@ -164,7 +164,7 @@ export function BubbleRoomPage({
     setIsPostingDuplicate(true)
     try {
       const result = await postQuestion(classId, pendingQuestion, activeChallengeId)
-      if (!result.error) {
+      if (!result.error && result.data) {
         handleQuestionSubmitted(result.data)
       }
     } catch (err) {
