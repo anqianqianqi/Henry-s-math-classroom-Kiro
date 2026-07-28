@@ -10,6 +10,8 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { localDateString } from '@/lib/utils/date'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { HenryProblemSheet } from '@/components/HenryProblemSheet'
+import { readStoredHenryProblem } from '@/lib/henryproblem'
 
 type Tab = 'challenges' | 'templates'
 
@@ -20,6 +22,8 @@ interface PoolChallenge {
   tag_ids: string[]
   max_points: number
   image_url?: string | null
+  /** Editable .henryproblem snapshot, graph stripped. Null for plain challenges. */
+  henryproblem?: unknown
   created_at: string
 }
 
@@ -126,7 +130,7 @@ export default function ChallengeBankPage() {
       { data: templateData },
     ] = await Promise.all([
       supabase.from('challenge_bank')
-        .select('id, title, description, tag_ids, max_points, image_url, created_at')
+        .select('id, title, description, tag_ids, max_points, image_url, henryproblem, created_at')
         .order('created_at', { ascending: false }),
       supabase.from('challenge_tags')
         .select('id, challenge_tag_names(language, name)')
@@ -288,6 +292,7 @@ export default function ChallengeBankPage() {
           tag_ids: source.tag_ids || [],
           max_points: source.max_points || 100,
           image_url: source.image_url || null,
+          henryproblem: (source as any).henryproblem ?? null,
           created_by: user.id,
           source_bank_id: source.id,
         })
@@ -895,18 +900,35 @@ export default function ChallengeBankPage() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-              {/* Image */}
-              {previewChallenge.image_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={previewChallenge.image_url}
-                  alt="Challenge"
-                  onClick={() => setPreviewImgLightbox(previewChallenge.image_url!)}
-                  className="w-full rounded-xl object-contain max-h-64 bg-gray-50 border border-gray-100 cursor-zoom-in"
-                />
-              )}
-              {/* Description */}
-              <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{previewChallenge.description}</p>
+              {(() => {
+                const sheet = readStoredHenryProblem(previewChallenge.henryproblem)
+                if (sheet) {
+                  return (
+                    <HenryProblemSheet
+                      problem={sheet.problem}
+                      graphUrl={previewChallenge.image_url}
+                      onGraphClick={url => setPreviewImgLightbox(url)}
+                      zoomable
+                    />
+                  )
+                }
+                return (
+                  <>
+                    {/* Image */}
+                    {previewChallenge.image_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={previewChallenge.image_url}
+                        alt="Challenge"
+                        onClick={() => setPreviewImgLightbox(previewChallenge.image_url!)}
+                        className="w-full rounded-xl object-contain max-h-64 bg-gray-50 border border-gray-100 cursor-zoom-in"
+                      />
+                    )}
+                    {/* Description */}
+                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{previewChallenge.description}</p>
+                  </>
+                )
+              })()}
               {/* Points */}
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full font-medium">{previewChallenge.max_points} pts</span>

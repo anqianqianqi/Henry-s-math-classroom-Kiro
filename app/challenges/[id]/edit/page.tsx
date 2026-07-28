@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import TagInput, { TagOption } from '@/components/TagInput'
+import { readStoredHenryProblem } from '@/lib/henryproblem'
 
 interface Challenge {
   id: string
@@ -520,11 +521,21 @@ export default function EditChallengePage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Description
                 </label>
+                {readStoredHenryProblem((challenge as any)?.henryproblem) && (
+                  <div className="mb-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p className="text-xs text-amber-800">
+                      📄 This challenge was imported from a <code>.henryproblem</code> file.
+                      Students see the worksheet rendered from that file, so edits here won&apos;t
+                      change what they read — they only affect search and TA grading.
+                      To change the problem itself, edit it in the Henry Problem Editor and upload it again.
+                    </p>
+                  </div>
+                )}
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe the challenge... Include the problem and any instructions."
-                  className="w-full h-48 p-4 border-2 border-gray-200 rounded-2xl 
+                  className="w-full h-48 p-4 border-2 border-gray-200 rounded-2xl
                            focus:border-primary-500 focus:ring-2 focus:ring-primary-200
                            resize-none transition-colors"
                   required

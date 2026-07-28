@@ -8,6 +8,8 @@ import { CommentThread } from '@/components/CommentThread'
 import { localDateString, localDateOffset } from '@/lib/utils/date'
 import { HomeButton } from '@/components/ui/HomeButton'
 import { MagicBookReveal } from '@/components/MagicBookReveal'
+import { HenryProblemSheet } from '@/components/HenryProblemSheet'
+import { readStoredHenryProblem } from '@/lib/henryproblem'
 
 interface Challenge {
   id: string
@@ -19,6 +21,8 @@ interface Challenge {
   max_points?: number
   tag_ids?: string[]
   hint?: string | null
+  /** Editable .henryproblem snapshot, graph stripped. Null for plain challenges. */
+  henryproblem?: unknown
 }
 
 interface Submission {
@@ -1142,6 +1146,7 @@ export default function ChallengePage() {
           tag_ids: challenge.tag_ids || [],
           max_points: challenge.max_points || 100,
           image_url: challenge.image_url || null,
+          henryproblem: (challenge as any).henryproblem ?? null,
           created_by: userId
         })
         .select()
@@ -1262,6 +1267,10 @@ export default function ChallengePage() {
       </div>
     )
   }
+
+  // Challenges imported from a .henryproblem render as the Henry worksheet
+  // instead of the plain description + image pair.
+  const henrySheet = readStoredHenryProblem((challenge as any).henryproblem)
 
   const hasSubmitted = !!userSubmission
   const canSeeOthers = (hasSubmitted && userSubmission?.is_locked) || isTeacher
@@ -1550,26 +1559,38 @@ export default function ChallengePage() {
             </div>
           )}
 
-          {/* Challenge image */}
-          {challenge.image_url && (
-            <div className="mb-5">
-              <img
-                src={challenge.image_url}
-                alt="Challenge visual"
-                className="w-full max-h-96 object-contain rounded-lg border cursor-zoom-in hover:opacity-90 transition-opacity"
-                style={{ borderColor: 'rgba(180,120,40,0.35)', background: 'rgba(255,245,220,0.6)' }}
-                title="Click to enlarge"
-              />
-              <p className="text-xs text-center mt-1" style={{ color: 'rgba(100,60,10,0.5)', fontStyle: 'italic' }}>
-                Click image to enlarge
-              </p>
-            </div>
-          )}
+          {henrySheet ? (
+            /* Henry worksheet — rendered live from the .henryproblem snapshot */
+            <HenryProblemSheet
+              problem={henrySheet.problem}
+              graphUrl={challenge.image_url}
+              zoomable
+              className="mb-1"
+            />
+          ) : (
+            <>
+              {/* Challenge image */}
+              {challenge.image_url && (
+                <div className="mb-5">
+                  <img
+                    src={challenge.image_url}
+                    alt="Challenge visual"
+                    className="w-full max-h-96 object-contain rounded-lg border cursor-zoom-in hover:opacity-90 transition-opacity"
+                    style={{ borderColor: 'rgba(180,120,40,0.35)', background: 'rgba(255,245,220,0.6)' }}
+                    title="Click to enlarge"
+                  />
+                  <p className="text-xs text-center mt-1" style={{ color: 'rgba(100,60,10,0.5)', fontStyle: 'italic' }}>
+                    Click image to enlarge
+                  </p>
+                </div>
+              )}
 
-          {/* Problem text */}
-          <p className="whitespace-pre-wrap leading-relaxed" style={{ color: '#2d1a00' }}>
-            {challenge.description}
-          </p>
+              {/* Problem text */}
+              <p className="whitespace-pre-wrap leading-relaxed" style={{ color: '#2d1a00' }}>
+                {challenge.description}
+              </p>
+            </>
+          )}
 
           {/* Hint Section */}
           {(challenge.hint || (challenge as any).hint_image_url || isTeacher) && (

@@ -12,6 +12,15 @@ import TagInput, { TagOption } from '@/components/TagInput'
 import { generateChallenge, GenerativeTemplate } from '@/lib/challenge-generator'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { localDateString } from '@/lib/utils/date'
+import {
+  HENRY_PROBLEM_EXTENSION,
+  HenryProblemError,
+  isHenryProblemFile,
+  parseHenryProblem,
+  type StoredHenryProblem,
+} from '@/lib/henryproblem'
+import { cropGraphToBlob } from '@/lib/henryproblem-graph'
+import { HenryProblemSheet } from '@/components/HenryProblemSheet'
 
 interface Class {
   id: string
@@ -60,6 +69,11 @@ export default function NewChallengePage() {
   // Pending new tags suggested by GPT — shown for confirmation before creating
   const [pendingNewTags, setPendingNewTags] = useState<string[]>([])
   const [creatingTags, setCreatingTags] = useState(false)
+  // .henryproblem import state — structured, no API call needed
+  const [henryProblem, setHenryProblem] = useState<StoredHenryProblem | null>(null)
+  const [henryFileName, setHenryFileName] = useState<string | null>(null)
+  const [henryError, setHenryError] = useState<string | null>(null)
+  const [henryLoading, setHenryLoading] = useState(false)
   useEffect(() => {
     if (fromBank) {
       setSaveToPool(true)
@@ -209,6 +223,86 @@ export default function NewChallengePage() {
     setImagePreview(null)
   }
 
+  /**
+   * Match tag names against existing tags; anything unknown becomes a pending
+   * tag the teacher confirms before it is created.
+   */
+  function applyTagNames(names: string[]) {
+    const matchedIds: string[] = []
+    const unmatched: string[] = []
+
+    for (const rawName of names) {
+      const name = rawName.trim()
+      if (!name) continue
+      const existing = (availableTags as any[]).find((t: any) =>
+        (t._names || []).some((n: any) => String(n.name).toLowerCase() === name.toLowerCase())
+      )
+      if (existing) matchedIds.push(existing.id)
+      else unmatched.push(name)
+    }
+
+    if (matchedIds.length > 0) setTags(prev => [...new Set([...prev, ...matchedIds])])
+    if (unmatched.length > 0) setPendingNewTags(prev => [...new Set([...prev, ...unmatched])])
+  }
+
+  /**
+   * Read a .henryproblem snapshot and fill the form directly from its fields.
+   * No image parsing, no LLM call — the file already holds title, score, tags
+   * and both language versions of the wording.
+   */
+  async function handleHenryProblemChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file after an error
+    if (!file) return
+
+    setHenryError(null)
+
+    if (!isHenryProblemFile(file.name)) {
+      setHenryError(`Please choose a ${HENRY_PROBLEM_EXTENSION} file.`)
+      return
+    }
+    if (file.size > 40 * 1024 * 1024) {
+      setHenryError('That file is too large to read.')
+      return
+    }
+
+    setHenryLoading(true)
+    try {
+      const parsed = parseHenryProblem(await file.text())
+
+      if (parsed.title) setTitle(parsed.title)
+      setDescription(parsed.description)
+      if (parsed.maxPoints != null) setMaxPoints(parsed.maxPoints)
+      if (parsed.tagNames.length > 0) applyTagNames(parsed.tagNames)
+
+      // The embedded diagram becomes the challenge image, cropped exactly as
+      // the snapshot specifies. It rides the existing upload path.
+      if (parsed.graphDataUrl) {
+        const blob = await cropGraphToBlob(parsed.graphDataUrl, parsed.crop)
+        const base = file.name.replace(new RegExp(`${HENRY_PROBLEM_EXTENSION}$`, 'i'), '')
+        setImageFile(new File([blob], `${base || 'graph'}.png`, { type: 'image/png' }))
+        setImagePreview(URL.createObjectURL(blob))
+      }
+
+      setHenryProblem(parsed.stored)
+      setHenryFileName(file.name)
+    } catch (err) {
+      setHenryError(
+        err instanceof HenryProblemError
+          ? err.message
+          : 'Could not read that file. Please try again.'
+      )
+    } finally {
+      setHenryLoading(false)
+    }
+  }
+
+  function removeHenryProblem() {
+    setHenryProblem(null)
+    setHenryFileName(null)
+    setHenryError(null)
+  }
+
   async function uploadImage(challengeId: string): Promise<string | null> {
     if (!imageFile || !userId) return null
 
@@ -304,6 +398,7 @@ export default function NewChallengePage() {
             description: description.trim(),
             tag_ids: finalTagIds,
             max_points: maxPoints,
+            henryproblem: henryProblem,
           })
           .select()
           .single()
@@ -320,6 +415,7 @@ export default function NewChallengePage() {
             challenge_date: challengeDate,
             tag_ids: finalTagIds,
             max_points: maxPoints,
+            henryproblem: henryProblem,
           })
           .select()
           .single()
@@ -620,6 +716,71 @@ export default function NewChallengePage() {
                 <p className="mt-2 text-sm text-gray-500">
                   Tip: Use line breaks to format your problem clearly
                 </p>
+              </div>
+
+              {/* Henry Problem file import */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Henry Problem File (Optional)
+                </label>
+
+                {henryProblem ? (
+                  <div className="rounded-2xl border-2 border-green-200 bg-green-50/60 p-4">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-green-900 flex items-center gap-2">
+                          <span>📄</span>
+                          <span className="truncate">{henryFileName}</span>
+                        </p>
+                        <p className="text-xs text-green-700 mt-0.5">
+                          Title, score, tags and both languages were read straight from the file — no AI parsing needed.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeHenryProblem}
+                        className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg
+                                   bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    <HenryProblemSheet
+                      problem={henryProblem.problem}
+                      graphUrl={imagePreview}
+                    />
+                    <p className="mt-2 text-xs text-green-700">
+                      This is how students will see the problem. Edits to the fields below won&apos;t change this sheet.
+                    </p>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full py-8
+                                    border-2 border-dashed border-green-300 rounded-2xl
+                                    hover:border-green-500 hover:bg-green-50/50
+                                    cursor-pointer transition-all">
+                    <span className="text-4xl mb-2">📄</span>
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold">
+                        {henryLoading ? 'Reading file...' : 'Click to upload a .henryproblem file'}
+                      </span>
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Fills the form instantly — no image parsing, no API call
+                    </p>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept={HENRY_PROBLEM_EXTENSION}
+                      disabled={henryLoading}
+                      onChange={handleHenryProblemChange}
+                    />
+                  </label>
+                )}
+
+                {henryError && (
+                  <p className="mt-2 text-sm text-red-600">{henryError}</p>
+                )}
               </div>
 
               <div>
