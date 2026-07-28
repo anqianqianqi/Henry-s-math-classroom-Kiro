@@ -437,9 +437,18 @@ export default function ChallengeBankPage() {
               <option value="zh">CN</option>
             </select>
             {activeTab === 'challenges' ? (
-              <Button onClick={() => router.push('/challenges/new?source=bank')} size="sm">
-                + Write Challenge
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push('/challenges/batch-import')}
+                  size="sm"
+                >
+                  📦 Batch Import
+                </Button>
+                <Button onClick={() => router.push('/challenges/new?source=bank')} size="sm">
+                  + Write Challenge
+                </Button>
+              </>
             ) : (
               <Button onClick={() => router.push('/admin/generative-templates')} size="sm">
                 + Create Template
