@@ -25,3 +25,25 @@ body {
     text-wrap: balance;
   }
 }
+
+/*
+ * Henry worksheet header.
+ *
+ * The sheet renders in narrow columns (the book's left page, the assign modal,
+ * batch review rows) even on wide screens, so viewport breakpoints are the
+ * wrong tool here — the Chinese half of the title has to drop out based on the
+ * strip's own width. Hence a container query rather than `sm:`.
+ */
+.henry-header-strip {
+  container-type: inline-size;
+}
+
+.henry-header-cn {
+  display: none;
+}
+
+@container (min-width: 22rem) {
+  .henry-header-cn {
+    display: inline;
+  }
+}
