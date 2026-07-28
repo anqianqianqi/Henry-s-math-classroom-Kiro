@@ -24,7 +24,7 @@ const STOPWORDS = new Set([
 ])
 
 const DUPLICATE_THRESHOLD = 0.7
-const MAX_MATCHES = 3
+const MAX_MATCHES = 2
 
 /** 48 hours in milliseconds — recency window for 2× weight boost */
 const RECENT_WINDOW_MS = 48 * 60 * 60 * 1000
