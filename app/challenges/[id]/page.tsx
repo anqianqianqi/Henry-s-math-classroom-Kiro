@@ -1721,7 +1721,7 @@ export default function ChallengePage() {
         </MagicBookReveal>
 
         {/* Ask About This Challenge button — shown when challenge is assigned to at least one class (Req 1.2, 1.3) */}
-        {assignedClassIds.length > 0 && challenge.challenge_date && challenge.challenge_date <= localDateString() && (
+        {assignedClassIds.length > 0 && (!challenge.challenge_date || challenge.challenge_date <= localDateString()) && (
           <div className="mb-6 flex justify-center">
             <a
               href={`/classes/${assignedClassIds[0]}/bubble-room?challengeId=${challenge.id}`}
