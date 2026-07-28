@@ -391,6 +391,17 @@ export default function ClassDetailPage() {
             )}
           </div>
           <div className="flex gap-2">
+            {/* Bubble Room button — accessible to teachers and enrolled students */}
+            {(userRole === 'teacher' || isEnrolled) && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => router.push(`/classes/${classId}/bubble-room`)}
+                className="bg-purple-100 hover:bg-purple-200 text-purple-700 border-purple-200"
+              >
+                💬 Bubble Room
+              </Button>
+            )}
             {userRole === 'teacher' ? (
               <>
                 <Button
