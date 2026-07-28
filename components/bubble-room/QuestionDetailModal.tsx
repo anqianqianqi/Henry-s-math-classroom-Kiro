@@ -21,7 +21,6 @@ import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   recordView,
-  getResponses,
   postResponse,
   deleteQuestion,
   deleteResponse,
@@ -69,11 +68,50 @@ export function QuestionDetailModal({
     // Fire-and-forget engagement tracking (Req: engagement scoring)
     recordView(question.id).catch(() => {})
 
-    // Fetch existing responses
+    // Fetch existing responses directly via client — no Server Action round-trip
     ;(async () => {
-      const result = await getResponses(question.id)
-      if (!result.error) {
-        setResponses(result.data ?? [])
+      const supabaseClient = createClient()
+      const { data, error } = await supabaseClient
+        .from('bubble_room_responses')
+        .select(`
+          id,
+          question_id,
+          user_id,
+          text,
+          created_at,
+          profiles:user_id ( full_name, nickname )
+        `)
+        .eq('question_id', question.id)
+        .order('created_at', { ascending: true })
+
+      if (!error && data) {
+        // Batch-resolve teacher roles
+        const responderIds = [...new Set(data.map((r: any) => r.user_id))]
+        let teacherIds = new Set<string>()
+        if (responderIds.length > 0) {
+          const { data: roleRows } = await supabaseClient
+            .from('user_roles')
+            .select('user_id, roles ( name )')
+            .in('user_id', responderIds)
+            .is('class_id', null)
+          teacherIds = new Set(
+            (roleRows ?? [])
+              .filter((r: any) => r.roles?.name === 'teacher' || r.roles?.name === 'administrator')
+              .map((r: any) => r.user_id),
+          )
+        }
+
+        setResponses(
+          data.map((row: any): BubbleResponse => ({
+            id: row.id,
+            question_id: row.question_id,
+            user_id: row.user_id,
+            text: row.text,
+            created_at: row.created_at,
+            responder_display_name: row.profiles?.nickname ?? row.profiles?.full_name ?? 'Unknown',
+            responder_role: teacherIds.has(row.user_id) ? 'teacher' : 'student',
+          })),
+        )
       }
       setLoadingResponses(false)
     })()
@@ -91,8 +129,47 @@ export function QuestionDetailModal({
         },
         async (payload) => {
           // Re-fetch to get joined profile data, but skip if already present (optimistic)
-          const result = await getResponses(question.id)
-          if (!result.error) setResponses(result.data ?? [])
+          const supabaseClient = createClient()
+          const { data, error } = await supabaseClient
+            .from('bubble_room_responses')
+            .select(`
+              id,
+              question_id,
+              user_id,
+              text,
+              created_at,
+              profiles:user_id ( full_name, nickname )
+            `)
+            .eq('question_id', question.id)
+            .order('created_at', { ascending: true })
+
+          if (!error && data) {
+            const responderIds = [...new Set(data.map((r: any) => r.user_id))]
+            let teacherIds = new Set<string>()
+            if (responderIds.length > 0) {
+              const { data: roleRows } = await supabaseClient
+                .from('user_roles')
+                .select('user_id, roles ( name )')
+                .in('user_id', responderIds)
+                .is('class_id', null)
+              teacherIds = new Set(
+                (roleRows ?? [])
+                  .filter((r: any) => r.roles?.name === 'teacher' || r.roles?.name === 'administrator')
+                  .map((r: any) => r.user_id),
+              )
+            }
+            setResponses(
+              data.map((row: any): BubbleResponse => ({
+                id: row.id,
+                question_id: row.question_id,
+                user_id: row.user_id,
+                text: row.text,
+                created_at: row.created_at,
+                responder_display_name: row.profiles?.nickname ?? row.profiles?.full_name ?? 'Unknown',
+                responder_role: teacherIds.has(row.user_id) ? 'teacher' : 'student',
+              })),
+            )
+          }
         },
       )
       .on(
