@@ -36,10 +36,10 @@ export interface BubbleAnimationEngineProps {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const SPAWN_INTERVAL_MS = 2000   // How often to attempt spawning a new bubble
-const MIN_VISIBLE = 3            // Minimum bubbles on screen
-const MAX_VISIBLE = 7            // Maximum bubbles on screen (Req 5.5)
-const ANIMATION_BUFFER_MS = 1000 // Extra time after animation to remove from DOM
+const SPAWN_INTERVAL_MS = 1200   // How often to attempt spawning a new bubble
+const MIN_VISIBLE = 6            // Minimum bubbles on screen
+const MAX_VISIBLE = 14           // Maximum bubbles on screen — dense field
+const ANIMATION_BUFFER_MS = 500  // Extra time after animation to remove from DOM
 
 // Param ranges (Req 5.4)
 const X_MIN = 5                  // % viewport width, keep away from edges
@@ -137,7 +137,8 @@ export function BubbleAnimationEngine({
 
     // Immediately spawn until MIN_VISIBLE is reached
     for (let i = 0; i < MIN_VISIBLE; i++) {
-      spawnBubble()
+      // stagger slightly so they don't all appear at the same x
+      setTimeout(() => spawnBubble(), i * 300)
     }
 
     intervalRef.current = setInterval(spawnBubble, SPAWN_INTERVAL_MS)
