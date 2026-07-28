@@ -103,7 +103,8 @@ export async function postQuestion(
     return { data: question }
   } catch (err) {
     console.error('[BubbleRoom] postQuestion:', err)
-    return { error: 'Failed to post your question. Please try again.' }
+    const msg = err instanceof Error ? err.message : JSON.stringify(err)
+    return { error: `Failed to post your question: ${msg}` }
   }
 }
 
