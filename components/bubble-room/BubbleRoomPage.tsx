@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { BubbleQuestion, DuplicateMatch } from '@/lib/types/bubbleRoom'
-import { postQuestion } from '@/app/classes/[classId]/bubble-room/actions'
+import { postQuestion } from '@/lib/actions/bubbleRoom'
 import { SearchBar } from './SearchBar'
 import { BubbleAnimationEngine } from './BubbleAnimationEngine'
 import { QuestionCompositionForm } from './QuestionCompositionForm'

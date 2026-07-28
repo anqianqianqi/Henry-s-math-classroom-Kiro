@@ -15,7 +15,7 @@
 
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/Button'
-import { postQuestion } from '@/app/classes/[classId]/bubble-room/actions'
+import { postQuestion } from '@/lib/actions/bubbleRoom'
 import { findDuplicates } from '@/lib/utils/bubbleRoom'
 import type { BubbleQuestion, DuplicateMatch } from '@/lib/types/bubbleRoom'
 

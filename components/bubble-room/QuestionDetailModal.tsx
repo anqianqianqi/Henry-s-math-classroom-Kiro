@@ -25,7 +25,7 @@ import {
   postResponse,
   deleteQuestion,
   deleteResponse,
-} from '@/app/classes/[classId]/bubble-room/actions'
+} from '@/lib/actions/bubbleRoom'
 import type { BubbleQuestion, BubbleResponse } from '@/lib/types/bubbleRoom'
 import { Button } from '@/components/ui/Button'
 

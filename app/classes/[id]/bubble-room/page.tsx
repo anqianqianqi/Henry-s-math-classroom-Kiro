@@ -16,7 +16,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { BubbleRoomPage } from '@/components/bubble-room/BubbleRoomPage'
-import { fetchInitialQuestions } from './actions'
+import { fetchInitialQuestions } from '@/lib/actions/bubbleRoom'
 
 interface BubbleRoomRouteProps {
   params: { id: string }
