@@ -255,6 +255,23 @@ export function QuestionDetailModal({
             >
               {question.text}
             </h2>
+            {/* Challenge linkage — shown when question was created from a challenge */}
+            {question.challenge_id && (
+              <a
+                href={`/challenges/${question.challenge_id}`}
+                className="
+                  inline-flex items-center gap-1 mt-2
+                  text-xs font-medium text-primary-600 hover:text-primary-700
+                  bg-primary-50 hover:bg-primary-100
+                  rounded-full px-2.5 py-1
+                  transition-colors
+                "
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span aria-hidden="true">🎯</span>
+                View Challenge
+              </a>
+            )}
           </div>
           <button
             type="button"

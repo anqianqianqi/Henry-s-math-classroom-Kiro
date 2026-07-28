@@ -100,6 +100,17 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
         <p className="px-3 text-center text-xs font-medium text-gray-700 leading-tight break-words">
           {searchQuery ? highlightInBubble(preview, searchQuery) : preview}
         </p>
+
+        {/* Challenge indicator dot */}
+        {question.challenge_id && (
+          <div
+            className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px]"
+            aria-label="Linked to a challenge"
+            title="Linked to a challenge"
+          >
+            🎯
+          </div>
+        )}
       </div>
 
       {/* Activity bar — shown below bubble when there are responses or views */}
