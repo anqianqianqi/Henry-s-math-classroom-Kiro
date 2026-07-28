@@ -1,7 +1,7 @@
 /**
  * Bubble Room Q&A — Next.js Server Component route.
  *
- * Route: /classes/[classId]/bubble-room
+ * Route: /classes/[id]/bubble-room
  *
  * Responsibilities:
  *  - Authenticate user; redirect to /login if unauthenticated (Req 8.2)
@@ -19,7 +19,7 @@ import { BubbleRoomPage } from '@/components/bubble-room/BubbleRoomPage'
 import { fetchInitialQuestions } from './actions'
 
 interface BubbleRoomRouteProps {
-  params: { classId: string }
+  params: { id: string }
   searchParams: { challengeId?: string }
 }
 
@@ -67,12 +67,12 @@ export default async function BubbleRoomRoute({
   }
 
   // ── Fetch initial questions (SSR hydration) ───────────────────────────────
-  const initialQuestions = await fetchInitialQuestions(params.classId)
+  const initialQuestions = await fetchInitialQuestions(params.id)
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <BubbleRoomPage
-      classId={params.classId}
+      classId={params.id}
       initialQuestions={initialQuestions}
       currentUserId={user.id}
       currentUserRole={currentUserRole}
