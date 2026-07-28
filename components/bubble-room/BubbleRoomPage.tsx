@@ -68,9 +68,7 @@ export function BubbleRoomPage({
   const [questions, setQuestions] = useState<BubbleQuestion[]>(initialQuestions)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedQuestion, setSelectedQuestion] = useState<BubbleQuestion | null>(null)
-  const [showCompositionForm, setShowCompositionForm] = useState(
-    !!initialChallengeId, // auto-open when coming from a challenge page
-  )
+  const [showCompositionForm, setShowCompositionForm] = useState(false) // never auto-open; challengeId is pre-filled silently
   const [compositionInitialText, setCompositionInitialText] = useState('')
   const [activeChallengeId, setActiveChallengeId] = useState<string | null>(
     initialChallengeId ?? null,
