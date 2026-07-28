@@ -141,7 +141,7 @@ export function QuestionCompositionForm({
         {/* Header */}
         <div className="flex items-center justify-between">
           <h2 id="compose-form-title" className="text-lg font-semibold text-gray-900">
-            {challengeId ? '💬 Ask About This Challenge' : '💬 Ask a Question'}
+            💬 Ask a Question
           </h2>
           <button
             type="button"
@@ -162,10 +162,11 @@ export function QuestionCompositionForm({
           </button>
         </div>
 
-        {/* Challenge context label */}
+        {/* Challenge context — subtle chip only, not a banner */}
         {challengeId && (
-          <p className="text-xs text-purple-600 bg-purple-50 rounded-lg px-3 py-1.5">
-            📌 This question will be linked to the current challenge.
+          <p className="text-xs text-purple-500 flex items-center gap-1">
+            <span aria-hidden="true">🎯</span>
+            Linked to current challenge
           </p>
         )}
 
