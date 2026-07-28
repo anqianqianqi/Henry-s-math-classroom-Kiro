@@ -90,7 +90,7 @@ export function QuestionDetailModal({
           filter: `question_id=eq.${question.id}`,
         },
         async (payload) => {
-          // Re-fetch to get joined profile data
+          // Re-fetch to get joined profile data, but skip if already present (optimistic)
           const result = await getResponses(question.id)
           if (!result.error) setResponses(result.data ?? [])
         },
@@ -153,6 +153,14 @@ export function QuestionDetailModal({
       if (result.error) {
         setResponseError(result.error)
         return
+      }
+      // Optimistically append the new response immediately
+      if (result.data) {
+        setResponses((prev) => {
+          // Guard against Realtime double-append
+          if (prev.find((r) => r.id === result.data!.id)) return prev
+          return [...prev, result.data!]
+        })
       }
       setResponseText('')
       onResponseSubmitted()
