@@ -10,6 +10,20 @@ import { runSchedulerForClass } from '@/lib/scheduler'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { localDateString, localDateOffset } from '@/lib/utils/date'
+import { HenryProblemSheet } from '@/components/HenryProblemSheet'
+import { readStoredHenryProblem } from '@/lib/henryproblem'
+
+/** A challenge-bank item as shown in the assign-from-bank modal. */
+interface BankChallenge {
+  id: string
+  title: string
+  description: string
+  tag_ids: string[]
+  image_url?: string | null
+  max_points?: number | null
+  /** Editable .henryproblem snapshot, graph stripped. Null for plain challenges. */
+  henryproblem?: unknown
+}
 
 interface Challenge {
   id: string
@@ -87,7 +101,7 @@ export default function ChallengesPage() {
 
   // Assign-from-bank modal state
   const [pickTarget, setPickTarget] = useState<{ classId: string, className: string, date: string } | null>(null)
-  const [bankChallenges, setBankChallenges] = useState<Array<{id: string, title: string, description: string, tag_ids: string[], image_url?: string | null, max_points?: number | null}>>([])
+  const [bankChallenges, setBankChallenges] = useState<BankChallenge[]>([])
   const [bankTagMap, setBankTagMap] = useState<Record<string, string>>({}) // tagId → name
   const [bankSearch, setBankSearch] = useState('')
   const [bankLoading, setBankLoading] = useState(false)
@@ -96,7 +110,7 @@ export default function ChallengesPage() {
   const [usedBankIds, setUsedBankIds] = useState<Set<string>>(new Set())
   const [showUsed, setShowUsed] = useState(false)
   // Two-step confirm: null = browse, non-null = confirm stage
-  const [pendingChallenge, setPendingChallenge] = useState<{id: string, title: string, description: string, tag_ids: string[], image_url?: string | null, max_points?: number | null} | null>(null)
+  const [pendingChallenge, setPendingChallenge] = useState<BankChallenge | null>(null)
   // Lightbox for zoomed image preview
   const [imgLightbox, setImgLightbox] = useState<string | null>(null)
   
@@ -587,7 +601,7 @@ export default function ChallengesPage() {
     const [{ data: challenges }, { data: tagsData }] = await Promise.all([
       supabase
         .from('challenge_bank')
-        .select('id, title, description, tag_ids, image_url, max_points')
+        .select('id, title, description, tag_ids, image_url, max_points, henryproblem')
         .order('created_at', { ascending: false }),
       supabase
         .from('challenge_tags')
@@ -682,7 +696,7 @@ export default function ChallengesPage() {
     await loadChallenges()
   }
 
-  async function handleAssignFromBank(bankChallenge: { id: string; title: string; description: string; tag_ids: string[]; image_url?: string | null; max_points?: number | null }) {
+  async function handleAssignFromBank(bankChallenge: BankChallenge) {
     if (!pickTarget) return
     setAssigning(true)
     try {
@@ -720,6 +734,7 @@ export default function ChallengesPage() {
           tag_ids: bankChallenge.tag_ids || [],
           image_url: bankChallenge.image_url || null,
           max_points: bankChallenge.max_points ?? 100,
+          henryproblem: bankChallenge.henryproblem ?? null,
         })
         .select('id')
         .single()
@@ -1628,7 +1643,13 @@ export default function ChallengesPage() {
       {/* ── Assign-from-bank modal ── */}
       {pickTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[85vh]">
+          <div
+            className={`bg-white rounded-2xl shadow-2xl w-full flex flex-col max-h-[85vh] ${
+              pendingChallenge && readStoredHenryProblem(pendingChallenge.henryproblem)
+                ? 'max-w-2xl'   // the worksheet needs more room than a text snippet
+                : 'max-w-lg'
+            }`}
+          >
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between gap-3 shrink-0">
               <div>
@@ -1681,26 +1702,46 @@ export default function ChallengesPage() {
                 <div className="space-y-4 py-2">
                   <div className="p-4 rounded-xl bg-primary-50 border border-primary-200">
                     <p className="text-xs font-semibold text-primary-500 uppercase tracking-wide mb-1">Selected challenge</p>
-                    <p className="font-bold text-gray-900">{pendingChallenge.title}</p>
-                    <p className="text-sm text-gray-600 mt-1 line-clamp-4">{pendingChallenge.description}</p>
-                    {pendingChallenge.image_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={pendingChallenge.image_url}
-                        alt="Challenge"
-                        onClick={() => setImgLightbox(pendingChallenge.image_url!)}
-                        className="mt-3 w-full rounded-lg object-contain max-h-48 bg-white border border-primary-100 cursor-zoom-in"
-                      />
-                    )}
-                    {pendingChallenge.tag_ids.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {pendingChallenge.tag_ids.map(tid => bankTagMap[tid] ? (
-                          <span key={tid} className="px-2 py-0.5 bg-white text-primary-600 rounded-full text-xs border border-primary-200">
-                            {bankTagMap[tid]}
-                          </span>
-                        ) : null)}
-                      </div>
-                    )}
+                    {(() => {
+                      // .henryproblem items preview as the worksheet students
+                      // will actually see, rather than a truncated description.
+                      const sheet = readStoredHenryProblem(pendingChallenge.henryproblem)
+                      if (sheet) {
+                        return (
+                          <HenryProblemSheet
+                            problem={sheet.problem}
+                            graphUrl={pendingChallenge.image_url}
+                            onGraphClick={url => setImgLightbox(url)}
+                            zoomable
+                            className="mt-2"
+                          />
+                        )
+                      }
+                      return (
+                        <>
+                          <p className="font-bold text-gray-900">{pendingChallenge.title}</p>
+                          <p className="text-sm text-gray-600 mt-1 line-clamp-4">{pendingChallenge.description}</p>
+                          {pendingChallenge.image_url && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={pendingChallenge.image_url}
+                              alt="Challenge"
+                              onClick={() => setImgLightbox(pendingChallenge.image_url!)}
+                              className="mt-3 w-full rounded-lg object-contain max-h-48 bg-white border border-primary-100 cursor-zoom-in"
+                            />
+                          )}
+                          {pendingChallenge.tag_ids.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {pendingChallenge.tag_ids.map(tid => bankTagMap[tid] ? (
+                                <span key={tid} className="px-2 py-0.5 bg-white text-primary-600 rounded-full text-xs border border-primary-200">
+                                  {bankTagMap[tid]}
+                                </span>
+                              ) : null)}
+                            </div>
+                          )}
+                        </>
+                      )
+                    })()}
                   </div>
                   {usedBankIds.has(pendingChallenge.id) && (
                     <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-700">
