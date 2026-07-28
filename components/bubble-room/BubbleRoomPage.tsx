@@ -151,7 +151,8 @@ export function BubbleRoomPage({
 
   function handleOpenCompositionForm() {
     setCompositionInitialText('')
-    setActiveChallengeId(null)
+    // Preserve initialChallengeId if this bubble room was opened from a challenge page
+    setActiveChallengeId(initialChallengeId ?? null)
     setShowCompositionForm(true)
   }
 
