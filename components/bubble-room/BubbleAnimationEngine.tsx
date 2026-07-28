@@ -3,15 +3,12 @@
 /**
  * BubbleAnimationEngine — manages the CSS animation cycle for floating question bubbles.
  *
- * Cycle logic (Requirements 5.1–5.7):
- *  1. Maintain a cycleQueue: copy of weighted-shuffled questions
- *  2. Every ~2 s, pop from cycleQueue and spawn a new BubbleInstance
- *  3. When cycleQueue is empty: recompute weightedShuffle → new cycle
- *  4. Keep visible: BubbleInstance[]; remove after animation ends (speed + buffer)
- *  5. Clamp visible count to [3, 7]
- *  6. When isActive=false: pause spawning (search active); bubbles already visible remain
- *  7. When questions=[] → empty-state CTA
- *  8. Cleanup on unmount: cancel interval
+ * Spawn rules:
+ *  - Each unique question can appear at most MAX_PER_QUESTION (2) times simultaneously.
+ *  - Questions are drawn in weighted-shuffled order.
+ *  - A question is skipped if it already has MAX_PER_QUESTION live instances on screen.
+ *  - Once all questions have been seen in the current cycle, the queue refills and
+ *    the process repeats — allowing duplicates only after full enumeration.
  *
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
  */
@@ -22,36 +19,30 @@ import type { BubbleInstance, BubbleQuestion } from '@/lib/types/bubbleRoom'
 import { QuestionBubble } from './QuestionBubble'
 
 export interface BubbleAnimationEngineProps {
-  /** Weighted-shuffled question list from BubbleRoomPage */
   questions: BubbleQuestion[]
-  /** False when search is active — spawn loop pauses */
   isActive: boolean
-  /** Called when user clicks a bubble */
   onBubbleClick: (q: BubbleQuestion) => void
-  /** Optional callback to open the "ask question" form (empty-state CTA) */
   onAskQuestion?: () => void
-  /** Current search query — used to highlight matching keywords in bubbles */
   searchQuery?: string
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const SPAWN_INTERVAL_MS = 1500   // New bubble launches every 1.5s — continuous stream
-const MIN_VISIBLE = 4            // Minimum to maintain
-const MAX_VISIBLE = 999          // No effective cap — just keep launching
+const SPAWN_INTERVAL_MS = 1500
+const MIN_VISIBLE = 4
 const ANIMATION_BUFFER_MS = 500
+/** Max simultaneous instances of the same question on screen */
+const MAX_PER_QUESTION = 2
 
-// Param ranges (Req 5.4)
-const X_MIN = 5                  // % viewport width, keep away from edges
+const X_MIN = 5
 const X_MAX = 95
-const DRIFT_MAG_MIN = 5          // % vw lateral drift magnitude
+const DRIFT_MAG_MIN = 5
 const DRIFT_MAG_MAX = 15
-const SPEED_MIN = 14              // seconds (slowed down for readability)
+const SPEED_MIN = 14
 const SPEED_MAX = 22
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Generate random parameters for a bubble instance (Req 5.4) */
 function randomBubbleParams(): { x: number; drift: number; speed: number } {
   const x = X_MIN + Math.random() * (X_MAX - X_MIN)
   const driftMagnitude = DRIFT_MAG_MIN + Math.random() * (DRIFT_MAG_MAX - DRIFT_MAG_MIN)
@@ -67,11 +58,6 @@ function nextInstanceId(): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-/**
- * BubbleAnimationEngine renders an absolutely-positioned canvas layer over the
- * Bubble Room page. Each BubbleInstance mounts as a QuestionBubble with
- * CSS custom property-driven animation that auto-removes after the animation.
- */
 export function BubbleAnimationEngine({
   questions,
   isActive,
@@ -82,29 +68,52 @@ export function BubbleAnimationEngine({
   const [visible, setVisible] = useState<BubbleInstance[]>([])
   const cycleQueueRef = useRef<BubbleQuestion[]>([])
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const visibleCountRef = useRef(0)
+  // Ref mirror of visible so interval closure always sees current state
+  const visibleRef = useRef<BubbleInstance[]>([])
 
-  // Track visible count in a ref so the interval closure can read it
   useEffect(() => {
-    visibleCountRef.current = visible.length
-  }, [visible.length])
+    visibleRef.current = visible
+  }, [visible])
 
   // ── Spawn one bubble ───────────────────────────────────────────────────────
   const spawnBubble = useCallback(() => {
     if (!isActive) return
     if (questions.length === 0) return
-    if (visibleCountRef.current >= MAX_VISIBLE) return
 
-    // Replenish queue if empty
+    // Count how many of each question are currently on screen
+    const onScreenCount = new Map<string, number>()
+    for (const b of visibleRef.current) {
+      onScreenCount.set(b.question.id, (onScreenCount.get(b.question.id) ?? 0) + 1)
+    }
+
+    // Refill queue if empty
     if (cycleQueueRef.current.length === 0) {
       cycleQueueRef.current = weightedShuffle(questions)
     }
 
-    const question = cycleQueueRef.current.shift()!
-    const { x, drift, speed } = randomBubbleParams()
+    // Walk the queue to find the next question that isn't capped on screen.
+    // If ALL remaining queue items are capped, skip spawning this tick — the
+    // screen already has ≥ MAX_PER_QUESTION of every question simultaneously.
+    let chosen: BubbleQuestion | null = null
+    const skipped: BubbleQuestion[] = []
 
+    while (cycleQueueRef.current.length > 0) {
+      const candidate = cycleQueueRef.current.shift()!
+      if ((onScreenCount.get(candidate.id) ?? 0) < MAX_PER_QUESTION) {
+        chosen = candidate
+        break
+      }
+      skipped.push(candidate)
+    }
+
+    // Put skipped ones back at the front so they get reconsidered next tick
+    cycleQueueRef.current = [...skipped, ...cycleQueueRef.current]
+
+    if (!chosen) return  // all questions are already at cap — wait for some to leave
+
+    const { x, drift, speed } = randomBubbleParams()
     const instance: BubbleInstance = {
-      question,
+      question: chosen,
       id: nextInstanceId(),
       x,
       drift,
@@ -112,15 +121,12 @@ export function BubbleAnimationEngine({
       startedAt: Date.now(),
     }
 
-    setVisible((prev) => {
-      if (prev.length >= MAX_VISIBLE) return prev
-      return [...prev, instance]
-    })
+    setVisible((prev) => [...prev, instance])
 
     // Auto-remove after animation ends
     setTimeout(() => {
       setVisible((prev) => prev.filter((b) => b.id !== instance.id))
-    }, (speed * 1000) + ANIMATION_BUFFER_MS)
+    }, speed * 1000 + ANIMATION_BUFFER_MS)
   }, [isActive, questions])
 
   // ── Main interval loop ─────────────────────────────────────────────────────
@@ -132,12 +138,10 @@ export function BubbleAnimationEngine({
 
     if (!isActive || questions.length === 0) return
 
-    // Re-seed the cycle queue when questions change
     cycleQueueRef.current = weightedShuffle(questions)
 
-    // Immediately spawn until MIN_VISIBLE is reached
+    // Staggered initial burst
     for (let i = 0; i < MIN_VISIBLE; i++) {
-      // stagger slightly so they don't all appear at the same x
       setTimeout(() => spawnBubble(), i * 300)
     }
 
@@ -159,11 +163,10 @@ export function BubbleAnimationEngine({
     }
   }, [visible.length, isActive, questions.length, spawnBubble])
 
-  // ── Empty state (Req 5.6) ──────────────────────────────────────────────────
+  // ── Empty state ────────────────────────────────────────────────────────────
   if (questions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[60vh] gap-6 select-none">
-        {/* Illustration */}
         <div className="relative">
           {[...Array(3)].map((_, i) => (
             <div
