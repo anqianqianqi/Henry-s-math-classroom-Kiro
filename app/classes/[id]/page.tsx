@@ -396,7 +396,7 @@ export default function ClassDetailPage() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => router.push(`/classes/${classId}/bubble-room`)}
+                onClick={() => router.push(`/bubble-room`)}
                 className="bg-purple-100 hover:bg-purple-200 text-purple-700 border-purple-200"
               >
                 💬 Bubble Room

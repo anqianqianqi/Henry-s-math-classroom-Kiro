@@ -27,7 +27,7 @@ type ActionResult<T> = { data: T; error?: never } | { data?: never; error: strin
  * Requirements: 1.1, 1.3, 1.4, 8.3, 8.5
  */
 export async function postQuestion(
-  classId: string,
+  classId: string | null,
   text: string,
   challengeId?: string | null,
 ): Promise<ActionResult<BubbleQuestion>> {
@@ -47,13 +47,12 @@ export async function postQuestion(
       return { error: 'You must be logged in to post a question.' }
     }
 
-    // Note: challenge/class alignment is enforced at DB level (RLS). No app-level
-    // pre-check here so bank-sourced challenges (not in challenge_assignments) still work.
+    // Note: class_id is now optional for the global bubble room.
 
     const { data, error } = await supabase
       .from('bubble_room_questions')
       .insert({
-        class_id: classId,
+        class_id: classId ?? null,
         user_id: user.id,
         challenge_id: challengeId ?? null,
         text: trimmed,
@@ -334,9 +333,7 @@ export async function getResponses(
  *
  * Requirements: 1.1, 8.1
  */
-export async function fetchInitialQuestions(
-  classId: string,
-): Promise<BubbleQuestion[]> {
+export async function fetchInitialQuestions(): Promise<BubbleQuestion[]> {
   try {
     const supabase = createClient()
 
@@ -352,7 +349,6 @@ export async function fetchInitialQuestions(
         updated_at,
         profiles:user_id ( full_name, nickname )
       `)
-      .eq('class_id', classId)
       .order('created_at', { ascending: false })
 
     if (error) throw error

@@ -742,22 +742,7 @@ export default function DashboardPage() {
               const supabaseClient = createClient()
               const { data: { user: u } } = await supabaseClient.auth.getUser()
               if (!u) { router.push('/classes'); return }
-              if (isTeacher || isAdmin) {
-                // Teachers: pick from their classes list
-                const { data: classes } = await supabaseClient.from('classes').select('id').order('created_at', { ascending: false }).limit(1)
-                if (classes && classes.length > 0) {
-                  router.push(`/classes/${classes[0].id}/bubble-room`)
-                } else {
-                  router.push('/classes')
-                }
-              } else {
-                const { data: memberships } = await supabaseClient.from('class_members').select('class_id').eq('user_id', u.id).limit(1)
-                if (memberships && memberships.length > 0) {
-                  router.push(`/classes/${memberships[0].class_id}/bubble-room`)
-                } else {
-                  router.push('/classes')
-                }
-              }
+              router.push('/bubble-room')
             }}
           >
             <Card.Body>

@@ -25,12 +25,11 @@ import { DuplicateDetectionModal } from './DuplicateDetectionModal'
 import { QuestionDetailModal } from './QuestionDetailModal'
 
 export interface BubbleRoomPageProps {
-  classId: string
   initialQuestions: BubbleQuestion[]
   currentUserId: string
   currentUserRole: 'teacher' | 'student'
   currentUserDisplayName: string
-  /** Optional challengeId passed via URL query param (Req 1.3) */
+  /** Optional challengeId passed via URL query param */
   initialChallengeId?: string | null
 }
 
@@ -54,7 +53,6 @@ function highlightKeyword(text: string, keyword: string): React.ReactNode {
 }
 
 export function BubbleRoomPage({
-  classId,
   initialQuestions,
   currentUserId,
   currentUserRole,
@@ -79,20 +77,18 @@ export function BubbleRoomPage({
 
   const supabase = createClient()
 
-  // ── Realtime subscription: questions channel ──────────────────────────────
+  // ── Realtime subscription: global questions channel ──────────────────────
   useEffect(() => {
     const channel = supabase
-      .channel(`bubble-room-questions:${classId}`)
+      .channel('bubble-room-questions-global')
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'bubble_room_questions',
-          filter: `class_id=eq.${classId}`,
         },
         (payload) => {
-          // Realtime payload doesn't include joined fields — add defaults
           const newRow = payload.new as any
           const newQuestion: BubbleQuestion = {
             id: newRow.id,
@@ -107,7 +103,6 @@ export function BubbleRoomPage({
             unique_view_count: 0,
           }
           setQuestions((prev) => {
-            // Avoid duplicates if postQuestion already added it optimistically
             if (prev.find((q) => q.id === newRow.id)) return prev
             return [newQuestion, ...prev]
           })
@@ -119,7 +114,6 @@ export function BubbleRoomPage({
           event: 'DELETE',
           schema: 'public',
           table: 'bubble_room_questions',
-          filter: `class_id=eq.${classId}`,
         },
         (payload) => {
           const deletedId = (payload.old as any).id
@@ -132,7 +126,7 @@ export function BubbleRoomPage({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [classId])
+  }, [])
 
   // ── Search state ──────────────────────────────────────────────────────────
   const isAnimationActive = searchQuery.length === 0
@@ -183,7 +177,7 @@ export function BubbleRoomPage({
     setShowDuplicateModal(false)
     setIsPostingDuplicate(true)
     try {
-      const result = await postQuestion(classId, pendingQuestion, activeChallengeId)
+      const result = await postQuestion(null, pendingQuestion, activeChallengeId)
       if (!result.error && result.data) {
         handleQuestionSubmitted(result.data)
       }
@@ -227,7 +221,6 @@ export function BubbleRoomPage({
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 sm:gap-3">
               <HomeButton />
-              <span className="text-gray-400 text-sm hidden sm:block">/ Bubble Room</span>
             </div>
             <div className="flex items-center gap-1 sm:gap-3">
               <NotificationBell />
@@ -349,7 +342,7 @@ export function BubbleRoomPage({
 
       {showCompositionForm && (
         <QuestionCompositionForm
-          classId={classId}
+          classId={null}
           challengeId={activeChallengeId}
           initialText={compositionInitialText}
           existingQuestions={questions}

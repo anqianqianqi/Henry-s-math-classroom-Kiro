@@ -20,8 +20,8 @@ import { findDuplicates } from '@/lib/utils/bubbleRoom'
 import type { BubbleQuestion, DuplicateMatch } from '@/lib/types/bubbleRoom'
 
 export interface QuestionCompositionFormProps {
-  /** Class the question will be posted to */
-  classId: string
+  /** Class the question will be posted to (null for global bubble room) */
+  classId: string | null
   /** Pre-populate challenge context (Req 1.3) */
   challengeId?: string | null
   /** Pre-populate text from search query or "go back" cancel (Req 2.4) */

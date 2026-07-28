@@ -1724,7 +1724,7 @@ export default function ChallengePage() {
         {assignedClassIds.length > 0 && (!challenge.challenge_date || challenge.challenge_date <= localDateString()) && (
           <div className="mb-6 flex justify-center">
             <a
-              href={`/classes/${searchParams.get('classId') ?? assignedClassIds[0]}/bubble-room?challengeId=${challenge.id}`}
+              href={`/bubble-room?challengeId=${challenge.id}`}
               className="
                 inline-flex items-center gap-2
                 px-5 py-3 rounded-2xl
