@@ -47,19 +47,8 @@ export async function postQuestion(
       return { error: 'You must be logged in to post a question.' }
     }
 
-    // Validate that challengeId (if provided) belongs to this class (Req 8.5)
-    if (challengeId) {
-      const { data: assignment } = await supabase
-        .from('challenge_assignments')
-        .select('id')
-        .eq('challenge_id', challengeId)
-        .eq('class_id', classId)
-        .maybeSingle()
-
-      if (!assignment) {
-        return { error: 'The selected challenge is not assigned to this class.' }
-      }
-    }
+    // Note: challenge/class alignment is enforced at DB level (RLS). No app-level
+    // pre-check here so bank-sourced challenges (not in challenge_assignments) still work.
 
     const { data, error } = await supabase
       .from('bubble_room_questions')
