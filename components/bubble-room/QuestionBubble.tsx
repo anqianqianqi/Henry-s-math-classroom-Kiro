@@ -3,38 +3,50 @@
 /**
  * QuestionBubble — a single animated bubble rising from the bottom of the screen.
  *
- * Pure presentational component. Receives a BubbleInstance and renders a <div>
- * with CSS custom properties consumed by the @keyframes bubble-rise animation.
- *
- * Shows a truncated question preview (≤ 60 chars).
+ * Round circle design with:
+ * - Keyword highlight when a search query is active
+ * - Prominent response + view count badges
  *
  * Requirements: 5.1, 5.4
  */
 
+import React from 'react'
 import type { BubbleInstance } from '@/lib/types/bubbleRoom'
 
 export interface QuestionBubbleProps {
-  /** The live bubble instance with position/speed params */
   instance: BubbleInstance
-  /** Called when the user clicks the bubble */
   onClick: () => void
+  /** If set, highlights this keyword inside the bubble text */
+  searchQuery?: string
 }
 
-const PREVIEW_MAX_LENGTH = 60
+const PREVIEW_MAX_LENGTH = 55
 
-/**
- * QuestionBubble renders an absolutely positioned bubble that rises from the
- * bottom of the viewport using a CSS keyframe animation driven by inline custom
- * properties: --x (horizontal start, 0-100%), --drift (lateral offset, ±5-15%),
- * --speed (rise duration, 14-22s).
- */
-export function QuestionBubble({ instance, onClick }: QuestionBubbleProps) {
+/** Splits text around keyword and wraps the match in a highlight span */
+function highlightInBubble(text: string, keyword: string): React.ReactNode {
+  if (!keyword.trim()) return text
+  const idx = text.toLowerCase().indexOf(keyword.toLowerCase())
+  if (idx === -1) return text
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-yellow-300 text-yellow-900 rounded-sm px-0.5 not-italic font-semibold">
+        {text.slice(idx, idx + keyword.length)}
+      </mark>
+      {text.slice(idx + keyword.length)}
+    </>
+  )
+}
+
+export function QuestionBubble({ instance, onClick, searchQuery = '' }: QuestionBubbleProps) {
   const { question, id, x, drift, speed } = instance
 
   const preview =
     question.text.length > PREVIEW_MAX_LENGTH
       ? question.text.slice(0, PREVIEW_MAX_LENGTH - 1) + '…'
       : question.text
+
+  const hasActivity = question.response_count > 0 || question.unique_view_count > 0
 
   return (
     <div
@@ -78,34 +90,46 @@ export function QuestionBubble({ instance, onClick }: QuestionBubbleProps) {
           backdrop-blur-sm
         "
       >
-        {/* Bubble glare effect */}
+        {/* Bubble glare */}
         <div
           className="absolute top-2 left-3 w-6 h-3 rounded-full bg-white/50 blur-sm pointer-events-none"
           aria-hidden="true"
         />
 
-        {/* Question text */}
+        {/* Question text with optional keyword highlight */}
         <p className="px-3 text-center text-xs font-medium text-gray-700 leading-tight break-words">
-          {preview}
+          {searchQuery ? highlightInBubble(preview, searchQuery) : preview}
         </p>
       </div>
 
-      {/* Response count badge */}
-      {question.response_count > 0 && (
+      {/* Activity bar — shown below bubble when there are responses or views */}
+      {hasActivity && (
         <div
-          aria-label={`${question.response_count} response${question.response_count !== 1 ? 's' : ''}`}
           className="
-            absolute -top-1 -right-1
-            min-w-[1.25rem] h-5 px-1
-            rounded-full
-            bg-primary-500 text-white
-            text-xs font-bold
-            flex items-center justify-center
-            border-2 border-white
-            shadow
+            mt-1 mx-auto w-fit
+            flex items-center gap-1.5
+            bg-white/80 backdrop-blur-sm
+            rounded-full px-2 py-0.5
+            border border-white/60 shadow-sm
+            text-[10px] font-semibold text-gray-600
           "
+          aria-label={`${question.response_count} responses, ${question.unique_view_count} views`}
         >
-          {question.response_count}
+          {question.response_count > 0 && (
+            <span className="flex items-center gap-0.5 text-purple-600">
+              <span aria-hidden="true">💬</span>
+              {question.response_count}
+            </span>
+          )}
+          {question.response_count > 0 && question.unique_view_count > 0 && (
+            <span className="text-gray-300" aria-hidden="true">·</span>
+          )}
+          {question.unique_view_count > 0 && (
+            <span className="flex items-center gap-0.5 text-blue-500">
+              <span aria-hidden="true">👁</span>
+              {question.unique_view_count}
+            </span>
+          )}
         </div>
       )}
     </div>

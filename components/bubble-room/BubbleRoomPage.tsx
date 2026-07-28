@@ -261,6 +261,7 @@ export function BubbleRoomPage({
             isActive={isAnimationActive}
             onBubbleClick={handleBubbleClick}
             onAskQuestion={handleOpenCompositionForm}
+            searchQuery={searchQuery}
           />
         ) : (
           /* Search results mode (Req 4.3, 4.5) */

@@ -30,6 +30,8 @@ export interface BubbleAnimationEngineProps {
   onBubbleClick: (q: BubbleQuestion) => void
   /** Optional callback to open the "ask question" form (empty-state CTA) */
   onAskQuestion?: () => void
+  /** Current search query — used to highlight matching keywords in bubbles */
+  searchQuery?: string
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -75,6 +77,7 @@ export function BubbleAnimationEngine({
   isActive,
   onBubbleClick,
   onAskQuestion,
+  searchQuery = '',
 }: BubbleAnimationEngineProps) {
   const [visible, setVisible] = useState<BubbleInstance[]>([])
   const cycleQueueRef = useRef<BubbleQuestion[]>([])
@@ -218,6 +221,7 @@ export function BubbleAnimationEngine({
         <QuestionBubble
           key={instance.id}
           instance={instance}
+          searchQuery={searchQuery}
           onClick={() => onBubbleClick(instance.question)}
         />
       ))}
