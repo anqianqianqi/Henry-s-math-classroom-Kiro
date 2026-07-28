@@ -230,8 +230,6 @@ export function BubbleRoomPage({
         <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 sm:gap-3">
-              <span className="text-sm font-bold text-gray-900 hidden sm:block">Henry&apos;s Math Classroom</span>
-              <span className="text-sm font-bold text-gray-900 sm:hidden">Math Class</span>
               <HomeButton />
               <span className="text-gray-400 text-sm hidden sm:block">/ Bubble Room</span>
             </div>
