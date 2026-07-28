@@ -44,8 +44,8 @@ const X_MIN = 5                  // % viewport width, keep away from edges
 const X_MAX = 95
 const DRIFT_MAG_MIN = 5          // % vw lateral drift magnitude
 const DRIFT_MAG_MAX = 15
-const SPEED_MIN = 6              // seconds
-const SPEED_MAX = 14
+const SPEED_MIN = 14              // seconds (slowed down for readability)
+const SPEED_MAX = 22
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
