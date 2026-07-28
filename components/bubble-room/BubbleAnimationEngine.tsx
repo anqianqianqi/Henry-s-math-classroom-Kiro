@@ -36,10 +36,10 @@ export interface BubbleAnimationEngineProps {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const SPAWN_INTERVAL_MS = 1200   // How often to attempt spawning a new bubble
-const MIN_VISIBLE = 6            // Minimum bubbles on screen
-const MAX_VISIBLE = 14           // Maximum bubbles on screen — dense field
-const ANIMATION_BUFFER_MS = 500  // Extra time after animation to remove from DOM
+const SPAWN_INTERVAL_MS = 1500   // New bubble launches every 1.5s — continuous stream
+const MIN_VISIBLE = 4            // Minimum to maintain
+const MAX_VISIBLE = 999          // No effective cap — just keep launching
+const ANIMATION_BUFFER_MS = 500
 
 // Param ranges (Req 5.4)
 const X_MIN = 5                  // % viewport width, keep away from edges

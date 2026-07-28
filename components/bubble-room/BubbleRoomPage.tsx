@@ -12,12 +12,15 @@
  * Requirements: 1.2, 1.5, 2.2, 2.3, 2.4, 2.6, 3.5, 4.2, 4.3, 4.4, 4.5, 8.1
  */
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { BubbleQuestion, DuplicateMatch } from '@/lib/types/bubbleRoom'
 import { postQuestion } from '@/lib/actions/bubbleRoom'
 import { SearchBar } from './SearchBar'
 import { BubbleAnimationEngine } from './BubbleAnimationEngine'
+import NotificationBell from '@/components/NotificationBell'
+import { HomeButton } from '@/components/ui/HomeButton'
 import { QuestionCompositionForm } from './QuestionCompositionForm'
 import { DuplicateDetectionModal } from './DuplicateDetectionModal'
 import { QuestionDetailModal } from './QuestionDetailModal'
@@ -59,6 +62,8 @@ export function BubbleRoomPage({
   currentUserDisplayName,
   initialChallengeId,
 }: BubbleRoomPageProps) {
+  const router = useRouter()
+
   // ── Core state ────────────────────────────────────────────────────────────
   const [questions, setQuestions] = useState<BubbleQuestion[]>(initialQuestions)
   const [searchQuery, setSearchQuery] = useState('')
@@ -220,8 +225,35 @@ export function BubbleRoomPage({
 
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-indigo-50 via-purple-50 to-white">
-      {/* ── Top bar ─────────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-gray-100 px-4 py-3">
+      {/* ── Dashboard-style nav bar ──────────────────────────────────────── */}
+      <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className="text-sm font-bold text-gray-900 hidden sm:block">Henry&apos;s Math Classroom</span>
+              <span className="text-sm font-bold text-gray-900 sm:hidden">Math Class</span>
+              <HomeButton />
+              <span className="text-gray-400 text-sm hidden sm:block">/ Bubble Room</span>
+            </div>
+            <div className="flex items-center gap-1 sm:gap-3">
+              <NotificationBell />
+              <span className="text-xs text-gray-500 font-medium hidden sm:inline">
+                {currentUserDisplayName}
+              </span>
+              <button
+                type="button"
+                onClick={() => router.push(`/classes`)}
+                className="px-2 py-1 text-xs text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                ← Classes
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Bubble Room top bar (search + ask) ──────────────────────────── */}
+      <div className="sticky top-[52px] z-20 bg-white/80 backdrop-blur border-b border-gray-100 px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           <h1 className="text-lg font-bold text-gray-900 shrink-0 hidden sm:block">
             💬 Bubble Room
