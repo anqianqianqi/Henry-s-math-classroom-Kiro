@@ -67,12 +67,11 @@ export default async function BubbleRoomRoute({
   }
 
   // ── Fetch initial questions (SSR hydration) ───────────────────────────────
-  const initialQuestions = await fetchInitialQuestions(params.id)
+  const initialQuestions = await fetchInitialQuestions()
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <BubbleRoomPage
-      classId={params.id}
       initialQuestions={initialQuestions}
       currentUserId={user.id}
       currentUserRole={currentUserRole}
