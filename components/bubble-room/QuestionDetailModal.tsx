@@ -73,7 +73,7 @@ export function QuestionDetailModal({
     ;(async () => {
       const result = await getResponses(question.id)
       if (!result.error) {
-        setResponses(result.data)
+        setResponses(result.data ?? [])
       }
       setLoadingResponses(false)
     })()
@@ -92,7 +92,7 @@ export function QuestionDetailModal({
         async (payload) => {
           // Re-fetch to get joined profile data
           const result = await getResponses(question.id)
-          if (!result.error) setResponses(result.data)
+          if (!result.error) setResponses(result.data ?? [])
         },
       )
       .on(

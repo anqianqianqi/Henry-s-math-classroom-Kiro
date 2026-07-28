@@ -105,7 +105,7 @@ export function QuestionCompositionForm({
         return
       }
 
-      onSubmitted(result.data)
+      onSubmitted(result.data!)
     } catch (err) {
       setError('Failed to post your question. Please try again.')
     } finally {
