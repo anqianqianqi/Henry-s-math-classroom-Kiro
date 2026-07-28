@@ -13,7 +13,6 @@
  */
 
 import React, { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { BubbleQuestion, DuplicateMatch } from '@/lib/types/bubbleRoom'
 import { postQuestion } from '@/lib/actions/bubbleRoom'
@@ -62,8 +61,6 @@ export function BubbleRoomPage({
   currentUserDisplayName,
   initialChallengeId,
 }: BubbleRoomPageProps) {
-  const router = useRouter()
-
   // ── Core state ────────────────────────────────────────────────────────────
   const [questions, setQuestions] = useState<BubbleQuestion[]>(initialQuestions)
   const [searchQuery, setSearchQuery] = useState('')
@@ -236,13 +233,6 @@ export function BubbleRoomPage({
               <span className="text-xs text-gray-500 font-medium hidden sm:inline">
                 {currentUserDisplayName}
               </span>
-              <button
-                type="button"
-                onClick={() => router.push(`/classes`)}
-                className="px-2 py-1 text-xs text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                ← Classes
-              </button>
             </div>
           </div>
         </div>
