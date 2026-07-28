@@ -575,7 +575,7 @@ export default function ClassDetailPage() {
                         <div
                           key={c.id}
                           className="py-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-gray-50 -mx-4 px-4 rounded transition-colors"
-                          onClick={() => router.push(`/challenges/${c.id}`)}
+                          onClick={() => router.push(`/challenges/${c.id}?classId=${params.id}`)}
                         >
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 truncate">{c.title}</p>
