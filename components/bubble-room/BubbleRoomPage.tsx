@@ -12,7 +12,7 @@
  * Requirements: 1.2, 1.5, 2.2, 2.3, 2.4, 2.6, 3.5, 4.2, 4.3, 4.4, 4.5, 8.1
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { BubbleQuestion, DuplicateMatch } from '@/lib/types/bubbleRoom'
 import { postQuestion } from '@/lib/actions/bubbleRoom'
@@ -30,6 +30,25 @@ export interface BubbleRoomPageProps {
   currentUserDisplayName: string
   /** Optional challengeId passed via URL query param (Req 1.3) */
   initialChallengeId?: string | null
+}
+
+/**
+ * Splits text around the keyword and wraps the matching part in a highlight span.
+ * Case-insensitive. Returns plain text if no match.
+ */
+function highlightKeyword(text: string, keyword: string): React.ReactNode {
+  if (!keyword.trim()) return text
+  const idx = text.toLowerCase().indexOf(keyword.toLowerCase())
+  if (idx === -1) return text
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-yellow-200 text-yellow-900 rounded px-0.5 not-italic">
+        {text.slice(idx, idx + keyword.length)}
+      </mark>
+      {text.slice(idx + keyword.length)}
+    </>
+  )
 }
 
 export function BubbleRoomPage({
@@ -284,7 +303,9 @@ export function BubbleRoomPage({
                     focus:outline-none focus:ring-2 focus:ring-primary-400
                   "
                 >
-                  <p className="text-sm font-medium text-gray-900 leading-snug">{q.text}</p>
+                  <p className="text-sm font-medium text-gray-900 leading-snug">
+                    {highlightKeyword(q.text, searchQuery)}
+                  </p>
                   <div className="flex items-center gap-2 text-xs text-gray-400">
                     <span>{q.author_display_name}</span>
                     {q.response_count > 0 && (
