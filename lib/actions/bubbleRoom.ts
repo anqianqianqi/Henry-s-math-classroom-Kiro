@@ -48,15 +48,18 @@ export async function postQuestion(
     }
 
     // Note: class_id is now optional for the global bubble room.
+    // If challenge_id FK fails (bank challenge not in daily_challenges), retry without it.
 
-    const { data, error } = await supabase
+    const insertPayload = {
+      class_id: classId ?? null,
+      user_id: user.id,
+      challenge_id: challengeId ?? null,
+      text: trimmed,
+    }
+
+    let { data, error } = await supabase
       .from('bubble_room_questions')
-      .insert({
-        class_id: classId ?? null,
-        user_id: user.id,
-        challenge_id: challengeId ?? null,
-        text: trimmed,
-      })
+      .insert(insertPayload)
       .select(`
         id,
         class_id,
@@ -68,6 +71,20 @@ export async function postQuestion(
         profiles:user_id ( full_name, nickname )
       `)
       .single()
+
+    // If FK violation (bank challenge ID), retry without challenge_id
+    if (error && challengeId && (error.code === '23503' || error.message?.includes('foreign key'))) {
+      const retry = await supabase
+        .from('bubble_room_questions')
+        .insert({ ...insertPayload, challenge_id: null })
+        .select(`
+          id, class_id, user_id, challenge_id, text, created_at, updated_at,
+          profiles:user_id ( full_name, nickname )
+        `)
+        .single()
+      data = retry.data
+      error = retry.error
+    }
 
     if (error) throw error
 

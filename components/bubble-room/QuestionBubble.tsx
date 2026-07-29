@@ -148,48 +148,11 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
         )
       })}
 
-      {/* Bubble circle */}
-      <div
-        className="
-          relative flex items-center justify-center
-          w-24 h-24 sm:w-28 sm:h-28
-          rounded-full
-          bg-gradient-to-br from-blue-200 via-purple-100 to-pink-100
-          border-2 border-white/60
-          shadow-lg shadow-purple-200/50
-          backdrop-blur-sm
-          origin-center
-        "
-        style={bubbleStyle}
-      >
-        {/* Bubble glare */}
-        <div
-          className="absolute top-2 left-3 w-6 h-3 rounded-full bg-white/50 blur-sm pointer-events-none"
-          aria-hidden="true"
-        />
-
-        {/* Question text */}
-        <p className="px-3 text-center text-xs font-medium text-gray-700 leading-tight break-words">
-          {searchQuery ? highlightInBubble(preview, searchQuery) : preview}
-        </p>
-
-        {/* Challenge indicator dot */}
-        {question.challenge_id && (
-          <div
-            className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px]"
-            aria-label="Linked to a challenge"
-            title="Linked to a challenge"
-          >
-            🎯
-          </div>
-        )}
-      </div>
-
-      {/* Activity bar */}
+      {/* Activity bar — ABOVE the bubble */}
       {hasActivity && phase === 'idle' && (
         <div
           className="
-            mt-1 mx-auto w-fit
+            mb-1 mx-auto w-fit
             flex items-center gap-1.5
             bg-white/80 backdrop-blur-sm
             rounded-full px-2 py-0.5
@@ -215,6 +178,46 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           )}
         </div>
       )}
+
+      {/* Bubble circle — warm tint for challenge-linked bubbles */}
+      <div
+        className={`
+          relative flex items-center justify-center
+          w-24 h-24 sm:w-28 sm:h-28
+          rounded-full
+          border-2 border-white/60
+          shadow-lg
+          backdrop-blur-sm
+          origin-center
+          ${question.challenge_id
+            ? 'bg-gradient-to-br from-orange-200 via-yellow-100 to-amber-100 shadow-amber-200/50'
+            : 'bg-gradient-to-br from-blue-200 via-purple-100 to-pink-100 shadow-purple-200/50'
+          }
+        `}
+        style={bubbleStyle}
+      >
+        {/* Bubble glare */}
+        <div
+          className="absolute top-2 left-3 w-6 h-3 rounded-full bg-white/50 blur-sm pointer-events-none"
+          aria-hidden="true"
+        />
+
+        {/* Challenge indicator — top of circle */}
+        {question.challenge_id && (
+          <div
+            className="absolute top-1.5 left-1/2 -translate-x-1/2 text-[10px]"
+            aria-label="Linked to a challenge"
+            title="Linked to a challenge"
+          >
+            🎯
+          </div>
+        )}
+
+        {/* Question text */}
+        <p className="px-3 text-center text-xs font-medium text-gray-700 leading-tight break-words">
+          {searchQuery ? highlightInBubble(preview, searchQuery) : preview}
+        </p>
+      </div>
     </div>
   )
 }
