@@ -67,6 +67,38 @@ async function sendBadgeNotification(
   })
 }
 
+// ── Student: withdraw pending application ─────────────────────────────────
+
+export async function withdrawBadgeApplication(
+  badgeSlug: string,
+): Promise<ActionResult<{ success: true }>> {
+  try {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'You must be logged in.' }
+
+    const { data: badge } = await supabase
+      .from('badge_definitions')
+      .select('id')
+      .eq('slug', badgeSlug)
+      .single()
+    if (!badge) return { error: 'Badge not found.' }
+
+    const { error } = await supabase
+      .from('badge_applications')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('badge_id', badge.id)
+      .eq('status', 'pending')
+
+    if (error) throw error
+    return { data: { success: true } }
+  } catch (err) {
+    console.error('[Badges] withdrawBadgeApplication:', err)
+    return { error: 'Failed to withdraw application.' }
+  }
+}
+
 // ── Student: apply ─────────────────────────────────────────────────────────
 
 export async function applyForBadge(

@@ -16,7 +16,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { BubbleQuestion, DuplicateMatch } from '@/lib/types/bubbleRoom'
 import { postQuestion, searchQuestions } from '@/lib/actions/bubbleRoom'
-import { getMyBadgeStatus } from '@/lib/actions/badges'
+import { getMyBadgeStatus, withdrawBadgeApplication } from '@/lib/actions/badges'
 import { SearchBar } from './SearchBar'
 import { BubbleAnimationEngine } from './BubbleAnimationEngine'
 import NotificationBell from '@/components/NotificationBell'
@@ -26,6 +26,7 @@ import { DuplicateDetectionModal } from './DuplicateDetectionModal'
 import { QuestionDetailModal } from './QuestionDetailModal'
 import { TAApplicationModal } from './TAApplicationModal'
 import { TAPendingPanel } from './TAPendingPanel'
+import { TAStatusModal } from './TAStatusModal'
 
 export interface BubbleRoomPageProps {
   initialQuestions: BubbleQuestion[]
@@ -91,16 +92,24 @@ export function BubbleRoomPage({
   const [isTA, setIsTA] = useState(currentUserIsTA)
   const [taPending, setTAPending] = useState(currentUserTAApplicationPending)
   const [showTAApplyModal, setShowTAApplyModal] = useState(false)
-  const [showTAPanel, setShowTAPanel] = useState(false)  // teacher review panel
+  const [showTAStatusModal, setShowTAStatusModal] = useState(false)
+  const [taApplicationNote, setTaApplicationNote] = useState<string | null>(null)
+  const [taApplicationDate, setTaApplicationDate] = useState<string | null>(null)
+  const [isWithdrawing, setIsWithdrawing] = useState(false)
+  const [showTAPanel, setShowTAPanel] = useState(false)
 
   // ── Refresh badge status (called after apply + on a short poll while pending) ──
   const refreshBadgeStatus = useCallback(async () => {
     const result = await getMyBadgeStatus('bubble_room_ta')
     if (result.error) return
     const hasTA = (result.data?.activeBadges ?? []).some((b: any) => b.badge?.slug === 'bubble_room_ta')
-    const hasPending = (result.data?.pendingApplications ?? []).length > 0
+    const pendingApp = (result.data?.pendingApplications ?? [])[0] as any
     setIsTA(hasTA)
-    setTAPending(hasPending)
+    setTAPending(!!pendingApp)
+    if (pendingApp) {
+      setTaApplicationNote(pendingApp.note ?? null)
+      setTaApplicationDate(pendingApp.created_at ?? null)
+    }
   }, [])
 
   // Poll every 15s while the application is pending so the student sees approval without a manual refresh
@@ -336,7 +345,20 @@ export function BubbleRoomPage({
             </button>
           )}
           {currentUserRole === 'student' && taPending && (
-            <span className="shrink-0 text-xs text-gray-400 px-2">🎓 Pending…</span>
+            <button
+              type="button"
+              onClick={() => setShowTAStatusModal(true)}
+              title="View your TA application status"
+              className="
+                shrink-0 flex items-center gap-1
+                px-3 py-2 rounded-xl
+                border border-amber-300 text-amber-700 text-xs font-semibold bg-amber-50
+                hover:bg-amber-100 transition-colors
+                focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2
+              "
+            >
+              🎓 <span className="hidden sm:inline">Pending…</span>
+            </button>
           )}
           {currentUserRole === 'student' && isTA && (
             <span className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-teal-700 bg-teal-100 rounded-full px-2.5 py-1">
@@ -508,6 +530,28 @@ export function BubbleRoomPage({
           onSubmitted={() => {
             setShowTAApplyModal(false)
             setTAPending(true)
+            refreshBadgeStatus()
+          }}
+        />
+      )}
+
+      {/* TA status modal (student — pending view) */}
+      {showTAStatusModal && (
+        <TAStatusModal
+          note={taApplicationNote}
+          appliedAt={taApplicationDate}
+          onClose={() => setShowTAStatusModal(false)}
+          isWithdrawing={isWithdrawing}
+          onWithdraw={async () => {
+            setIsWithdrawing(true)
+            const result = await withdrawBadgeApplication('bubble_room_ta')
+            setIsWithdrawing(false)
+            if (!result.error) {
+              setTAPending(false)
+              setTaApplicationNote(null)
+              setTaApplicationDate(null)
+              setShowTAStatusModal(false)
+            }
           }}
         />
       )}
