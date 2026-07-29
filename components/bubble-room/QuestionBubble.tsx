@@ -1,28 +1,36 @@
 'use client'
 
 /**
- * QuestionBubble — a single animated bubble rising from the bottom of the screen.
+ * QuestionBubble — animated floating bubble that bursts (膨脹 → pop) on click.
  *
- * Round circle design with:
- * - Keyword highlight when a search query is active
- * - Prominent response + view count badges
- *
- * Requirements: 5.1, 5.4
+ * Click sequence:
+ *  1. Bubble pauses its rise animation
+ *  2. Expands (scale 1 → 1.5) over 200ms
+ *  3. Pops: scale jumps to 1.8, opacity drops to 0 over 150ms
+ *     + 8 radial particle fragments fly outward
+ *  4. After 380ms total → calls onClick to open the detail modal
  */
 
-import React from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 import type { BubbleInstance } from '@/lib/types/bubbleRoom'
 
 export interface QuestionBubbleProps {
   instance: BubbleInstance
   onClick: () => void
-  /** If set, highlights this keyword inside the bubble text */
   searchQuery?: string
 }
 
 const PREVIEW_MAX_LENGTH = 55
+const EXPAND_MS = 200
+const POP_MS = 150
+const TOTAL_MS = EXPAND_MS + POP_MS
 
-/** Splits text around keyword and wraps the match in a highlight span */
+// 8 particles, evenly spaced radially
+const PARTICLES = Array.from({ length: 8 }, (_, i) => ({
+  angle: (i * 360) / 8,
+  size: 6 + Math.floor(Math.random() * 8),
+}))
+
 function highlightInBubble(text: string, keyword: string): React.ReactNode {
   if (!keyword.trim()) return text
   const idx = text.toLowerCase().indexOf(keyword.toLowerCase())
@@ -38,8 +46,12 @@ function highlightInBubble(text: string, keyword: string): React.ReactNode {
   )
 }
 
+type BurstPhase = 'idle' | 'expand' | 'pop'
+
 export function QuestionBubble({ instance, onClick, searchQuery = '' }: QuestionBubbleProps) {
   const { question, id, x, drift, speed } = instance
+  const [phase, setPhase] = useState<BurstPhase>('idle')
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const preview =
     question.text.length > PREVIEW_MAX_LENGTH
@@ -48,17 +60,51 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
 
   const hasActivity = question.response_count > 0 || question.unique_view_count > 0
 
+  const handleClick = useCallback(() => {
+    if (phase !== 'idle') return
+    setPhase('expand')
+    timerRef.current = setTimeout(() => {
+      setPhase('pop')
+      timerRef.current = setTimeout(() => {
+        onClick()
+      }, POP_MS)
+    }, EXPAND_MS)
+  }, [phase, onClick])
+
+  const isPopping = phase === 'pop'
+  const isExpanding = phase === 'expand'
+
+  // Bubble transform based on phase
+  let bubbleStyle: React.CSSProperties = {}
+  if (isExpanding) {
+    bubbleStyle = {
+      transform: 'translateX(-50%) scale(1.5)',
+      transition: `transform ${EXPAND_MS}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
+      opacity: 1,
+    }
+  } else if (isPopping) {
+    bubbleStyle = {
+      transform: 'translateX(-50%) scale(1.8)',
+      transition: `transform ${POP_MS}ms ease-out, opacity ${POP_MS}ms ease-out`,
+      opacity: 0,
+    }
+  } else {
+    bubbleStyle = {
+      transform: 'translateX(-50%)',
+    }
+  }
+
   return (
     <div
       key={id}
       role="button"
       tabIndex={0}
       aria-label={`Question bubble: ${preview}`}
-      onClick={onClick}
+      onClick={handleClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          onClick()
+          handleClick()
         }
       }}
       className="bubble-rise absolute cursor-pointer select-none"
@@ -69,13 +115,39 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           '--speed': `${speed}s`,
           left: `${x}%`,
           bottom: '-80px',
-          transform: 'translateX(-50%)',
+          // Pause animation while bursting
+          animationPlayState: phase !== 'idle' ? 'paused' : 'running',
           animationDuration: `${speed}s`,
           animationTimingFunction: 'ease-out',
           animationFillMode: 'forwards',
         } as React.CSSProperties
       }
     >
+      {/* Burst particles — radiate outward on pop */}
+      {isPopping && PARTICLES.map((p, i) => {
+        const rad = (p.angle * Math.PI) / 180
+        const tx = Math.cos(rad) * 50
+        const ty = Math.sin(rad) * 50
+        return (
+          <div
+            key={i}
+            aria-hidden="true"
+            className="bubble-particle"
+            style={{
+              width: p.size,
+              height: p.size,
+              top: '50%',
+              left: '50%',
+              marginTop: -p.size / 2,
+              marginLeft: -p.size / 2,
+              background: `hsl(${200 + i * 20}, 70%, 65%)`,
+              '--px': `${tx}px`,
+              '--py': `${ty}px`,
+            } as React.CSSProperties}
+          />
+        )
+      })}
+
       {/* Bubble circle */}
       <div
         className="
@@ -85,10 +157,10 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           bg-gradient-to-br from-blue-200 via-purple-100 to-pink-100
           border-2 border-white/60
           shadow-lg shadow-purple-200/50
-          hover:scale-110 focus:scale-110
-          transition-transform duration-200
           backdrop-blur-sm
+          origin-center
         "
+        style={bubbleStyle}
       >
         {/* Bubble glare */}
         <div
@@ -96,7 +168,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           aria-hidden="true"
         />
 
-        {/* Question text with optional keyword highlight */}
+        {/* Question text */}
         <p className="px-3 text-center text-xs font-medium text-gray-700 leading-tight break-words">
           {searchQuery ? highlightInBubble(preview, searchQuery) : preview}
         </p>
@@ -113,8 +185,8 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
         )}
       </div>
 
-      {/* Activity bar — shown below bubble when there are responses or views */}
-      {hasActivity && (
+      {/* Activity bar */}
+      {hasActivity && phase === 'idle' && (
         <div
           className="
             mt-1 mx-auto w-fit
