@@ -11,7 +11,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
-import type { BubbleQuestion, BubbleResponse } from '@/lib/types/bubbleRoom'
+import type { BubbleQuestion, BubbleResponse, BubbleQuestionAssignment } from '@/lib/types/bubbleRoom'
 import { evaluateRuleBadges } from '@/lib/actions/badges'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -209,6 +209,9 @@ export async function postResponse(
 
     // Fire-and-forget: check rule_based badge thresholds for this responder
     evaluateRuleBadges(user.id).catch(() => {})
+
+    // Fire-and-forget: mark any assignments for this question as responded
+    markAssignmentResponded(questionId).catch(() => {})
 
     return { data: response }
   } catch (err) {
@@ -536,5 +539,213 @@ export async function searchQuestions(
   } catch (err) {
     console.error('[BubbleRoom] searchQuestions:', err)
     return { error: 'Failed to search questions.' }
+  }
+}
+
+// ── Question assignments ───────────────────────────────────────────────────────
+
+/**
+ * Fetch all users who can be assigned questions (teachers + TA badge holders).
+ * Used to populate the assignee picker in the compose form.
+ */
+export async function fetchAssignableUsers(): Promise<ActionResult<Array<{
+  id: string
+  name: string
+  role: 'teacher' | 'ta'
+}>>> {
+  try {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Not logged in.' }
+
+    // Teachers and admins
+    const { data: teacherRoles } = await supabase
+      .from('user_roles')
+      .select('user_id, roles!inner(name), profiles:user_id(full_name, nickname)')
+      .is('class_id', null)
+      .in('roles.name', ['teacher', 'administrator'])
+
+    // TA badge holders
+    const { data: taBadgeRows } = await supabase
+      .from('user_badges')
+      .select('user_id, badge:badge_definitions!inner(slug), profile:profiles!user_id(full_name, nickname)')
+      .eq('badge_definitions.slug', 'bubble_room_ta')
+      .is('revoked_at', null)
+
+    const result = new Map<string, { id: string; name: string; role: 'teacher' | 'ta' }>()
+
+    for (const row of teacherRoles ?? []) {
+      if (row.user_id === user.id) continue  // don't list yourself
+      const p = (row as any).profiles
+      const name = p?.nickname ?? p?.full_name ?? 'Unknown'
+      result.set(row.user_id, { id: row.user_id, name, role: 'teacher' })
+    }
+
+    for (const row of taBadgeRows ?? []) {
+      if (row.user_id === user.id) continue
+      if (result.has(row.user_id)) continue  // already in as teacher
+      const p = (row as any).profile
+      const name = p?.nickname ?? p?.full_name ?? 'Unknown'
+      result.set(row.user_id, { id: row.user_id, name, role: 'ta' })
+    }
+
+    return { data: [...result.values()].sort((a, b) => a.name.localeCompare(b.name)) }
+  } catch (err) {
+    console.error('[BubbleRoom] fetchAssignableUsers:', err)
+    return { error: 'Failed to load assignable users.' }
+  }
+}
+
+/**
+ * Create assignment rows for a question and notify each assignee.
+ */
+export async function assignQuestion(
+  questionId: string,
+  assigneeIds: string[],
+): Promise<ActionResult<{ success: true }>> {
+  try {
+    if (assigneeIds.length === 0) return { data: { success: true } }
+
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Not logged in.' }
+
+    // Fetch question title for notification
+    const { data: q } = await supabase
+      .from('bubble_room_questions')
+      .select('id, title, text')
+      .eq('id', questionId)
+      .single()
+
+    const questionTitle = (q as any)?.title ?? (q as any)?.text?.slice(0, 60) ?? 'a question'
+
+    // Insert assignment rows (ignore conflicts — idempotent)
+    const rows = assigneeIds.map(id => ({
+      question_id: questionId,
+      assignee_id: id,
+      assigned_by: user.id,
+    }))
+
+    await supabase
+      .from('bubble_room_question_assignments')
+      .upsert(rows, { onConflict: 'question_id,assignee_id', ignoreDuplicates: true })
+
+    // Notify each assignee
+    const posterProfile = await supabase
+      .from('profiles')
+      .select('full_name, nickname')
+      .eq('id', user.id)
+      .single()
+    const posterName = (posterProfile.data as any)?.nickname ?? (posterProfile.data as any)?.full_name ?? 'Someone'
+
+    await supabase.from('notifications').insert(
+      assigneeIds.map(id => ({
+        user_id: id,
+        type: 'bubble_room_assigned',
+        title: '📬 Question assigned to you',
+        message: `${posterName} asked you: "${questionTitle}"`,
+        link: '/bubble-room',
+        related_id: questionId,
+      })),
+    )
+
+    return { data: { success: true } }
+  } catch (err) {
+    console.error('[BubbleRoom] assignQuestion:', err)
+    return { error: 'Failed to assign question.' }
+  }
+}
+
+/**
+ * Fetch questions assigned to the current user.
+ * Returns pending (no response yet) and responded lists.
+ */
+export async function fetchMyAssignments(): Promise<ActionResult<{
+  pending: BubbleQuestionAssignment[]
+  responded: BubbleQuestionAssignment[]
+}>> {
+  try {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { data: { pending: [], responded: [] } }
+
+    const { data, error } = await supabase
+      .from('bubble_room_question_assignments')
+      .select(`
+        id,
+        question_id,
+        assignee_id,
+        assigned_by,
+        responded_at,
+        created_at,
+        question:bubble_room_questions (
+          id, class_id, user_id, challenge_id, title, text, image_url,
+          created_at, updated_at,
+          profiles:user_id ( full_name, nickname )
+        )
+      `)
+      .eq('assignee_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    const all = (data ?? []).map((row: any): BubbleQuestionAssignment => {
+      const q = row.question
+      const question: BubbleQuestion | undefined = q ? {
+        id: q.id,
+        class_id: q.class_id,
+        user_id: q.user_id,
+        challenge_id: q.challenge_id ?? null,
+        title: q.title ?? null,
+        text: q.text,
+        image_url: q.image_url ?? null,
+        created_at: q.created_at,
+        updated_at: q.updated_at,
+        author_display_name: q.profiles?.nickname ?? q.profiles?.full_name ?? 'Unknown',
+        response_count: 0,
+        unique_view_count: 0,
+      } : undefined
+
+      return {
+        id: row.id,
+        question_id: row.question_id,
+        assignee_id: row.assignee_id,
+        assigned_by: row.assigned_by,
+        responded_at: row.responded_at ?? null,
+        created_at: row.created_at,
+        question,
+      }
+    })
+
+    return {
+      data: {
+        pending: all.filter(a => !a.responded_at),
+        responded: all.filter(a => !!a.responded_at),
+      },
+    }
+  } catch (err) {
+    console.error('[BubbleRoom] fetchMyAssignments:', err)
+    return { error: 'Failed to load assignments.' }
+  }
+}
+
+/**
+ * Mark all assignments for this question as responded for the current user.
+ * Called automatically when the assignee posts a response.
+ */
+export async function markAssignmentResponded(questionId: string): Promise<void> {
+  try {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    await supabase
+      .from('bubble_room_question_assignments')
+      .update({ responded_at: new Date().toISOString() })
+      .eq('question_id', questionId)
+      .eq('assignee_id', user.id)
+      .is('responded_at', null)
+  } catch (err) {
+    console.error('[BubbleRoom] markAssignmentResponded:', err)
   }
 }

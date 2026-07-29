@@ -27,6 +27,7 @@ import { QuestionDetailModal } from './QuestionDetailModal'
 import { TAApplicationModal } from './TAApplicationModal'
 import { TAPendingPanel } from './TAPendingPanel'
 import { TAStatusModal } from './TAStatusModal'
+import { AssignedToMeTray } from './AssignedToMeTray'
 
 export interface BubbleRoomPageProps {
   initialQuestions: BubbleQuestion[]
@@ -511,6 +512,14 @@ export function BubbleRoomPage({
           onDeleteResponse={() => {
             // Response deletion is handled inside modal; no state needed here
           }}
+        />
+      )}
+
+      {/* Assigned-to-me tray (teachers + TAs) */}
+      {(currentUserRole === 'teacher' || isTA) && (
+        <AssignedToMeTray
+          currentUserId={currentUserId}
+          onQuestionClick={(q) => setSelectedQuestion(q)}
         />
       )}
 

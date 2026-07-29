@@ -13,10 +13,11 @@
  * Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.5
  */
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { postQuestion } from '@/lib/actions/bubbleRoom'
+import { assignQuestion, fetchAssignableUsers } from '@/lib/actions/bubbleRoom'
 import { findDuplicates } from '@/lib/utils/bubbleRoom'
 import type { BubbleQuestion, DuplicateMatch } from '@/lib/types/bubbleRoom'
 
@@ -61,6 +62,16 @@ export function QuestionCompositionForm({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Assignee picker state
+  const [assignableUsers, setAssignableUsers] = useState<Array<{ id: string; name: string; role: 'teacher' | 'ta' }>>([])
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([])
+
+  useEffect(() => {
+    fetchAssignableUsers().then(result => {
+      if (!result.error) setAssignableUsers(result.data ?? [])
+    })
+  }, [])
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -151,6 +162,11 @@ export function QuestionCompositionForm({
       if (result.error) {
         setError(result.error)
         return
+      }
+
+      // Assign to selected people (fire-and-forget)
+      if (selectedAssignees.length > 0 && result.data) {
+        assignQuestion(result.data.id, selectedAssignees).catch(() => {})
       }
 
       onSubmitted(result.data!)
@@ -323,6 +339,46 @@ export function QuestionCompositionForm({
             </label>
           )}
         </div>
+
+        {/* Assignee picker — only show if there are teachers/TAs */}
+        {assignableUsers.length > 0 && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">
+              Ask specifically <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {assignableUsers.map(u => {
+                const selected = selectedAssignees.includes(u.id)
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => setSelectedAssignees(prev =>
+                      selected ? prev.filter(id => id !== u.id) : [...prev, u.id]
+                    )}
+                    className={`
+                      inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
+                      border transition-all
+                      ${selected
+                        ? 'bg-green-100 border-green-400 text-green-800'
+                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-400'
+                      }
+                    `}
+                  >
+                    {u.role === 'teacher' ? '⭐' : '🎓'}
+                    {u.name}
+                    {selected && <span className="ml-0.5 text-green-600">✓</span>}
+                  </button>
+                )
+              })}
+            </div>
+            {selectedAssignees.length > 0 && (
+              <p className="text-xs text-green-700">
+                Will notify {selectedAssignees.length} person{selectedAssignees.length > 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Action buttons */}
         <div className="flex gap-3">

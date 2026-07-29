@@ -39,8 +39,17 @@ export interface BubbleResponse {
 }
 
 /**
- * A candidate duplicate match returned by findDuplicates.
+ * An assignment linking a question to a specific responder (teacher or TA).
  */
+export interface BubbleQuestionAssignment {
+  id: string
+  question_id: string
+  assignee_id: string
+  assigned_by: string
+  responded_at: string | null
+  created_at: string
+  question?: BubbleQuestion  // joined when fetching "assigned to me"
+}
 export interface DuplicateMatch {
   question: BubbleQuestion
   score: number  // 0.0–1.0 Jaccard similarity
