@@ -398,6 +398,7 @@ export async function fetchInitialQuestions(): Promise<BubbleQuestion[]> {
         updated_at,
         profiles:user_id ( full_name, nickname )
       `)
+      .gte('created_at', new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString())
       .order('created_at', { ascending: false })
 
     if (error) throw error

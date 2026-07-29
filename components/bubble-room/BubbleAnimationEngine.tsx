@@ -31,8 +31,16 @@ export interface BubbleAnimationEngineProps {
 const SPAWN_INTERVAL_MS = 1500
 const MIN_VISIBLE = 4
 const ANIMATION_BUFFER_MS = 500
-/** Max simultaneous instances of the same question on screen */
-const MAX_PER_QUESTION = 2
+
+/**
+ * Hard cap on simultaneous bubbles on screen.
+ * When the pool has ≥ 15 unique questions, we show each one at most once
+ * before cycling (no duplicates needed — the pool fills the screen).
+ * When the pool has < 15 questions we allow up to 2 copies of each so the
+ * screen doesn't look empty.
+ */
+const MAX_ON_SCREEN = 15
+const MAX_PER_QUESTION_SMALL_POOL = 2  // only applies when pool < 15 questions
 
 const X_MIN = 5
 const X_MAX = 95
@@ -81,6 +89,12 @@ export function BubbleAnimationEngine({
     if (!isActive) return
     if (questions.length === 0) return
 
+    // Hard cap: never exceed MAX_ON_SCREEN bubbles at once
+    if (visibleRef.current.length >= MAX_ON_SCREEN) return
+
+    // Per-question cap: 1 if pool ≥ 15 (no duplicates), 2 if pool < 15
+    const maxPerQuestion = questions.length >= MAX_ON_SCREEN ? 1 : MAX_PER_QUESTION_SMALL_POOL
+
     // Count how many of each question are currently on screen
     const onScreenCount = new Map<string, number>()
     for (const b of visibleRef.current) {
@@ -92,25 +106,21 @@ export function BubbleAnimationEngine({
       cycleQueueRef.current = weightedShuffle(questions)
     }
 
-    // Walk the queue to find the next question that isn't capped on screen.
-    // If ALL remaining queue items are capped, skip spawning this tick — the
-    // screen already has ≥ MAX_PER_QUESTION of every question simultaneously.
     let chosen: BubbleQuestion | null = null
     const skipped: BubbleQuestion[] = []
 
     while (cycleQueueRef.current.length > 0) {
       const candidate = cycleQueueRef.current.shift()!
-      if ((onScreenCount.get(candidate.id) ?? 0) < MAX_PER_QUESTION) {
+      if ((onScreenCount.get(candidate.id) ?? 0) < maxPerQuestion) {
         chosen = candidate
         break
       }
       skipped.push(candidate)
     }
 
-    // Put skipped ones back at the front so they get reconsidered next tick
     cycleQueueRef.current = [...skipped, ...cycleQueueRef.current]
 
-    if (!chosen) return  // all questions are already at cap — wait for some to leave
+    if (!chosen) return
 
     const { x, drift, speed } = randomBubbleParams()
     const instance: BubbleInstance = {
@@ -124,7 +134,6 @@ export function BubbleAnimationEngine({
 
     setVisible((prev) => [...prev, instance])
 
-    // Auto-remove after animation ends
     setTimeout(() => {
       setVisible((prev) => prev.filter((b) => b.id !== instance.id))
     }, speed * 1000 + ANIMATION_BUFFER_MS)
@@ -156,7 +165,7 @@ export function BubbleAnimationEngine({
   // ── Keep at least MIN_VISIBLE when count drops ─────────────────────────────
   useEffect(() => {
     if (!isActive || questions.length === 0) return
-    if (visible.length < MIN_VISIBLE) {
+    if (visible.length < MIN_VISIBLE && visible.length < MAX_ON_SCREEN) {
       spawnBubble()
     }
   }, [visible.length, isActive, questions.length, spawnBubble])
