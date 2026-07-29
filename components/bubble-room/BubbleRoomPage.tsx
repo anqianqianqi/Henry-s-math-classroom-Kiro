@@ -12,10 +12,11 @@
  * Requirements: 1.2, 1.5, 2.2, 2.3, 2.4, 2.6, 3.5, 4.2, 4.3, 4.4, 4.5, 8.1
  */
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { BubbleQuestion, DuplicateMatch } from '@/lib/types/bubbleRoom'
 import { postQuestion, searchQuestions } from '@/lib/actions/bubbleRoom'
+import { getMyBadgeStatus } from '@/lib/actions/badges'
 import { SearchBar } from './SearchBar'
 import { BubbleAnimationEngine } from './BubbleAnimationEngine'
 import NotificationBell from '@/components/NotificationBell'
@@ -91,6 +92,23 @@ export function BubbleRoomPage({
   const [taPending, setTAPending] = useState(currentUserTAApplicationPending)
   const [showTAApplyModal, setShowTAApplyModal] = useState(false)
   const [showTAPanel, setShowTAPanel] = useState(false)  // teacher review panel
+
+  // ── Refresh badge status (called after apply + on a short poll while pending) ──
+  const refreshBadgeStatus = useCallback(async () => {
+    const result = await getMyBadgeStatus('bubble_room_ta')
+    if (result.error) return
+    const hasTA = (result.data?.activeBadges ?? []).some((b: any) => b.badge?.slug === 'bubble_room_ta')
+    const hasPending = (result.data?.pendingApplications ?? []).length > 0
+    setIsTA(hasTA)
+    setTAPending(hasPending)
+  }, [])
+
+  // Poll every 15s while the application is pending so the student sees approval without a manual refresh
+  useEffect(() => {
+    if (!taPending || currentUserRole !== 'student') return
+    const interval = setInterval(refreshBadgeStatus, 15_000)
+    return () => clearInterval(interval)
+  }, [taPending, currentUserRole, refreshBadgeStatus])
 
   const supabase = createClient()
 

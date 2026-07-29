@@ -144,32 +144,30 @@ export async function getMyBadgeStatus(badgeSlug?: string): Promise<ActionResult
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { data: { activeBadges: [], pendingApplications: [] } }
 
-    let badgesQuery = supabase
+    // Fetch active badges
+    const { data: badges } = await supabase
       .from('user_badges')
       .select('*, badge:badge_definitions(*)')
       .eq('user_id', user.id)
       .is('revoked_at', null)
-    if (badgeSlug) {
-      badgesQuery = badgesQuery.eq('badge_definitions.slug', badgeSlug) as any
-    }
-    const { data: badges } = await badgesQuery
 
-    let appsQuery = supabase
+    // Fetch pending applications
+    const { data: apps } = await supabase
       .from('badge_applications')
       .select('*, badge:badge_definitions(*)')
       .eq('user_id', user.id)
       .eq('status', 'pending')
-    if (badgeSlug) {
-      appsQuery = appsQuery.eq('badge_definitions.slug', badgeSlug) as any
-    }
-    const { data: apps } = await appsQuery
 
-    return {
-      data: {
-        activeBadges: (badges ?? []) as UserBadge[],
-        pendingApplications: (apps ?? []) as BadgeApplication[],
-      },
-    }
+    // Filter by slug client-side if requested
+    const activeBadges = (badges ?? []).filter((b: any) =>
+      !badgeSlug || b.badge?.slug === badgeSlug
+    ) as UserBadge[]
+
+    const pendingApplications = (apps ?? []).filter((a: any) =>
+      !badgeSlug || a.badge?.slug === badgeSlug
+    ) as BadgeApplication[]
+
+    return { data: { activeBadges, pendingApplications } }
   } catch (err) {
     console.error('[Badges] getMyBadgeStatus:', err)
     return { error: 'Failed to load badge status.' }
