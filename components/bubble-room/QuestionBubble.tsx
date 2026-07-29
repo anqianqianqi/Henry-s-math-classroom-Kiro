@@ -107,7 +107,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           handleClick()
         }
       }}
-      className="bubble-rise absolute cursor-pointer select-none"
+      className="bubble-rise absolute cursor-pointer select-none relative"
       style={
         {
           '--x': `${x}%`,
@@ -148,23 +148,23 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
         )
       })}
 
-      {/* Activity bar — ABOVE the bubble */}
+      {/* Counts tag — floating outside bubble, centered at top */}
       {hasActivity && phase === 'idle' && (
         <div
           className="
-            mb-1 mx-auto w-fit
-            flex items-center gap-1.5
-            bg-white/80 backdrop-blur-sm
+            absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2
+            flex items-center gap-1
+            bg-white/90 backdrop-blur-sm
             rounded-full px-2 py-0.5
             border border-white/60 shadow-sm
-            text-[10px] font-semibold text-gray-600
+            text-[9px] font-semibold text-gray-600
+            pointer-events-none
           "
           aria-label={`${question.response_count} responses, ${question.unique_view_count} views`}
         >
           {question.response_count > 0 && (
             <span className="flex items-center gap-0.5 text-purple-600">
-              <span aria-hidden="true">💬</span>
-              {question.response_count}
+              <span aria-hidden="true">💬</span>{question.response_count}
             </span>
           )}
           {question.response_count > 0 && question.unique_view_count > 0 && (
@@ -172,8 +172,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           )}
           {question.unique_view_count > 0 && (
             <span className="flex items-center gap-0.5 text-blue-500">
-              <span aria-hidden="true">👁</span>
-              {question.unique_view_count}
+              <span aria-hidden="true">👁</span>{question.unique_view_count}
             </span>
           )}
         </div>
@@ -201,25 +200,6 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           className="absolute top-2 left-3 w-6 h-3 rounded-full bg-white/50 blur-sm pointer-events-none"
           aria-hidden="true"
         />
-
-        {/* Counts — centered at top inside bubble */}
-        {hasActivity && phase === 'idle' && (
-          <div className="flex items-center gap-1 mb-0.5 text-[9px] font-semibold">
-            {question.response_count > 0 && (
-              <span className="flex items-center gap-0.5 text-purple-700">
-                <span aria-hidden="true">💬</span>{question.response_count}
-              </span>
-            )}
-            {question.response_count > 0 && question.unique_view_count > 0 && (
-              <span className="text-white/60" aria-hidden="true">·</span>
-            )}
-            {question.unique_view_count > 0 && (
-              <span className="flex items-center gap-0.5 text-blue-600">
-                <span aria-hidden="true">👁</span>{question.unique_view_count}
-              </span>
-            )}
-          </div>
-        )}
 
         {/* Question text */}
         <p className="px-3 text-center text-[10px] font-medium text-gray-700 leading-tight break-words">
