@@ -10,6 +10,8 @@ import { HomeButton } from '@/components/ui/HomeButton'
 import { MagicBookReveal } from '@/components/MagicBookReveal'
 import { HenryProblemSheet } from '@/components/HenryProblemSheet'
 import { readStoredHenryProblem } from '@/lib/henryproblem'
+import { useUserBadges } from '@/lib/hooks/useUserBadges'
+import { UserNameWithBadges } from '@/components/UserNameWithBadges'
 
 interface Challenge {
   id: string
@@ -64,6 +66,10 @@ export default function ChallengePage() {
   const [assignedClassIds, setAssignedClassIds] = useState<string[]>([])
   const [userSubmission, setUserSubmission] = useState<Submission | null>(null)
   const [otherSubmissions, setOtherSubmissions] = useState<Submission[]>([])
+
+  // Fetch badges for all submitters so they show inline with names
+  const submitterIds = otherSubmissions.map(s => s.user_id)
+  const submitterBadgeMap = useUserBadges(submitterIds)
   const [solution, setSolution] = useState('')
   const [solutionImage, setSolutionImage] = useState<File | null>(null)
   const [solutionImagePreview, setSolutionImagePreview] = useState<string | null>(null)
@@ -1870,7 +1876,10 @@ export default function ChallengePage() {
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
                             <p className="font-semibold text-gray-900">
-                              {submission.profiles.nickname || submission.profiles.full_name}
+                              <UserNameWithBadges
+                                name={submission.profiles.nickname || submission.profiles.full_name}
+                                badges={submitterBadgeMap.get(submission.user_id)}
+                              />
                             </p>
                             <p className="text-sm text-gray-500">
                               {formatTimeAgo(submission.submitted_at)}
