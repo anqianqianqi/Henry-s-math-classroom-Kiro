@@ -36,11 +36,11 @@ const MAX_PER_QUESTION = 2
 
 const X_MIN = 5
 const X_MAX = 95
-const DRIFT_MAG_MIN = 5
-const DRIFT_MAG_MAX = 15
-/** Rise speed range — scales with question count to keep stream flowing */
-const SPEED_MIN = 8    // faster floor so slots free up when few questions
-const SPEED_MAX = 18
+const DRIFT_MAG_MIN = 10
+const DRIFT_MAG_MAX = 28
+/** Rise speed range — slower for a more relaxed floating feel */
+const SPEED_MIN = 14   // slower floor for gentle drifting
+const SPEED_MAX = 28
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

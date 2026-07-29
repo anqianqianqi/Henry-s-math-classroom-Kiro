@@ -432,3 +432,91 @@ export async function fetchInitialQuestions(): Promise<BubbleQuestion[]> {
     return []
   }
 }
+
+// ── searchQuestions ───────────────────────────────────────────────────────────
+
+/**
+ * Paginated server-side search for bubble room questions.
+ * Used by the search dropdown "Show more" button — the first 5 results come
+ * from the in-memory questions array; subsequent pages hit this action.
+ *
+ * @param query   - Search keyword (matched against title + text, case-insensitive)
+ * @param offset  - Row offset for pagination (0-based)
+ * @param limit   - Page size (default 5)
+ */
+export async function searchQuestions(
+  query: string,
+  offset: number = 0,
+  limit: number = 5,
+): Promise<ActionResult<{ questions: BubbleQuestion[]; hasMore: boolean }>> {
+  try {
+    const supabase = createClient()
+
+    const trimmed = query.trim()
+
+    let q = supabase
+      .from('bubble_room_questions')
+      .select(
+        `id, class_id, user_id, challenge_id, title, text, created_at, updated_at,
+         profiles:user_id ( full_name, nickname )`,
+      )
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit) // fetch one extra to detect hasMore
+
+    if (trimmed) {
+      q = q.or(`title.ilike.%${trimmed}%,text.ilike.%${trimmed}%`)
+    }
+
+    const { data, error } = await q
+
+    if (error) throw error
+
+    const rows = data ?? []
+    const hasMore = rows.length > limit
+    const page = rows.slice(0, limit)
+
+    const questionIds = page.map((r: any) => r.id)
+    const responseCounts = new Map<string, number>()
+    const viewCounts = new Map<string, number>()
+
+    if (questionIds.length > 0) {
+      const { data: rData } = await supabase
+        .from('bubble_room_responses')
+        .select('question_id')
+        .in('question_id', questionIds)
+      ;(rData ?? []).forEach((r: any) => {
+        responseCounts.set(r.question_id, (responseCounts.get(r.question_id) ?? 0) + 1)
+      })
+
+      const { data: vData } = await supabase
+        .from('bubble_room_question_views')
+        .select('question_id')
+        .in('question_id', questionIds)
+      ;(vData ?? []).forEach((v: any) => {
+        viewCounts.set(v.question_id, (viewCounts.get(v.question_id) ?? 0) + 1)
+      })
+    }
+
+    const questions: BubbleQuestion[] = page.map((row: any) => ({
+      id: row.id,
+      class_id: row.class_id,
+      user_id: row.user_id,
+      challenge_id: row.challenge_id ?? null,
+      title: row.title ?? null,
+      text: row.text,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      author_display_name:
+        (row.profiles as any)?.nickname ??
+        (row.profiles as any)?.full_name ??
+        'Unknown',
+      response_count: responseCounts.get(row.id) ?? 0,
+      unique_view_count: viewCounts.get(row.id) ?? 0,
+    }))
+
+    return { data: { questions, hasMore } }
+  } catch (err) {
+    console.error('[BubbleRoom] searchQuestions:', err)
+    return { error: 'Failed to search questions.' }
+  }
+}

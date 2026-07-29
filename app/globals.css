@@ -31,7 +31,7 @@ body {
  * .bubble-rise is applied to each QuestionBubble <div>.
  * CSS custom properties (set inline):
  *   --drift  : lateral sine-like offset in vw (e.g. 10vw or -8vw)
- *   --speed  : animation duration in seconds (6-14s)
+ *   --speed  : animation duration in seconds (14-28s)
  *
  * The element starts at bottom:-80px and rises to top:-120px while fading out
  * near the top and drifting laterally.
@@ -44,14 +44,29 @@ body {
   8% {
     opacity: 1;
   }
-  70% {
+  20% {
+    /* sway opposite direction first */
+    transform: translateX(-50%) translateX(calc(var(--drift, 0vw) * -0.4)) translateY(-20vh);
+  }
+  40% {
+    /* swing toward drift direction */
+    transform: translateX(-50%) translateX(calc(var(--drift, 0vw) * 0.6)) translateY(-40vh);
+  }
+  60% {
+    /* sway back slightly */
+    transform: translateX(-50%) translateX(calc(var(--drift, 0vw) * 0.2)) translateY(-60vh);
     opacity: 1;
   }
-  85% {
-    opacity: 0.3;
+  80% {
+    /* drift fully out */
+    transform: translateX(-50%) translateX(var(--drift, 0vw)) translateY(-80vh);
+    opacity: 0.5;
+  }
+  90% {
+    opacity: 0.2;
   }
   100% {
-    transform: translateX(-50%) translateX(var(--drift, 0vw)) translateY(-110vh);
+    transform: translateX(-50%) translateX(calc(var(--drift, 0vw) * 1.1)) translateY(-110vh);
     opacity: 0;
   }
 }

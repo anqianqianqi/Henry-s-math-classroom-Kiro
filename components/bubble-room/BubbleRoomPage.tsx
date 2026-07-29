@@ -15,7 +15,7 @@
 import React, { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { BubbleQuestion, DuplicateMatch } from '@/lib/types/bubbleRoom'
-import { postQuestion } from '@/lib/actions/bubbleRoom'
+import { postQuestion, searchQuestions } from '@/lib/actions/bubbleRoom'
 import { SearchBar } from './SearchBar'
 import { BubbleAnimationEngine } from './BubbleAnimationEngine'
 import NotificationBell from '@/components/NotificationBell'
@@ -151,6 +151,13 @@ export function BubbleRoomPage({
     setSearchQuery(query)
   }
 
+  /** Called by SearchBar "Show more" — paginated server fetch */
+  async function handleSearchLoadMore(query: string, offset: number) {
+    const result = await searchQuestions(query, offset, 5)
+    if (result.error || !result.data) return null
+    return result.data
+  }
+
   function handleOpenCompositionForm() {
     setCompositionInitialText('')
     // Preserve initialChallengeId if this bubble room was opened from a challenge page
@@ -251,7 +258,13 @@ export function BubbleRoomPage({
 
           {/* Search (Req 4.1) */}
           <div className="flex-1">
-            <SearchBar value={searchQuery} onChange={handleSearchChange} />
+            <SearchBar
+              value={searchQuery}
+              onChange={handleSearchChange}
+              suggestions={questions}
+              onLoadMore={handleSearchLoadMore}
+              onSuggestionClick={(q) => setSelectedQuestion(q)}
+            />
           </div>
 
           {/* Ask a Question button (Req 1.2) */}
