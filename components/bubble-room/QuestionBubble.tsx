@@ -115,9 +115,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           '--speed': `${speed}s`,
           left: `${x}%`,
           bottom: '-80px',
-          transform: bubbleStyle.transform ?? 'translateX(-50%)',
-          ...(bubbleStyle.transition ? { transition: bubbleStyle.transition } : {}),
-          ...(bubbleStyle.opacity !== undefined ? { opacity: bubbleStyle.opacity } : {}),
+          transform: 'translateX(-50%)',
           animationPlayState: phase !== 'idle' ? 'paused' : 'running',
           animationDuration: `${speed}s`,
           animationTimingFunction: 'ease-out',
@@ -195,6 +193,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
             : 'bg-gradient-to-br from-blue-200 via-purple-100 to-pink-100 shadow-purple-200/50'
           }
         `}
+        style={bubbleStyle}
       >
         {/* Bubble glare */}
         <div
