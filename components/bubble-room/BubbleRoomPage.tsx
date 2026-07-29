@@ -470,12 +470,10 @@ export function BubbleRoomPage({
       </div>
 
       {/* ── Assigned-to-me tray — rendered outside the overflow container ── */}
-      {(currentUserRole === 'teacher' || isTA) && (
-        <AssignedToMeTray
-          currentUserId={currentUserId}
-          onQuestionClick={(q) => setSelectedQuestion(q)}
-        />
-      )}
+      <AssignedToMeTray
+        currentUserId={currentUserId}
+        onQuestionClick={(q) => setSelectedQuestion(q)}
+      />
 
       {/* ── Modals ───────────────────────────────────────────────────────── */}
 
