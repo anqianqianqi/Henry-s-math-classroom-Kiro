@@ -395,7 +395,7 @@ export function QuestionDetailModal({
                   {challengeContext.title}
                 </p>
                 {challengeContext.description && (
-                  <p className="text-xs text-amber-800 leading-snug mt-1 line-clamp-3">
+                  <p className="text-xs text-amber-800 leading-snug mt-1 whitespace-pre-wrap">
                     {challengeContext.description}
                   </p>
                 )}
