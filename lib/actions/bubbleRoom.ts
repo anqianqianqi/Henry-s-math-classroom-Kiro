@@ -739,7 +739,14 @@ export async function markAssignmentResponded(questionId: string): Promise<void>
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    await supabase
+    // Use service role to bypass RLS on UPDATE
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js')
+    const serviceSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+
+    await serviceSupabase
       .from('bubble_room_question_assignments')
       .update({ responded_at: new Date().toISOString() })
       .eq('question_id', questionId)

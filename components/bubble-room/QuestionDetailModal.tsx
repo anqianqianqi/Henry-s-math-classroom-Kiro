@@ -41,6 +41,8 @@ export interface QuestionDetailModalProps {
   onResponseSubmitted: () => void
   onDeleteQuestion: (questionId: string) => void
   onDeleteResponse: (responseId: string) => void
+  /** Optional: shown when the modal was opened from the assigned list */
+  onBack?: () => void
 }
 
 export function QuestionDetailModal({
@@ -52,6 +54,7 @@ export function QuestionDetailModal({
   onResponseSubmitted,
   onDeleteQuestion,
   onDeleteResponse,
+  onBack,
 }: QuestionDetailModalProps) {
   const [responses, setResponses] = useState<BubbleResponse[]>([])
   const [responseText, setResponseText] = useState('')
@@ -449,6 +452,16 @@ export function QuestionDetailModal({
         {/* ── Header ──────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between p-5 border-b border-gray-100">
           <div className="flex-1 min-w-0 pr-4">
+            {/* Back button — shown when opened from assigned list */}
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 font-medium mb-2 transition-colors"
+              >
+                ← Back to Assigned
+              </button>
+            )}
             <p className="text-xs text-gray-400 mb-0.5">
               {question.author_display_name} · {formatDate(question.created_at)}
             </p>

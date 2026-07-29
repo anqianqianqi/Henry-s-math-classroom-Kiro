@@ -99,6 +99,8 @@ export function BubbleRoomPage({
   const [isWithdrawing, setIsWithdrawing] = useState(false)
   const [showTAPanel, setShowTAPanel] = useState(false)
   const [showAssignedModal, setShowAssignedModal] = useState(false)
+  // Track if the currently open question was opened from the assigned list
+  const [questionFromAssigned, setQuestionFromAssigned] = useState(false)
 
   // ── Refresh badge status (called after apply + on a short poll while pending) ──
   const refreshBadgeStatus = useCallback(async () => {
@@ -516,9 +518,11 @@ export function BubbleRoomPage({
           currentUserId={currentUserId}
           currentUserRole={currentUserRole}
           currentUserDisplayName={currentUserDisplayName}
-          onClose={handleModalClose}
+          onClose={() => {
+            setSelectedQuestion(null)
+            setQuestionFromAssigned(false)
+          }}
           onResponseSubmitted={() => {
-            // Increment response count locally for immediate feedback
             setQuestions((prev) =>
               prev.map((q) =>
                 q.id === selectedQuestion.id
@@ -528,9 +532,12 @@ export function BubbleRoomPage({
             )
           }}
           onDeleteQuestion={handleQuestionDeleted}
-          onDeleteResponse={() => {
-            // Response deletion is handled inside modal; no state needed here
-          }}
+          onDeleteResponse={() => {}}
+          onBack={questionFromAssigned ? () => {
+            setSelectedQuestion(null)
+            setQuestionFromAssigned(false)
+            setShowAssignedModal(true)
+          } : undefined}
         />
       )}
 
@@ -588,6 +595,7 @@ export function BubbleRoomPage({
           onQuestionClick={(q) => {
             setSelectedQuestion(q)
             setShowAssignedModal(false)
+            setQuestionFromAssigned(true)
           }}
           onClose={() => setShowAssignedModal(false)}
         />
