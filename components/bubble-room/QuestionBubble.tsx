@@ -3,12 +3,9 @@
 /**
  * QuestionBubble — animated floating bubble that bursts (膨脹 → pop) on click.
  *
- * Click sequence:
- *  1. Bubble pauses its rise animation
- *  2. Expands (scale 1 → 1.5) over 200ms
- *  3. Pops: scale jumps to 1.8, opacity drops to 0 over 150ms
- *     + 8 radial particle fragments fly outward
- *  4. After 380ms total → calls onClick to open the detail modal
+ * The outer wrapper handles the rise animation (CSS).
+ * The inner circle handles the burst scale/opacity animation (React state).
+ * The counts tag is absolutely positioned on the outer wrapper at top-center.
  */
 
 import React, { useCallback, useRef, useState } from 'react'
@@ -23,9 +20,7 @@ export interface QuestionBubbleProps {
 const PREVIEW_MAX_LENGTH = 55
 const EXPAND_MS = 200
 const POP_MS = 150
-const TOTAL_MS = EXPAND_MS + POP_MS
 
-// 8 particles, evenly spaced radially
 const PARTICLES = Array.from({ length: 8 }, (_, i) => ({
   angle: (i * 360) / 8,
   size: 6 + Math.floor(Math.random() * 8),
@@ -74,23 +69,18 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
   const isPopping = phase === 'pop'
   const isExpanding = phase === 'expand'
 
-  // Bubble transform based on phase
-  let bubbleStyle: React.CSSProperties = {}
+  // Inner circle style for burst animation only
+  let circleStyle: React.CSSProperties = { transform: 'scale(1)' }
   if (isExpanding) {
-    bubbleStyle = {
-      transform: 'translateX(-50%) scale(1.5)',
+    circleStyle = {
+      transform: 'scale(1.5)',
       transition: `transform ${EXPAND_MS}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
-      opacity: 1,
     }
   } else if (isPopping) {
-    bubbleStyle = {
-      transform: 'translateX(-50%) scale(1.8)',
-      transition: `transform ${POP_MS}ms ease-out, opacity ${POP_MS}ms ease-out`,
+    circleStyle = {
+      transform: 'scale(1.8)',
       opacity: 0,
-    }
-  } else {
-    bubbleStyle = {
-      transform: 'translateX(-50%)',
+      transition: `transform ${POP_MS}ms ease-out, opacity ${POP_MS}ms ease-out`,
     }
   }
 
@@ -123,7 +113,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
         } as React.CSSProperties
       }
     >
-      {/* Burst particles — radiate outward on pop */}
+      {/* Burst particles */}
       {isPopping && PARTICLES.map((p, i) => {
         const rad = (p.angle * Math.PI) / 180
         const tx = Math.cos(rad) * 50
@@ -148,7 +138,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
         )
       })}
 
-      {/* Counts tag — floating outside bubble, centered at top */}
+      {/* Counts tag — floating tag outside bubble at top-center */}
       {hasActivity && phase === 'idle' && (
         <div
           className="
@@ -178,7 +168,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
         </div>
       )}
 
-      {/* Bubble circle — warm tint for challenge-linked bubbles */}
+      {/* Bubble circle — burst animation applied here, not on outer wrapper */}
       <div
         className={`
           relative flex flex-col items-center justify-center
@@ -193,7 +183,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
             : 'bg-gradient-to-br from-blue-200 via-purple-100 to-pink-100 shadow-purple-200/50'
           }
         `}
-        style={bubbleStyle}
+        style={circleStyle}
       >
         {/* Bubble glare */}
         <div
@@ -206,7 +196,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           {searchQuery ? highlightInBubble(preview, searchQuery) : preview}
         </p>
 
-        {/* Challenge link — bottom of circle */}
+        {/* Challenge link */}
         {question.challenge_id && (
           <div className="mt-0.5 text-[9px] font-semibold text-amber-700 flex items-center gap-0.5">
             <span aria-hidden="true">🎯</span>
