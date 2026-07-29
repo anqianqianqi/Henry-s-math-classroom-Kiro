@@ -56,6 +56,8 @@ export default function ChallengePage() {
   const supabase = createClient()
   
   const [challenge, setChallenge] = useState<Challenge | null>(null)
+  // Bubble Room: class IDs this challenge is assigned to (for "Ask About This Challenge" button)
+  const [assignedClassIds, setAssignedClassIds] = useState<string[]>([])
   const [userSubmission, setUserSubmission] = useState<Submission | null>(null)
   const [otherSubmissions, setOtherSubmissions] = useState<Submission[]>([])
   const [solution, setSolution] = useState('')
@@ -440,6 +442,8 @@ export default function ChallengePage() {
       const assignments = (assignmentsResult as any).data
       if (assignments && assignments.length > 0) {
         const classIds = assignments.map((a: any) => a.class_id)
+        // Store assigned class IDs for the "Ask About This Challenge" button (Req 1.2, 1.3)
+        setAssignedClassIds(classIds)
         const [{ data: memberData }, { data: individualAssignments }] = await Promise.all([
           supabase.from('class_members').select('user_id').in('class_id', classIds),
           supabase.from('challenge_student_assignments').select('student_id').eq('challenge_id', params.id),
@@ -454,6 +458,23 @@ export default function ChallengePage() {
       }
     } else if (submissionData) {
       await loadOtherSubmissions(user.id, false, bankItemId)
+      // Fetch assigned class IDs for the "Ask About This Challenge" button (students)
+      const { data: studentAssignments } = await supabase
+        .from('challenge_assignments')
+        .select('class_id')
+        .eq('challenge_id', params.id)
+      if (studentAssignments && studentAssignments.length > 0) {
+        setAssignedClassIds(studentAssignments.map((a: any) => a.class_id))
+      }
+    } else {
+      // No submission yet — still fetch assigned classes for the Ask button
+      const { data: studentAssignments } = await supabase
+        .from('challenge_assignments')
+        .select('class_id')
+        .eq('challenge_id', params.id)
+      if (studentAssignments && studentAssignments.length > 0) {
+        setAssignedClassIds(studentAssignments.map((a: any) => a.class_id))
+      }
     }
 
     // Load comments + submission count in parallel
@@ -1698,6 +1719,29 @@ export default function ChallengePage() {
             </div>
           )}
         </MagicBookReveal>
+
+        {/* Ask About This Challenge button — shown when challenge is assigned to at least one class (Req 1.2, 1.3) */}
+        {assignedClassIds.length > 0 && (!challenge.challenge_date || challenge.challenge_date <= localDateString()) && (
+          <div className="mb-6 flex justify-center">
+            <a
+              href={`/bubble-room?challengeId=${challenge.id}`}
+              className="
+                inline-flex items-center gap-2
+                px-5 py-3 rounded-2xl
+                bg-gradient-to-r from-purple-500 to-indigo-500
+                text-white font-semibold text-sm
+                shadow-lg hover:shadow-xl
+                hover:from-purple-600 hover:to-indigo-600
+                transition-all active:translate-y-0.5
+                focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2
+              "
+              aria-label="Ask a question about this challenge in the Bubble Room"
+            >
+              <span aria-hidden="true">💬</span>
+              Ask About This Challenge
+            </a>
+          </div>
+        )}
 
         {/* Teacher Stats Dashboard */}
         {isTeacher && (

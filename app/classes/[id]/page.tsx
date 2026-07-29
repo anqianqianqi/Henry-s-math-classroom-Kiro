@@ -391,6 +391,17 @@ export default function ClassDetailPage() {
             )}
           </div>
           <div className="flex gap-2">
+            {/* Bubble Room button — accessible to teachers and enrolled students */}
+            {(userRole === 'teacher' || isEnrolled) && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => router.push(`/bubble-room`)}
+                className="bg-purple-100 hover:bg-purple-200 text-purple-700 border-purple-200"
+              >
+                💬 Bubble Room
+              </Button>
+            )}
             {userRole === 'teacher' ? (
               <>
                 <Button
@@ -564,7 +575,7 @@ export default function ClassDetailPage() {
                         <div
                           key={c.id}
                           className="py-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-gray-50 -mx-4 px-4 rounded transition-colors"
-                          onClick={() => router.push(`/challenges/${c.id}`)}
+                          onClick={() => router.push(`/challenges/${c.id}?classId=${params.id}`)}
                         >
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 truncate">{c.title}</p>

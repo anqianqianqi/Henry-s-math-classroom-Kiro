@@ -25,3 +25,60 @@ body {
     text-wrap: balance;
   }
 }
+
+/* ─── Bubble Room: floating bubble animation ────────────────────────────────
+ *
+ * .bubble-rise is applied to each QuestionBubble <div>.
+ * CSS custom properties (set inline):
+ *   --drift  : lateral sine-like offset in vw (e.g. 10vw or -8vw)
+ *   --speed  : animation duration in seconds (6-14s)
+ *
+ * The element starts at bottom:-80px and rises to top:-120px while fading out
+ * near the top and drifting laterally.
+ * ─────────────────────────────────────────────────────────────────────────── */
+@keyframes bubble-rise {
+  0% {
+    transform: translateX(-50%) translateX(0) translateY(0);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateX(-50%) translateX(var(--drift, 0vw)) translateY(-110vh);
+    opacity: 0;
+  }
+}
+
+.bubble-rise {
+  animation-name: bubble-rise;
+  animation-duration: var(--speed, 10s);
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+  will-change: transform, opacity;
+}
+
+/* ─── Bubble burst particle animation ────────────────────────────────────── */
+@keyframes bubble-particle {
+  0% {
+    transform: translate(var(--px, 0px), var(--py, 0px)) scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(calc(var(--px, 0px) * 2.5), calc(var(--py, 0px) * 2.5)) scale(0);
+    opacity: 0;
+  }
+}
+
+.bubble-particle {
+  animation: bubble-particle 200ms ease-out forwards;
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+}

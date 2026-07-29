@@ -734,6 +734,24 @@ export default function DashboardPage() {
             </Card.Body>
           </Card>
 
+          {/* Bubble Room — links to the user's first class bubble room, or /classes to pick */}
+          <Card
+            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={async () => {
+              // Find the user's first enrolled class and navigate to its bubble room
+              const supabaseClient = createClient()
+              const { data: { user: u } } = await supabaseClient.auth.getUser()
+              if (!u) { router.push('/classes'); return }
+              router.push('/bubble-room')
+            }}
+          >
+            <Card.Body>
+              <div className="text-5xl mb-3 hidden sm:block">💬</div>
+              <div className="text-2xl font-bold text-purple-600 mb-1">Bubble Room</div>
+              <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Q&amp;A</div>
+            </Card.Body>
+          </Card>
+
           {/* Decorations hub — book skins, pet room, etc. */}
           <Card
             className="text-center cursor-pointer hover:shadow-lg transition-shadow"
