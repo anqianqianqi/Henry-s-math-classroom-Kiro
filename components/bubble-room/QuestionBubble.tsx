@@ -107,7 +107,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           handleClick()
         }
       }}
-      className="bubble-rise absolute cursor-pointer select-none relative"
+      className="bubble-rise absolute cursor-pointer select-none"
       style={
         {
           '--x': `${x}%`,
@@ -115,7 +115,9 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           '--speed': `${speed}s`,
           left: `${x}%`,
           bottom: '-80px',
-          // Pause animation while bursting
+          transform: bubbleStyle.transform ?? 'translateX(-50%)',
+          transition: (bubbleStyle as any).transition,
+          opacity: bubbleStyle.opacity,
           animationPlayState: phase !== 'idle' ? 'paused' : 'running',
           animationDuration: `${speed}s`,
           animationTimingFunction: 'ease-out',
@@ -152,13 +154,13 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
       {hasActivity && phase === 'idle' && (
         <div
           className="
-            absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2
+            absolute -top-4 left-1/2 -translate-x-1/2
             flex items-center gap-1
             bg-white/90 backdrop-blur-sm
             rounded-full px-2 py-0.5
             border border-white/60 shadow-sm
             text-[9px] font-semibold text-gray-600
-            pointer-events-none
+            pointer-events-none whitespace-nowrap z-10
           "
           aria-label={`${question.response_count} responses, ${question.unique_view_count} views`}
         >
@@ -193,7 +195,6 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
             : 'bg-gradient-to-br from-blue-200 via-purple-100 to-pink-100 shadow-purple-200/50'
           }
         `}
-        style={bubbleStyle}
       >
         {/* Bubble glare */}
         <div
