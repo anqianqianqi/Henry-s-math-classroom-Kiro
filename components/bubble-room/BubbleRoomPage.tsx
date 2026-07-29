@@ -277,7 +277,7 @@ export function BubbleRoomPage({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-indigo-50 via-purple-50 to-white flex flex-col">
+    <div className="relative min-h-screen bg-gradient-to-b from-indigo-50 via-purple-50 to-white">
       {/* ── Dashboard-style nav bar ──────────────────────────────────────── */}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6">
@@ -409,7 +409,7 @@ export function BubbleRoomPage({
       </div>
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
-      <div className="relative flex-1 overflow-hidden" style={{ minHeight: 'calc(100vh - 112px)' }}>
+      <div className="relative" style={{ height: 'calc(100vh - 112px)' }}>
         {isAnimationActive ? (
           /* Animation mode */
           <BubbleAnimationEngine
