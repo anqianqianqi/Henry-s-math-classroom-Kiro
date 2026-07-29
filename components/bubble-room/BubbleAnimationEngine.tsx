@@ -141,11 +141,8 @@ export function BubbleAnimationEngine({
 
     cycleQueueRef.current = weightedShuffle(questions)
 
-    // Staggered initial burst
-    for (let i = 0; i < MIN_VISIBLE; i++) {
-      setTimeout(() => spawnBubble(), i * 300)
-    }
-
+    // Spawn first bubble immediately, then one every SPAWN_INTERVAL_MS — no bulk burst
+    spawnBubble()
     intervalRef.current = setInterval(spawnBubble, SPAWN_INTERVAL_MS)
 
     return () => {
