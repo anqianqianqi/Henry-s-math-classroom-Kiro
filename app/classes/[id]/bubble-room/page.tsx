@@ -69,6 +69,14 @@ export default async function BubbleRoomRoute({
   // ── Fetch initial questions (SSR hydration) ───────────────────────────────
   const initialQuestions = await fetchInitialQuestions()
 
+  // ── Fetch TA badge status ─────────────────────────────────────────────────
+  const { getMyBadgeStatus } = await import('@/lib/actions/badges')
+  const taStatus = await getMyBadgeStatus('bubble_room_ta')
+  const currentUserIsTA = !taStatus.error &&
+    (taStatus.data?.activeBadges ?? []).some((b: any) => b.badge?.slug === 'bubble_room_ta')
+  const currentUserTAApplicationPending = !taStatus.error &&
+    (taStatus.data?.pendingApplications ?? []).length > 0
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <BubbleRoomPage
@@ -77,6 +85,8 @@ export default async function BubbleRoomRoute({
       currentUserRole={currentUserRole}
       currentUserDisplayName={displayName}
       initialChallengeId={searchParams.challengeId ?? null}
+      currentUserIsTA={currentUserIsTA}
+      currentUserTAApplicationPending={currentUserTAApplicationPending}
     />
   )
 }

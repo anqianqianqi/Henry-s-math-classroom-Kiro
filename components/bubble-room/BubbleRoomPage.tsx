@@ -23,6 +23,8 @@ import { HomeButton } from '@/components/ui/HomeButton'
 import { QuestionCompositionForm } from './QuestionCompositionForm'
 import { DuplicateDetectionModal } from './DuplicateDetectionModal'
 import { QuestionDetailModal } from './QuestionDetailModal'
+import { TAApplicationModal } from './TAApplicationModal'
+import { TAPendingPanel } from './TAPendingPanel'
 
 export interface BubbleRoomPageProps {
   initialQuestions: BubbleQuestion[]
@@ -31,6 +33,10 @@ export interface BubbleRoomPageProps {
   currentUserDisplayName: string
   /** Optional challengeId passed via URL query param */
   initialChallengeId?: string | null
+  /** Whether the current user already holds the TA badge */
+  currentUserIsTA?: boolean
+  /** Whether the current user has a pending TA application */
+  currentUserTAApplicationPending?: boolean
 }
 
 /**
@@ -58,13 +64,15 @@ export function BubbleRoomPage({
   currentUserRole,
   currentUserDisplayName,
   initialChallengeId,
+  currentUserIsTA = false,
+  currentUserTAApplicationPending = false,
 }: BubbleRoomPageProps) {
   // ── Core state ────────────────────────────────────────────────────────────
   const [questions, setQuestions] = useState<BubbleQuestion[]>(initialQuestions)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedQuestion, setSelectedQuestion] = useState<BubbleQuestion | null>(null)
   const [showCompositionForm, setShowCompositionForm] = useState(
-    !!initialChallengeId, // auto-open when coming from a challenge page
+    !!initialChallengeId,
   )
   const [compositionInitialText, setCompositionInitialText] = useState('')
   const [activeChallengeId, setActiveChallengeId] = useState<string | null>(
@@ -77,6 +85,12 @@ export function BubbleRoomPage({
   const [duplicateMatches, setDuplicateMatches] = useState<DuplicateMatch[]>([])
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [isPostingDuplicate, setIsPostingDuplicate] = useState(false)
+
+  // TA badge UI state
+  const [isTA, setIsTA] = useState(currentUserIsTA)
+  const [taPending, setTAPending] = useState(currentUserTAApplicationPending)
+  const [showTAApplyModal, setShowTAApplyModal] = useState(false)
+  const [showTAPanel, setShowTAPanel] = useState(false)  // teacher review panel
 
   const supabase = createClient()
 
@@ -285,6 +299,50 @@ export function BubbleRoomPage({
             <span aria-hidden="true">+</span>
             <span className="hidden sm:inline">Ask</span>
           </button>
+
+          {/* TA badge controls */}
+          {currentUserRole === 'student' && !isTA && !taPending && (
+            <button
+              type="button"
+              onClick={() => setShowTAApplyModal(true)}
+              title="Apply to be a Bubble Room TA"
+              className="
+                shrink-0 flex items-center gap-1
+                px-3 py-2 rounded-xl
+                border border-teal-300 text-teal-700 text-xs font-semibold bg-teal-50
+                hover:bg-teal-100 transition-colors
+                focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2
+              "
+            >
+              🎓 <span className="hidden sm:inline">Apply TA</span>
+            </button>
+          )}
+          {currentUserRole === 'student' && taPending && (
+            <span className="shrink-0 text-xs text-gray-400 px-2">🎓 Pending…</span>
+          )}
+          {currentUserRole === 'student' && isTA && (
+            <span className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-teal-700 bg-teal-100 rounded-full px-2.5 py-1">
+              🎓 TA
+            </span>
+          )}
+
+          {/* Teacher: pending applications button */}
+          {(currentUserRole === 'teacher') && (
+            <button
+              type="button"
+              onClick={() => setShowTAPanel(true)}
+              title="Review TA Applications"
+              className="
+                shrink-0 flex items-center gap-1
+                px-3 py-2 rounded-xl
+                border border-teal-300 text-teal-700 text-xs font-semibold bg-teal-50
+                hover:bg-teal-100 transition-colors
+                focus:outline-none focus:ring-2 focus:ring-teal-400
+              "
+            >
+              🎓 <span className="hidden sm:inline">TA Apps</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -423,6 +481,22 @@ export function BubbleRoomPage({
             <span className="text-sm font-medium text-gray-700">Posting your question…</span>
           </div>
         </div>
+      )}
+
+      {/* TA application modal (student) */}
+      {showTAApplyModal && (
+        <TAApplicationModal
+          onClose={() => setShowTAApplyModal(false)}
+          onSubmitted={() => {
+            setShowTAApplyModal(false)
+            setTAPending(true)
+          }}
+        />
+      )}
+
+      {/* TA pending panel (teacher/admin) */}
+      {showTAPanel && (
+        <TAPendingPanel onClose={() => setShowTAPanel(false)} />
       )}
     </div>
   )

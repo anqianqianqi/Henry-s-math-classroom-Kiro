@@ -53,6 +53,14 @@ export default async function GlobalBubbleRoomRoute({
 
   const initialQuestions = await fetchInitialQuestions()
 
+  // Fetch TA badge status for current user
+  const { getMyBadgeStatus } = await import('@/lib/actions/badges')
+  const taStatus = await getMyBadgeStatus('bubble_room_ta')
+  const currentUserIsTA = !taStatus.error &&
+    (taStatus.data?.activeBadges ?? []).some((b: any) => b.badge?.slug === 'bubble_room_ta')
+  const currentUserTAApplicationPending = !taStatus.error &&
+    (taStatus.data?.pendingApplications ?? []).length > 0
+
   return (
     <BubbleRoomPage
       initialQuestions={initialQuestions}
@@ -60,6 +68,8 @@ export default async function GlobalBubbleRoomRoute({
       currentUserRole={currentUserRole}
       currentUserDisplayName={displayName}
       initialChallengeId={searchParams.challengeId ?? null}
+      currentUserIsTA={currentUserIsTA}
+      currentUserTAApplicationPending={currentUserTAApplicationPending}
     />
   )
 }

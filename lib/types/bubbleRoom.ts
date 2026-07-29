@@ -35,6 +35,7 @@ export interface BubbleResponse {
   created_at: string
   responder_display_name: string  // joined from profiles
   responder_role: 'teacher' | 'student'
+  responder_badges?: Array<{ slug: string; name: string; emoji: string; color: string }>
 }
 
 /**

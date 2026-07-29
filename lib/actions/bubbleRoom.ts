@@ -2,6 +2,7 @@
 
 /**
  * Server Actions for Bubble Room Q&A feature.
+ * Note: evaluateRuleBadges is called after postResponse to auto-check rule_based badges.
  *
  * All mutations run server-side with Supabase auth context.
  * RLS policies enforce authorization at DB level.
@@ -11,6 +12,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import type { BubbleQuestion, BubbleResponse } from '@/lib/types/bubbleRoom'
+import { evaluateRuleBadges } from '@/lib/actions/badges'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -204,6 +206,9 @@ export async function postResponse(
       responder_display_name: displayName,
       responder_role: isTeacher ? 'teacher' : 'student',
     }
+
+    // Fire-and-forget: check rule_based badge thresholds for this responder
+    evaluateRuleBadges(user.id).catch(() => {})
 
     return { data: response }
   } catch (err) {
