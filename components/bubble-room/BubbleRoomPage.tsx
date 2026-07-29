@@ -98,6 +98,7 @@ export function BubbleRoomPage({
   const [taApplicationDate, setTaApplicationDate] = useState<string | null>(null)
   const [isWithdrawing, setIsWithdrawing] = useState(false)
   const [showTAPanel, setShowTAPanel] = useState(false)
+  const [showAssignedModal, setShowAssignedModal] = useState(false)
 
   // ── Refresh badge status (called after apply + on a short poll while pending) ──
   const refreshBadgeStatus = useCallback(async () => {
@@ -274,7 +275,7 @@ export function BubbleRoomPage({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-indigo-50 via-purple-50 to-white">
+    <div className="relative min-h-screen bg-gradient-to-b from-indigo-50 via-purple-50 to-white flex flex-col">
       {/* ── Dashboard-style nav bar ──────────────────────────────────────── */}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6">
@@ -384,11 +385,29 @@ export function BubbleRoomPage({
               🎓 <span className="hidden sm:inline">TA Apps</span>
             </button>
           )}
+
+          {/* Assigned-to-me button — visible for teachers and TAs */}
+          {(currentUserRole === 'teacher' || isTA) && (
+            <button
+              type="button"
+              onClick={() => setShowAssignedModal(true)}
+              title="Questions assigned to you"
+              className="
+                shrink-0 flex items-center gap-1
+                px-3 py-2 rounded-xl
+                border border-orange-300 text-orange-700 text-xs font-semibold bg-orange-50
+                hover:bg-orange-100 transition-colors
+                focus:outline-none focus:ring-2 focus:ring-orange-400
+              "
+            >
+              📬 <span className="hidden sm:inline">Assigned</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
-      <div className="relative" style={{ height: 'calc(100vh - 64px)' }}>
+      <div className="relative flex-1 overflow-hidden">
         {isAnimationActive ? (
           /* Animation mode */
           <BubbleAnimationEngine
@@ -468,12 +487,6 @@ export function BubbleRoomPage({
           </div>
         )}
       </div>
-
-      {/* ── Assigned-to-me tray — rendered outside the overflow container ── */}
-      <AssignedToMeTray
-        currentUserId={currentUserId}
-        onQuestionClick={(q) => setSelectedQuestion(q)}
-      />
 
       {/* ── Modals ───────────────────────────────────────────────────────── */}
 
@@ -566,6 +579,18 @@ export function BubbleRoomPage({
       {/* TA pending panel (teacher/admin) */}
       {showTAPanel && (
         <TAPendingPanel onClose={() => setShowTAPanel(false)} />
+      )}
+
+      {/* Assigned-to-me modal */}
+      {showAssignedModal && (
+        <AssignedToMeTray
+          currentUserId={currentUserId}
+          onQuestionClick={(q) => {
+            setSelectedQuestion(q)
+            setShowAssignedModal(false)
+          }}
+          onClose={() => setShowAssignedModal(false)}
+        />
       )}
     </div>
   )
