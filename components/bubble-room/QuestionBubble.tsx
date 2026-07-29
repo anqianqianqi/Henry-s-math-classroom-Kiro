@@ -182,7 +182,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
       {/* Bubble circle — warm tint for challenge-linked bubbles */}
       <div
         className={`
-          relative flex items-center justify-center
+          relative flex flex-col items-center justify-center
           w-24 h-24 sm:w-28 sm:h-28
           rounded-full
           border-2 border-white/60
@@ -202,21 +202,37 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           aria-hidden="true"
         />
 
-        {/* Challenge indicator — top of circle */}
-        {question.challenge_id && (
-          <div
-            className="absolute top-1.5 left-1/2 -translate-x-1/2 text-[10px]"
-            aria-label="Linked to a challenge"
-            title="Linked to a challenge"
-          >
-            🎯
+        {/* Counts — centered at top inside bubble */}
+        {hasActivity && phase === 'idle' && (
+          <div className="flex items-center gap-1 mb-0.5 text-[9px] font-semibold">
+            {question.response_count > 0 && (
+              <span className="flex items-center gap-0.5 text-purple-700">
+                <span aria-hidden="true">💬</span>{question.response_count}
+              </span>
+            )}
+            {question.response_count > 0 && question.unique_view_count > 0 && (
+              <span className="text-white/60" aria-hidden="true">·</span>
+            )}
+            {question.unique_view_count > 0 && (
+              <span className="flex items-center gap-0.5 text-blue-600">
+                <span aria-hidden="true">👁</span>{question.unique_view_count}
+              </span>
+            )}
           </div>
         )}
 
         {/* Question text */}
-        <p className="px-3 text-center text-xs font-medium text-gray-700 leading-tight break-words">
+        <p className="px-3 text-center text-[10px] font-medium text-gray-700 leading-tight break-words">
           {searchQuery ? highlightInBubble(preview, searchQuery) : preview}
         </p>
+
+        {/* Challenge link — bottom of circle */}
+        {question.challenge_id && (
+          <div className="mt-0.5 text-[9px] font-semibold text-amber-700 flex items-center gap-0.5">
+            <span aria-hidden="true">🎯</span>
+            <span>Challenge</span>
+          </div>
+        )}
       </div>
     </div>
   )
