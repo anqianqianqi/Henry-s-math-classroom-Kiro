@@ -52,12 +52,10 @@ export function AssignedToMeTray({ currentUserId, onQuestionClick }: AssignedToM
   return (
     <div
       className="
-        absolute bottom-0 left-0 right-0 z-20
         bg-white border-t border-orange-200
         transition-all duration-300 ease-in-out
         select-none
       "
-      style={{ maxHeight: isExpanded ? '50vh' : undefined }}
     >
       {/* ── Header row — always visible ──────────────────────────────── */}
       <button
