@@ -15,6 +15,7 @@ export interface BubbleQuestion {
   challenge_id: string | null
   title: string | null          // optional short title (≤120 chars)
   text: string
+  image_url: string | null      // optional attached image
   created_at: string            // ISO 8601
   updated_at: string
   author_display_name: string   // joined from profiles
@@ -30,6 +31,7 @@ export interface BubbleResponse {
   question_id: string
   user_id: string
   text: string
+  image_url: string | null      // optional attached image
   created_at: string
   responder_display_name: string  // joined from profiles
   responder_role: 'teacher' | 'student'

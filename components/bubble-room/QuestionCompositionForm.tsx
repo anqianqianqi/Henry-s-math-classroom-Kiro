@@ -7,13 +7,14 @@
  *  1. Validate non-empty text (Req 1.4)
  *  2. Run client-side Jaccard duplicate detection (Req 2.1)
  *  3. If duplicates found → call onDuplicatesFound (Req 2.2)
- *  4. If no duplicates → call postQuestion Server Action (Req 1.1)
+ *  4. If no duplicates → upload image (if any) then call postQuestion (Req 1.1)
  *  5. Show inline errors; preserve draft on failure (Req 1.4, 3.6)
  *
  * Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.5
  */
 
 import { useRef, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { postQuestion } from '@/lib/actions/bubbleRoom'
 import { findDuplicates } from '@/lib/utils/bubbleRoom'
@@ -40,6 +41,8 @@ export interface QuestionCompositionFormProps {
 }
 
 const MAX_LENGTH = 2000
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024 // 10 MB
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
 export function QuestionCompositionForm({
   classId,
@@ -52,9 +55,34 @@ export function QuestionCompositionForm({
 }: QuestionCompositionFormProps) {
   const [title, setTitle] = useState('')
   const [text, setText] = useState(initialText)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setError('Only JPEG, PNG, GIF, or WebP images are allowed.')
+      return
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError('Image must be 10 MB or smaller.')
+      return
+    }
+    setError(null)
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
+  function handleRemoveImage() {
+    setImageFile(null)
+    setImagePreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -63,55 +91,62 @@ export function QuestionCompositionForm({
     const trimmedTitle = title.trim() || null
     const trimmed = text.trim()
 
-    // Client-side validation: title required
     if (!trimmedTitle) {
       setError('Please enter a title for your question.')
       return
     }
-
-    // Client-side validation: non-empty body (Req 1.4)
     if (!trimmed) {
       setError('Please enter your question before submitting.')
       textareaRef.current?.focus()
       return
     }
-
     if (trimmed.length > MAX_LENGTH) {
       setError(`Question must be ${MAX_LENGTH} characters or fewer.`)
       return
     }
-
-    if (trimmedTitle && trimmedTitle.length > 120) {
+    if (trimmedTitle.length > 120) {
       setError('Title must be 120 characters or fewer.')
       return
     }
 
-    // Duplicate detection (Req 2.1) — runs entirely client-side
+    // Duplicate detection — runs entirely client-side
     let duplicates: DuplicateMatch[] = []
     try {
       duplicates = findDuplicates(trimmed, existingQuestions)
     } catch (dupErr) {
-      // Req 2.6: if duplicate detection fails, proceed silently
       console.error('[BubbleRoom] duplicate detection failed:', dupErr)
     }
 
     if (duplicates.length > 0) {
-      // Hand off to parent — will show DuplicateDetectionModal
       onDuplicatesFound(trimmed, duplicates, trimmedTitle)
       return
     }
 
-    // No duplicates → submit immediately
     await submitQuestion(trimmed, trimmedTitle)
   }
 
-  /** Called by this form (no duplicate) and by the parent after duplicate confirm */
   async function submitQuestion(trimmedText: string, trimmedTitle: string | null) {
     setIsSubmitting(true)
     setError(null)
 
     try {
-      const result = await postQuestion(classId, trimmedText, challengeId, trimmedTitle)
+      // Upload image first if one was selected
+      let uploadedImageUrl: string | null = null
+      if (imageFile) {
+        const supabase = createClient()
+        const ext = imageFile.name.split('.').pop() ?? 'jpg'
+        const path = `questions/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('bubble-room-images')
+          .upload(path, imageFile, { cacheControl: '3600', upsert: false })
+        if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`)
+        const { data: { publicUrl } } = supabase.storage
+          .from('bubble-room-images')
+          .getPublicUrl(path)
+        uploadedImageUrl = publicUrl
+      }
+
+      const result = await postQuestion(classId, trimmedText, challengeId, trimmedTitle, uploadedImageUrl)
 
       if (result.error) {
         setError(result.error)
@@ -120,7 +155,7 @@ export function QuestionCompositionForm({
 
       onSubmitted(result.data!)
     } catch (err) {
-      setError('Failed to post your question. Please try again.')
+      setError(err instanceof Error ? err.message : 'Failed to post your question. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -148,6 +183,7 @@ export function QuestionCompositionForm({
           rounded-t-2xl sm:rounded-2xl
           bg-white shadow-2xl
           p-6 space-y-4
+          max-h-[90vh] overflow-y-auto
         "
         aria-label="Post a question"
       >
@@ -162,20 +198,13 @@ export function QuestionCompositionForm({
             aria-label="Close"
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* Challenge context — subtle chip only, not a banner */}
+        {/* Challenge context chip */}
         {challengeId && (
           <p className="text-xs text-purple-500 flex items-center gap-1">
             <span aria-hidden="true">🎯</span>
@@ -230,12 +259,9 @@ export function QuestionCompositionForm({
               ${error ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'}
             `}
           />
-          {/* Character counter */}
           <div className="flex justify-between items-center">
             {error ? (
-              <p role="alert" className="text-sm text-red-600">
-                {error}
-              </p>
+              <p role="alert" className="text-sm text-red-600">{error}</p>
             ) : (
               <span />
             )}
@@ -245,15 +271,62 @@ export function QuestionCompositionForm({
           </div>
         </div>
 
+        {/* Image upload */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">
+            Image <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+
+          {imagePreview ? (
+            <div className="relative inline-block">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imagePreview}
+                alt="Selected image preview"
+                className="max-h-48 rounded-xl border border-gray-200 object-contain bg-gray-50"
+              />
+              <button
+                type="button"
+                onClick={handleRemoveImage}
+                aria-label="Remove image"
+                className="
+                  absolute -top-2 -right-2
+                  w-6 h-6 rounded-full bg-gray-700 text-white
+                  flex items-center justify-center text-xs
+                  hover:bg-red-600 transition-colors
+                "
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <label
+              className="
+                flex items-center gap-2 w-fit
+                px-3 py-2 rounded-xl border border-dashed border-gray-300
+                text-sm text-gray-500 cursor-pointer
+                hover:border-primary-400 hover:text-primary-500
+                transition-colors
+              "
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Attach image
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleImageChange}
+                className="sr-only"
+              />
+            </label>
+          )}
+        </div>
+
         {/* Action buttons */}
         <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="flex-1"
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} className="flex-1">
             Cancel
           </Button>
           <Button

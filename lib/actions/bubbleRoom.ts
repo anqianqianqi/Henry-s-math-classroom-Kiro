@@ -31,6 +31,7 @@ export async function postQuestion(
   text: string,
   challengeId?: string | null,
   title?: string | null,
+  imageUrl?: string | null,
 ): Promise<ActionResult<BubbleQuestion>> {
   try {
     const trimmed = text.trim()
@@ -65,6 +66,7 @@ export async function postQuestion(
       challenge_id: challengeId ?? null,
       title: trimmedTitle,
       text: trimmed,
+      image_url: imageUrl ?? null,
     }
 
     let { data, error } = await supabase
@@ -77,6 +79,7 @@ export async function postQuestion(
         challenge_id,
         title,
         text,
+        image_url,
         created_at,
         updated_at,
         profiles:user_id ( full_name, nickname )
@@ -89,7 +92,7 @@ export async function postQuestion(
         .from('bubble_room_questions')
         .insert({ ...insertPayload, challenge_id: null })
         .select(`
-          id, class_id, user_id, challenge_id, title, text, created_at, updated_at,
+          id, class_id, user_id, challenge_id, title, text, image_url, created_at, updated_at,
           profiles:user_id ( full_name, nickname )
         `)
         .single()
@@ -110,6 +113,7 @@ export async function postQuestion(
       challenge_id: row.challenge_id,
       title: row.title ?? null,
       text: row.text,
+      image_url: row.image_url ?? null,
       created_at: row.created_at,
       updated_at: row.updated_at,
       author_display_name: displayName,
@@ -135,6 +139,7 @@ export async function postQuestion(
 export async function postResponse(
   questionId: string,
   text: string,
+  imageUrl?: string | null,
 ): Promise<ActionResult<BubbleResponse>> {
   try {
     const trimmed = text.trim()
@@ -158,12 +163,14 @@ export async function postResponse(
         question_id: questionId,
         user_id: user.id,
         text: trimmed,
+        image_url: imageUrl ?? null,
       })
       .select(`
         id,
         question_id,
         user_id,
         text,
+        image_url,
         created_at,
         profiles:user_id ( full_name, nickname )
       `)
@@ -192,6 +199,7 @@ export async function postResponse(
       question_id: row.question_id,
       user_id: row.user_id,
       text: row.text,
+      image_url: row.image_url ?? null,
       created_at: row.created_at,
       responder_display_name: displayName,
       responder_role: isTeacher ? 'teacher' : 'student',
@@ -306,6 +314,7 @@ export async function getResponses(
         question_id,
         user_id,
         text,
+        image_url,
         created_at,
         profiles:user_id ( full_name, nickname )
       `)
@@ -339,6 +348,7 @@ export async function getResponses(
       question_id: row.question_id,
       user_id: row.user_id,
       text: row.text,
+      image_url: row.image_url ?? null,
       created_at: row.created_at,
       responder_display_name:
         row.profiles?.nickname ?? row.profiles?.full_name ?? 'Unknown',
@@ -375,6 +385,7 @@ export async function fetchInitialQuestions(): Promise<BubbleQuestion[]> {
         challenge_id,
         title,
         text,
+        image_url,
         created_at,
         updated_at,
         profiles:user_id ( full_name, nickname )
@@ -418,6 +429,7 @@ export async function fetchInitialQuestions(): Promise<BubbleQuestion[]> {
       challenge_id: row.challenge_id,
       title: row.title ?? null,
       text: row.text,
+      image_url: row.image_url ?? null,
       created_at: row.created_at,
       updated_at: row.updated_at,
       author_display_name:
@@ -457,7 +469,7 @@ export async function searchQuestions(
     let q = supabase
       .from('bubble_room_questions')
       .select(
-        `id, class_id, user_id, challenge_id, title, text, created_at, updated_at,
+        `id, class_id, user_id, challenge_id, title, text, image_url, created_at, updated_at,
          profiles:user_id ( full_name, nickname )`,
       )
       .order('created_at', { ascending: false })
@@ -504,6 +516,7 @@ export async function searchQuestions(
       challenge_id: row.challenge_id ?? null,
       title: row.title ?? null,
       text: row.text,
+      image_url: row.image_url ?? null,
       created_at: row.created_at,
       updated_at: row.updated_at,
       author_display_name:

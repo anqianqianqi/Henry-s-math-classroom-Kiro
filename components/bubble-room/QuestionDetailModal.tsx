@@ -28,6 +28,9 @@ import {
 import type { BubbleQuestion, BubbleResponse } from '@/lib/types/bubbleRoom'
 import { Button } from '@/components/ui/Button'
 
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+
 export interface QuestionDetailModalProps {
   question: BubbleQuestion
   currentUserId: string
@@ -51,6 +54,8 @@ export function QuestionDetailModal({
 }: QuestionDetailModalProps) {
   const [responses, setResponses] = useState<BubbleResponse[]>([])
   const [responseText, setResponseText] = useState('')
+  const [responseImageFile, setResponseImageFile] = useState<File | null>(null)
+  const [responseImagePreview, setResponseImagePreview] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [responseError, setResponseError] = useState<string | null>(null)
   const [deleteQuestionError, setDeleteQuestionError] = useState<string | null>(null)
@@ -66,6 +71,7 @@ export function QuestionDetailModal({
     description: string
   } | null>(null)
   const responseInputRef = useRef<HTMLTextAreaElement>(null)
+  const responseFileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
   // ── On mount: record view + fetch responses + open Realtime channel ──────
@@ -118,6 +124,7 @@ export function QuestionDetailModal({
           question_id,
           user_id,
           text,
+          image_url,
           created_at,
           profiles:user_id ( full_name, nickname )
         `)
@@ -147,6 +154,7 @@ export function QuestionDetailModal({
             question_id: row.question_id,
             user_id: row.user_id,
             text: row.text,
+            image_url: row.image_url ?? null,
             created_at: row.created_at,
             responder_display_name: row.profiles?.nickname ?? row.profiles?.full_name ?? 'Unknown',
             responder_role: teacherIds.has(row.user_id) ? 'teacher' : 'student',
@@ -204,6 +212,7 @@ export function QuestionDetailModal({
                 question_id: row.question_id,
                 user_id: row.user_id,
                 text: row.text,
+                image_url: row.image_url ?? null,
                 created_at: row.created_at,
                 responder_display_name: row.profiles?.nickname ?? row.profiles?.full_name ?? 'Unknown',
                 responder_role: teacherIds.has(row.user_id) ? 'teacher' : 'student',
@@ -251,6 +260,30 @@ export function QuestionDetailModal({
     return currentUserId === contentUserId || currentUserRole === 'teacher'
   }
 
+  // ── Response image handler ────────────────────────────────────────────────
+
+  function handleResponseImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setResponseError('Only JPEG, PNG, GIF, or WebP images are allowed.')
+      return
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setResponseError('Image must be 10 MB or smaller.')
+      return
+    }
+    setResponseError(null)
+    setResponseImageFile(file)
+    setResponseImagePreview(URL.createObjectURL(file))
+  }
+
+  function handleRemoveResponseImage() {
+    setResponseImageFile(null)
+    setResponseImagePreview(null)
+    if (responseFileInputRef.current) responseFileInputRef.current.value = ''
+  }
+
   // ── Response submit ───────────────────────────────────────────────────────
 
   async function handleResponseSubmit(e: React.FormEvent) {
@@ -266,7 +299,23 @@ export function QuestionDetailModal({
 
     setIsSubmitting(true)
     try {
-      const result = await postResponse(question.id, trimmed)
+      // Upload image if one was attached
+      let uploadedImageUrl: string | null = null
+      if (responseImageFile) {
+        const supabaseClient = createClient()
+        const ext = responseImageFile.name.split('.').pop() ?? 'jpg'
+        const path = `responses/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { error: uploadError } = await supabaseClient.storage
+          .from('bubble-room-images')
+          .upload(path, responseImageFile, { cacheControl: '3600', upsert: false })
+        if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`)
+        const { data: { publicUrl } } = supabaseClient.storage
+          .from('bubble-room-images')
+          .getPublicUrl(path)
+        uploadedImageUrl = publicUrl
+      }
+
+      const result = await postResponse(question.id, trimmed, uploadedImageUrl)
       if (result.error) {
         setResponseError(result.error)
         return
@@ -274,15 +323,17 @@ export function QuestionDetailModal({
       // Optimistically append the new response immediately
       if (result.data) {
         setResponses((prev) => {
-          // Guard against Realtime double-append
           if (prev.find((r) => r.id === result.data!.id)) return prev
           return [...prev, result.data!]
         })
       }
       setResponseText('')
+      setResponseImageFile(null)
+      setResponseImagePreview(null)
+      if (responseFileInputRef.current) responseFileInputRef.current.value = ''
       onResponseSubmitted()
-    } catch {
-      setResponseError('Failed to post your response. Please try again.')
+    } catch (err) {
+      setResponseError(err instanceof Error ? err.message : 'Failed to post your response. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -416,6 +467,23 @@ export function QuestionDetailModal({
             >
               {question.text}
             </p>
+            {/* Question image */}
+            {question.image_url && (
+              <a
+                href={question.image_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block mt-2"
+                aria-label="View full question image"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={question.image_url}
+                  alt="Question attachment"
+                  className="max-h-64 rounded-xl border border-gray-200 object-contain bg-gray-50 hover:opacity-90 transition-opacity"
+                />
+              </a>
+            )}
           </div>
           <button
             type="button"
@@ -542,6 +610,23 @@ export function QuestionDetailModal({
                   )}
                 </div>
                 <p className="text-sm text-gray-800 leading-relaxed">{response.text}</p>
+                {/* Response image */}
+                {response.image_url && (
+                  <a
+                    href={response.image_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block mt-1.5"
+                    aria-label="View full response image"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={response.image_url}
+                      alt="Response attachment"
+                      className="max-h-48 rounded-xl border border-gray-200 object-contain bg-gray-50 hover:opacity-90 transition-opacity"
+                    />
+                  </a>
+                )}
               </div>
             ))
           )}
@@ -573,12 +658,62 @@ export function QuestionDetailModal({
               ${responseError ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'}
             `}
           />
+
+          {/* Response image preview */}
+          {responseImagePreview && (
+            <div className="relative inline-block">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={responseImagePreview}
+                alt="Selected image preview"
+                className="max-h-32 rounded-xl border border-gray-200 object-contain bg-gray-50"
+              />
+              <button
+                type="button"
+                onClick={handleRemoveResponseImage}
+                aria-label="Remove image"
+                className="
+                  absolute -top-2 -right-2
+                  w-5 h-5 rounded-full bg-gray-700 text-white
+                  flex items-center justify-center text-xs
+                  hover:bg-red-600 transition-colors
+                "
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {responseError && (
             <p role="alert" className="text-sm text-red-600">
               {responseError}
             </p>
           )}
-          <div className="flex justify-end">
+
+          <div className="flex items-center justify-between gap-2">
+            {/* Image attach button */}
+            <label
+              className="
+                flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                text-xs text-gray-500 border border-gray-200 bg-white
+                cursor-pointer hover:border-primary-400 hover:text-primary-500
+                transition-colors
+              "
+              aria-label="Attach image to response"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              {responseImageFile ? responseImageFile.name.slice(0, 16) + (responseImageFile.name.length > 16 ? '…' : '') : 'Image'}
+              <input
+                ref={responseFileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleResponseImageChange}
+                className="sr-only"
+              />
+            </label>
+
             <Button
               type="submit"
               size="sm"

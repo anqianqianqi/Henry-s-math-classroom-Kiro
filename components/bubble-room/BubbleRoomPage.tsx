@@ -100,6 +100,7 @@ export function BubbleRoomPage({
             challenge_id: newRow.challenge_id ?? null,
             title: newRow.title ?? null,
             text: newRow.text,
+            image_url: newRow.image_url ?? null,
             created_at: newRow.created_at,
             updated_at: newRow.updated_at,
             author_display_name: 'Loading…',
