@@ -206,6 +206,49 @@ export async function getMyBadgeStatus(badgeSlug?: string): Promise<ActionResult
   }
 }
 
+// ── Teacher/Admin: all applications (pending + history) ───────────────────
+
+export async function getAllApplications(badgeSlug?: string): Promise<ActionResult<BadgeApplication[]>> {
+  try {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
+    if (!(await isTeacherOrAdmin(supabase, user.id))) return { error: 'Unauthorized' }
+
+    let q = supabase
+      .from('badge_applications')
+      .select(`
+        *,
+        badge:badge_definitions(*),
+        applicant:profiles!badge_applications_user_id_fkey(full_name, nickname, email)
+      `)
+      .order('created_at', { ascending: false })
+
+    if (badgeSlug) {
+      const { data: badgeDef } = await supabase
+        .from('badge_definitions')
+        .select('id')
+        .eq('slug', badgeSlug)
+        .single()
+      if (badgeDef) q = q.eq('badge_id', badgeDef.id) as any
+    }
+
+    const { data, error } = await q
+    if (error) throw error
+
+    const apps = (data ?? []).map((row: any): BadgeApplication => ({
+      ...row,
+      applicant_name: row.applicant?.nickname ?? row.applicant?.full_name ?? 'Unknown',
+      applicant_email: row.applicant?.email ?? '',
+    }))
+
+    return { data: apps }
+  } catch (err) {
+    console.error('[Badges] getAllApplications:', err)
+    return { error: 'Failed to load applications.' }
+  }
+}
+
 // ── Teacher/Admin: pending applications ───────────────────────────────────
 
 export async function getPendingApplications(badgeSlug?: string): Promise<ActionResult<BadgeApplication[]>> {
@@ -264,8 +307,15 @@ export async function reviewBadgeApplication(
     if (!user) return { error: 'Unauthorized' }
     if (!(await isTeacherOrAdmin(supabase, user.id))) return { error: 'Unauthorized' }
 
+    // Use service role for the write operations to bypass RLS on UPDATE/INSERT
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js')
+    const serviceSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+
     // Fetch the application + badge info
-    const { data: app, error: appError } = await supabase
+    const { data: app, error: appError } = await serviceSupabase
       .from('badge_applications')
       .select('*, badge:badge_definitions(id, name, emoji)')
       .eq('id', applicationId)
@@ -275,7 +325,7 @@ export async function reviewBadgeApplication(
     if (appError || !app) return { error: 'Application not found or already reviewed.' }
 
     // Update application status
-    const { error: updateError } = await supabase
+    const { error: updateError } = await serviceSupabase
       .from('badge_applications')
       .update({
         status: decision,
@@ -290,20 +340,20 @@ export async function reviewBadgeApplication(
 
     // If approved: grant the badge
     if (decision === 'approved') {
-      const { error: grantError } = await supabase
+      const { error: grantError } = await serviceSupabase
         .from('user_badges')
         .insert({
           user_id: app.user_id,
           badge_id: (app.badge as any).id,
           granted_by: user.id,
         })
-      if (grantError) {
-        // Already has badge — not fatal
-        console.warn('[Badges] grant insert conflict (user already has badge):', grantError.message)
+      if (grantError && grantError.code !== '23505') {
+        // 23505 = unique violation (already has badge) — not fatal
+        throw grantError
       }
     }
 
-    // Notify the applicant
+    // Notify the applicant (use regular client — just inserting a notification row)
     await sendBadgeNotification(
       supabase,
       app.user_id,
@@ -339,7 +389,13 @@ export async function grantBadgeDirect(
       .single()
     if (!badge) return { error: 'Badge not found.' }
 
-    const { error } = await supabase
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js')
+    const serviceSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+
+    const { error } = await serviceSupabase
       .from('user_badges')
       .insert({ user_id: targetUserId, badge_id: badge.id, granted_by: user.id })
 
