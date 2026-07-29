@@ -60,6 +60,11 @@ export function QuestionDetailModal({
   const [loadingResponses, setLoadingResponses] = useState(true)
   const [confirmDeleteQuestion, setConfirmDeleteQuestion] = useState(false)
   const [confirmDeleteResponseId, setConfirmDeleteResponseId] = useState<string | null>(null)
+  // Challenge context: fetch the challenge title+description when challenge_id is set
+  const [challengeContext, setChallengeContext] = useState<{
+    title: string
+    description: string
+  } | null>(null)
   const responseInputRef = useRef<HTMLTextAreaElement>(null)
   const supabase = createClient()
 
@@ -67,6 +72,41 @@ export function QuestionDetailModal({
   useEffect(() => {
     // Fire-and-forget engagement tracking (Req: engagement scoring)
     recordView(question.id).catch(() => {})
+
+    // Fetch challenge context if this bubble is linked to a challenge
+    if (question.challenge_id) {
+      ;(async () => {
+        const supabaseClient = createClient()
+        // Try daily_challenges first, then challenge_bank as fallback
+        let title = ''
+        let description = ''
+
+        const { data: dc } = await supabaseClient
+          .from('daily_challenges')
+          .select('title, description')
+          .eq('id', question.challenge_id!)
+          .maybeSingle()
+
+        if (dc) {
+          title = dc.title ?? ''
+          description = dc.description ?? ''
+        } else {
+          const { data: cb } = await supabaseClient
+            .from('challenge_bank')
+            .select('title, description')
+            .eq('id', question.challenge_id!)
+            .maybeSingle()
+          if (cb) {
+            title = cb.title ?? ''
+            description = cb.description ?? ''
+          }
+        }
+
+        if (title || description) {
+          setChallengeContext({ title, description })
+        }
+      })()
+    }
 
     // Fetch existing responses directly via client — no Server Action round-trip
     ;(async () => {
@@ -334,6 +374,34 @@ export function QuestionDetailModal({
             <p className="text-xs text-gray-400 mb-0.5">
               {question.author_display_name} · {formatDate(question.created_at)}
             </p>
+
+            {/* Challenge context banner — shows the math problem above the user's question */}
+            {challengeContext && (
+              <div className="mb-3 rounded-xl bg-amber-50 border border-amber-200 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-sm" aria-hidden="true">🎯</span>
+                  <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">
+                    Challenge
+                  </span>
+                  <a
+                    href={`/challenges/${question.challenge_id}`}
+                    className="ml-auto text-xs text-primary-600 hover:text-primary-700 hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    View →
+                  </a>
+                </div>
+                <p className="text-sm font-semibold text-amber-900 leading-snug">
+                  {challengeContext.title}
+                </p>
+                {challengeContext.description && (
+                  <p className="text-xs text-amber-800 leading-snug mt-1 line-clamp-3">
+                    {challengeContext.description}
+                  </p>
+                )}
+              </div>
+            )}
+
             {question.title && (
               <h2
                 id="question-detail-title"
@@ -348,23 +416,6 @@ export function QuestionDetailModal({
             >
               {question.text}
             </p>
-            {/* Challenge linkage — shown when question was created from a challenge */}
-            {question.challenge_id && (
-              <a
-                href={`/challenges/${question.challenge_id}`}
-                className="
-                  inline-flex items-center gap-1 mt-2
-                  text-xs font-medium text-primary-600 hover:text-primary-700
-                  bg-primary-50 hover:bg-primary-100
-                  rounded-full px-2.5 py-1
-                  transition-colors
-                "
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span aria-hidden="true">🎯</span>
-                View Challenge
-              </a>
-            )}
           </div>
           <button
             type="button"
