@@ -13,6 +13,7 @@ export interface BubbleQuestion {
   class_id: string
   user_id: string
   challenge_id: string | null
+  title: string | null          // optional short title (≤120 chars)
   text: string
   created_at: string            // ISO 8601
   updated_at: string

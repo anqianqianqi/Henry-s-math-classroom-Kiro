@@ -34,9 +34,9 @@ export interface QuestionCompositionFormProps {
   onClose: () => void
   /**
    * Called when duplicates are found — parent should show DuplicateDetectionModal.
-   * (text, matches) so parent can confirm or cancel.
+   * (text, matches, title) so parent can confirm or cancel.
    */
-  onDuplicatesFound: (text: string, matches: DuplicateMatch[]) => void
+  onDuplicatesFound: (text: string, matches: DuplicateMatch[], title?: string | null) => void
 }
 
 const MAX_LENGTH = 2000
@@ -50,6 +50,7 @@ export function QuestionCompositionForm({
   onClose,
   onDuplicatesFound,
 }: QuestionCompositionFormProps) {
+  const [title, setTitle] = useState('')
   const [text, setText] = useState(initialText)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -59,9 +60,10 @@ export function QuestionCompositionForm({
     e.preventDefault()
     setError(null)
 
+    const trimmedTitle = title.trim() || null
     const trimmed = text.trim()
 
-    // Client-side validation: non-empty (Req 1.4)
+    // Client-side validation: non-empty body (Req 1.4)
     if (!trimmed) {
       setError('Please enter your question before submitting.')
       textareaRef.current?.focus()
@@ -70,6 +72,11 @@ export function QuestionCompositionForm({
 
     if (trimmed.length > MAX_LENGTH) {
       setError(`Question must be ${MAX_LENGTH} characters or fewer.`)
+      return
+    }
+
+    if (trimmedTitle && trimmedTitle.length > 120) {
+      setError('Title must be 120 characters or fewer.')
       return
     }
 
@@ -84,21 +91,21 @@ export function QuestionCompositionForm({
 
     if (duplicates.length > 0) {
       // Hand off to parent — will show DuplicateDetectionModal
-      onDuplicatesFound(trimmed, duplicates)
+      onDuplicatesFound(trimmed, duplicates, trimmedTitle)
       return
     }
 
     // No duplicates → submit immediately
-    await submitQuestion(trimmed)
+    await submitQuestion(trimmed, trimmedTitle)
   }
 
   /** Called by this form (no duplicate) and by the parent after duplicate confirm */
-  async function submitQuestion(trimmedText: string) {
+  async function submitQuestion(trimmedText: string, trimmedTitle: string | null) {
     setIsSubmitting(true)
     setError(null)
 
     try {
-      const result = await postQuestion(classId, trimmedText, challengeId)
+      const result = await postQuestion(classId, trimmedText, challengeId, trimmedTitle)
 
       if (result.error) {
         setError(result.error)
@@ -170,10 +177,36 @@ export function QuestionCompositionForm({
           </p>
         )}
 
-        {/* Textarea */}
+        {/* Title field */}
+        <div className="space-y-1">
+          <label htmlFor="question-title" className="text-sm font-medium text-gray-700">
+            Title <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <input
+            id="question-title"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={120}
+            placeholder="Give your question a short title…"
+            className="
+              w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white
+              text-sm text-gray-900
+              focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent
+              transition-colors
+            "
+          />
+          <div className="flex justify-end">
+            <span className={`text-xs ${title.length > 108 ? 'text-orange-500' : 'text-gray-400'}`}>
+              {title.length}/120
+            </span>
+          </div>
+        </div>
+
+        {/* Body textarea */}
         <div className="space-y-1.5">
           <label htmlFor="question-text" className="text-sm font-medium text-gray-700">
-            Your question
+            Details
           </label>
           <textarea
             id="question-text"
@@ -182,8 +215,8 @@ export function QuestionCompositionForm({
             onChange={(e) => setText(e.target.value)}
             maxLength={MAX_LENGTH}
             rows={4}
-            placeholder="What would you like to ask?"
-            autoFocus
+            placeholder="Describe your question in detail…"
+            autoFocus={!initialText}
             className={`
               w-full px-4 py-3 rounded-xl border text-sm text-gray-900 resize-none
               focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent

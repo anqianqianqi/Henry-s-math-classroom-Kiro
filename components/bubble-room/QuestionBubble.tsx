@@ -48,8 +48,10 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
   const [phase, setPhase] = useState<BurstPhase>('idle')
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const preview =
-    question.text.length > PREVIEW_MAX_LENGTH
+  // If there's a title, show it as the bubble label; otherwise fall back to body text preview
+  const bubbleLabel = question.title
+    ? question.title
+    : question.text.length > PREVIEW_MAX_LENGTH
       ? question.text.slice(0, PREVIEW_MAX_LENGTH - 1) + '…'
       : question.text
 
@@ -89,7 +91,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
       key={id}
       role="button"
       tabIndex={0}
-      aria-label={`Question bubble: ${preview}`}
+      aria-label={`Question bubble: ${bubbleLabel}`}
       onClick={handleClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -191,10 +193,23 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           aria-hidden="true"
         />
 
-        {/* Question text */}
-        <p className="px-3 text-center text-[10px] font-medium text-gray-700 leading-tight break-words">
-          {searchQuery ? highlightInBubble(preview, searchQuery) : preview}
-        </p>
+        {/* Question title or body preview */}
+        {question.title ? (
+          <>
+            <p className="px-3 text-center text-[10px] font-bold text-gray-800 leading-tight break-words">
+              {searchQuery ? highlightInBubble(question.title, searchQuery) : question.title}
+            </p>
+            <p className="px-3 text-center text-[9px] text-gray-500 leading-tight break-words mt-0.5 line-clamp-2">
+              {question.text.length > 40
+                ? question.text.slice(0, 39) + '…'
+                : question.text}
+            </p>
+          </>
+        ) : (
+          <p className="px-3 text-center text-[10px] font-medium text-gray-700 leading-tight break-words">
+            {searchQuery ? highlightInBubble(bubbleLabel, searchQuery) : bubbleLabel}
+          </p>
+        )}
 
         {/* Challenge link */}
         {question.challenge_id && (

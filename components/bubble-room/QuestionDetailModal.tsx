@@ -334,12 +334,20 @@ export function QuestionDetailModal({
             <p className="text-xs text-gray-400 mb-0.5">
               {question.author_display_name} · {formatDate(question.created_at)}
             </p>
-            <h2
-              id="question-detail-title"
-              className="text-base font-semibold text-gray-900 leading-snug"
+            {question.title && (
+              <h2
+                id="question-detail-title"
+                className="text-base font-semibold text-gray-900 leading-snug mb-1"
+              >
+                {question.title}
+              </h2>
+            )}
+            <p
+              id={question.title ? undefined : 'question-detail-title'}
+              className={`leading-snug ${question.title ? 'text-sm text-gray-600' : 'text-base font-semibold text-gray-900'}`}
             >
               {question.text}
-            </h2>
+            </p>
             {/* Challenge linkage — shown when question was created from a challenge */}
             {question.challenge_id && (
               <a

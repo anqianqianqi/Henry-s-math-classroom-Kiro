@@ -30,6 +30,7 @@ export async function postQuestion(
   classId: string | null,
   text: string,
   challengeId?: string | null,
+  title?: string | null,
 ): Promise<ActionResult<BubbleQuestion>> {
   try {
     const trimmed = text.trim()
@@ -38,6 +39,11 @@ export async function postQuestion(
     }
     if (trimmed.length > 2000) {
       return { error: 'Question text must be 2000 characters or fewer.' }
+    }
+
+    const trimmedTitle = title?.trim() || null
+    if (trimmedTitle && trimmedTitle.length > 120) {
+      return { error: 'Title must be 120 characters or fewer.' }
     }
 
     const supabase = createClient()
@@ -54,6 +60,7 @@ export async function postQuestion(
       class_id: classId ?? null,
       user_id: user.id,
       challenge_id: challengeId ?? null,
+      title: trimmedTitle,
       text: trimmed,
     }
 
@@ -65,6 +72,7 @@ export async function postQuestion(
         class_id,
         user_id,
         challenge_id,
+        title,
         text,
         created_at,
         updated_at,
@@ -78,7 +86,7 @@ export async function postQuestion(
         .from('bubble_room_questions')
         .insert({ ...insertPayload, challenge_id: null })
         .select(`
-          id, class_id, user_id, challenge_id, text, created_at, updated_at,
+          id, class_id, user_id, challenge_id, title, text, created_at, updated_at,
           profiles:user_id ( full_name, nickname )
         `)
         .single()
@@ -97,6 +105,7 @@ export async function postQuestion(
       class_id: row.class_id,
       user_id: row.user_id,
       challenge_id: row.challenge_id,
+      title: row.title ?? null,
       text: row.text,
       created_at: row.created_at,
       updated_at: row.updated_at,
@@ -361,6 +370,7 @@ export async function fetchInitialQuestions(): Promise<BubbleQuestion[]> {
         class_id,
         user_id,
         challenge_id,
+        title,
         text,
         created_at,
         updated_at,
@@ -403,6 +413,7 @@ export async function fetchInitialQuestions(): Promise<BubbleQuestion[]> {
       class_id: row.class_id,
       user_id: row.user_id,
       challenge_id: row.challenge_id,
+      title: row.title ?? null,
       text: row.text,
       created_at: row.created_at,
       updated_at: row.updated_at,

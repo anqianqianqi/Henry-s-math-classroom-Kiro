@@ -73,6 +73,7 @@ export function BubbleRoomPage({
 
   // Duplicate detection state
   const [pendingQuestion, setPendingQuestion] = useState('')
+  const [pendingTitle, setPendingTitle] = useState<string | null>(null)
   const [duplicateMatches, setDuplicateMatches] = useState<DuplicateMatch[]>([])
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [isPostingDuplicate, setIsPostingDuplicate] = useState(false)
@@ -97,6 +98,7 @@ export function BubbleRoomPage({
             class_id: newRow.class_id,
             user_id: newRow.user_id,
             challenge_id: newRow.challenge_id ?? null,
+            title: newRow.title ?? null,
             text: newRow.text,
             created_at: newRow.created_at,
             updated_at: newRow.updated_at,
@@ -135,9 +137,13 @@ export function BubbleRoomPage({
 
   const filteredQuestions = isAnimationActive
     ? []
-    : questions.filter((q) =>
-        q.text.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
+    : questions.filter((q) => {
+        const lower = searchQuery.toLowerCase()
+        return (
+          q.text.toLowerCase().includes(lower) ||
+          (q.title ?? '').toLowerCase().includes(lower)
+        )
+      })
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -167,8 +173,9 @@ export function BubbleRoomPage({
   }
 
   /** Called by QuestionCompositionForm when duplicates are found */
-  function handleDuplicatesFound(text: string, matches: DuplicateMatch[]) {
+  function handleDuplicatesFound(text: string, matches: DuplicateMatch[], title?: string | null) {
     setPendingQuestion(text)
+    setPendingTitle(title ?? null)
     setDuplicateMatches(matches)
     setShowCompositionForm(false)
     setShowDuplicateModal(true)
@@ -179,7 +186,7 @@ export function BubbleRoomPage({
     setShowDuplicateModal(false)
     setIsPostingDuplicate(true)
     try {
-      const result = await postQuestion(null, pendingQuestion, activeChallengeId)
+      const result = await postQuestion(null, pendingQuestion, activeChallengeId, pendingTitle)
       if (!result.error && result.data) {
         handleQuestionSubmitted(result.data)
       }
@@ -188,6 +195,7 @@ export function BubbleRoomPage({
     } finally {
       setIsPostingDuplicate(false)
       setPendingQuestion('')
+      setPendingTitle(null)
       setDuplicateMatches([])
     }
   }
@@ -319,8 +327,16 @@ export function BubbleRoomPage({
                   "
                 >
                   <p className="text-sm font-medium text-gray-900 leading-snug">
-                    {highlightKeyword(q.text, searchQuery)}
+                    {highlightKeyword(q.title ?? q.text, searchQuery)}
                   </p>
+                  {q.title && (
+                    <p className="text-xs text-gray-500 leading-snug mt-0.5">
+                      {highlightKeyword(
+                        q.text.length > 80 ? q.text.slice(0, 79) + '…' : q.text,
+                        searchQuery,
+                      )}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 text-xs text-gray-400">
                     <span>{q.author_display_name}</span>
                     {q.response_count > 0 && (
