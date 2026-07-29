@@ -41,7 +41,7 @@ async function isTeacherOrAdmin(supabase: ReturnType<typeof createClient>, userI
 async function sendBadgeNotification(
   supabase: ReturnType<typeof createClient>,
   userId: string,
-  type: 'badge_application_result' | 'badge_revoked',
+  type: string,  // free-text — notifications table has no type constraint
   badge: { name: string; emoji: string },
   approved: boolean,
   reviewerComment?: string | null,
