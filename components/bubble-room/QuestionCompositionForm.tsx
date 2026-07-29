@@ -63,6 +63,12 @@ export function QuestionCompositionForm({
     const trimmedTitle = title.trim() || null
     const trimmed = text.trim()
 
+    // Client-side validation: title required
+    if (!trimmedTitle) {
+      setError('Please enter a title for your question.')
+      return
+    }
+
     // Client-side validation: non-empty body (Req 1.4)
     if (!trimmed) {
       setError('Please enter your question before submitting.')
@@ -180,7 +186,7 @@ export function QuestionCompositionForm({
         {/* Title field */}
         <div className="space-y-1">
           <label htmlFor="question-title" className="text-sm font-medium text-gray-700">
-            Title <span className="text-gray-400 font-normal">(optional)</span>
+            Title
           </label>
           <input
             id="question-title"
@@ -255,7 +261,7 @@ export function QuestionCompositionForm({
             variant="primary"
             size="sm"
             isLoading={isSubmitting}
-            disabled={isSubmitting || text.trim().length === 0}
+            disabled={isSubmitting || text.trim().length === 0 || title.trim().length === 0}
             className="flex-1"
           >
             Post Question

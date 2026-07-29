@@ -42,7 +42,10 @@ export async function postQuestion(
     }
 
     const trimmedTitle = title?.trim() || null
-    if (trimmedTitle && trimmedTitle.length > 120) {
+    if (!trimmedTitle) {
+      return { error: 'Title is required.' }
+    }
+    if (trimmedTitle.length > 120) {
       return { error: 'Title must be 120 characters or fewer.' }
     }
 
