@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { useUserBadges } from '@/lib/hooks/useUserBadges'
+import { UserNameWithBadges } from '@/components/UserNameWithBadges'
 
 interface GradingInterfaceProps {
   assignmentId: string
@@ -71,6 +73,10 @@ export default function GradingInterface({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
+
+  // Fetch badges for all students in this assignment
+  const studentIds = submissions.map(s => s.student_id)
+  const badgeMap = useUserBadges(studentIds)
 
   useEffect(() => {
     loadSubmissions()
@@ -475,7 +481,10 @@ export default function GradingInterface({
                         <div className="flex-1">
                           <div className="flex items-center gap-3">
                             <h4 className="font-medium text-gray-900">
-                              {submission.profiles.full_name}
+                              <UserNameWithBadges
+                                name={submission.profiles.full_name}
+                                badges={badgeMap.get(submission.student_id)}
+                              />
                             </h4>
                             {submission.is_late && (
                               <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">

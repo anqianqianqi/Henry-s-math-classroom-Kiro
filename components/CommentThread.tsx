@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { UserNameWithBadges } from '@/components/UserNameWithBadges'
+import type { BadgeInfo, UserBadgeMap } from '@/lib/hooks/useUserBadges'
 
 interface Comment {
   id: string
@@ -32,6 +34,8 @@ interface CommentThreadProps {
   allowImage?: boolean
   /** IDs of users who are teachers/admins — their comments get unread highlighting */
   teacherUserIds?: string[]
+  /** Badge map from useUserBadges — badges shown next to commenter names */
+  userBadges?: UserBadgeMap
 }
 
 const COMMENTS_INCREMENT = 5
@@ -52,6 +56,7 @@ export function CommentThread({
   showTitle = false,
   allowImage = false,
   teacherUserIds = [],
+  userBadges,
 }: CommentThreadProps) {
   const [commentImage, setCommentImage] = useState<File | null>(null)
   const [commentImagePreview, setCommentImagePreview] = useState<string | null>(null)
@@ -121,7 +126,11 @@ export function CommentThread({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <p className="font-medium text-gray-900 flex items-center gap-2">
-                    {comment.profiles.nickname || comment.profiles.full_name}
+                    <UserNameWithBadges
+                      name={comment.profiles.nickname || comment.profiles.full_name}
+                      badges={userBadges?.get(comment.user_id)}
+                      nameClassName="font-medium text-gray-900"
+                    />
                     <span className="font-normal text-gray-500">
                       {formatTimeAgo(comment.created_at)}
                     </span>

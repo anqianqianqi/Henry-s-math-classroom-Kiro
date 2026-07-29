@@ -27,6 +27,7 @@ import {
 } from '@/lib/actions/bubbleRoom'
 import type { BubbleQuestion, BubbleResponse } from '@/lib/types/bubbleRoom'
 import { Button } from '@/components/ui/Button'
+import { BadgePill } from './BadgePill'
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
@@ -40,6 +41,8 @@ export interface QuestionDetailModalProps {
   onResponseSubmitted: () => void
   onDeleteQuestion: (questionId: string) => void
   onDeleteResponse: (responseId: string) => void
+  /** Optional: shown when the modal was opened from the assigned list */
+  onBack?: () => void
 }
 
 export function QuestionDetailModal({
@@ -51,6 +54,7 @@ export function QuestionDetailModal({
   onResponseSubmitted,
   onDeleteQuestion,
   onDeleteResponse,
+  onBack,
 }: QuestionDetailModalProps) {
   const [responses, setResponses] = useState<BubbleResponse[]>([])
   const [responseText, setResponseText] = useState('')
@@ -158,8 +162,33 @@ export function QuestionDetailModal({
             created_at: row.created_at,
             responder_display_name: row.profiles?.nickname ?? row.profiles?.full_name ?? 'Unknown',
             responder_role: teacherIds.has(row.user_id) ? 'teacher' : 'student',
+            responder_badges: [],
           })),
         )
+
+        // Batch-fetch active badges for all responders
+        if (responderIds.length > 0) {
+          const supabaseClient2 = createClient()
+          const { data: badgeRows } = await supabaseClient2
+            .from('user_badges')
+            .select('user_id, badge:badge_definitions(slug, name, emoji, color)')
+            .in('user_id', responderIds)
+            .is('revoked_at', null)
+
+          if (badgeRows?.length) {
+            const badgesByUser = new Map<string, Array<{ slug: string; name: string; emoji: string; color: string }>>()
+            for (const br of badgeRows) {
+              const b = br.badge as any
+              if (!b) continue
+              const list = badgesByUser.get(br.user_id) ?? []
+              list.push({ slug: b.slug, name: b.name, emoji: b.emoji, color: b.color })
+              badgesByUser.set(br.user_id, list)
+            }
+            setResponses((prev) =>
+              prev.map((r) => ({ ...r, responder_badges: badgesByUser.get(r.user_id) ?? [] })),
+            )
+          }
+        }
       }
       setLoadingResponses(false)
     })()
@@ -216,6 +245,7 @@ export function QuestionDetailModal({
                 created_at: row.created_at,
                 responder_display_name: row.profiles?.nickname ?? row.profiles?.full_name ?? 'Unknown',
                 responder_role: teacherIds.has(row.user_id) ? 'teacher' : 'student',
+                responder_badges: [],
               })),
             )
           }
@@ -422,6 +452,16 @@ export function QuestionDetailModal({
         {/* ── Header ──────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between p-5 border-b border-gray-100">
           <div className="flex-1 min-w-0 pr-4">
+            {/* Back button — shown when opened from assigned list */}
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 font-medium mb-2 transition-colors"
+              >
+                ← Back to Assigned
+              </button>
+            )}
             <p className="text-xs text-gray-400 mb-0.5">
               {question.author_display_name} · {formatDate(question.created_at)}
             </p>
@@ -572,6 +612,10 @@ export function QuestionDetailModal({
                         {response.responder_display_name}
                       </span>
                     )}
+                    {/* Badges */}
+                    {(response.responder_badges ?? []).map((b) => (
+                      <BadgePill key={b.slug} emoji={b.emoji} name={b.name} color={b.color} />
+                    ))}
                     <span className="text-xs text-gray-400">{formatDate(response.created_at)}</span>
                   </div>
 
