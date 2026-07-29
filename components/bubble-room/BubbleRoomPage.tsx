@@ -467,6 +467,14 @@ export function BubbleRoomPage({
             )}
           </div>
         )}
+
+        {/* Assigned-to-me tray — anchored to bottom of bubble room canvas */}
+        {(currentUserRole === 'teacher' || isTA) && (
+          <AssignedToMeTray
+            currentUserId={currentUserId}
+            onQuestionClick={(q) => setSelectedQuestion(q)}
+          />
+        )}
       </div>
 
       {/* ── Modals ───────────────────────────────────────────────────────── */}
@@ -512,14 +520,6 @@ export function BubbleRoomPage({
           onDeleteResponse={() => {
             // Response deletion is handled inside modal; no state needed here
           }}
-        />
-      )}
-
-      {/* Assigned-to-me tray (teachers + TAs) */}
-      {(currentUserRole === 'teacher' || isTA) && (
-        <AssignedToMeTray
-          currentUserId={currentUserId}
-          onQuestionClick={(q) => setSelectedQuestion(q)}
         />
       )}
 
