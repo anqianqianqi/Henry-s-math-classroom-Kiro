@@ -17,14 +17,13 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { MathText } from '@/lib/mathtext'
 import type { HenryProblemFields } from '@/lib/henryproblem'
-
-// Henry Class Note palette — see AGENTS.md in the Prettify Homework workspace.
-const PAPER = '#F6F0E6'
-const CARD = '#FFFDF8'
-const GREEN = '#495F42'
-const INK = '#2F332B'
-const MUTED = '#6F706A'
-const BORDER = '#DDD4C7'
+import { HenrySheetHeader } from '@/components/HenrySheetHeader'
+import {
+  defaultHenryTheme,
+  themeColor,
+  type HenryPalette,
+  type HenrySheetTheme,
+} from '@/lib/henry-theme'
 
 /** Mirrors format_score(): a bare number gets " pts" appended. */
 function formatScore(score: string): string {
@@ -33,13 +32,21 @@ function formatScore(score: string): string {
   return /^\d+(\.\d+)?$/.test(text) ? `${text} pts` : text
 }
 
-function WordingPanel({ text, lang }: { text: string; lang: 'en' | 'zh' }) {
+function WordingPanel({
+  text,
+  lang,
+  palette,
+}: {
+  text: string
+  lang: 'en' | 'zh'
+  palette: HenryPalette
+}) {
   return (
     <div
       className="rounded-lg"
       style={{
-        background: CARD,
-        border: `1px solid ${BORDER}`,
+        background: palette.card,
+        border: `1px solid ${palette.border}`,
         padding: '0.75em 1em',
       }}
       lang={lang === 'zh' ? 'zh-Hans' : 'en'}
@@ -56,13 +63,16 @@ function Sheet({
   onGraphClick,
   fontSize,
   maxGraphHeight,
+  theme,
 }: {
   problem: HenryProblemFields
   graphUrl?: string | null
   onGraphClick?: (url: string) => void
   fontSize: string
   maxGraphHeight: string
+  theme: HenrySheetTheme
 }) {
+  const palette = theme.palette
   const score = formatScore(problem.score)
   const hasGraph = problem.mode === 'graph' && !!graphUrl
   const hasEnglish = !!problem.english.trim()
@@ -71,49 +81,30 @@ function Sheet({
   return (
     <div
       className="rounded-xl overflow-hidden"
-      style={{ background: PAPER, border: `1px solid ${BORDER}`, fontSize }}
+      style={{ background: palette.paper, border: `1px solid ${palette.border}`, fontSize }}
     >
       <div style={{ padding: '0.85em 1em' }}>
-        {/* Header */}
-        <div
-          className="flex items-center justify-between"
-          style={{ gap: '0.75em', paddingBottom: '0.5em' }}
-        >
-          <span className="font-semibold tracking-wide" style={{ color: GREEN }}>
-            Henry&apos;s Math<span className="hidden sm:inline">（Henry&apos;s 数学）</span>
-          </span>
-          {/* pointer-events-none: the book shell turns any <img> click into an
-              image lightbox, and the logo is not worth enlarging. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/henry-math-logo.png"
-            alt=""
-            aria-hidden="true"
-            className="rounded-full shrink-0 pointer-events-none"
-            style={{ width: '2em', height: '2em' }}
-          />
-        </div>
+        <HenrySheetHeader theme={theme} />
 
-        {/* Title / Score row */}
+        {/* Title / Score row — the green rule above stands in for a top border */}
         <div
           className="flex flex-wrap items-baseline"
           style={{
             gap: '0.25em 1.5em',
             padding: '0.5em 0',
-            borderTop: `1px solid ${BORDER}`,
-            borderBottom: `1px solid ${BORDER}`,
+            borderBottom: `1px solid ${palette.border}`,
           }}
         >
           <div className="flex items-baseline min-w-0 flex-1" style={{ gap: '0.5em' }}>
-            <span className="shrink-0" style={{ color: MUTED, fontSize: '0.8em' }}>Title :</span>
-            <span className="font-medium truncate" style={{ color: INK, fontSize: '0.92em' }}>
+            <span className="shrink-0" style={{ color: palette.muted, fontSize: '0.8em' }}>Title :</span>
+            <span className="font-medium truncate" style={{ color: palette.ink, fontSize: '0.92em' }}>
               {problem.title || '—'}
             </span>
           </div>
           {score && (
             <div className="flex items-baseline" style={{ gap: '0.5em' }}>
-              <span style={{ color: MUTED, fontSize: '0.8em' }}>Score :</span>
-              <span className="font-medium" style={{ color: INK, fontSize: '0.92em' }}>{score}</span>
+              <span style={{ color: palette.muted, fontSize: '0.8em' }}>Score :</span>
+              <span className="font-medium" style={{ color: palette.ink, fontSize: '0.92em' }}>{score}</span>
             </div>
           )}
         </div>
@@ -127,7 +118,7 @@ function Sheet({
               alt="Problem diagram"
               onClick={onGraphClick ? () => onGraphClick(graphUrl!) : undefined}
               className="w-full object-contain rounded-lg cursor-zoom-in hover:opacity-90 transition-opacity"
-              style={{ maxHeight: maxGraphHeight, background: CARD, border: `1px solid ${BORDER}` }}
+              style={{ maxHeight: maxGraphHeight, background: palette.card, border: `1px solid ${palette.border}` }}
               title="Click to enlarge the diagram"
             />
           )}
@@ -135,39 +126,42 @@ function Sheet({
           {hasGraph && hasEnglish && hasChinese ? (
             /* Graph mode: English lower-left, Chinese lower-right. */
             <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '0.75em' }}>
-              <WordingPanel text={problem.english} lang="en" />
-              <WordingPanel text={problem.chinese} lang="zh" />
+              <WordingPanel text={problem.english} lang="en" palette={palette} />
+              <WordingPanel text={problem.chinese} lang="zh" palette={palette} />
             </div>
           ) : (
             <>
-              {hasEnglish && <WordingPanel text={problem.english} lang="en" />}
-              {hasChinese && <WordingPanel text={problem.chinese} lang="zh" />}
+              {hasEnglish && <WordingPanel text={problem.english} lang="en" palette={palette} />}
+              {hasChinese && <WordingPanel text={problem.chinese} lang="zh" palette={palette} />}
             </>
           )}
         </div>
 
-        {/* Tags footer */}
+        {/* Tags footer — alternating green/orange chips */}
         {problem.tags.length > 0 && (
           <div
             className="flex flex-wrap items-center"
-            style={{ gap: '0.5em', paddingTop: '0.5em', borderTop: `1px solid ${BORDER}` }}
+            style={{ gap: '0.5em', paddingTop: '0.5em', borderTop: `1px solid ${palette.border}` }}
           >
-            <span style={{ color: MUTED, fontSize: '0.8em' }}>Tags :</span>
-            {problem.tags.map((tag, i) => (
-              <span
-                key={`${tag}-${i}`}
-                className="font-medium rounded-full"
-                style={{
-                  fontSize: '0.72em',
-                  padding: '0.15em 0.7em',
-                  background: i % 2 === 0 ? 'rgba(73,95,66,0.10)' : 'rgba(230,149,66,0.14)',
-                  color: i % 2 === 0 ? GREEN : '#9C6420',
-                  border: `1px solid ${i % 2 === 0 ? 'rgba(73,95,66,0.20)' : 'rgba(230,149,66,0.30)'}`,
-                }}
-              >
-                {tag}
-              </span>
-            ))}
+            <span style={{ color: palette.muted, fontSize: '0.8em' }}>Tags :</span>
+            {problem.tags.map((tag, i) => {
+              const accent: keyof HenryPalette = i % 2 === 0 ? 'green' : 'orange'
+              return (
+                <span
+                  key={`${tag}-${i}`}
+                  className="font-medium rounded-full"
+                  style={{
+                    fontSize: '0.72em',
+                    padding: '0.15em 0.7em',
+                    background: themeColor(palette, accent, i % 2 === 0 ? 0.1 : 0.14),
+                    color: i % 2 === 0 ? palette.green : '#9C6420',
+                    border: `1px solid ${themeColor(palette, accent, i % 2 === 0 ? 0.2 : 0.3)}`,
+                  }}
+                >
+                  {tag}
+                </span>
+              )
+            })}
           </div>
         )}
       </div>
@@ -183,6 +177,11 @@ export interface HenryProblemSheetProps {
   onGraphClick?: (url: string) => void
   /** Show a tap-to-enlarge affordance that opens the sheet full-screen. */
   zoomable?: boolean
+  /**
+   * Palette and header decorations. Defaults to defaultHenryTheme — pass
+   * plainHenryTheme, or your own, to restyle without touching this component.
+   */
+  theme?: HenrySheetTheme
   className?: string
 }
 
@@ -194,6 +193,7 @@ export function HenryProblemSheet({
   graphUrl,
   onGraphClick,
   zoomable,
+  theme = defaultHenryTheme,
   className,
 }: HenryProblemSheetProps) {
   const [zoomed, setZoomed] = useState(false)
@@ -234,6 +234,7 @@ export function HenryProblemSheet({
       onGraphClick={onGraphClick}
       fontSize="1rem"
       maxGraphHeight="20rem"
+      theme={theme}
     />
   )
 
@@ -316,6 +317,7 @@ export function HenryProblemSheet({
                 graphUrl={graphUrl}
                 fontSize={`${scale}rem`}
                 maxGraphHeight="none"
+                theme={theme}
               />
             </div>
           </div>
