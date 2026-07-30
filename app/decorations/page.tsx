@@ -47,6 +47,13 @@ export default function DecorationsPage() {
 
   const adminItems = [
     {
+      icon: '🏛️',
+      title: 'ChallengeRoom',
+      subtitle: 'Admin: 3D room designer',
+      href: '/admin/challenge-rooms',
+      description: 'Generate a challenge room background with AI, then position the animated book on the table and save it.',
+    },
+    {
       icon: '🖼️',
       title: 'Upload Book Skins',
       subtitle: 'Admin: manage skins',

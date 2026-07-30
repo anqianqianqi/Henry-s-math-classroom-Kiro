@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { CommentThread } from '@/components/CommentThread'
 import { localDateString, localDateOffset } from '@/lib/utils/date'
 import { HomeButton } from '@/components/ui/HomeButton'
-import { MagicBookReveal } from '@/components/MagicBookReveal'
+import { ChallengeBookShell, type ChallengeScene } from '@/components/challenge-room/ChallengeBookShell'
 import { HenryProblemSheet } from '@/components/HenryProblemSheet'
 import { readStoredHenryProblem } from '@/lib/henryproblem'
 import { useUserBadges } from '@/lib/hooks/useUserBadges'
@@ -114,6 +114,9 @@ export default function ChallengePage() {
   const [defaultCoverLayout, setDefaultCoverLayout] = useState<any>(undefined)
   const [defaultCoverFrameUrls, setDefaultCoverFrameUrls] = useState<string[] | undefined>(undefined)
   const [defaultCoverOverlays, setDefaultCoverOverlays] = useState<any[]>([])
+  // 3D challenge room — only set when the student has selected one. Null keeps
+  // the page on the existing 2D MagicBookReveal path.
+  const [challengeScene, setChallengeScene] = useState<ChallengeScene | null>(null)
   // TA grading state — richer type with streaming progress + suggestion solution
   const [taGrades, setTaGrades] = useState<Record<string, {
     suggested_score: number; max_score: number; confidence: number
@@ -291,7 +294,9 @@ export default function ChallengePage() {
     ] = await Promise.all([
       supabase.from('daily_challenges').select('*').eq('id', params.id).single(),
       Promise.resolve(supabase.from('book_skins').select('skin_type, image_url, cover_layout, is_animated, has_overlays, id').eq('is_default', true).eq('is_active', true)).catch(() => ({ data: null })),
-      Promise.resolve(supabase.from('user_book_skin_preferences').select('cover_skin_id, page_skin_id').eq('user_id', user.id).maybeSingle()).catch(() => ({ data: null })),
+      // challenge_room_id / texture_package_id drive the 3D path. Joined here so
+      // the room costs no extra round trip; both are null for existing rows.
+      Promise.resolve(supabase.from('user_book_skin_preferences').select('cover_skin_id, page_skin_id, challenge_room_id, texture_package_id').eq('user_id', user.id).maybeSingle()).catch(() => ({ data: null })),
       supabase.from('user_roles').select('role_id').eq('user_id', user.id).is('class_id', null),
     ])
 
@@ -334,6 +339,44 @@ export default function ChallengePage() {
     if (defCover?.cover_layout) setDefaultCoverLayout(defCover.cover_layout)
 
     const userPrefData = (userPrefResult as any).data
+
+    // ── 3D challenge room ─────────────────────────────────────────────────
+    // Fire-and-forget: if anything here fails or is unset, challengeScene stays
+    // null and the page renders the existing 2D book.
+    if (userPrefData?.challenge_room_id) {
+      ;(async () => {
+        try {
+          const [roomResult, packageResult] = await Promise.all([
+            supabase
+              .from('challenge_rooms')
+              .select('room_url, placement, animation')
+              .eq('id', userPrefData.challenge_room_id)
+              .maybeSingle(),
+            userPrefData.texture_package_id
+              ? supabase
+                  .from('book_texture_packages')
+                  .select('cover_url, inner_url')
+                  .eq('id', userPrefData.texture_package_id)
+                  .maybeSingle()
+              : Promise.resolve({ data: null }),
+          ])
+
+          const room = (roomResult as any).data
+          if (!room?.room_url || !room.placement || !room.animation) return
+          const pkg = (packageResult as any).data
+
+          setChallengeScene({
+            roomUrl: room.room_url,
+            placement: room.placement,
+            animation: room.animation,
+            coverUrl: pkg?.cover_url ?? null,
+            innerUrl: pkg?.inner_url ?? null,
+          })
+        } catch (err) {
+          console.error('[challenge] challenge room load failed:', err)
+        }
+      })()
+    }
 
     // bankItemId needed for submission lookup
     const bankItemId: string | null = challengeData?.is_bank_item
@@ -1395,8 +1438,10 @@ export default function ChallengePage() {
           </div>
         )}
 
-        {/* Challenge Card — wrapped in MagicBookReveal for the ancient book opening experience */}
-        <MagicBookReveal
+        {/* Challenge Card — ChallengeBookShell picks the 3D room when the student
+            has one selected on desktop, otherwise the 2D MagicBookReveal book */}
+        <ChallengeBookShell
+          scene={challengeScene}
           title={challenge.title}
           date={new Date(challenge.challenge_date + 'T12:00:00').toLocaleDateString('en-US', {
             month: 'long',
@@ -1745,7 +1790,7 @@ export default function ChallengePage() {
               )}
             </div>
           )}
-        </MagicBookReveal>
+        </ChallengeBookShell>
 
         {/* Ask About This Challenge button — shown when challenge is assigned to at least one class (Req 1.2, 1.3) */}
         {assignedClassIds.length > 0 && (!challenge.challenge_date || challenge.challenge_date <= localDateString()) && (
