@@ -569,9 +569,9 @@ export function QuestionDetailModal({
         style={{
           // Match exact bubble gradient stops:
           // Regular:   blue-200 → purple-100 → pink-100  (#bfdbfe → #f3e8ff → #fce7f3)
-          // Challenge: yellow-100 → yellow-200 → amber-100 (#fef9c3 → #fde68a → #fef3c7)
+          // Challenge: yellow-200 → yellow-100 → amber-100 (exact bubble colors: #fef08a → #fef9c3 → #fef3c7)
           background: question.challenge_id
-            ? 'linear-gradient(145deg, rgba(254,249,195,0.94) 0%, rgba(253,230,138,0.88) 45%, rgba(254,243,199,0.94) 100%)'
+            ? 'linear-gradient(145deg, rgba(254,240,138,0.90) 0%, rgba(254,249,195,0.86) 45%, rgba(254,243,199,0.90) 100%)'
             : 'linear-gradient(145deg, rgba(191,219,254,0.93) 0%, rgba(243,232,255,0.89) 45%, rgba(252,231,243,0.93) 100%)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
