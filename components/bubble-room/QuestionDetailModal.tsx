@@ -442,6 +442,36 @@ export function QuestionDetailModal({
         aria-hidden="true"
       />
 
+      {/* Decorative mini-bubbles — float around the modal */}
+      {[
+        { size: 18, left: '8%',  bottom: '18%', delay: 0,    speed: 5.5, drift:  6, color: question.challenge_id ? 'rgba(254,215,170,0.65)' : 'rgba(191,219,254,0.65)' },
+        { size: 11, left: '14%', bottom: '28%', delay: 0.8,  speed: 7,   drift: -4, color: question.challenge_id ? 'rgba(254,249,195,0.55)' : 'rgba(243,232,255,0.55)' },
+        { size: 22, left: '88%', bottom: '22%', delay: 0.4,  speed: 6,   drift: -7, color: question.challenge_id ? 'rgba(254,243,199,0.60)' : 'rgba(252,231,243,0.60)' },
+        { size: 14, left: '82%', bottom: '38%', delay: 1.2,  speed: 8,   drift:  5, color: question.challenge_id ? 'rgba(254,215,170,0.50)' : 'rgba(191,219,254,0.50)' },
+        { size:  9, left: '5%',  bottom: '48%', delay: 1.8,  speed: 6.5, drift:  3, color: question.challenge_id ? 'rgba(254,249,195,0.45)' : 'rgba(243,232,255,0.45)' },
+        { size: 16, left: '92%', bottom: '50%', delay: 0.6,  speed: 7.5, drift: -5, color: question.challenge_id ? 'rgba(254,243,199,0.55)' : 'rgba(252,231,243,0.55)' },
+        { size: 12, left: '20%', bottom: '8%',  delay: 2.1,  speed: 9,   drift:  8, color: question.challenge_id ? 'rgba(254,215,170,0.40)' : 'rgba(191,219,254,0.40)' },
+        { size:  8, left: '75%', bottom: '12%', delay: 1.5,  speed: 7,   drift: -3, color: question.challenge_id ? 'rgba(254,249,195,0.40)' : 'rgba(243,232,255,0.40)' },
+      ].map((b, i) => (
+        <div
+          key={i}
+          aria-hidden="true"
+          className="modal-minibubble absolute pointer-events-none rounded-full"
+          style={{
+            width: b.size,
+            height: b.size,
+            left: b.left,
+            bottom: b.bottom,
+            background: `radial-gradient(circle at 35% 30%, rgba(255,255,255,0.75) 0%, ${b.color} 60%, rgba(255,255,255,0.05) 100%)`,
+            border: '1px solid rgba(255,255,255,0.55)',
+            boxShadow: `0 0 ${b.size * 0.6}px ${b.color}`,
+            animationDelay: `${b.delay}s`,
+            animationDuration: `${b.speed}s`,
+            '--mb-drift': `${b.drift}px`,
+          } as React.CSSProperties}
+        />
+      ))}
+
       {/* Panel — bubble-glass aesthetic */}
       <div
         className="
@@ -453,17 +483,20 @@ export function QuestionDetailModal({
           overflow-hidden
         "
         style={{
+          // Match exact bubble gradient stops:
+          // Regular:   blue-200 → purple-100 → pink-100  (#bfdbfe → #f3e8ff → #fce7f3)
+          // Challenge: orange-200 → yellow-100 → amber-100 (#fed7aa → #fef9c3 → #fef3c7)
           background: question.challenge_id
-            ? 'linear-gradient(145deg, rgba(255,237,213,0.92) 0%, rgba(254,243,199,0.88) 40%, rgba(255,251,235,0.92) 100%)'
-            : 'linear-gradient(145deg, rgba(219,234,254,0.92) 0%, rgba(237,233,254,0.88) 40%, rgba(252,231,243,0.92) 100%)',
+            ? 'linear-gradient(145deg, rgba(254,215,170,0.93) 0%, rgba(254,249,195,0.89) 45%, rgba(254,243,199,0.93) 100%)'
+            : 'linear-gradient(145deg, rgba(191,219,254,0.93) 0%, rgba(243,232,255,0.89) 45%, rgba(252,231,243,0.93) 100%)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: question.challenge_id
-            ? '1.5px solid rgba(251,191,36,0.35)'
-            : '1.5px solid rgba(167,139,250,0.35)',
+            ? '1.5px solid rgba(251,191,36,0.40)'
+            : '1.5px solid rgba(167,139,250,0.40)',
           boxShadow: question.challenge_id
-            ? '0 8px 48px rgba(180,80,0,0.18), inset 0 1px 0 rgba(255,255,255,0.6), inset -2px -2px 8px rgba(180,80,0,0.08)'
-            : '0 8px 48px rgba(100,60,200,0.18), inset 0 1px 0 rgba(255,255,255,0.6), inset -2px -2px 8px rgba(100,60,200,0.08)',
+            ? '0 8px 48px rgba(180,80,0,0.20), 0 0 0 1px rgba(254,215,170,0.3), inset 0 1px 0 rgba(255,255,255,0.65), inset -2px -2px 8px rgba(180,80,0,0.10)'
+            : '0 8px 48px rgba(100,60,200,0.20), 0 0 0 1px rgba(191,219,254,0.3), inset 0 1px 0 rgba(255,255,255,0.65), inset -2px -2px 8px rgba(100,60,200,0.10)',
         }}
       >
         {/* Bubble highlight — large soft ellipse upper-right (mirrors QuestionBubble) */}
@@ -485,8 +518,8 @@ export function QuestionDetailModal({
           className="pointer-events-none absolute inset-0 rounded-t-3xl sm:rounded-3xl"
           style={{
             boxShadow: question.challenge_id
-              ? 'inset 0 0 0 1.5px rgba(255,200,80,0.3)'
-              : 'inset 0 0 0 1.5px rgba(200,160,255,0.3)',
+              ? 'inset 0 0 0 1.5px rgba(254,215,170,0.5)'
+              : 'inset 0 0 0 1.5px rgba(191,219,254,0.5)',
             zIndex: 0,
           }}
         />
@@ -665,7 +698,9 @@ export function QuestionDetailModal({
                 className="group rounded-2xl p-3 space-y-1"
                 style={{
                   background: 'rgba(255,255,255,0.45)',
-                  border: '1px solid rgba(200,180,255,0.3)',
+                  border: question.challenge_id
+                    ? '1px solid rgba(254,215,170,0.45)'
+                    : '1px solid rgba(191,219,254,0.5)',
                   backdropFilter: 'blur(6px)',
                 }}
               >
