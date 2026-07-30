@@ -17,7 +17,7 @@
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 6.1, 6.2, 6.3, 6.4, 7.1, 7.2, 7.3, 7.4, 7.5
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   recordView,
@@ -426,6 +426,74 @@ export function QuestionDetailModal({
     }
   }
 
+  // ── Edge bubbles (bottom half only) ──────────────────────────────────────
+  // Seeded PRNG so bubbles are stable across re-renders but varied per question
+  const edgeBubbles = useMemo(() => {
+    const seed = question.id
+    let h = 0
+    for (let i = 0; i < seed.length; i++) h = Math.imul(31, h) + seed.charCodeAt(i) | 0
+    const rand = () => { h = Math.imul(h ^ (h >>> 16), 0x45d9f3b); h ^= h >>> 16; return (Math.abs(h) / 2147483648) }
+
+    const isChallenge = !!question.challenge_id
+    const colorsC = ['rgba(254,249,195,0.92)', 'rgba(253,230,138,0.88)', 'rgba(254,243,199,0.90)', 'rgba(253,224,71,0.75)']
+    const colorsR = ['rgba(191,219,254,0.88)', 'rgba(243,232,255,0.82)', 'rgba(252,231,243,0.84)', 'rgba(216,180,254,0.75)']
+    const glowC = 'rgba(202,138,4,0.40)'
+    const glowR = 'rgba(139,92,246,0.35)'
+
+    const bubbles: Array<{
+      id: number; size: number; edge: string; pos: number
+      delay: number; speed: number; dx: number; dy: number
+      color: string; glow: string; travel: number
+    }> = []
+
+    // Bottom edge — densely packed, 20 bubbles
+    for (let i = 0; i < 20; i++) {
+      const size = 5 + Math.floor(rand() * 26)  // 5–30px
+      const pos = 2 + rand() * 96               // 2–98%
+      const dx = (rand() - 0.5) * 0.8           // ±0.4 lateral
+      const dy = -(0.8 + rand() * 0.4)          // mostly up
+      bubbles.push({
+        id: i, size, edge: 'bottom', pos,
+        delay: rand() * 5.5, speed: 3.2 + rand() * 4.5,
+        dx, dy,
+        color: (isChallenge ? colorsC : colorsR)[Math.floor(rand() * 4)],
+        glow: isChallenge ? glowC : glowR,
+        travel: 50 + size * 2.8 + rand() * 40,
+      })
+    }
+    // Lower-half of left edge (pos 50–100%) — 10 bubbles
+    for (let i = 0; i < 10; i++) {
+      const size = 5 + Math.floor(rand() * 22)
+      const pos = 50 + rand() * 50
+      const dx = -(0.8 + rand() * 0.4)
+      const dy = -(rand() * 0.6)
+      bubbles.push({
+        id: 20 + i, size, edge: 'left', pos,
+        delay: rand() * 5.5, speed: 3.5 + rand() * 4,
+        dx, dy,
+        color: (isChallenge ? colorsC : colorsR)[Math.floor(rand() * 4)],
+        glow: isChallenge ? glowC : glowR,
+        travel: 45 + size * 2.5 + rand() * 35,
+      })
+    }
+    // Lower-half of right edge (pos 50–100%) — 10 bubbles
+    for (let i = 0; i < 10; i++) {
+      const size = 5 + Math.floor(rand() * 22)
+      const pos = 50 + rand() * 50
+      const dx = 0.8 + rand() * 0.4
+      const dy = -(rand() * 0.6)
+      bubbles.push({
+        id: 30 + i, size, edge: 'right', pos,
+        delay: rand() * 5.5, speed: 3.5 + rand() * 4,
+        dx, dy,
+        color: (isChallenge ? colorsC : colorsR)[Math.floor(rand() * 4)],
+        glow: isChallenge ? glowC : glowR,
+        travel: 45 + size * 2.5 + rand() * 35,
+      })
+    }
+    return bubbles
+  }, [question.id, question.challenge_id])
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -447,85 +515,37 @@ export function QuestionDetailModal({
         aria-hidden="true"
       />
 
-      {/* Decorative mini-bubbles — spawn AT the panel edge, grow outward and drift away */}
+      {/* Decorative mini-bubbles — bottom half of panel only, random sizes + directions */}
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none flex items-end sm:items-center justify-center p-0 sm:p-4"
         style={{ zIndex: 11 }}
       >
         <div className="relative w-full sm:max-w-xl" style={{ height: '90vh', maxHeight: '90vh' }}>
-          {([
-            // edge: 'bottom' | 'top' | 'left' | 'right'
-            // pos: % along that edge, size: px, delay: s, speed: s, dx/dy: outward unit vector
-            // Bottom edge — densely packed
-            { size:  6, edge: 'bottom', pos:  4, delay: 0.0, speed: 3.8, dx:  -0.2, dy: -1   },
-            { size: 14, edge: 'bottom', pos: 10, delay: 1.3, speed: 5.2, dx:   0.1, dy: -1   },
-            { size:  9, edge: 'bottom', pos: 18, delay: 2.7, speed: 4.5, dx:  -0.3, dy: -1   },
-            { size: 22, edge: 'bottom', pos: 26, delay: 0.6, speed: 6.5, dx:   0.4, dy: -1   },
-            { size:  5, edge: 'bottom', pos: 34, delay: 3.4, speed: 3.5, dx:   0.1, dy: -1   },
-            { size: 18, edge: 'bottom', pos: 42, delay: 1.8, speed: 5.8, dx:  -0.2, dy: -1   },
-            { size: 10, edge: 'bottom', pos: 50, delay: 0.3, speed: 4.2, dx:   0.3, dy: -1   },
-            { size: 28, edge: 'bottom', pos: 58, delay: 2.1, speed: 7.0, dx:  -0.1, dy: -1   },
-            { size:  7, edge: 'bottom', pos: 66, delay: 3.9, speed: 3.9, dx:   0.2, dy: -1   },
-            { size: 16, edge: 'bottom', pos: 74, delay: 1.1, speed: 5.5, dx:  -0.4, dy: -1   },
-            { size: 11, edge: 'bottom', pos: 82, delay: 0.8, speed: 4.8, dx:   0.1, dy: -1   },
-            { size: 24, edge: 'bottom', pos: 90, delay: 2.5, speed: 6.8, dx:  -0.2, dy: -1   },
-            { size:  8, edge: 'bottom', pos: 96, delay: 1.6, speed: 4.0, dx:   0.3, dy: -1   },
-            // Right edge
-            { size: 12, edge: 'right',  pos: 12, delay: 0.4, speed: 5.0, dx:   1,   dy: -0.5 },
-            { size: 20, edge: 'right',  pos: 28, delay: 2.2, speed: 6.2, dx:   1,   dy: -0.2 },
-            { size:  7, edge: 'right',  pos: 45, delay: 3.7, speed: 4.0, dx:   1,   dy:  0.3 },
-            { size: 16, edge: 'right',  pos: 62, delay: 1.0, speed: 5.5, dx:   1,   dy: -0.4 },
-            { size:  9, edge: 'right',  pos: 80, delay: 2.8, speed: 4.3, dx:   1,   dy:  0.1 },
-            // Left edge
-            { size: 14, edge: 'left',   pos: 15, delay: 1.5, speed: 5.3, dx:  -1,   dy: -0.4 },
-            { size:  8, edge: 'left',   pos: 35, delay: 0.2, speed: 4.1, dx:  -1,   dy: -0.2 },
-            { size: 20, edge: 'left',   pos: 55, delay: 3.0, speed: 6.0, dx:  -1,   dy: -0.5 },
-            { size:  6, edge: 'left',   pos: 72, delay: 1.9, speed: 3.7, dx:  -1,   dy:  0.2 },
-            { size: 17, edge: 'left',   pos: 88, delay: 0.7, speed: 5.6, dx:  -1,   dy: -0.3 },
-            // Top edge
-            { size: 10, edge: 'top',    pos: 15, delay: 2.4, speed: 4.4, dx:  -0.3, dy: -1   },
-            { size: 18, edge: 'top',    pos: 35, delay: 0.9, speed: 5.7, dx:   0.2, dy: -1   },
-            { size:  6, edge: 'top',    pos: 55, delay: 3.2, speed: 3.6, dx:  -0.1, dy: -1   },
-            { size: 22, edge: 'top',    pos: 72, delay: 1.4, speed: 6.3, dx:   0.3, dy: -1   },
-            { size:  9, edge: 'top',    pos: 88, delay: 2.9, speed: 4.6, dx:  -0.2, dy: -1   },
-          ] as const).map((b, i) => {
-            const c = question.challenge_id
-            // yellow-100/200 palette for challenge; blue/purple/pink for regular
-            const colors = c
-              ? ['rgba(254,249,195,0.92)', 'rgba(253,230,138,0.85)', 'rgba(254,243,199,0.88)']
-              : ['rgba(191,219,254,0.85)', 'rgba(243,232,255,0.80)', 'rgba(252,231,243,0.80)']
-            const glow = c ? 'rgba(202,138,4,0.35)' : 'rgba(139,92,246,0.30)'
-            const col = colors[i % 3]
-
-            // Position: ON the panel edge
+          {edgeBubbles.map((b) => {
             let stylePos: React.CSSProperties = {}
             if (b.edge === 'bottom') {
               stylePos = { left: `${b.pos}%`, bottom: 0, transform: 'translateY(50%)' }
-            } else if (b.edge === 'top') {
-              stylePos = { left: `${b.pos}%`, top: 0, transform: 'translateY(-50%)' }
             } else if (b.edge === 'left') {
               stylePos = { top: `${b.pos}%`, left: 0, transform: 'translateX(-50%)' }
             } else {
               stylePos = { top: `${b.pos}%`, right: 0, transform: 'translateX(50%)' }
             }
-
-            const travelPx = 55 + b.size * 2.5
             return (
               <div
-                key={i}
+                key={b.id}
                 className="modal-edge-bubble absolute rounded-full pointer-events-none"
                 style={{
                   width: b.size,
                   height: b.size,
                   ...stylePos,
-                  background: `radial-gradient(circle at 33% 28%, rgba(255,255,255,0.88) 0%, ${col} 55%, rgba(255,255,255,0.05) 100%)`,
+                  background: `radial-gradient(circle at 33% 28%, rgba(255,255,255,0.88) 0%, ${b.color} 55%, rgba(255,255,255,0.04) 100%)`,
                   border: '1px solid rgba(255,255,255,0.65)',
-                  boxShadow: `0 0 ${Math.round(b.size * 0.65)}px ${glow}`,
+                  boxShadow: `0 0 ${Math.round(b.size * 0.65)}px ${b.glow}`,
                   animationDelay: `${b.delay}s`,
                   animationDuration: `${b.speed}s`,
-                  '--eb-tx': `${b.dx * travelPx}px`,
-                  '--eb-ty': `${b.dy * travelPx}px`,
+                  '--eb-tx': `${b.dx * b.travel}px`,
+                  '--eb-ty': `${b.dy * b.travel}px`,
                 } as React.CSSProperties}
               />
             )
