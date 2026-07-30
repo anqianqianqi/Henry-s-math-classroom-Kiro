@@ -75,7 +75,6 @@ export function QuestionDetailModal({
     description: string
     image_url: string | null
   } | null>(null)
-  const [challengeExpanded, setChallengeExpanded] = useState(false)
   const responseInputRef = useRef<HTMLTextAreaElement>(null)
   const responseFileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
@@ -471,73 +470,47 @@ export function QuestionDetailModal({
               {question.author_display_name} · {formatDate(question.created_at)}
             </p>
 
-            {/* Challenge context banner — collapsible, shows full content inline */}
+            {/* Challenge context — always expanded, shows title, body, image + link */}
             {challengeContext && (
-              <div className="mb-3 rounded-xl bg-amber-50 border border-amber-200 overflow-hidden">
-                {/* Header row — always visible */}
-                <button
-                  type="button"
-                  onClick={() => setChallengeExpanded(e => !e)}
-                  className="w-full flex items-center gap-1.5 px-3 py-2.5 text-left hover:bg-amber-100/60 transition-colors"
-                >
+              <div className="mb-3 rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-2">
+                <div className="flex items-center gap-1.5">
                   <span className="text-sm" aria-hidden="true">🎯</span>
                   <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide flex-1">
                     Challenge
-                  </span>
-                  <p className="text-xs font-semibold text-amber-900 truncate max-w-[45%]">
-                    {challengeContext.title}
-                  </p>
-                  <span className="text-amber-500 text-[10px] ml-1 shrink-0">
-                    {challengeExpanded ? '▲' : '▼'}
                   </span>
                   <a
                     href={`/challenges/${question.challenge_id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="ml-2 text-xs text-primary-600 hover:text-primary-700 hover:underline shrink-0"
-                    onClick={(e) => e.stopPropagation()}
+                    className="text-xs text-primary-600 hover:text-primary-700 hover:underline shrink-0"
                     title="Open full challenge in new tab"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    ↗
+                    View full challenge →
                   </a>
-                </button>
-
-                {/* Expanded content */}
-                {challengeExpanded && (
-                  <div className="px-3 pb-3 pt-1 space-y-2 border-t border-amber-200">
-                    <p className="text-sm font-semibold text-amber-900 leading-snug">
-                      {challengeContext.title}
-                    </p>
-                    {challengeContext.description && (
-                      <p className="text-xs text-amber-800 leading-snug whitespace-pre-wrap">
-                        {challengeContext.description}
-                      </p>
-                    )}
-                    {challengeContext.image_url && (
-                      <a
-                        href={challengeContext.image_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={challengeContext.image_url}
-                          alt="Challenge image"
-                          className="max-h-64 rounded-lg border border-amber-200 object-contain bg-white w-full hover:opacity-90 transition-opacity"
-                        />
-                      </a>
-                    )}
-                    <a
-                      href={`/challenges/${question.challenge_id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      View full challenge →
-                    </a>
-                  </div>
+                </div>
+                <p className="text-sm font-semibold text-amber-900 leading-snug">
+                  {challengeContext.title}
+                </p>
+                {challengeContext.description && (
+                  <p className="text-xs text-amber-800 leading-snug whitespace-pre-wrap">
+                    {challengeContext.description}
+                  </p>
+                )}
+                {challengeContext.image_url && (
+                  <a
+                    href={challengeContext.image_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={challengeContext.image_url}
+                      alt="Challenge image"
+                      className="max-h-64 rounded-lg border border-amber-200 object-contain bg-white w-full hover:opacity-90 transition-opacity"
+                    />
+                  </a>
                 )}
               </div>
             )}
