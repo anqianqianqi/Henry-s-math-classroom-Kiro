@@ -173,8 +173,11 @@ export function Book3DReveal({
   const pageStyle: React.CSSProperties = innerUrl
     ? {
         backgroundImage: `url(${innerUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        // Stretch rather than cover: the page grows with its content, and cover
+        // would zoom the texture until the decorative border is cropped off the
+        // sides. Stretching keeps the frame framing the whole sheet at any height.
+        backgroundSize: '100% 100%',
+        backgroundRepeat: 'no-repeat',
       }
     : { background: 'linear-gradient(160deg, #f6efdd 0%, #efe3c8 55%, #e6d6b4 100%)' }
 
@@ -274,14 +277,11 @@ export function Book3DReveal({
         box — which is what made the pages cramped before.
       */}
       {zoomed && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 lg:p-8"
-          style={{ animation: 'content-fade-in 0.45s ease-out both' }}
-        >
-          {/* Full-viewport blurred room behind the spread */}
+        <>
+          {/* Blurred room. Fixed, so it stays put while the spread scrolls. */}
           <div
             aria-hidden="true"
-            className="absolute inset-0"
+            className="fixed inset-0 z-40"
             style={{
               backgroundImage: `url(${roomUrl})`,
               backgroundSize: 'cover',
@@ -291,67 +291,83 @@ export function Book3DReveal({
             }}
           />
 
+          {/*
+            The scroll container is the whole overlay, NOT each page. Pages with
+            their own overflow-y clip long problems inside a fixed frame, which
+            is what broke the sense of looking at a complete sheet of paper.
+            Here each page grows to its content and you scroll the spread.
+          */}
           <div
-            className="relative flex w-full overflow-hidden rounded-lg"
-            style={{
-              maxWidth: 'min(1700px, 96vw)',
-              height: '92vh',
-              boxShadow: '0 24px 70px rgba(0,0,0,0.6)',
-            }}
+            className="fixed inset-0 z-50 overflow-y-auto overscroll-contain"
+            style={{ animation: 'content-fade-in 0.45s ease-out both' }}
           >
-            {/* LEFT page — problem */}
-            <div className="relative h-full flex-1 overflow-y-auto" style={pageStyle}>
+            <div className="flex min-h-full items-start justify-center p-4 lg:p-8">
               <div
-                className="relative z-10 px-8 py-7 lg:px-14"
+                className="relative flex w-full overflow-hidden rounded-lg"
                 style={{
-                  fontFamily: '"Georgia", "Times New Roman", serif',
-                  color: '#2d1a00',
-                  lineHeight: 1.8,
+                  maxWidth: 'min(1700px, 96vw)',
+                  // Grows past this when the problem is long; never shorter, so
+                  // a one-line problem still looks like a page rather than a strip.
+                  minHeight: '92vh',
+                  boxShadow: '0 24px 70px rgba(0,0,0,0.6)',
                 }}
               >
-                <div className="mb-5 text-center">
-                  <span
-                    className="text-sm italic"
-                    style={{ color: 'rgba(100,60,10,0.6)', fontFamily: 'Georgia, serif' }}
+                {/* LEFT page — problem */}
+                <div className="relative flex-1" style={pageStyle}>
+                  <div
+                    className="relative z-10 px-8 py-7 lg:px-14"
+                    style={{
+                      fontFamily: '"Georgia", "Times New Roman", serif',
+                      color: '#2d1a00',
+                      lineHeight: 1.8,
+                    }}
                   >
-                    — ✦ — {date} — ✦ —
-                  </span>
+                    <div className="mb-5 text-center">
+                      <span
+                        className="text-sm italic"
+                        style={{ color: 'rgba(100,60,10,0.6)', fontFamily: 'Georgia, serif' }}
+                      >
+                        — ✦ — {date} — ✦ —
+                      </span>
+                    </div>
+                    {children}
+                  </div>
                 </div>
-                {children}
-              </div>
-            </div>
 
-            {/* Spine */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none w-3 shrink-0"
-              style={{
-                background:
-                  'linear-gradient(to right, rgba(0,0,0,0.22), rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0.22))',
-              }}
-            />
+                {/* Spine */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none w-3 shrink-0"
+                  style={{
+                    background:
+                      'linear-gradient(to right, rgba(0,0,0,0.22), rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0.22))',
+                  }}
+                />
 
-            {/* RIGHT page — solution */}
-            <div className="relative h-full flex-1 overflow-y-auto" style={pageStyle}>
-              <div className="relative z-10 px-8 py-7 lg:px-14">
-                {solutionSlot ?? (
-                  <p className="text-sm italic" style={{ color: 'rgba(100,60,10,0.55)' }}>
-                    Nothing to answer here yet.
-                  </p>
-                )}
+                {/* RIGHT page — solution */}
+                <div className="relative flex-1" style={pageStyle}>
+                  <div className="relative z-10 px-8 py-7 lg:px-14">
+                    {solutionSlot ?? (
+                      <p className="text-sm italic" style={{ color: 'rgba(100,60,10,0.55)' }}>
+                        Nothing to answer here yet.
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
+          {/* Fixed so it stays reachable however far down the page you scroll. */}
           <button
             type="button"
             onClick={zoomOut}
             aria-label="Back to the room"
-            className="absolute right-5 top-5 z-10 rounded-full bg-black/60 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/80"
+            className="fixed right-5 top-5 z-[60] rounded-full bg-black/60 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/80"
           >
             ✕ Back to the room
           </button>
-        </div>
+        </>
       )}
     </div>
   )
