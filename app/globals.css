@@ -185,6 +185,7 @@ body {
 
 .modal-edge-bubble {
   animation: modal-edge-bubble-rise ease-out infinite;
+  animation-fill-mode: backwards;
   will-change: transform, opacity;
 }
 
