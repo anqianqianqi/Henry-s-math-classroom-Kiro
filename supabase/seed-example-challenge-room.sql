@@ -125,6 +125,30 @@ SELECT
   owner.user_id
 FROM owner;
 
+-- ── Select them for YOUR account ───────────────────────────
+-- Creating the rows is not enough: the challenge page reads the student's
+-- user_book_skin_preferences, and there is no student-facing picker UI yet.
+-- Without this step challengeScene stays null and you get the old 2D book.
+--
+-- Replace the email with your own login. Both columns must be set together --
+-- ubsp_package_requires_room rejects a package without a room.
+INSERT INTO user_book_skin_preferences (user_id, challenge_room_id, texture_package_id)
+SELECT
+  p.id,
+  (SELECT id FROM challenge_rooms       WHERE name = 'Moonlit Tide Observatory'   LIMIT 1),
+  (SELECT id FROM book_texture_packages WHERE name = 'Little Celestial Herbarium' LIMIT 1)
+FROM profiles p
+WHERE p.email = 'shinnyih1@gmail.com'
+ON CONFLICT (user_id) DO UPDATE SET
+  challenge_room_id  = EXCLUDED.challenge_room_id,
+  texture_package_id = EXCLUDED.texture_package_id,
+  updated_at         = now();
+
+-- To go back to the 2D book at any time:
+--   UPDATE user_book_skin_preferences
+--      SET texture_package_id = NULL, challenge_room_id = NULL
+--    WHERE user_id = (SELECT id FROM profiles WHERE email = 'shinnyih1@gmail.com');
+
 -- ── Verify ─────────────────────────────────────────────────
 SELECT 'challenge_rooms' AS table_name, name, model_key,
        placement->>'tilt' AS tilt, animation->>'endFrame' AS end_frame
@@ -132,3 +156,12 @@ FROM challenge_rooms
 UNION ALL
 SELECT 'book_texture_packages', name, NULL, NULL, NULL
 FROM book_texture_packages;
+
+-- Confirm the selection took, and that the URLs are reachable
+SELECT p.email, cr.name AS room, btp.name AS package,
+       cr.room_url, btp.cover_url, btp.inner_url
+FROM user_book_skin_preferences u
+JOIN profiles p ON p.id = u.user_id
+LEFT JOIN challenge_rooms cr ON cr.id = u.challenge_room_id
+LEFT JOIN book_texture_packages btp ON btp.id = u.texture_package_id
+WHERE u.challenge_room_id IS NOT NULL;
