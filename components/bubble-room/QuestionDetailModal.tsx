@@ -496,7 +496,7 @@ export function QuestionDetailModal({
                     rel="noopener noreferrer"
                     className="ml-2 text-xs text-primary-600 hover:text-primary-700 hover:underline shrink-0"
                     onClick={(e) => e.stopPropagation()}
-                    title="在新标签页打开完整题目"
+                    title="Open full challenge in new tab"
                   >
                     ↗
                   </a>
@@ -535,7 +535,7 @@ export function QuestionDetailModal({
                       className="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      在完整页面查看 →
+                      View full challenge →
                     </a>
                   </div>
                 )}
