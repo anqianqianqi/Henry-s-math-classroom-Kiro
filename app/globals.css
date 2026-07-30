@@ -150,32 +150,41 @@ body {
   will-change: transform, opacity;
 }
 
-/* Emitter bubbles — spawn at bottom edge of the panel, rise upward past the top */
-@keyframes modal-emitter-rise {
+/* Edge bubbles — born ON the panel edge (scale 0), grow outward and drift away */
+@keyframes modal-edge-bubble-rise {
   0% {
-    transform: translateX(0) translateY(0) scale(0.3);
+    transform: translate(0, 0) scale(0);
     opacity: 0;
   }
-  8% {
-    opacity: 0.9;
-    transform: translateX(0) translateY(-6px) scale(1);
+  12% {
+    transform: translate(
+      calc(var(--eb-tx, 0px) * 0.1),
+      calc(var(--eb-ty, -10px) * 0.1)
+    ) scale(1);
+    opacity: 0.95;
   }
-  45% {
-    transform: translateX(calc(var(--mb-drift, 6px) * 0.6)) translateY(-45vh) scale(0.95);
-    opacity: 0.75;
+  55% {
+    transform: translate(
+      calc(var(--eb-tx, 0px) * 0.6),
+      calc(var(--eb-ty, -10px) * 0.6)
+    ) scale(0.92);
+    opacity: 0.70;
   }
-  80% {
-    opacity: 0.3;
-    transform: translateX(var(--mb-drift, 6px)) translateY(-80vh) scale(0.85);
+  85% {
+    transform: translate(
+      calc(var(--eb-tx, 0px) * 0.9),
+      calc(var(--eb-ty, -10px) * 0.9)
+    ) scale(0.80);
+    opacity: 0.25;
   }
   100% {
-    transform: translateX(calc(var(--mb-drift, 6px) * 1.2)) translateY(-110vh) scale(0.7);
+    transform: translate(var(--eb-tx, 0px), var(--eb-ty, -10px)) scale(0.65);
     opacity: 0;
   }
 }
 
-.modal-emitter-bubble {
-  animation: modal-emitter-rise linear infinite;
+.modal-edge-bubble {
+  animation: modal-edge-bubble-rise ease-out infinite;
   will-change: transform, opacity;
 }
 

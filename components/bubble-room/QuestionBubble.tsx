@@ -202,7 +202,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           backdrop-blur-sm
           origin-center
           ${question.challenge_id
-            ? 'bg-gradient-to-br from-sky-200 via-cyan-100 to-blue-100 shadow-sky-200/50'
+            ? 'bg-gradient-to-br from-yellow-100 via-yellow-50 to-amber-50 shadow-yellow-100/60'
             : 'bg-gradient-to-br from-blue-200 via-purple-100 to-pink-100 shadow-purple-200/50'
           }
         `}
@@ -251,7 +251,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           className={`
             absolute inset-0 rounded-full pointer-events-none
             ${question.challenge_id
-              ? 'shadow-[inset_0_0_0_1.5px_rgba(100,200,255,0.45),inset_-3px_-3px_6px_rgba(0,120,200,0.20)]'
+              ? 'shadow-[inset_0_0_0_1.5px_rgba(253,224,71,0.45),inset_-3px_-3px_6px_rgba(180,130,0,0.15)]'
               : 'shadow-[inset_0_0_0_1.5px_rgba(180,140,255,0.45),inset_-3px_-3px_6px_rgba(100,80,200,0.25)]'
             }
           `}
@@ -264,7 +264,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           style={{
             height: '30%',
             background: question.challenge_id
-              ? 'linear-gradient(to bottom, transparent, rgba(0,120,200,0.12))'
+              ? 'linear-gradient(to bottom, transparent, rgba(180,140,0,0.10))'
               : 'linear-gradient(to bottom, transparent, rgba(80,40,160,0.15))',
           }}
           aria-hidden="true"
@@ -291,7 +291,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
 
         {/* Challenge link */}
         {question.challenge_id && (
-          <div className="mt-0.5 text-[9px] font-semibold text-sky-700 flex items-center gap-0.5 relative z-10">
+          <div className="mt-0.5 text-[9px] font-semibold text-yellow-600 flex items-center gap-0.5 relative z-10">
             <span aria-hidden="true">🎯</span>
             <span>Challenge</span>
           </div>

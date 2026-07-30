@@ -440,54 +440,73 @@ export function QuestionDetailModal({
         className="absolute inset-0 backdrop-blur-sm"
         style={{
           background: question.challenge_id
-            ? 'rgba(7, 89, 133, 0.20)'    // sky-900 tint for challenge
+            ? 'rgba(113, 85, 0, 0.18)'    // warm yellow-brown tint for challenge
             : 'rgba(49, 46, 129, 0.25)',   // indigo-900 tint for regular
         }}
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Decorative mini-bubbles — emit from the panel edges, rise upward */}
-      {/* Wrapper sits at z-10 alongside the panel, overflow visible so bubbles escape */}
+      {/* Decorative mini-bubbles — spawn AT the panel edge, grow outward and drift away */}
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none flex items-end sm:items-center justify-center p-0 sm:p-4"
         style={{ zIndex: 11 }}
       >
         <div className="relative w-full sm:max-w-xl" style={{ height: '90vh', maxHeight: '90vh' }}>
-          {[
-            // Spawn along the bottom edge (left 0–100%) and sides, all float upward
-            { size: 10, left: '8%',   bottom: '0%',  delay: 0,    speed: 4.5, drift:  -8 },
-            { size: 14, left: '22%',  bottom: '0%',  delay: 1.1,  speed: 5.5, drift:   6 },
-            { size:  8, left: '38%',  bottom: '0%',  delay: 2.2,  speed: 4,   drift:  -4 },
-            { size: 18, left: '55%',  bottom: '0%',  delay: 0.5,  speed: 6,   drift:   9 },
-            { size: 11, left: '70%',  bottom: '0%',  delay: 1.7,  speed: 5,   drift:  -6 },
-            { size:  7, left: '85%',  bottom: '0%',  delay: 0.9,  speed: 4.8, drift:   5 },
-            { size: 13, left: '94%',  bottom: '15%', delay: 1.4,  speed: 5.8, drift:  10 },
-            { size:  9, left: '2%',   bottom: '20%', delay: 2.6,  speed: 5.2, drift: -10 },
-            { size: 16, left: '48%',  bottom: '0%',  delay: 3.0,  speed: 6.5, drift:   7 },
-            { size:  6, left: '62%',  bottom: '0%',  delay: 0.3,  speed: 3.8, drift:  -3 },
-          ].map((b, i) => {
+          {([
+            // edge: 'bottom' | 'top' | 'left' | 'right'
+            // pos: % along that edge
+            // dx/dy: outward direction vector (normalized, will be multiplied by travel distance)
+            { size: 10, edge: 'bottom', pos: 8,  delay: 0,   speed: 4.5, dx:  -0.3, dy: -1 },
+            { size: 14, edge: 'bottom', pos: 22, delay: 1.1, speed: 5.5, dx:   0.2, dy: -1 },
+            { size:  8, edge: 'bottom', pos: 40, delay: 2.2, speed: 4.2, dx:  -0.1, dy: -1 },
+            { size: 18, edge: 'bottom', pos: 58, delay: 0.5, speed: 6,   dx:   0.4, dy: -1 },
+            { size: 11, edge: 'bottom', pos: 75, delay: 1.7, speed: 5,   dx:  -0.2, dy: -1 },
+            { size:  7, edge: 'bottom', pos: 90, delay: 0.9, speed: 4.8, dx:   0.1, dy: -1 },
+            { size: 12, edge: 'right',  pos: 25, delay: 1.4, speed: 5.5, dx:   1,   dy: -0.4 },
+            { size:  9, edge: 'right',  pos: 55, delay: 2.8, speed: 6,   dx:   1,   dy: -0.2 },
+            { size:  8, edge: 'left',   pos: 30, delay: 0.7, speed: 5.2, dx:  -1,   dy: -0.3 },
+            { size: 11, edge: 'left',   pos: 60, delay: 2.0, speed: 4.8, dx:  -1,   dy: -0.5 },
+            { size:  6, edge: 'top',    pos: 35, delay: 1.6, speed: 4,   dx:  -0.3, dy: -1   },
+            { size: 10, edge: 'top',    pos: 65, delay: 3.1, speed: 5,   dx:   0.2, dy: -1   },
+          ] as const).map((b, i) => {
             const c = question.challenge_id
-            const color1 = c ? 'rgba(186,230,253,0.80)' : 'rgba(191,219,254,0.80)'
-            const color2 = c ? 'rgba(207,250,254,0.65)' : 'rgba(243,232,255,0.65)'
-            const glow   = c ? 'rgba(56,189,248,0.40)'  : 'rgba(139,92,246,0.35)'
-            const col = i % 3 === 0 ? color1 : i % 3 === 1 ? color2 : (c ? 'rgba(219,234,254,0.70)' : 'rgba(252,231,243,0.70)')
+            // yellow-50/100/amber-50 palette for challenge; blue/purple/pink for regular
+            const colors = c
+              ? ['rgba(254,252,232,0.90)', 'rgba(254,249,195,0.80)', 'rgba(255,251,235,0.85)']
+              : ['rgba(191,219,254,0.80)', 'rgba(243,232,255,0.75)', 'rgba(252,231,243,0.75)']
+            const glow = c ? 'rgba(234,179,8,0.30)' : 'rgba(139,92,246,0.30)'
+            const col = colors[i % 3]
+
+            // Position: ON the panel edge
+            let stylePos: React.CSSProperties = {}
+            if (b.edge === 'bottom') {
+              stylePos = { left: `${b.pos}%`, bottom: 0, transform: 'translateY(50%)' }
+            } else if (b.edge === 'top') {
+              stylePos = { left: `${b.pos}%`, top: 0, transform: 'translateY(-50%)' }
+            } else if (b.edge === 'left') {
+              stylePos = { top: `${b.pos}%`, left: 0, transform: 'translateX(-50%)' }
+            } else {
+              stylePos = { top: `${b.pos}%`, right: 0, transform: 'translateX(50%)' }
+            }
+
+            const travelPx = 60 + b.size * 2  // how far it travels outward
             return (
               <div
                 key={i}
-                className="modal-emitter-bubble absolute rounded-full pointer-events-none"
+                className="modal-edge-bubble absolute rounded-full pointer-events-none"
                 style={{
                   width: b.size,
                   height: b.size,
-                  left: b.left,
-                  bottom: b.bottom,
-                  background: `radial-gradient(circle at 35% 28%, rgba(255,255,255,0.80) 0%, ${col} 55%, rgba(255,255,255,0.05) 100%)`,
-                  border: '1px solid rgba(255,255,255,0.60)',
-                  boxShadow: `0 0 ${Math.round(b.size * 0.7)}px ${glow}`,
+                  ...stylePos,
+                  background: `radial-gradient(circle at 33% 28%, rgba(255,255,255,0.85) 0%, ${col} 55%, rgba(255,255,255,0.05) 100%)`,
+                  border: '1px solid rgba(255,255,255,0.65)',
+                  boxShadow: `0 0 ${Math.round(b.size * 0.6)}px ${glow}`,
                   animationDelay: `${b.delay}s`,
                   animationDuration: `${b.speed}s`,
-                  '--mb-drift': `${b.drift}px`,
+                  '--eb-tx': `${b.dx * travelPx}px`,
+                  '--eb-ty': `${b.dy * travelPx}px`,
                 } as React.CSSProperties}
               />
             )
@@ -508,17 +527,17 @@ export function QuestionDetailModal({
         style={{
           // Match exact bubble gradient stops:
           // Regular:   blue-200 → purple-100 → pink-100  (#bfdbfe → #f3e8ff → #fce7f3)
-          // Challenge: sky-200 → cyan-100 → blue-100 (#bae6fd → #cffafe → #dbeafe)
+          // Challenge: yellow-50 → yellow-100 → amber-50 (#fefce8 → #fef9c3 → #fffbeb)
           background: question.challenge_id
-            ? 'linear-gradient(145deg, rgba(186,230,253,0.93) 0%, rgba(207,250,254,0.89) 45%, rgba(219,234,254,0.93) 100%)'
+            ? 'linear-gradient(145deg, rgba(254,252,232,0.94) 0%, rgba(254,249,195,0.90) 45%, rgba(255,251,235,0.94) 100%)'
             : 'linear-gradient(145deg, rgba(191,219,254,0.93) 0%, rgba(243,232,255,0.89) 45%, rgba(252,231,243,0.93) 100%)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: question.challenge_id
-            ? '1.5px solid rgba(56,189,248,0.40)'
+            ? '1.5px solid rgba(253,224,71,0.40)'
             : '1.5px solid rgba(167,139,250,0.40)',
           boxShadow: question.challenge_id
-            ? '0 8px 48px rgba(0,120,200,0.18), 0 0 0 1px rgba(186,230,253,0.35), inset 0 1px 0 rgba(255,255,255,0.65), inset -2px -2px 8px rgba(0,120,200,0.08)'
+            ? '0 8px 48px rgba(180,140,0,0.14), 0 0 0 1px rgba(254,252,232,0.4), inset 0 1px 0 rgba(255,255,255,0.70), inset -2px -2px 8px rgba(180,140,0,0.06)'
             : '0 8px 48px rgba(100,60,200,0.20), 0 0 0 1px rgba(191,219,254,0.3), inset 0 1px 0 rgba(255,255,255,0.65), inset -2px -2px 8px rgba(100,60,200,0.10)',
         }}
       >
@@ -541,7 +560,7 @@ export function QuestionDetailModal({
           className="pointer-events-none absolute inset-0 rounded-t-3xl sm:rounded-3xl"
           style={{
             boxShadow: question.challenge_id
-              ? 'inset 0 0 0 1.5px rgba(186,230,253,0.55)'
+              ? 'inset 0 0 0 1.5px rgba(253,224,71,0.40)'
               : 'inset 0 0 0 1.5px rgba(191,219,254,0.5)',
             zIndex: 0,
           }}
@@ -567,31 +586,31 @@ export function QuestionDetailModal({
             {challengeContext && (
               <div className="mb-3 rounded-2xl p-3 space-y-2"
                 style={{
-                  background: 'rgba(186,230,253,0.55)',
-                  border: '1.5px solid rgba(56,189,248,0.35)',
+                  background: 'rgba(254,252,232,0.70)',
+                  border: '1.5px solid rgba(253,224,71,0.35)',
                   backdropFilter: 'blur(8px)',
                 }}>
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm" aria-hidden="true">🎯</span>
-                  <span className="text-xs font-semibold text-sky-700 uppercase tracking-wide flex-1">
+                  <span className="text-xs font-semibold text-yellow-700 uppercase tracking-wide flex-1">
                     Challenge
                   </span>
                   <a
                     href={`/challenges/${question.challenge_id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-sky-700 hover:text-sky-900 hover:underline shrink-0 font-medium"
+                    className="text-xs text-yellow-700 hover:text-yellow-900 hover:underline shrink-0 font-medium"
                     title="Open full challenge in new tab"
                     onClick={(e) => e.stopPropagation()}
                   >
                     View full challenge →
                   </a>
                 </div>
-                <p className="text-sm font-semibold text-sky-900 leading-snug">
+                <p className="text-sm font-semibold text-yellow-900 leading-snug">
                   {challengeContext.title}
                 </p>
                 {challengeContext.description && (
-                  <p className="text-xs text-sky-800 leading-snug whitespace-pre-wrap">
+                  <p className="text-xs text-yellow-800 leading-snug whitespace-pre-wrap">
                     {challengeContext.description}
                   </p>
                 )}
@@ -606,7 +625,7 @@ export function QuestionDetailModal({
                     <img
                       src={challengeContext.image_url}
                       alt="Challenge image"
-                      className="max-h-64 rounded-lg border border-sky-200 object-contain bg-white w-full hover:opacity-90 transition-opacity"
+                      className="max-h-64 rounded-lg border border-yellow-200 object-contain bg-white w-full hover:opacity-90 transition-opacity"
                     />
                   </a>
                 )}
@@ -722,7 +741,7 @@ export function QuestionDetailModal({
                 style={{
                   background: 'rgba(255,255,255,0.45)',
                   border: question.challenge_id
-                    ? '1px solid rgba(186,230,253,0.50)'
+                    ? '1px solid rgba(253,224,71,0.35)'
                     : '1px solid rgba(191,219,254,0.5)',
                   backdropFilter: 'blur(6px)',
                 }}
