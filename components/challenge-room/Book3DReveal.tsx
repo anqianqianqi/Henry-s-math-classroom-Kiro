@@ -181,13 +181,29 @@ export function Book3DReveal({
   return (
     <div className="relative">
       {/*
-        The plate is 3:2 but desktop viewports are nearer 16:9, and object-cover
-        would crop ~16% of the height — eating the top of the arched window and
-        the front edge of the desk, the two things that sell "sitting here".
-        So the plate is letterboxed at its own ratio over a blurred, scaled copy
-        of itself, which fills the viewport without cropping the composition.
+        The challenge page wraps its content in max-w-4xl (896px), which is far
+        too small to sit at a desk in. Break out of it to viewport width.
+
+        Sizing: the plate is 3:2 but desktop viewports are nearer 16:9, and
+        object-cover would crop ~16% of the height — eating the top of the arched
+        window and the front edge of the desk, the two things that sell "sitting
+        here". So we fit the largest 3:2 box the viewport allows
+        (width = min(100vw, 132vh) caps height at 88vh) and letterbox it over a
+        blurred copy of itself, rather than cropping the composition.
       */}
-      <div className="relative overflow-hidden rounded-2xl bg-gray-950">
+      <div
+        className="relative"
+        style={{
+          // 96vw rather than 100vw: vw units include the vertical scrollbar, so
+          // a full 100vw breakout pushes the page into horizontal scroll.
+          width: '96vw',
+          marginLeft: 'calc(50% - 48vw)',
+        }}
+      >
+        <div
+          className="relative mx-auto overflow-hidden bg-gray-950"
+          style={{ width: 'min(100%, 132vh)' }}
+        >
         <div
           aria-hidden="true"
           className="absolute inset-0 scale-110 blur-2xl"
@@ -203,7 +219,6 @@ export function Book3DReveal({
         <div
           className="relative mx-auto transition-[filter,transform,opacity] duration-700 ease-out"
           style={{
-            maxWidth: 'min(100%, 1536px)',
             filter: zoomed ? 'blur(14px) saturate(0.85) brightness(0.7)' : 'none',
             transform: zoomed ? 'scale(1.04)' : 'none',
           }}
@@ -247,81 +262,97 @@ export function Book3DReveal({
           </button>
         )}
 
-        {/* ── Zoomed: the real working surface ────────────────────────── */}
-        {zoomed && (
+        </div>
+      </div>
+
+      {/*
+        Zoomed working surface.
+
+        Deliberately a SIBLING of the stage, not a child: an ancestor carrying
+        `filter` or `transform` becomes the containing block for position:fixed,
+        so nesting this inside the blurred/scaled stage would trap it in that
+        box — which is what made the pages cramped before.
+      */}
+      {zoomed && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 lg:p-8"
+          style={{ animation: 'content-fade-in 0.45s ease-out both' }}
+        >
+          {/* Full-viewport blurred room behind the spread */}
           <div
-            className="absolute inset-0 z-20 flex items-center justify-center p-4 lg:p-8"
-            style={{ animation: 'content-fade-in 0.45s ease-out both' }}
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url(${roomUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(18px) saturate(0.85) brightness(0.55)',
+              transform: 'scale(1.08)',
+            }}
+          />
+
+          <div
+            className="relative flex w-full overflow-hidden rounded-lg"
+            style={{
+              maxWidth: 'min(1700px, 96vw)',
+              height: '92vh',
+              boxShadow: '0 24px 70px rgba(0,0,0,0.6)',
+            }}
           >
-            <div
-              className="flex w-full overflow-hidden rounded-lg"
-              style={{
-                maxWidth: '1400px',
-                maxHeight: '88vh',
-                boxShadow: '0 24px 70px rgba(0,0,0,0.6)',
-              }}
-            >
-              {/* LEFT page — problem */}
+            {/* LEFT page — problem */}
+            <div className="relative h-full flex-1 overflow-y-auto" style={pageStyle}>
               <div
-                className="relative flex-1 overflow-y-auto"
-                style={{ ...pageStyle, maxHeight: '88vh' }}
-              >
-                <div
-                  className="relative z-10 px-8 py-7 lg:px-12"
-                  style={{
-                    fontFamily: '"Georgia", "Times New Roman", serif',
-                    color: '#2d1a00',
-                    lineHeight: 1.8,
-                  }}
-                >
-                  <div className="mb-5 text-center">
-                    <span
-                      className="text-sm italic"
-                      style={{ color: 'rgba(100,60,10,0.6)', fontFamily: 'Georgia, serif' }}
-                    >
-                      — ✦ — {date} — ✦ —
-                    </span>
-                  </div>
-                  {children}
-                </div>
-              </div>
-
-              {/* Spine */}
-              <div
-                aria-hidden="true"
-                className="pointer-events-none w-3 shrink-0"
+                className="relative z-10 px-8 py-7 lg:px-14"
                 style={{
-                  background:
-                    'linear-gradient(to right, rgba(0,0,0,0.22), rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0.22))',
+                  fontFamily: '"Georgia", "Times New Roman", serif',
+                  color: '#2d1a00',
+                  lineHeight: 1.8,
                 }}
-              />
-
-              {/* RIGHT page — solution */}
-              <div
-                className="relative flex-1 overflow-y-auto"
-                style={{ ...pageStyle, maxHeight: '88vh' }}
               >
-                <div className="relative z-10 px-8 py-7 lg:px-12">
-                  {solutionSlot ?? (
-                    <p className="text-sm italic" style={{ color: 'rgba(100,60,10,0.55)' }}>
-                      Nothing to answer here yet.
-                    </p>
-                  )}
+                <div className="mb-5 text-center">
+                  <span
+                    className="text-sm italic"
+                    style={{ color: 'rgba(100,60,10,0.6)', fontFamily: 'Georgia, serif' }}
+                  >
+                    — ✦ — {date} — ✦ —
+                  </span>
                 </div>
+                {children}
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={zoomOut}
-              aria-label="Back to the room"
-              className="absolute right-5 top-5 rounded-full bg-black/50 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/70"
-            >
-              ✕ Back to the room
-            </button>
+            {/* Spine */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none w-3 shrink-0"
+              style={{
+                background:
+                  'linear-gradient(to right, rgba(0,0,0,0.22), rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0.22))',
+              }}
+            />
+
+            {/* RIGHT page — solution */}
+            <div className="relative h-full flex-1 overflow-y-auto" style={pageStyle}>
+              <div className="relative z-10 px-8 py-7 lg:px-14">
+                {solutionSlot ?? (
+                  <p className="text-sm italic" style={{ color: 'rgba(100,60,10,0.55)' }}>
+                    Nothing to answer here yet.
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+
+          <button
+            type="button"
+            onClick={zoomOut}
+            aria-label="Back to the room"
+            className="absolute right-5 top-5 z-10 rounded-full bg-black/60 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/80"
+          >
+            ✕ Back to the room
+          </button>
+        </div>
+      )}
     </div>
   )
 }
