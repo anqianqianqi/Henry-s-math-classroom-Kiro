@@ -12,15 +12,18 @@
 -- (Storage -> book-skins). The dashboard uses the service role, so it is not
 -- subject to the `${uid}/...` path rule that the app's uploads must follow:
 --
---   seed-assets/room.png                        -> examples/room.png
---   seed-assets/front-cover.png                 -> examples/front-cover.png
---   seed-assets/other-pages.png                 -> examples/other-pages.png
---   seed-assets/PageFlix-web-smooth-203-notex.glb -> models/pageflix-web-smooth-203-notex.glb
+--   seed-assets/room.png                          -> examples/room.png
+--   seed-assets/front-cover.png                   -> examples/front-cover.png
+--   seed-assets/other-pages.png                   -> examples/other-pages.png
+--   seed-assets/pageflix-web-smooth-203-notex.glb -> models/pageflix-web-smooth-203-notex.glb
+--
+-- Storage paths are CASE-SENSITIVE. The local GLB was renamed to all-lowercase
+-- so a straight drag-and-drop produces exactly the path used below.
 --
 -- (seed-assets/ is in the ChallengeRoomGeneration folder.)
 --
--- Then replace <PROJECT> below with your Supabase project ref. Copy the exact
--- public URLs from the dashboard rather than hand-typing them.
+-- The URLs below are already filled in for project thgaokonzsabpvhfbfdy. Verify each
+-- matches what the dashboard shows before running this.
 --
 -- The bucket must allow PUBLIC READS or the browser cannot fetch the GLB or the
 -- textures. The app already calls getPublicUrl() on book-skins, so this is very
@@ -45,8 +48,8 @@ INSERT INTO book_texture_packages
 SELECT
   'Little Celestial Herbarium',
   'Example package imported from storyframe — watercolour cover with matching blank inner page.',
-  'https://<PROJECT>.supabase.co/storage/v1/object/public/book-skins/examples/front-cover.png',
-  'https://<PROJECT>.supabase.co/storage/v1/object/public/book-skins/examples/other-pages.png',
+  'https://thgaokonzsabpvhfbfdy.supabase.co/storage/v1/object/public/book-skins/examples/front-cover.png',
+  'https://thgaokonzsabpvhfbfdy.supabase.co/storage/v1/object/public/book-skins/examples/other-pages.png',
   '{
     "name": "Little Celestial Herbarium",
     "mood": "curious, refined, magical",
@@ -83,7 +86,7 @@ INSERT INTO challenge_rooms
 SELECT
   'Moonlit Tide Observatory',
   'Example room imported from storyframe — dark-wood observatory with an underwater kelp view.',
-  'https://<PROJECT>.supabase.co/storage/v1/object/public/book-skins/examples/room.png',
+  'https://thgaokonzsabpvhfbfdy.supabase.co/storage/v1/object/public/book-skins/examples/room.png',
   '{
     "name": "Moonlit Tide Observatory",
     "mood": "hushed, enchanted, contemplative",
