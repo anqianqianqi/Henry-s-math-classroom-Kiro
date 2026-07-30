@@ -196,6 +196,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           relative flex flex-col items-center justify-center
           w-24 h-24 sm:w-28 sm:h-28
           rounded-full
+          overflow-hidden
           border-2 border-white/60
           shadow-lg
           backdrop-blur-sm
