@@ -462,10 +462,6 @@ export function QuestionDetailModal({
         glow: isChallenge ? glowC : glowR,
         travel: 50 + size * 2.8 + rand() * 40,
       })
-        color: (isChallenge ? colorsC : colorsR)[Math.floor(rand() * 4)],
-        glow: isChallenge ? glowC : glowR,
-        travel: 50 + size * 2.8 + rand() * 40,
-      })
     }
     // Lower-half of left edge — 10 bubbles
     for (let i = 0; i < 10; i++) {
