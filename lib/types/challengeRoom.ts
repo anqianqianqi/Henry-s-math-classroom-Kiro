@@ -126,18 +126,23 @@ export const BOOK_MATERIALS = {
 } as const
 
 /**
- * Faces whose UV winding runs opposite to world +X, so a texture applied to
- * them renders horizontally mirrored unless corrected.
- *
- * Measured on the baked mesh at frame 203:
- *   page_material_2.015  d(u)/d(worldX) = -0.671  -> mirrored
- *   page_material_3.006  d(u)/d(worldX) = +0.668  -> correct
+ * Faces that render horizontally mirrored unless corrected.
  *
  * The original GLB compensated with KHR_texture_transform scale [-1, 1], but
- * three.js writes that onto the texture object, so replacing material.map
- * drops it. We reapply it ourselves via repeat.x = -1.
+ * three.js writes that onto the texture object, so replacing material.map drops
+ * it. We reapply it via repeat.x = -1 (with RepeatWrapping — ClampToEdge
+ * ignores a negative repeat).
+ *
+ * ONLY the left page belongs here, confirmed visually by rendering the
+ * asymmetric cover art onto both page faces and comparing corner clusters
+ * against the recipe: the right page matched, the left was flipped.
+ *
+ * Do not add entries from a UV-vs-world-X measurement alone. That reading flips
+ * sign purely because a sheet rotates over during the flip, so it reports the
+ * cover as mirrored at frame 203 (where Page-1 faces away) and not mirrored at
+ * frame 1 (where it faces the camera). Only a face that is actually toward the
+ * camera can be judged, and the reliable way to judge it is to look.
  */
 export const MIRRORED_U_MATERIALS: string[] = [
   'page_material_2.015',
-  'page_material_1.016',
 ]
