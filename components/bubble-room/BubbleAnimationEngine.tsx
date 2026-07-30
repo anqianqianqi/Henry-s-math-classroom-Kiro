@@ -29,18 +29,17 @@ export interface BubbleAnimationEngineProps {
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const SPAWN_INTERVAL_MS = 1500
-const MIN_VISIBLE = 4
+const MIN_VISIBLE = 6
 const ANIMATION_BUFFER_MS = 500
 
 /**
  * Hard cap on simultaneous bubbles on screen.
- * When the pool has ≥ 15 unique questions, we show each one at most once
- * before cycling (no duplicates needed — the pool fills the screen).
- * When the pool has < 15 questions we allow up to 2 copies of each so the
- * screen doesn't look empty.
+ * When the pool has ≥ 15 unique questions, show each at most once (no duplicates).
+ * When the pool is smaller, allow duplicates up to MAX_PER_QUESTION_SMALL_POOL.
+ * If even that cap blocks spawning when the screen is sparse, allow one extra copy.
  */
 const MAX_ON_SCREEN = 15
-const MAX_PER_QUESTION_SMALL_POOL = 2  // only applies when pool < 15 questions
+const MAX_PER_QUESTION_SMALL_POOL = 2  // base cap for small pools
 
 const X_MIN = 5
 const X_MAX = 95
@@ -92,14 +91,23 @@ export function BubbleAnimationEngine({
     // Hard cap: never exceed MAX_ON_SCREEN bubbles at once
     if (visibleRef.current.length >= MAX_ON_SCREEN) return
 
-    // Per-question cap: 1 if pool ≥ 15 (no duplicates), 2 if pool < 15
-    const maxPerQuestion = questions.length >= MAX_ON_SCREEN ? 1 : MAX_PER_QUESTION_SMALL_POOL
+    // Per-question cap:
+    //   pool ≥ 15 → no duplicates (each question at most 1 on screen)
+    //   pool < 15 → allow up to 2 copies of each question
+    //   If all questions are at the cap and the screen is sparse (<= MIN_VISIBLE),
+    //   bump the cap by 1 to prevent a dead screen
+    const baseMax = questions.length >= MAX_ON_SCREEN ? 1 : MAX_PER_QUESTION_SMALL_POOL
+    const screenIsSparse = visibleRef.current.length <= MIN_VISIBLE
 
     // Count how many of each question are currently on screen
     const onScreenCount = new Map<string, number>()
     for (const b of visibleRef.current) {
       onScreenCount.set(b.question.id, (onScreenCount.get(b.question.id) ?? 0) + 1)
     }
+
+    // Check if all questions are at the base cap — if so, bump by 1
+    const allAtCap = questions.every(q => (onScreenCount.get(q.id) ?? 0) >= baseMax)
+    const maxPerQuestion = (allAtCap && screenIsSparse) ? baseMax + 1 : baseMax
 
     // Refill queue if empty
     if (cycleQueueRef.current.length === 0) {
@@ -167,6 +175,10 @@ export function BubbleAnimationEngine({
     if (!isActive || questions.length === 0) return
     if (visible.length < MIN_VISIBLE && visible.length < MAX_ON_SCREEN) {
       spawnBubble()
+      // If very sparse (less than half of MIN_VISIBLE), spawn a second one too
+      if (visible.length < Math.floor(MIN_VISIBLE / 2)) {
+        setTimeout(() => spawnBubble(), 200)
+      }
     }
   }, [visible.length, isActive, questions.length, spawnBubble])
 
