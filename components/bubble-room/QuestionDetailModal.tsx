@@ -454,7 +454,8 @@ export function QuestionDetailModal({
       const dy = -(0.8 + rand() * 0.4)          // mostly up
       bubbles.push({
         id: i, size, edge: 'bottom', pos,
-        delay: rand() * 5.5, speed: 3.2 + rand() * 4.5,
+        delay: 1.5 + rand() * 6,  // first bubble starts at 1.5s, rest up to 7.5s
+        speed: 3.2 + rand() * 4.5,
         dx, dy,
         color: (isChallenge ? colorsC : colorsR)[Math.floor(rand() * 4)],
         glow: isChallenge ? glowC : glowR,
@@ -469,7 +470,8 @@ export function QuestionDetailModal({
       const dy = -(rand() * 0.6)
       bubbles.push({
         id: 20 + i, size, edge: 'left', pos,
-        delay: rand() * 5.5, speed: 3.5 + rand() * 4,
+        delay: 1.5 + rand() * 6,
+        speed: 3.5 + rand() * 4,
         dx, dy,
         color: (isChallenge ? colorsC : colorsR)[Math.floor(rand() * 4)],
         glow: isChallenge ? glowC : glowR,
@@ -484,7 +486,8 @@ export function QuestionDetailModal({
       const dy = -(rand() * 0.6)
       bubbles.push({
         id: 30 + i, size, edge: 'right', pos,
-        delay: rand() * 5.5, speed: 3.5 + rand() * 4,
+        delay: 1.5 + rand() * 6,
+        speed: 3.5 + rand() * 4,
         dx, dy,
         color: (isChallenge ? colorsC : colorsR)[Math.floor(rand() * 4)],
         glow: isChallenge ? glowC : glowR,
