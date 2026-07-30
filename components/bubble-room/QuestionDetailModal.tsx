@@ -69,11 +69,13 @@ export function QuestionDetailModal({
   const [loadingResponses, setLoadingResponses] = useState(true)
   const [confirmDeleteQuestion, setConfirmDeleteQuestion] = useState(false)
   const [confirmDeleteResponseId, setConfirmDeleteResponseId] = useState<string | null>(null)
-  // Challenge context: fetch the challenge title+description when challenge_id is set
+  // Challenge context: fetch the full challenge content when challenge_id is set
   const [challengeContext, setChallengeContext] = useState<{
     title: string
     description: string
+    image_url: string | null
   } | null>(null)
+  const [challengeExpanded, setChallengeExpanded] = useState(false)
   const responseInputRef = useRef<HTMLTextAreaElement>(null)
   const responseFileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
@@ -90,30 +92,33 @@ export function QuestionDetailModal({
         // Try daily_challenges first, then challenge_bank as fallback
         let title = ''
         let description = ''
+        let imageUrl: string | null = null
 
         const { data: dc } = await supabaseClient
           .from('daily_challenges')
-          .select('title, description')
+          .select('title, description, image_url')
           .eq('id', question.challenge_id!)
           .maybeSingle()
 
         if (dc) {
           title = dc.title ?? ''
           description = dc.description ?? ''
+          imageUrl = (dc as any).image_url ?? null
         } else {
           const { data: cb } = await supabaseClient
             .from('challenge_bank')
-            .select('title, description')
+            .select('title, description, image_url')
             .eq('id', question.challenge_id!)
             .maybeSingle()
           if (cb) {
             title = cb.title ?? ''
             description = cb.description ?? ''
+            imageUrl = (cb as any).image_url ?? null
           }
         }
 
         if (title || description) {
-          setChallengeContext({ title, description })
+          setChallengeContext({ title, description, image_url: imageUrl })
         }
       })()
     }
@@ -466,29 +471,73 @@ export function QuestionDetailModal({
               {question.author_display_name} · {formatDate(question.created_at)}
             </p>
 
-            {/* Challenge context banner — shows the math problem above the user's question */}
+            {/* Challenge context banner — collapsible, shows full content inline */}
             {challengeContext && (
-              <div className="mb-3 rounded-xl bg-amber-50 border border-amber-200 p-3">
-                <div className="flex items-center gap-1.5 mb-1">
+              <div className="mb-3 rounded-xl bg-amber-50 border border-amber-200 overflow-hidden">
+                {/* Header row — always visible */}
+                <button
+                  type="button"
+                  onClick={() => setChallengeExpanded(e => !e)}
+                  className="w-full flex items-center gap-1.5 px-3 py-2.5 text-left hover:bg-amber-100/60 transition-colors"
+                >
                   <span className="text-sm" aria-hidden="true">🎯</span>
-                  <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">
+                  <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide flex-1">
                     Challenge
+                  </span>
+                  <p className="text-xs font-semibold text-amber-900 truncate max-w-[45%]">
+                    {challengeContext.title}
+                  </p>
+                  <span className="text-amber-500 text-[10px] ml-1 shrink-0">
+                    {challengeExpanded ? '▲' : '▼'}
                   </span>
                   <a
                     href={`/challenges/${question.challenge_id}`}
-                    className="ml-auto text-xs text-primary-600 hover:text-primary-700 hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-2 text-xs text-primary-600 hover:text-primary-700 hover:underline shrink-0"
                     onClick={(e) => e.stopPropagation()}
+                    title="在新标签页打开完整题目"
                   >
-                    View →
+                    ↗
                   </a>
-                </div>
-                <p className="text-sm font-semibold text-amber-900 leading-snug">
-                  {challengeContext.title}
-                </p>
-                {challengeContext.description && (
-                  <p className="text-xs text-amber-800 leading-snug mt-1 whitespace-pre-wrap">
-                    {challengeContext.description}
-                  </p>
+                </button>
+
+                {/* Expanded content */}
+                {challengeExpanded && (
+                  <div className="px-3 pb-3 pt-1 space-y-2 border-t border-amber-200">
+                    <p className="text-sm font-semibold text-amber-900 leading-snug">
+                      {challengeContext.title}
+                    </p>
+                    {challengeContext.description && (
+                      <p className="text-xs text-amber-800 leading-snug whitespace-pre-wrap">
+                        {challengeContext.description}
+                      </p>
+                    )}
+                    {challengeContext.image_url && (
+                      <a
+                        href={challengeContext.image_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={challengeContext.image_url}
+                          alt="Challenge image"
+                          className="max-h-64 rounded-lg border border-amber-200 object-contain bg-white w-full hover:opacity-90 transition-opacity"
+                        />
+                      </a>
+                    )}
+                    <a
+                      href={`/challenges/${question.challenge_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      在完整页面查看 →
+                    </a>
+                  </div>
                 )}
               </div>
             )}
