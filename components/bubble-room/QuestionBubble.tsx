@@ -197,7 +197,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           w-24 h-24 sm:w-28 sm:h-28
           rounded-full
           overflow-hidden
-          border-2 border-white/60
+          ${question.challenge_id ? 'border-2 border-yellow-400/70' : 'border-2 border-white/60'}
           shadow-lg
           backdrop-blur-sm
           origin-center
