@@ -498,6 +498,19 @@ export function QuestionDetailModal({
     return bubbles
   }, [question.id, question.challenge_id])
 
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [panelSize, setPanelSize] = useState({ w: 0, h: 0 })
+
+  useEffect(() => {
+    const el = panelRef.current
+    if (!el) return
+    const measure = () => setPanelSize({ w: el.offsetWidth, h: el.offsetHeight })
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -519,49 +532,65 @@ export function QuestionDetailModal({
         aria-hidden="true"
       />
 
-      {/* Decorative mini-bubbles — bottom half of panel only, random sizes + directions */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 pointer-events-none flex items-end sm:items-center justify-center p-0 sm:p-4"
-        style={{ zIndex: 11 }}
-      >
-        <div className="relative w-full sm:max-w-xl" style={{ height: '90vh', maxHeight: '90vh' }}>
-          {edgeBubbles.map((b) => {
-            let stylePos: React.CSSProperties = {}
-            if (b.edge === 'bottom') {
-              stylePos = { left: `${b.pos}%`, bottom: 0, transform: 'translateY(50%)' }
-            } else if (b.edge === 'left') {
-              stylePos = { top: `${b.pos}%`, left: 0, transform: 'translateX(-50%)' }
-            } else {
-              stylePos = { top: `${b.pos}%`, right: 0, transform: 'translateX(50%)' }
-            }
-            return (
-              <div
-                key={b.id}
-                className="modal-edge-bubble absolute rounded-full pointer-events-none"
-                style={{
-                  width: b.size,
-                  height: b.size,
-                  ...stylePos,
-                  background: `radial-gradient(circle at 33% 28%, rgba(255,255,255,0.88) 0%, ${b.color} 55%, rgba(255,255,255,0.04) 100%)`,
-                  border: '1px solid rgba(255,255,255,0.65)',
-                  boxShadow: `0 0 ${Math.round(b.size * 0.65)}px ${b.glow}`,
-                  animationDelay: `${(b.wait * b.speed).toFixed(2)}s`,
-                  animationDuration: `${b.speed}s`,
-                  '--eb-tx': `${b.dx * b.travel}px`,
-                  '--eb-ty': `${b.dy * b.travel}px`,
-                } as React.CSSProperties}
-              />
-            )
-          })}
-        </div>
-      </div>
+      {/* Panel + bubble overlay wrapper — overflow visible so bubbles escape */}
+      <div className="relative z-10 w-full sm:max-w-xl flex flex-col" style={{ maxHeight: '90vh' }}>
+
+        {/* Bubble overlay — anchored to actual panel edges via measured size */}
+        {panelSize.w > 0 && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+            style={{ zIndex: 12, overflow: 'visible' }}
+          >
+            {edgeBubbles.map((b) => {
+              let stylePos: React.CSSProperties = {}
+              if (b.edge === 'bottom') {
+                stylePos = {
+                  left: (b.pos / 100) * panelSize.w,
+                  bottom: 0,
+                  transform: 'translate(-50%, 50%)',
+                }
+              } else if (b.edge === 'left') {
+                stylePos = {
+                  left: 0,
+                  top: (b.pos / 100) * panelSize.h,
+                  transform: 'translate(-50%, -50%)',
+                }
+              } else {
+                stylePos = {
+                  right: 0,
+                  top: (b.pos / 100) * panelSize.h,
+                  transform: 'translate(50%, -50%)',
+                }
+              }
+              return (
+                <div
+                  key={b.id}
+                  className="modal-edge-bubble absolute rounded-full pointer-events-none"
+                  style={{
+                    width: b.size,
+                    height: b.size,
+                    ...stylePos,
+                    background: `radial-gradient(circle at 33% 28%, rgba(255,255,255,0.88) 0%, ${b.color} 55%, rgba(255,255,255,0.04) 100%)`,
+                    border: '1px solid rgba(255,255,255,0.65)',
+                    boxShadow: `0 0 ${Math.round(b.size * 0.65)}px ${b.glow}`,
+                    animationDelay: `${(b.wait * b.speed).toFixed(2)}s`,
+                    animationDuration: `${b.speed}s`,
+                    '--eb-tx': `${b.dx * b.travel}px`,
+                    '--eb-ty': `${b.dy * b.travel}px`,
+                  } as React.CSSProperties}
+                />
+              )
+            })}
+          </div>
+        )}
 
       {/* Panel — bubble-glass aesthetic */}
       <div
+        ref={panelRef}
         className="
           bubble-modal-panel
-          relative z-10 w-full sm:max-w-xl
+          relative w-full
           rounded-t-3xl sm:rounded-3xl
           flex flex-col
           max-h-[90vh]
@@ -963,6 +992,7 @@ export function QuestionDetailModal({
             </Button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   )
