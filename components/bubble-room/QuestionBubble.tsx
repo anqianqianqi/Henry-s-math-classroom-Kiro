@@ -202,7 +202,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           backdrop-blur-sm
           origin-center
           ${question.challenge_id
-            ? 'bg-gradient-to-br from-yellow-100 via-yellow-50 to-amber-50 shadow-yellow-100/60'
+            ? 'bg-gradient-to-br from-yellow-200 via-yellow-100 to-amber-100 shadow-yellow-200/60'
             : 'bg-gradient-to-br from-blue-200 via-purple-100 to-pink-100 shadow-purple-200/50'
           }
         `}

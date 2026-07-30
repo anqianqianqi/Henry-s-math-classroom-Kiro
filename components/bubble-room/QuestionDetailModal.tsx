@@ -456,27 +456,46 @@ export function QuestionDetailModal({
         <div className="relative w-full sm:max-w-xl" style={{ height: '90vh', maxHeight: '90vh' }}>
           {([
             // edge: 'bottom' | 'top' | 'left' | 'right'
-            // pos: % along that edge
-            // dx/dy: outward direction vector (normalized, will be multiplied by travel distance)
-            { size: 10, edge: 'bottom', pos: 8,  delay: 0,   speed: 4.5, dx:  -0.3, dy: -1 },
-            { size: 14, edge: 'bottom', pos: 22, delay: 1.1, speed: 5.5, dx:   0.2, dy: -1 },
-            { size:  8, edge: 'bottom', pos: 40, delay: 2.2, speed: 4.2, dx:  -0.1, dy: -1 },
-            { size: 18, edge: 'bottom', pos: 58, delay: 0.5, speed: 6,   dx:   0.4, dy: -1 },
-            { size: 11, edge: 'bottom', pos: 75, delay: 1.7, speed: 5,   dx:  -0.2, dy: -1 },
-            { size:  7, edge: 'bottom', pos: 90, delay: 0.9, speed: 4.8, dx:   0.1, dy: -1 },
-            { size: 12, edge: 'right',  pos: 25, delay: 1.4, speed: 5.5, dx:   1,   dy: -0.4 },
-            { size:  9, edge: 'right',  pos: 55, delay: 2.8, speed: 6,   dx:   1,   dy: -0.2 },
-            { size:  8, edge: 'left',   pos: 30, delay: 0.7, speed: 5.2, dx:  -1,   dy: -0.3 },
-            { size: 11, edge: 'left',   pos: 60, delay: 2.0, speed: 4.8, dx:  -1,   dy: -0.5 },
-            { size:  6, edge: 'top',    pos: 35, delay: 1.6, speed: 4,   dx:  -0.3, dy: -1   },
-            { size: 10, edge: 'top',    pos: 65, delay: 3.1, speed: 5,   dx:   0.2, dy: -1   },
+            // pos: % along that edge, size: px, delay: s, speed: s, dx/dy: outward unit vector
+            // Bottom edge — densely packed
+            { size:  6, edge: 'bottom', pos:  4, delay: 0.0, speed: 3.8, dx:  -0.2, dy: -1   },
+            { size: 14, edge: 'bottom', pos: 10, delay: 1.3, speed: 5.2, dx:   0.1, dy: -1   },
+            { size:  9, edge: 'bottom', pos: 18, delay: 2.7, speed: 4.5, dx:  -0.3, dy: -1   },
+            { size: 22, edge: 'bottom', pos: 26, delay: 0.6, speed: 6.5, dx:   0.4, dy: -1   },
+            { size:  5, edge: 'bottom', pos: 34, delay: 3.4, speed: 3.5, dx:   0.1, dy: -1   },
+            { size: 18, edge: 'bottom', pos: 42, delay: 1.8, speed: 5.8, dx:  -0.2, dy: -1   },
+            { size: 10, edge: 'bottom', pos: 50, delay: 0.3, speed: 4.2, dx:   0.3, dy: -1   },
+            { size: 28, edge: 'bottom', pos: 58, delay: 2.1, speed: 7.0, dx:  -0.1, dy: -1   },
+            { size:  7, edge: 'bottom', pos: 66, delay: 3.9, speed: 3.9, dx:   0.2, dy: -1   },
+            { size: 16, edge: 'bottom', pos: 74, delay: 1.1, speed: 5.5, dx:  -0.4, dy: -1   },
+            { size: 11, edge: 'bottom', pos: 82, delay: 0.8, speed: 4.8, dx:   0.1, dy: -1   },
+            { size: 24, edge: 'bottom', pos: 90, delay: 2.5, speed: 6.8, dx:  -0.2, dy: -1   },
+            { size:  8, edge: 'bottom', pos: 96, delay: 1.6, speed: 4.0, dx:   0.3, dy: -1   },
+            // Right edge
+            { size: 12, edge: 'right',  pos: 12, delay: 0.4, speed: 5.0, dx:   1,   dy: -0.5 },
+            { size: 20, edge: 'right',  pos: 28, delay: 2.2, speed: 6.2, dx:   1,   dy: -0.2 },
+            { size:  7, edge: 'right',  pos: 45, delay: 3.7, speed: 4.0, dx:   1,   dy:  0.3 },
+            { size: 16, edge: 'right',  pos: 62, delay: 1.0, speed: 5.5, dx:   1,   dy: -0.4 },
+            { size:  9, edge: 'right',  pos: 80, delay: 2.8, speed: 4.3, dx:   1,   dy:  0.1 },
+            // Left edge
+            { size: 14, edge: 'left',   pos: 15, delay: 1.5, speed: 5.3, dx:  -1,   dy: -0.4 },
+            { size:  8, edge: 'left',   pos: 35, delay: 0.2, speed: 4.1, dx:  -1,   dy: -0.2 },
+            { size: 20, edge: 'left',   pos: 55, delay: 3.0, speed: 6.0, dx:  -1,   dy: -0.5 },
+            { size:  6, edge: 'left',   pos: 72, delay: 1.9, speed: 3.7, dx:  -1,   dy:  0.2 },
+            { size: 17, edge: 'left',   pos: 88, delay: 0.7, speed: 5.6, dx:  -1,   dy: -0.3 },
+            // Top edge
+            { size: 10, edge: 'top',    pos: 15, delay: 2.4, speed: 4.4, dx:  -0.3, dy: -1   },
+            { size: 18, edge: 'top',    pos: 35, delay: 0.9, speed: 5.7, dx:   0.2, dy: -1   },
+            { size:  6, edge: 'top',    pos: 55, delay: 3.2, speed: 3.6, dx:  -0.1, dy: -1   },
+            { size: 22, edge: 'top',    pos: 72, delay: 1.4, speed: 6.3, dx:   0.3, dy: -1   },
+            { size:  9, edge: 'top',    pos: 88, delay: 2.9, speed: 4.6, dx:  -0.2, dy: -1   },
           ] as const).map((b, i) => {
             const c = question.challenge_id
-            // yellow-50/100/amber-50 palette for challenge; blue/purple/pink for regular
+            // yellow-100/200 palette for challenge; blue/purple/pink for regular
             const colors = c
-              ? ['rgba(254,252,232,0.90)', 'rgba(254,249,195,0.80)', 'rgba(255,251,235,0.85)']
-              : ['rgba(191,219,254,0.80)', 'rgba(243,232,255,0.75)', 'rgba(252,231,243,0.75)']
-            const glow = c ? 'rgba(234,179,8,0.30)' : 'rgba(139,92,246,0.30)'
+              ? ['rgba(254,249,195,0.92)', 'rgba(253,230,138,0.85)', 'rgba(254,243,199,0.88)']
+              : ['rgba(191,219,254,0.85)', 'rgba(243,232,255,0.80)', 'rgba(252,231,243,0.80)']
+            const glow = c ? 'rgba(202,138,4,0.35)' : 'rgba(139,92,246,0.30)'
             const col = colors[i % 3]
 
             // Position: ON the panel edge
@@ -491,7 +510,7 @@ export function QuestionDetailModal({
               stylePos = { top: `${b.pos}%`, right: 0, transform: 'translateX(50%)' }
             }
 
-            const travelPx = 60 + b.size * 2  // how far it travels outward
+            const travelPx = 55 + b.size * 2.5
             return (
               <div
                 key={i}
@@ -500,9 +519,9 @@ export function QuestionDetailModal({
                   width: b.size,
                   height: b.size,
                   ...stylePos,
-                  background: `radial-gradient(circle at 33% 28%, rgba(255,255,255,0.85) 0%, ${col} 55%, rgba(255,255,255,0.05) 100%)`,
+                  background: `radial-gradient(circle at 33% 28%, rgba(255,255,255,0.88) 0%, ${col} 55%, rgba(255,255,255,0.05) 100%)`,
                   border: '1px solid rgba(255,255,255,0.65)',
-                  boxShadow: `0 0 ${Math.round(b.size * 0.6)}px ${glow}`,
+                  boxShadow: `0 0 ${Math.round(b.size * 0.65)}px ${glow}`,
                   animationDelay: `${b.delay}s`,
                   animationDuration: `${b.speed}s`,
                   '--eb-tx': `${b.dx * travelPx}px`,
@@ -527,9 +546,9 @@ export function QuestionDetailModal({
         style={{
           // Match exact bubble gradient stops:
           // Regular:   blue-200 → purple-100 → pink-100  (#bfdbfe → #f3e8ff → #fce7f3)
-          // Challenge: yellow-50 → yellow-100 → amber-50 (#fefce8 → #fef9c3 → #fffbeb)
+          // Challenge: yellow-100 → yellow-200 → amber-100 (#fef9c3 → #fde68a → #fef3c7)
           background: question.challenge_id
-            ? 'linear-gradient(145deg, rgba(254,252,232,0.94) 0%, rgba(254,249,195,0.90) 45%, rgba(255,251,235,0.94) 100%)'
+            ? 'linear-gradient(145deg, rgba(254,249,195,0.94) 0%, rgba(253,230,138,0.88) 45%, rgba(254,243,199,0.94) 100%)'
             : 'linear-gradient(145deg, rgba(191,219,254,0.93) 0%, rgba(243,232,255,0.89) 45%, rgba(252,231,243,0.93) 100%)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
