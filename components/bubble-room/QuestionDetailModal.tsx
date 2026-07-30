@@ -442,52 +442,53 @@ export function QuestionDetailModal({
 
     const bubbles: Array<{
       id: number; size: number; edge: string; pos: number
-      delay: number; speed: number; dx: number; dy: number
+      delay: number; speed: number; wait: number; dx: number; dy: number
       color: string; glow: string; travel: number
     }> = []
 
     // Bottom edge — densely packed, 20 bubbles
     for (let i = 0; i < 20; i++) {
-      const size = 5 + Math.floor(rand() * 26)  // 5–30px
-      const pos = 2 + rand() * 96               // 2–98%
-      const dx = (rand() - 0.5) * 0.8           // ±0.4 lateral
-      const dy = -(0.8 + rand() * 0.4)          // mostly up
+      const size = 5 + Math.floor(rand() * 26)
+      const pos = 2 + rand() * 96
+      const dx = (rand() - 0.5) * 0.8
+      const dy = -(0.8 + rand() * 0.4)
+      // wait: 0–50% of total duration is "invisible hold" baked into keyframe
+      const wait = rand() * 0.50
       bubbles.push({
         id: i, size, edge: 'bottom', pos,
-        delay: 1.5 + rand() * 6,  // first bubble starts at 1.5s, rest up to 7.5s
-        speed: 3.2 + rand() * 4.5,
+        delay: 0, speed: 3.5 + rand() * 5, wait,
         dx, dy,
         color: (isChallenge ? colorsC : colorsR)[Math.floor(rand() * 4)],
         glow: isChallenge ? glowC : glowR,
         travel: 50 + size * 2.8 + rand() * 40,
       })
     }
-    // Lower-half of left edge (pos 50–100%) — 10 bubbles
+    // Lower-half of left edge — 10 bubbles
     for (let i = 0; i < 10; i++) {
       const size = 5 + Math.floor(rand() * 22)
       const pos = 50 + rand() * 50
       const dx = -(0.8 + rand() * 0.4)
       const dy = -(rand() * 0.6)
+      const wait = rand() * 0.50
       bubbles.push({
         id: 20 + i, size, edge: 'left', pos,
-        delay: 1.5 + rand() * 6,
-        speed: 3.5 + rand() * 4,
+        delay: 0, speed: 3.5 + rand() * 5, wait,
         dx, dy,
         color: (isChallenge ? colorsC : colorsR)[Math.floor(rand() * 4)],
         glow: isChallenge ? glowC : glowR,
         travel: 45 + size * 2.5 + rand() * 35,
       })
     }
-    // Lower-half of right edge (pos 50–100%) — 10 bubbles
+    // Lower-half of right edge — 10 bubbles
     for (let i = 0; i < 10; i++) {
       const size = 5 + Math.floor(rand() * 22)
       const pos = 50 + rand() * 50
       const dx = 0.8 + rand() * 0.4
       const dy = -(rand() * 0.6)
+      const wait = rand() * 0.50
       bubbles.push({
         id: 30 + i, size, edge: 'right', pos,
-        delay: 1.5 + rand() * 6,
-        speed: 3.5 + rand() * 4,
+        delay: 0, speed: 3.5 + rand() * 5, wait,
         dx, dy,
         color: (isChallenge ? colorsC : colorsR)[Math.floor(rand() * 4)],
         glow: isChallenge ? glowC : glowR,
@@ -545,7 +546,7 @@ export function QuestionDetailModal({
                   background: `radial-gradient(circle at 33% 28%, rgba(255,255,255,0.88) 0%, ${b.color} 55%, rgba(255,255,255,0.04) 100%)`,
                   border: '1px solid rgba(255,255,255,0.65)',
                   boxShadow: `0 0 ${Math.round(b.size * 0.65)}px ${b.glow}`,
-                  animationDelay: `${b.delay}s`,
+                  animationDelay: `${-(b.wait * b.speed).toFixed(2)}s`,
                   animationDuration: `${b.speed}s`,
                   '--eb-tx': `${b.dx * b.travel}px`,
                   '--eb-ty': `${b.dy * b.travel}px`,

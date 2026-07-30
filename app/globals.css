@@ -183,9 +183,10 @@ body {
   }
 }
 
+/* Negative delay = jump mid-cycle so all bubbles are active immediately on open.
+   No fill-mode needed since delay is negative (already mid-animation). */
 .modal-edge-bubble {
   animation: modal-edge-bubble-rise ease-out infinite;
-  animation-fill-mode: backwards;
   will-change: transform, opacity;
 }
 
