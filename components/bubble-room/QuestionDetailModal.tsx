@@ -440,7 +440,7 @@ export function QuestionDetailModal({
         className="absolute inset-0 backdrop-blur-sm"
         style={{
           background: question.challenge_id
-            ? 'rgba(120, 53, 15, 0.25)'   // amber-900 tint for challenge
+            ? 'rgba(7, 89, 133, 0.20)'    // sky-900 tint for challenge
             : 'rgba(49, 46, 129, 0.25)',   // indigo-900 tint for regular
         }}
         onClick={onClose}
@@ -469,10 +469,10 @@ export function QuestionDetailModal({
             { size:  6, left: '62%',  bottom: '0%',  delay: 0.3,  speed: 3.8, drift:  -3 },
           ].map((b, i) => {
             const c = question.challenge_id
-            const color1 = c ? 'rgba(254,215,170,0.80)' : 'rgba(191,219,254,0.80)'
-            const color2 = c ? 'rgba(254,249,195,0.65)' : 'rgba(243,232,255,0.65)'
-            const glow   = c ? 'rgba(251,146,60,0.40)'  : 'rgba(139,92,246,0.35)'
-            const col = i % 3 === 0 ? color1 : i % 3 === 1 ? color2 : (c ? 'rgba(254,243,199,0.70)' : 'rgba(252,231,243,0.70)')
+            const color1 = c ? 'rgba(186,230,253,0.80)' : 'rgba(191,219,254,0.80)'
+            const color2 = c ? 'rgba(207,250,254,0.65)' : 'rgba(243,232,255,0.65)'
+            const glow   = c ? 'rgba(56,189,248,0.40)'  : 'rgba(139,92,246,0.35)'
+            const col = i % 3 === 0 ? color1 : i % 3 === 1 ? color2 : (c ? 'rgba(219,234,254,0.70)' : 'rgba(252,231,243,0.70)')
             return (
               <div
                 key={i}
@@ -508,17 +508,17 @@ export function QuestionDetailModal({
         style={{
           // Match exact bubble gradient stops:
           // Regular:   blue-200 → purple-100 → pink-100  (#bfdbfe → #f3e8ff → #fce7f3)
-          // Challenge: orange-200 → yellow-100 → amber-100 (#fed7aa → #fef9c3 → #fef3c7)
+          // Challenge: sky-200 → cyan-100 → blue-100 (#bae6fd → #cffafe → #dbeafe)
           background: question.challenge_id
-            ? 'linear-gradient(145deg, rgba(254,215,170,0.93) 0%, rgba(254,249,195,0.89) 45%, rgba(254,243,199,0.93) 100%)'
+            ? 'linear-gradient(145deg, rgba(186,230,253,0.93) 0%, rgba(207,250,254,0.89) 45%, rgba(219,234,254,0.93) 100%)'
             : 'linear-gradient(145deg, rgba(191,219,254,0.93) 0%, rgba(243,232,255,0.89) 45%, rgba(252,231,243,0.93) 100%)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: question.challenge_id
-            ? '1.5px solid rgba(251,191,36,0.40)'
+            ? '1.5px solid rgba(56,189,248,0.40)'
             : '1.5px solid rgba(167,139,250,0.40)',
           boxShadow: question.challenge_id
-            ? '0 8px 48px rgba(180,80,0,0.20), 0 0 0 1px rgba(254,215,170,0.3), inset 0 1px 0 rgba(255,255,255,0.65), inset -2px -2px 8px rgba(180,80,0,0.10)'
+            ? '0 8px 48px rgba(0,120,200,0.18), 0 0 0 1px rgba(186,230,253,0.35), inset 0 1px 0 rgba(255,255,255,0.65), inset -2px -2px 8px rgba(0,120,200,0.08)'
             : '0 8px 48px rgba(100,60,200,0.20), 0 0 0 1px rgba(191,219,254,0.3), inset 0 1px 0 rgba(255,255,255,0.65), inset -2px -2px 8px rgba(100,60,200,0.10)',
         }}
       >
@@ -541,7 +541,7 @@ export function QuestionDetailModal({
           className="pointer-events-none absolute inset-0 rounded-t-3xl sm:rounded-3xl"
           style={{
             boxShadow: question.challenge_id
-              ? 'inset 0 0 0 1.5px rgba(254,215,170,0.5)'
+              ? 'inset 0 0 0 1.5px rgba(186,230,253,0.55)'
               : 'inset 0 0 0 1.5px rgba(191,219,254,0.5)',
             zIndex: 0,
           }}
@@ -567,31 +567,31 @@ export function QuestionDetailModal({
             {challengeContext && (
               <div className="mb-3 rounded-2xl p-3 space-y-2"
                 style={{
-                  background: 'rgba(255,237,170,0.55)',
-                  border: '1.5px solid rgba(251,191,36,0.4)',
+                  background: 'rgba(186,230,253,0.55)',
+                  border: '1.5px solid rgba(56,189,248,0.35)',
                   backdropFilter: 'blur(8px)',
                 }}>
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm" aria-hidden="true">🎯</span>
-                  <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide flex-1">
+                  <span className="text-xs font-semibold text-sky-700 uppercase tracking-wide flex-1">
                     Challenge
                   </span>
                   <a
                     href={`/challenges/${question.challenge_id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-amber-700 hover:text-amber-900 hover:underline shrink-0 font-medium"
+                    className="text-xs text-sky-700 hover:text-sky-900 hover:underline shrink-0 font-medium"
                     title="Open full challenge in new tab"
                     onClick={(e) => e.stopPropagation()}
                   >
                     View full challenge →
                   </a>
                 </div>
-                <p className="text-sm font-semibold text-amber-900 leading-snug">
+                <p className="text-sm font-semibold text-sky-900 leading-snug">
                   {challengeContext.title}
                 </p>
                 {challengeContext.description && (
-                  <p className="text-xs text-amber-800 leading-snug whitespace-pre-wrap">
+                  <p className="text-xs text-sky-800 leading-snug whitespace-pre-wrap">
                     {challengeContext.description}
                   </p>
                 )}
@@ -606,7 +606,7 @@ export function QuestionDetailModal({
                     <img
                       src={challengeContext.image_url}
                       alt="Challenge image"
-                      className="max-h-64 rounded-lg border border-amber-200 object-contain bg-white w-full hover:opacity-90 transition-opacity"
+                      className="max-h-64 rounded-lg border border-sky-200 object-contain bg-white w-full hover:opacity-90 transition-opacity"
                     />
                   </a>
                 )}
@@ -722,7 +722,7 @@ export function QuestionDetailModal({
                 style={{
                   background: 'rgba(255,255,255,0.45)',
                   border: question.challenge_id
-                    ? '1px solid rgba(254,215,170,0.45)'
+                    ? '1px solid rgba(186,230,253,0.50)'
                     : '1px solid rgba(191,219,254,0.5)',
                   backdropFilter: 'blur(6px)',
                 }}
