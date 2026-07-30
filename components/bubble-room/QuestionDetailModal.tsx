@@ -462,6 +462,10 @@ export function QuestionDetailModal({
         glow: isChallenge ? glowC : glowR,
         travel: 50 + size * 2.8 + rand() * 40,
       })
+        color: (isChallenge ? colorsC : colorsR)[Math.floor(rand() * 4)],
+        glow: isChallenge ? glowC : glowR,
+        travel: 50 + size * 2.8 + rand() * 40,
+      })
     }
     // Lower-half of left edge — 10 bubbles
     for (let i = 0; i < 10; i++) {
@@ -546,7 +550,7 @@ export function QuestionDetailModal({
                   background: `radial-gradient(circle at 33% 28%, rgba(255,255,255,0.88) 0%, ${b.color} 55%, rgba(255,255,255,0.04) 100%)`,
                   border: '1px solid rgba(255,255,255,0.65)',
                   boxShadow: `0 0 ${Math.round(b.size * 0.65)}px ${b.glow}`,
-                  animationDelay: `${-(b.wait * b.speed).toFixed(2)}s`,
+                  animationDelay: `${(b.wait * b.speed).toFixed(2)}s`,
                   animationDuration: `${b.speed}s`,
                   '--eb-tx': `${b.dx * b.travel}px`,
                   '--eb-ty': `${b.dy * b.travel}px`,

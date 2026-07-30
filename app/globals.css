@@ -150,43 +150,45 @@ body {
   will-change: transform, opacity;
 }
 
-/* Edge bubbles — born ON the panel edge (scale 0), grow outward and drift away */
+/* Edge bubbles — born ON the panel edge (scale 0), grow outward and drift away.
+ * Staggered by positive animation-delay with fill-mode:backwards (hold 0% = invisible)
+ * until each bubble's timer fires. 100% ends at same state as 0% for clean loop. */
 @keyframes modal-edge-bubble-rise {
   0% {
     transform: translate(0, 0) scale(0);
     opacity: 0;
   }
-  12% {
+  8% {
     transform: translate(
-      calc(var(--eb-tx, 0px) * 0.1),
-      calc(var(--eb-ty, -10px) * 0.1)
+      calc(var(--eb-tx, 0px) * 0.06),
+      calc(var(--eb-ty, -10px) * 0.06)
     ) scale(1);
     opacity: 0.95;
   }
-  55% {
+  50% {
     transform: translate(
-      calc(var(--eb-tx, 0px) * 0.6),
-      calc(var(--eb-ty, -10px) * 0.6)
-    ) scale(0.92);
+      calc(var(--eb-tx, 0px) * 0.55),
+      calc(var(--eb-ty, -10px) * 0.55)
+    ) scale(0.90);
     opacity: 0.70;
   }
-  85% {
+  82% {
     transform: translate(
-      calc(var(--eb-tx, 0px) * 0.9),
-      calc(var(--eb-ty, -10px) * 0.9)
-    ) scale(0.80);
-    opacity: 0.25;
+      calc(var(--eb-tx, 0px) * 0.88),
+      calc(var(--eb-ty, -10px) * 0.88)
+    ) scale(0.75);
+    opacity: 0.20;
   }
   100% {
-    transform: translate(var(--eb-tx, 0px), var(--eb-ty, -10px)) scale(0.65);
+    /* Return to exact origin state so infinite loop restarts cleanly */
+    transform: translate(0, 0) scale(0);
     opacity: 0;
   }
 }
 
-/* Negative delay = jump mid-cycle so all bubbles are active immediately on open.
-   No fill-mode needed since delay is negative (already mid-animation). */
 .modal-edge-bubble {
   animation: modal-edge-bubble-rise ease-out infinite;
+  animation-fill-mode: backwards;
   will-change: transform, opacity;
 }
 
