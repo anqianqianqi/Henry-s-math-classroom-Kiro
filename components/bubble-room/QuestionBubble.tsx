@@ -197,12 +197,12 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           w-24 h-24 sm:w-28 sm:h-28
           rounded-full
           overflow-hidden
-          ${question.challenge_id ? 'border-2 border-yellow-400/70' : 'border-2 border-white/60'}
+          ${question.challenge_id ? 'border-2 border-white/60' : 'border-2 border-white/60'}
           shadow-lg
           backdrop-blur-sm
           origin-center
           ${question.challenge_id
-            ? 'bg-gradient-to-br from-yellow-50 via-yellow-100/40 to-white shadow-yellow-100/30'
+            ? 'bg-gradient-to-br from-yellow-200 via-yellow-100 to-yellow-50 shadow-yellow-200/50'
             : 'bg-gradient-to-br from-blue-200 via-purple-100 to-pink-100 shadow-purple-200/50'
           }
         `}
@@ -251,7 +251,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           className={`
             absolute inset-0 rounded-full pointer-events-none
             ${question.challenge_id
-              ? 'shadow-[inset_0_0_0_1.5px_rgba(253,224,71,0.60),inset_0_0_0_3.5px_rgba(253,224,71,0.25),inset_0_0_0_6px_rgba(253,224,71,0.10),inset_-3px_-3px_8px_rgba(180,130,0,0.12)]'
+              ? 'shadow-[inset_0_0_0_1.5px_rgba(253,224,71,0.50),inset_0_0_0_3.5px_rgba(253,224,71,0.20),inset_-3px_-3px_6px_rgba(180,130,0,0.18)]'
               : 'shadow-[inset_0_0_0_1.5px_rgba(180,140,255,0.45),inset_-3px_-3px_6px_rgba(100,80,200,0.25)]'
             }
           `}
@@ -264,7 +264,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           style={{
             height: '30%',
             background: question.challenge_id
-              ? 'linear-gradient(to bottom, transparent, rgba(180,140,0,0.10))'
+              ? 'linear-gradient(to bottom, transparent, rgba(161,98,7,0.18))'
               : 'linear-gradient(to bottom, transparent, rgba(80,40,160,0.15))',
           }}
           aria-hidden="true"
