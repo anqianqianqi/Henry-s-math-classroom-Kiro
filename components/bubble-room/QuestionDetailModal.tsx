@@ -435,9 +435,14 @@ export function QuestionDetailModal({
       aria-labelledby="question-detail-title"
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
     >
-      {/* Backdrop */}
+      {/* Backdrop — color matches bubble type */}
       <div
-        className="absolute inset-0 bg-indigo-900/30 backdrop-blur-sm"
+        className="absolute inset-0 backdrop-blur-sm"
+        style={{
+          background: question.challenge_id
+            ? 'rgba(120, 53, 15, 0.25)'   // amber-900 tint for challenge
+            : 'rgba(49, 46, 129, 0.25)',   // indigo-900 tint for regular
+        }}
         onClick={onClose}
         aria-hidden="true"
       />
