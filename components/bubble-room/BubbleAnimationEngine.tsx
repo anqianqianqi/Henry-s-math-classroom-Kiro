@@ -84,6 +84,15 @@ export function BubbleAnimationEngine({
     visibleRef.current = visible
   }, [visible])
 
+  // ── Remove visible instances for questions that no longer exist ─────────────
+  useEffect(() => {
+    const validIds = new Set(questions.map((q) => q.id))
+    setVisible((prev) => {
+      const next = prev.filter((b) => validIds.has(b.question.id))
+      return next.length === prev.length ? prev : next
+    })
+  }, [questions])
+
   // ── Spawn one bubble ───────────────────────────────────────────────────────
   const spawnBubble = useCallback(() => {
     if (!isActive) return
