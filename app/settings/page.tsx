@@ -10,6 +10,7 @@ import { FormField } from '@/components/ui/FormField'
 import { Card } from '@/components/ui/Card'
 import NotificationPreferences from '@/components/NotificationPreferences'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null)
@@ -29,6 +30,7 @@ export default function SettingsPage() {
   } | null>(null)
   const router = useRouter()
   const supabase = createClient()
+  const { t, language } = useLanguage()
 
   useEffect(() => {
     loadUser()
@@ -123,11 +125,11 @@ export default function SettingsPage() {
 
     setSaving(false)
     if (error) {
-      setSaveMsg('Failed to save')
+      setSaveMsg(t('settings.saveFailed'))
       console.error('Profile save error:', error)
     } else {
       const newFullName = `${firstName.trim()} ${lastName.trim()}`.trim()
-      setSaveMsg('Saved!')
+      setSaveMsg(t('settings.saved'))
       setProfile({ ...profile, first_name: firstName.trim(), last_name: lastName.trim(), full_name: newFullName })
     }
     setTimeout(() => setSaveMsg(''), 2000)
@@ -138,7 +140,7 @@ export default function SettingsPage() {
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">⚙️</div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">{t('status.loading')}</p>
         </div>
       </div>
     )
@@ -146,47 +148,47 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
-      <PageHeader breadcrumbs={[{ label: 'Settings' }]} maxWidth="max-w-4xl" />
+      <PageHeader breadcrumbs={[{ label: t('nav.settings') }]} maxWidth="max-w-4xl" />
 
       <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-6">
         {/* Profile Card */}
         <Card>
           <Card.Header>
-            <h2 className="text-lg font-semibold"><span className="hidden sm:inline">👤 </span>Profile</h2>
+            <h2 className="text-lg font-semibold"><span className="hidden sm:inline">👤 </span>{t('settings.profile')}</h2>
           </Card.Header>
           <Card.Body>
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
-                  label="First Name"
+                  label={t('settings.firstName')}
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="First name"
+                  placeholder={t('settings.firstNamePlaceholder')}
                 />
                 <FormField
-                  label="Last Name"
+                  label={t('settings.lastName')}
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Last name"
+                  placeholder={t('settings.lastNamePlaceholder')}
                 />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-700">Email</p>
+                <p className="text-sm font-medium text-gray-700">{t('settings.email')}</p>
                 <p className="text-gray-900">{profile?.email}</p>
               </div>
               <FormField
-                label="Nickname (shown to classmates)"
+                label={t('settings.nickname')}
                 type="text"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 placeholder="e.g. Johnny"
-                helperText="Optional — displayed instead of your full name to other students"
+                helperText={t('settings.nicknameHint')}
               />
               <div className="flex items-center gap-3">
                 <Button onClick={saveProfile} isLoading={saving} size="sm">
-                  Save Profile
+                  {t('settings.saveProfile')}
                 </Button>
                 {saveMsg && <span className="text-sm text-green-600">{saveMsg}</span>}
               </div>
@@ -198,7 +200,7 @@ export default function SettingsPage() {
         {!isTeacher && scoreStats && (
           <Card>
             <Card.Header>
-              <h2 className="text-lg font-semibold"><span className="hidden sm:inline">⭐ </span>My Score</h2>
+              <h2 className="text-lg font-semibold"><span className="hidden sm:inline">⭐ </span>{t('settings.myScore')}</h2>
             </Card.Header>
             <Card.Body>
               <div className="space-y-4">
@@ -206,22 +208,22 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div className="bg-primary-50 rounded-xl p-4">
                     <div className="text-3xl font-bold text-primary-700">{scoreStats.totalScore}</div>
-                    <div className="text-sm text-gray-600 mt-1">Total Points</div>
+                    <div className="text-sm text-gray-600 mt-1">{t('settings.totalPoints')}</div>
                   </div>
                   <div className="bg-green-50 rounded-xl p-4">
                     <div className="text-3xl font-bold text-green-700">{scoreStats.gradedCount}</div>
-                    <div className="text-sm text-gray-600 mt-1">Graded</div>
+                    <div className="text-sm text-gray-600 mt-1">{t('settings.graded')}</div>
                   </div>
                   <div className="bg-blue-50 rounded-xl p-4">
                     <div className="text-3xl font-bold text-blue-700">{scoreStats.submittedCount}</div>
-                    <div className="text-sm text-gray-600 mt-1">Submitted</div>
+                    <div className="text-sm text-gray-600 mt-1">{t('settings.submitted')}</div>
                   </div>
                 </div>
 
                 {/* Recent grades */}
                 {scoreStats.recentGrades.length > 0 && (
                   <div>
-                    <p className="text-sm font-medium text-gray-700 mb-2">Recent Grades</p>
+                    <p className="text-sm font-medium text-gray-700 mb-2">{t('settings.recentGrades')}</p>
                     <div className="space-y-2">
                       {scoreStats.recentGrades.map((g, i) => (
                         <div key={i} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
@@ -229,7 +231,7 @@ export default function SettingsPage() {
                           <div className="flex items-center gap-3 ml-3 shrink-0">
                             <span className="text-sm font-bold text-primary-700">{g.points}/100</span>
                             <span className="text-xs text-gray-400">
-                              {new Date(g.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              {new Date(g.date).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}
                             </span>
                           </div>
                         </div>
@@ -239,7 +241,7 @@ export default function SettingsPage() {
                 )}
 
                 {scoreStats.gradedCount === 0 && (
-                  <p className="text-sm text-gray-500 text-center py-2">No graded challenges yet</p>
+                  <p className="text-sm text-gray-500 text-center py-2">{t('settings.noGradedYet')}</p>
                 )}
               </div>
             </Card.Body>

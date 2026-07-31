@@ -23,6 +23,18 @@ export const classes = {
   'class.approve': { en: 'Approve', zh: '通过' },
   'class.reject': { en: 'Reject', zh: '拒绝' },
   'class.enrolled': { en: 'enrolled', zh: '人已加入' },
+  'class.createNew': { en: 'Create New Class', zh: '创建新班级' },
+  'class.new': { en: '+ New', zh: '+ 新建' },
+  'class.notEnrolled': {
+    en: 'You are not enrolled in any classes yet',
+    zh: '你还没有加入任何班级',
+  },
+  'class.createFirst': { en: 'Create Your First Class', zh: '创建你的第一个班级' },
+  'class.noDescription': { en: 'No description', zh: '暂无简介' },
+  'class.schedule': { en: 'Schedule:', zh: '上课时间：' },
+  'class.starts': { en: 'Starts:', zh: '开课日期：' },
+  'class.viewClass': { en: 'View Class', zh: '查看班级' },
+  'class.loadFailed': { en: 'Failed to load classes', zh: '加载班级失败' },
 
   'grade.title': { en: 'Grade Homework', zh: '批改作业' },
   'grade.ungraded': { en: 'Ungraded', zh: '待批改' },

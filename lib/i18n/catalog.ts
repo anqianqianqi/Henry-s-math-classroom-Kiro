@@ -9,6 +9,7 @@
  *
  *   messages/common.ts       actions, status, navigation
  *   messages/auth.ts         sign in, sign up, password recovery
+ *   messages/settings.ts     account settings and score summary
  *   messages/dashboard.ts    dashboard tiles and stats
  *   messages/challenges.ts   challenge list, detail, book/room reading
  *   messages/decorations.ts  decorations hub, skins, rooms, bundles
@@ -27,6 +28,7 @@
 
 import { common } from './messages/common'
 import { auth } from './messages/auth'
+import { settings } from './messages/settings'
 import { dashboard } from './messages/dashboard'
 import { challenges } from './messages/challenges'
 import { decorations } from './messages/decorations'
@@ -50,6 +52,7 @@ export const LANGUAGES: { code: Language; label: string; short: string }[] = [
 export const catalog = {
   ...common,
   ...auth,
+  ...settings,
   ...dashboard,
   ...challenges,
   ...decorations,
