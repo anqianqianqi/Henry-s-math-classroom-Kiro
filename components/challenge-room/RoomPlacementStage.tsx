@@ -99,7 +99,14 @@ export function RoomPlacementStage({
     if (!canvas || !stage) return
 
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    // Render at 2x CSS resolution regardless of the display, then let the
+    // browser downsample. The book covers only about a fifth of the stage
+    // width, so on a 1x screen its cover art lands on ~260 device pixels out of
+    // a 1536px texture and reads soft; supersampling doubles that to ~520.
+    // Cheap here — three planes, so cost is vertex/morph work, not fragment
+    // shading — and a fixed 2 keeps the buffer bounded on large high-DPI
+    // monitors, where devicePixelRatio 3 would mean a 20+ megapixel target.
+    renderer.setPixelRatio(2)
     renderer.setClearColor(0x000000, 0)
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.shadowMap.enabled = true
