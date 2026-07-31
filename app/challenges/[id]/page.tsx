@@ -11,6 +11,7 @@ import { ChallengeBookShell, type ChallengeScene } from '@/components/challenge-
 import { HenryProblemSheet } from '@/components/HenryProblemSheet'
 import { pageNativeHenryTheme } from '@/lib/henry-theme'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { readStoredHenryProblem } from '@/lib/henryproblem'
 import { useUserBadges } from '@/lib/hooks/useUserBadges'
 import { UserNameWithBadges } from '@/components/UserNameWithBadges'
@@ -101,7 +102,10 @@ export default function ChallengePage() {
   const [submittingComment, setSubmittingComment] = useState<{[submissionId: string]: boolean}>({})
   const [visibleComments, setVisibleComments] = useState<{[submissionId: string]: number}>({})
   const COMMENTS_INCREMENT = 5
-  const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
+  const { t, language } = useLanguage()
+  // Tag names have a row per language in challenge_tag_names, so they follow
+  // the global UI language rather than a second, separate control.
+  const tagLang = language
   const [tagNames, setTagNames] = useState<Record<string, Record<string, string>>>({}) // id → { en: name, zh: name }
   // Hint state
   const [showHint, setShowHint] = useState(false)
@@ -1343,7 +1347,7 @@ export default function ChallengePage() {
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">🎯</div>
-          <p className="text-gray-600">Loading challenge...</p>
+          <p className="text-gray-600">{t('challenge.loadingDetail')}</p>
         </div>
       </div>
     )
@@ -1400,15 +1404,9 @@ export default function ChallengePage() {
               </Button>
               <HomeButton />
               <div className="flex items-center gap-2">
-                <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Challenge</h1>
-                <select
-                  value={tagLang}
-                  onChange={e => setTagLang(e.target.value as 'en' | 'zh')}
-                  className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white"
-                >
-                  <option value="en">EN</option>
-                  <option value="zh">CN</option>
-                </select>
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900">{t('challenge.label')}</h1>
+                {/* The EN/CN dropdown that lived here is gone — tag language
+                    now follows the global switcher. */}
               </div>
             </div>
             {isTeacher && (
@@ -1447,7 +1445,7 @@ export default function ChallengePage() {
                       <button onClick={() => { handleDuplicate(); setShowMenu(false) }} disabled={duplicating}
                         className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Copy</button>
                       <button onClick={() => { handleSaveAsTemplate(); setShowMenu(false) }} disabled={savingTemplate}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Save as Template</button>
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">{t('challenge.saveAsTemplate')}</button>
                       <button onClick={() => { setShowDeleteModal(true); setShowMenu(false) }}
                         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete</button>
                     </div>
@@ -1466,8 +1464,8 @@ export default function ChallengePage() {
             <div className="flex items-center gap-3">
               <span className="text-4xl">🎉</span>
               <div>
-                <h3 className="text-xl font-bold">Great job!</h3>
-                <p>You can now see what others wrote</p>
+                <h3 className="text-xl font-bold">{t('challenge.greatJob')}</h3>
+                <p>{t('challenge.canSeeOthers')}</p>
               </div>
             </div>
           </div>
@@ -1576,14 +1574,14 @@ export default function ChallengePage() {
                 <Card.Header className={onBookPage ? '!border-b-0 !px-0 !py-0' : ''}>
                   <Card.Title className={`flex items-center gap-2 ${onBookPage ? 'justify-center' : ''}`}>
                     <span>✍️</span>
-                    {hasSubmitted ? 'Edit Your Solution' : 'Your Solution'}
+                    {hasSubmitted ? t('challenge.editSolution') : t('challenge.yourSolution')}
                   </Card.Title>
                 </Card.Header>
                 <Card.Body className={onBookPage ? '!px-0' : ''}>
                   <textarea
                     value={solution}
                     onChange={(e) => setSolution(e.target.value)}
-                    placeholder="Write your solution here... Show your work!"
+                    placeholder={t('challenge.solutionPlaceholder')}
                     className={`w-full h-48 p-4 border-2 rounded-2xl resize-none transition-colors focus:ring-2 ${
                       onBookPage
                         ? 'bg-transparent border-[rgba(100,60,10,0.28)] text-[#2d1a00] placeholder-[rgba(100,60,10,0.45)] focus:border-[rgba(100,60,10,0.5)] focus:ring-[rgba(100,60,10,0.15)]'
@@ -1592,7 +1590,7 @@ export default function ChallengePage() {
                   />
                   <div className="mt-3">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      📷 Attach Image (Optional)
+                      {t('challenge.attachImage')}
                     </label>
                     <input
                       type="file"
@@ -1728,7 +1726,7 @@ export default function ChallengePage() {
                     <textarea
                       value={hintDraft}
                       onChange={e => setHintDraft(e.target.value)}
-                      placeholder="Add a hint for students..."
+                      placeholder={t('challenge.hintPlaceholder')}
                       rows={3}
                       className="w-full px-3 py-2 text-sm border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-100 resize-none"
                     />
@@ -1802,7 +1800,7 @@ export default function ChallengePage() {
                         />
                       )}
                       {!challenge.hint && !(challenge as any).hint_image_url && (
-                        <span className="italic text-amber-400 text-sm">No hint added yet</span>
+                        <span className="italic text-amber-400 text-sm">{t('challenge.noHint')}</span>
                       )}
                     </div>
                     <Button size="sm" variant="ghost" onClick={() => {
@@ -1907,7 +1905,7 @@ export default function ChallengePage() {
               {showStudentList && (
                 <div className="mt-4 p-4 bg-white rounded-2xl">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-gray-900">Student Status</h4>
+                    <h4 className="font-semibold text-gray-900">{t('challenge.studentStatus')}</h4>
                     <button
                       onClick={() => setShowStudentList(false)}
                       className="text-sm text-gray-500 hover:text-gray-700"
@@ -2189,10 +2187,10 @@ export default function ChallengePage() {
                                       onChange={e => setTaGrades(prev => ({ ...prev, [submission.id]: { ...prev[submission.id], lessonType: e.target.value } as any }))}
                                       className="w-full text-xs px-2 py-1.5 border border-amber-200 rounded-lg bg-white"
                                     >
-                                      <option value="correct">TA was correct actually</option>
-                                      <option value="grading-rules">Wrong grading rule applied</option>
-                                      <option value="math-knowledge">TA misunderstood the math</option>
-                                      <option value="grading-style">Wrong comment style</option>
+                                      <option value="correct">{t('challenge.taWasCorrect')}</option>
+                                      <option value="grading-rules">{t('challenge.wrongRule')}</option>
+                                      <option value="math-knowledge">{t('challenge.taMisunderstood')}</option>
+                                      <option value="grading-style">{t('challenge.wrongCommentStyle')}</option>
                                     </select>
                                     <button
                                       disabled={taGrades[submission.id]?.feedbackSending}

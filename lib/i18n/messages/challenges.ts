@@ -34,6 +34,61 @@ export const challenges = {
   'challenge.noChallenges': { en: 'No challenges yet', zh: '暂无挑战题' },
   'challenge.loading': { en: 'Loading challenge…', zh: '挑战题加载中…' },
 
+  // ── List page: search, filters, sort ─────────────────────
+  'challenge.loadingList': { en: 'Loading challenges...', zh: '挑战题加载中…' },
+  'challenge.searchPlaceholder': {
+    en: 'Search by title or description...',
+    zh: '按标题或描述搜索……',
+  },
+  'challenge.searchWithTag': {
+    en: 'Search by title, description or tag…',
+    zh: '按标题、描述或标签搜索……',
+  },
+  'challenge.allClasses': { en: 'All Classes', zh: '全部班级' },
+  'challenge.allDates': { en: 'All Dates', zh: '全部日期' },
+  'challenge.today': { en: 'Today', zh: '今天' },
+  'challenge.thisWeek': { en: 'This Week', zh: '本周' },
+  'challenge.upcoming': { en: 'Upcoming', zh: '即将开始' },
+  'challenge.past': { en: 'Past', zh: '已过期' },
+  'challenge.tagsLabel': { en: 'Tags:', zh: '标签：' },
+  'challenge.mostSubmissions': { en: 'Most Submissions', zh: '提交最多' },
+  'challenge.leastSubmissions': { en: 'Least Submissions', zh: '提交最少' },
+  'challenge.highestCompletion': { en: 'Highest Completion', zh: '完成率最高' },
+  'challenge.lowestCompletion': { en: 'Lowest Completion', zh: '完成率最低' },
+  'challenge.noneFound': { en: 'No challenges found', zh: '未找到挑战题' },
+
+  // ── Teacher stats ────────────────────────────────────────
+  'challenge.totalPoints': { en: 'Total Points', zh: '总分' },
+  'challenge.graded': { en: 'Graded', zh: '已批改' },
+  'challenge.pendingGrade': { en: 'Pending Grade', zh: '待批改' },
+  'challenge.notSubmittedStat': { en: 'Not Submitted', zh: '未提交' },
+  'challenge.scoreRate': { en: 'Score rate', zh: '得分率' },
+  'challenge.assignFromBank': { en: 'Assign from Challenge Bank', zh: '从题库分配' },
+  'challenge.selectedChallenge': { en: 'Selected challenge', zh: '已选挑战题' },
+
+  // ── Detail page ──────────────────────────────────────────
+  'challenge.loadingDetail': { en: 'Loading challenge...', zh: '挑战题加载中…' },
+  'challenge.label': { en: 'Challenge', zh: '挑战题' },
+  'challenge.copy': { en: 'Copy', zh: '复制' },
+  'challenge.saveAsTemplate': { en: 'Save as Template', zh: '保存为模板' },
+  'challenge.greatJob': { en: 'Great job!', zh: '做得好！' },
+  'challenge.canSeeOthers': {
+    en: 'You can now see what others wrote',
+    zh: '现在你可以看到其他同学的解答了',
+  },
+  'challenge.hintPlaceholder': {
+    en: 'Add a hint for students...',
+    zh: '为学生添加提示……',
+  },
+  'challenge.studentStatus': { en: 'Student Status', zh: '学生完成情况' },
+  'challenge.gap': { en: 'Gap: ', zh: '差距：' },
+
+  // TA grading review — teacher-facing
+  'challenge.taWasCorrect': { en: 'TA was correct actually', zh: '助教其实是对的' },
+  'challenge.wrongRule': { en: 'Wrong grading rule applied', zh: '套用了错误的评分规则' },
+  'challenge.taMisunderstood': { en: 'TA misunderstood the math', zh: '助教理解错了数学内容' },
+  'challenge.wrongCommentStyle': { en: 'Wrong comment style', zh: '评语风格不合适' },
+
   // Book / room reading experience
   'book.openTheBook': { en: 'Open the book', zh: '打开书本' },
   'book.clickToRead': { en: 'Click to read and answer', zh: '点击阅读并作答' },
