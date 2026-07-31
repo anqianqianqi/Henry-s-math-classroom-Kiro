@@ -25,6 +25,8 @@ import { BundleCollection } from '@/components/challenge-room/BundleCollection'
 interface Prefs {
   challenge_room_id: string | null
   texture_package_id: string | null
+  /** NoChallengeRoom — see supabase/add-challenge-room-opt-out.sql. */
+  challenge_room_opt_out: boolean
 }
 
 export default function ChallengeRoomsPage() {
@@ -33,7 +35,7 @@ export default function ChallengeRoomsPage() {
 
   const [userId, setUserId] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [prefs, setPrefs] = useState<Prefs>({ challenge_room_id: null, texture_package_id: null })
+  const [prefs, setPrefs] = useState<Prefs>({ challenge_room_id: null, texture_package_id: null, challenge_room_opt_out: false })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -48,7 +50,7 @@ export default function ChallengeRoomsPage() {
         supabase.from('user_roles').select('roles!inner(name)').eq('user_id', user.id).is('class_id', null),
         supabase
           .from('user_book_skin_preferences')
-          .select('challenge_room_id, texture_package_id')
+          .select('challenge_room_id, texture_package_id, challenge_room_opt_out')
           .eq('user_id', user.id)
           .maybeSingle(),
       ])
@@ -60,6 +62,7 @@ export default function ChallengeRoomsPage() {
         setPrefs({
           challenge_room_id: (prefRow as any).challenge_room_id ?? null,
           texture_package_id: (prefRow as any).texture_package_id ?? null,
+          challenge_room_opt_out: !!(prefRow as any).challenge_room_opt_out,
         })
       }
       setLoading(false)
@@ -80,6 +83,7 @@ export default function ChallengeRoomsPage() {
         user_id: userId,
         challenge_room_id: next.challenge_room_id,
         texture_package_id: next.texture_package_id,
+        challenge_room_opt_out: next.challenge_room_opt_out,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })
     setSaving(false)
@@ -115,9 +119,18 @@ export default function ChallengeRoomsPage() {
                 // Dropping the room drops the bundle with it, or the save is
                 // rejected by ubsp_package_requires_room.
                 const next: Prefs = {
+                  ...prefs,
                   challenge_room_id: id,
                   texture_package_id: id ? prefs.texture_package_id : null,
                 }
+                setPrefs(next)
+                save(next)
+              }}
+              optOut={prefs.challenge_room_opt_out}
+              onOptOutChange={(optOut) => {
+                // The room selection is kept, so switching back restores the
+                // room they had rather than dropping them on the default.
+                const next: Prefs = { ...prefs, challenge_room_opt_out: optOut }
                 setPrefs(next)
                 save(next)
               }}

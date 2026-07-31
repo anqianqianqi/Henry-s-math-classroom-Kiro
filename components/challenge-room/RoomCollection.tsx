@@ -16,11 +16,23 @@ import type { ChallengeRoom } from '@/lib/types/challengeRoom'
 export interface RoomCollectionProps {
   isAdmin: boolean
   selectedId: string | null
-  /** Null clears the room; the caller must clear the bundle with it. */
   onSelect: (id: string | null) => void
+  /**
+   * NoChallengeRoom. Distinct from selectedId === null, which only means
+   * "hasn't chosen" and falls through to the default room. This says "no room",
+   * and the challenge page skips the default lookup entirely.
+   */
+  optOut: boolean
+  onOptOutChange: (optOut: boolean) => void
 }
 
-export function RoomCollection({ isAdmin, selectedId, onSelect }: RoomCollectionProps) {
+export function RoomCollection({
+  isAdmin,
+  selectedId,
+  onSelect,
+  optOut,
+  onOptOutChange,
+}: RoomCollectionProps) {
   const supabase = createClient()
 
   const [rooms, setRooms] = useState<ChallengeRoom[]>([])
@@ -114,16 +126,38 @@ export function RoomCollection({ isAdmin, selectedId, onSelect }: RoomCollection
             and only on challenges imported from a .henryproblem file.
           </p>
         </div>
-        {effectiveId && (
-          <button
-            type="button"
-            onClick={() => onSelect(null)}
-            className="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-600 hover:border-gray-300"
+        {/* NoChallengeRoom — a toggle rather than a one-way button, so turning
+            it off restores whatever room was selected instead of dumping the
+            student on the default. */}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={optOut}
+          onClick={() => onOptOutChange(!optOut)}
+          className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+            optOut
+              ? 'border-amber-300 bg-amber-50 text-amber-800'
+              : 'border-gray-200 text-gray-600 hover:border-gray-300'
+          }`}
+        >
+          <span
+            aria-hidden="true"
+            className={`relative h-4 w-7 rounded-full transition-colors ${optOut ? 'bg-amber-500' : 'bg-gray-300'}`}
           >
-            Use the flat book instead
-          </button>
-        )}
+            <span
+              className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${optOut ? 'left-3.5' : 'left-0.5'}`}
+            />
+          </span>
+          NoChallengeRoom
+        </button>
       </div>
+
+      {optOut && (
+        <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Challenge rooms are off for you — challenges show the flat book. Turn
+          NoChallengeRoom off, or pick a room below, to switch back.
+        </div>
+      )}
 
       {loading ? (
         <div className="py-8 text-center text-sm text-gray-400">Loading rooms…</div>
@@ -134,18 +168,21 @@ export function RoomCollection({ isAdmin, selectedId, onSelect }: RoomCollection
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {rooms.map(room => {
-            const selected = effectiveId === room.id
+            // While opted out nothing reads as active, even the default.
+            const selected = !optOut && effectiveId === room.id
             return (
               <div
                 key={room.id}
                 className={`relative overflow-hidden rounded-2xl border-2 bg-white transition-all ${
                   selected ? 'border-primary-500 shadow-md' : 'border-gray-100 hover:border-gray-300'
-                } ${!room.is_active ? 'opacity-60' : ''}`}
+                } ${!room.is_active || optOut ? 'opacity-60' : ''}`}
               >
                 <button
                   type="button"
                   disabled={!room.is_active}
-                  onClick={() => onSelect(room.id)}
+                  // Picking a room is itself a statement that you want one, so
+                  // it lifts the opt-out rather than silently doing nothing.
+                  onClick={() => { if (optOut) onOptOutChange(false); onSelect(room.id) }}
                   className="block w-full text-left disabled:cursor-not-allowed"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}

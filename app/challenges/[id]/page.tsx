@@ -299,7 +299,7 @@ export default function ChallengePage() {
       Promise.resolve(supabase.from('book_skins').select('skin_type, image_url, cover_layout, is_animated, has_overlays, id').eq('is_default', true).eq('is_active', true)).catch(() => ({ data: null })),
       // challenge_room_id / texture_package_id drive the 3D path. Joined here so
       // the room costs no extra round trip; both are null for existing rows.
-      Promise.resolve(supabase.from('user_book_skin_preferences').select('cover_skin_id, page_skin_id, challenge_room_id, texture_package_id').eq('user_id', user.id).maybeSingle()).catch(() => ({ data: null })),
+      Promise.resolve(supabase.from('user_book_skin_preferences').select('cover_skin_id, page_skin_id, challenge_room_id, texture_package_id, challenge_room_opt_out').eq('user_id', user.id).maybeSingle()).catch(() => ({ data: null })),
       supabase.from('user_roles').select('role_id').eq('user_id', user.id).is('class_id', null),
     ])
 
@@ -354,7 +354,9 @@ export default function ChallengePage() {
     // page-native layout — so those keep the 2D book.
     const hasHenryProblem = !!readStoredHenryProblem((challengeData as any)?.henryproblem)
 
-    if (hasHenryProblem) {
+    // challenge_room_opt_out is the student saying "no room", which is not the
+    // same as having chosen nothing — that falls through to the default below.
+    if (hasHenryProblem && !userPrefData?.challenge_room_opt_out) {
       ;(async () => {
         try {
           // Selection wins; otherwise fall back to whatever an admin marked
