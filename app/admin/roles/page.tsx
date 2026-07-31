@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -27,6 +28,7 @@ interface CreateUserForm {
 }
 
 export default function AdminRolesPage() {
+  const { t } = useLanguage()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -149,7 +151,7 @@ export default function AdminRolesPage() {
       loadUsers()
     } catch (err) {
       console.error('Error assigning role:', err)
-      alert('Failed to assign role')
+      alert(t('admin.assignRoleFailed'))
     }
   }
 
@@ -173,7 +175,7 @@ export default function AdminRolesPage() {
       loadUsers()
     } catch (err) {
       console.error('Error removing role:', err)
-      alert('Failed to remove role')
+      alert(t('admin.removeRoleFailed'))
     }
   }
 
@@ -181,7 +183,7 @@ export default function AdminRolesPage() {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-6xl mx-auto">
-          <div className="animate-pulse">Loading...</div>
+          <div className="animate-pulse">{t('status.loading')}</div>
         </div>
       </div>
     )
@@ -189,7 +191,7 @@ export default function AdminRolesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 p-4 sm:p-8">
-      <PageHeader breadcrumbs={[{ label: 'Admin' }, { label: 'User Roles' }]} />
+      <PageHeader breadcrumbs={[{ label: t('admin.section') }, { label: t('admin.userRoles') }]} />
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-gray-500">{users.length} user{users.length !== 1 ? 's' : ''} total</p>
@@ -210,7 +212,7 @@ export default function AdminRolesPage() {
                     <p className="text-sm text-gray-600">{user.email}</p>
                     <div className="flex gap-2 mt-2">
                       {user.roles.length === 0 && (
-                        <Badge variant="warning">No role</Badge>
+                        <Badge variant="warning">{t('admin.noRole')}</Badge>
                       )}
                       {user.roles.map(role => (
                         <Badge
@@ -260,7 +262,7 @@ export default function AdminRolesPage() {
                 </div>
               ))}
               {users.length === 0 && (
-                <p className="text-center text-gray-500 py-8">No users found</p>
+                <p className="text-center text-gray-500 py-8">{t('admin.noUsersFound')}</p>
               )}
             </div>
           </Card.Body>
@@ -272,7 +274,7 @@ export default function AdminRolesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">Create New User</h2>
+              <h2 className="text-lg font-bold text-gray-900">{t('admin.createUser')}</h2>
               <button
                 onClick={() => setShowCreate(false)}
                 className="text-gray-400 hover:text-gray-600 text-xl leading-none"
@@ -293,7 +295,7 @@ export default function AdminRolesPage() {
             <form onSubmit={handleCreateUser} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">First name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin.firstNameReq')}</label>
                   <input
                     type="text"
                     required
@@ -304,7 +306,7 @@ export default function AdminRolesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Last name <span className="text-gray-400 font-normal">(optional)</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin.lastNameOpt')} <span className="text-gray-400 font-normal">{t('admin.optional')}</span></label>
                   <input
                     type="text"
                     value={form.lastName}
@@ -316,7 +318,7 @@ export default function AdminRolesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin.emailReq')}</label>
                 <input
                   type="email"
                   required
@@ -328,7 +330,7 @@ export default function AdminRolesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin.passwordReq')}</label>
                 <input
                   type="password"
                   required
@@ -336,21 +338,21 @@ export default function AdminRolesPage() {
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-100 outline-none"
-                  placeholder="At least 6 characters"
+                  placeholder={t('auth.passwordHint')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin.role')}</label>
                 <select
                   value={form.role}
                   onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:border-primary-500 outline-none"
                 >
-                  <option value="student">Student</option>
-                  <option value="teacher">Teacher</option>
-                  <option value="administrator">Administrator</option>
-                  <option value="">No role</option>
+                  <option value="student">{t('admin.roleStudent')}</option>
+                  <option value="teacher">{t('admin.roleTeacher')}</option>
+                  <option value="administrator">{t('admin.roleAdministrator')}</option>
+                  <option value="">{t('admin.noRole')}</option>
                 </select>
               </div>
 
@@ -369,7 +371,7 @@ export default function AdminRolesPage() {
                   ))}
                 </select>
                 {classes.length === 0 && (
-                  <p className="text-xs text-gray-400 mt-1">No active classes found</p>
+                  <p className="text-xs text-gray-400 mt-1">{t('admin.noActiveClasses')}</p>
                 )}
               </div>
 

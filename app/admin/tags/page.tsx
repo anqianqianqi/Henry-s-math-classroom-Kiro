@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
@@ -24,6 +25,7 @@ interface TagGroup {
 }
 
 export default function TagManagementPage() {
+  const { t } = useLanguage()
   const [tags, setTags] = useState<Tag[]>([])
   const [newNameEn, setNewNameEn] = useState('')
   const [newNameZh, setNewNameZh] = useState('')
@@ -249,20 +251,20 @@ export default function TagManagementPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
-        <p className="text-gray-500">Loading tags...</p>
+        <p className="text-gray-500">{t('admin.loadingTags')}</p>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
-      <PageHeader breadcrumbs={[{ label: 'Admin' }, { label: 'Tags' }]} maxWidth="max-w-4xl" />
+      <PageHeader breadcrumbs={[{ label: t('admin.section') }, { label: t('admin.tags') }]} maxWidth="max-w-4xl" />
 
       <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Create new tag */}
         <Card className="mb-6">
           <Card.Header>
-            <Card.Title>Create New Tag</Card.Title>
+            <Card.Title>{t('admin.createTag')}</Card.Title>
             <p className="text-sm text-gray-600 mt-1">
               Enter the tag name in one or both languages. An internal ID is generated automatically.
             </p>
@@ -276,7 +278,7 @@ export default function TagManagementPage() {
             <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">English Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin.englishName')}</label>
                   <input
                     type="text"
                     value={newNameEn}
@@ -312,7 +314,7 @@ export default function TagManagementPage() {
               <Card.Title>All Tags ({tags.length})</Card.Title>
               <input
                 type="text"
-                placeholder="Search tags..."
+                placeholder={t('admin.searchTags')}
                 value={tagSearch}
                 onChange={e => setTagSearch(e.target.value)}
                 className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-200 w-48"
@@ -321,7 +323,7 @@ export default function TagManagementPage() {
           </Card.Header>
           <Card.Body>
             {tags.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">No tags yet. Create your first one above.</p>
+              <p className="text-center text-gray-500 py-8">{t('admin.noTags')}</p>
             ) : (
               <div className="space-y-3">
                 {tags
@@ -370,7 +372,7 @@ export default function TagManagementPage() {
                               <span className="font-medium">{n.name}</span>
                             </span>
                           ))}
-                          {tag.names.length === 0 && <span className="text-sm text-gray-400 italic">No names set</span>}
+                          {tag.names.length === 0 && <span className="text-sm text-gray-400 italic">{t('admin.noNamesSet')}</span>}
                         </div>
                         <div className="flex gap-2 shrink-0 ml-3">
                           <button onClick={() => startEdit(tag)} className="text-sm text-primary-600 hover:text-primary-800">Edit</button>
@@ -392,7 +394,7 @@ export default function TagManagementPage() {
               <Card.Title>Tag Groups ({groups.length})</Card.Title>
               <input
                 type="text"
-                placeholder="Search groups..."
+                placeholder={t('admin.searchGroups')}
                 value={groupSearch}
                 onChange={e => setGroupSearch(e.target.value)}
                 className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-200 w-48"
@@ -413,12 +415,12 @@ export default function TagManagementPage() {
             ) : (
             <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 mb-4">
               <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-gray-900">Create New Group</h4>
+                <h4 className="font-medium text-gray-900">{t('admin.createGroup')}</h4>
                 <button onClick={() => setShowCreateGroup(false)} className="text-sm text-gray-400 hover:text-gray-600">✕</button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">English Name</label>
+                  <label className="block text-xs text-gray-500 mb-1">{t('admin.englishName')}</label>
                   <input
                     type="text"
                     value={newGroupNameEn}
@@ -439,7 +441,7 @@ export default function TagManagementPage() {
                 </div>
               </div>
               <div className="mb-3">
-                <label className="block text-xs text-gray-500 mb-1">Select Tags for this Group</label>
+                <label className="block text-xs text-gray-500 mb-1">{t('admin.selectTagsForGroup')}</label>
                 <div className="flex flex-wrap gap-2">
                   {tags.map(tag => {
                     const selected = newGroupTagIds.includes(tag.id)
@@ -465,7 +467,7 @@ export default function TagManagementPage() {
 
             {/* Existing groups */}
             {groups.length === 0 ? (
-              <p className="text-center text-gray-500 py-4">No tag groups yet.</p>
+              <p className="text-center text-gray-500 py-4">{t('admin.noGroups')}</p>
             ) : (
               <div className="space-y-3">
                 {groups
@@ -494,7 +496,7 @@ export default function TagManagementPage() {
                           </div>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 mb-1 block">Tags in Group</label>
+                          <label className="text-xs text-gray-500 mb-1 block">{t('admin.tagsInGroup')}</label>
                           <div className="flex flex-wrap gap-2">
                             {tags.map(tag => {
                               const selected = editGroupTagIds.includes(tag.id)

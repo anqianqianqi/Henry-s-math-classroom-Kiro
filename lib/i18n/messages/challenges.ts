@@ -7,11 +7,11 @@
  */
 
 export const challenges = {
-  'challenge.yourSolution': { en: 'Your Solution', zh: '你的解答' },
-  'challenge.editSolution': { en: 'Edit Your Solution', zh: '修改你的解答' },
+  'challenge.yourSolution': { en: 'Your Solution', zh: '您的解答' },
+  'challenge.editSolution': { en: 'Edit Your Solution', zh: '修改您的解答' },
   'challenge.solutionPlaceholder': {
     en: 'Write your solution here... Show your work!',
-    zh: '在这里写下你的解答……请写出解题过程！',
+    zh: '在这里写下您的解答……请写出解题过程！',
   },
   'challenge.attachImage': { en: '📷 Attach Image (Optional)', zh: '📷 添加图片（可选）' },
   'challenge.submitSolution': { en: 'Submit Solution', zh: '提交解答' },
@@ -74,7 +74,7 @@ export const challenges = {
   'challenge.greatJob': { en: 'Great job!', zh: '做得好！' },
   'challenge.canSeeOthers': {
     en: 'You can now see what others wrote',
-    zh: '现在你可以看到其他同学的解答了',
+    zh: '现在您可以看到其他同学的解答了',
   },
   'challenge.hintPlaceholder': {
     en: 'Add a hint for students...',

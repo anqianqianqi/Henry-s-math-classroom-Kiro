@@ -57,3 +57,36 @@ describe('catalog integrity', () => {
     expect(mismatched).toEqual([])
   })
 })
+
+/**
+ * Duplicate keys across message files.
+ *
+ * TypeScript rejects two identical keys in ONE object literal, which is how a
+ * duplicate got caught in admin.ts. It cannot see a key defined in two
+ * different files: catalog.ts spreads them in order, so the later file silently
+ * wins and one of the two translations is simply never used. That is invisible
+ * until somebody notices the wrong wording on screen.
+ */
+describe('message files', () => {
+  it('define each key exactly once across all files', async () => {
+    const { readdirSync, readFileSync } = await import('node:fs')
+    const dir = 'lib/i18n/messages'
+
+    const owners = new Map<string, string[]>()
+    for (const file of readdirSync(dir)) {
+      if (!file.endsWith('.ts')) continue
+      for (const line of readFileSync(`${dir}/${file}`, 'utf8').split(/\r?\n/)) {
+        const match = line.match(/^\s*'([\w.]+)':\s*\{/)
+        if (!match) continue
+        const key = match[1]
+        owners.set(key, [...(owners.get(key) ?? []), file])
+      }
+    }
+
+    const duplicated = [...owners]
+      .filter(([, files]) => files.length > 1)
+      .map(([key, files]) => `${key} in ${files.join(' + ')}`)
+
+    expect(duplicated).toEqual([])
+  })
+})

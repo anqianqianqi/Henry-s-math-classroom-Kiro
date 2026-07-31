@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import React, { useEffect, useRef, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -42,6 +43,7 @@ interface UserPrefs {
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function BookSkinsUserPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const supabase = createClient()
 
@@ -264,7 +266,7 @@ export default function BookSkinsUserPage() {
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
           <HomeButton />
           <span className="text-gray-400">/</span>
-          <h1 className="font-bold text-gray-900">Book &amp; Cover</h1>
+          <h1 className="font-bold text-gray-900">{t('skins.pageTitle')}</h1>
         </div>
       </header>
 
@@ -273,7 +275,7 @@ export default function BookSkinsUserPage() {
         {/* Intro */}
         <div className="text-center">
           <div className="text-5xl mb-3">📖</div>
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Personalise Your Book</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">{t('skins.personalise')}</h2>
           <p className="text-sm text-gray-500">
             Choose how your challenge book looks. More skins available in the shop.
           </p>
@@ -295,12 +297,12 @@ export default function BookSkinsUserPage() {
         )}
 
         {loading ? (
-          <div className="text-center py-16 text-gray-400">Loading your collection…</div>
+          <div className="text-center py-16 text-gray-400">{t('decor.loadingCollection')}</div>
         ) : (
           <>
             {/* ── Cover skin picker ── */}
             <SkinPicker
-              title="📖 Book Cover"
+              title={`📖 ${t('skins.bookCover')}`}
               description="The cover you see before opening a challenge."
               skins={coverSkins}
               selectedId={effectiveCover}
@@ -334,14 +336,14 @@ export default function BookSkinsUserPage() {
                 href="/challenge-rooms"
                 className="mt-3 inline-block rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-600"
               >
-                Open Challenge Room collection →
+                {t('skins.openRoomCollection')}
               </a>
             </div>
 
             {/* Auto-save indicator */}
             {saving && (
               <div className="fixed bottom-6 right-6 bg-amber-600 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium">
-                Saving…
+                {t('status.saving')}
               </div>
             )}
 
@@ -349,7 +351,7 @@ export default function BookSkinsUserPage() {
             <Card className="bg-blue-50 border-blue-200">
               <Card.Body>
                 <p className="text-sm text-blue-700 text-center">
-                  🛍️ More cover and page designs will be available in the <strong>Shop</strong> to unlock with your points.
+                  🛍️ {t('skins.moreInShopNote')}
                 </p>
               </Card.Body>
             </Card>
@@ -377,7 +379,7 @@ export default function BookSkinsUserPage() {
             </div>
             <div className="px-5 py-4 border-t border-gray-100 flex gap-3 sticky bottom-0 bg-white">
               <button onClick={() => setLayoutEditorSkin(null)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm">
-                Cancel
+                {t('action.cancel')}
               </button>
               <button
                 disabled={layoutSaving}
@@ -407,11 +409,11 @@ export default function BookSkinsUserPage() {
               <div>
                 <div className="font-bold text-gray-900">⚙️ {actionSkin.name}</div>
                 <div className="text-xs text-gray-400 mt-0.5">
-                  {actionSkin.skin_type === 'cover' ? '📖 Cover' : '📄 Page'} ·{' '}
-                  {actionSkin.visibility === 'public' ? '👥 Public' : '🔒 Admin only'}
-                  {actionSkin.is_default ? ' · ⭐ Default' : ''}
-                  {!actionSkin.is_active ? ' · ❌ Inactive' : ''}
-                  {actionSkin.shop_item_id ? ' · 🛍️ In shop' : ''}
+                  {actionSkin.skin_type === 'cover' ? `📖 ${t('skins.typeCover')}` : `📄 ${t('skins.typePage')}`} ·{' '}
+                  {actionSkin.visibility === 'public' ? `👥 ${t('skins.visPublic')}` : `🔒 ${t('skins.visAdminOnly')}`}
+                  {actionSkin.is_default ? ` · ⭐ ${t('skins.isDefaultTag')}` : ''}
+                  {!actionSkin.is_active ? ` · ❌ ${t('skins.inactiveTag')}` : ''}
+                  {actionSkin.shop_item_id ? ` · 🛍️ ${t('skins.inShopTag')}` : ''}
                 </div>
               </div>
               <button onClick={() => !actionWorking && setActionSkin(null)} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
@@ -427,7 +429,7 @@ export default function BookSkinsUserPage() {
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={() => adminSkinAction(actionSkin, 'set_default')} disabled={actionWorking || !!actionSkin.is_default}
                   className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-40 transition-colors">
-                  {actionSkin.is_default ? '⭐ Is Default' : 'Set default'}
+                  {actionSkin.is_default ? `⭐ ${t('skins.isDefault')}` : t('skins.setDefault')}
                 </button>
                 {actionSkin.visibility === 'public'
                   ? <button onClick={() => adminSkinAction(actionSkin, 'make_private')} disabled={actionWorking}
@@ -436,13 +438,13 @@ export default function BookSkinsUserPage() {
                       className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 transition-colors">👥 Make public</button>}
                 <button onClick={() => adminSkinAction(actionSkin, 'toggle_active')} disabled={actionWorking}
                   className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 transition-colors">
-                  {actionSkin.is_active ? 'Deactivate' : 'Activate'}
+                  {actionSkin.is_active ? t('skins.deactivate') : t('skins.activate')}
                 </button>
                 {!actionSkin.shop_item_id
                   ? <button onClick={() => setShowSellInput(v => !v)} disabled={actionWorking}
-                      className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-40 transition-colors">🛍️ Sell in shop</button>
+                      className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-40 transition-colors">🛍️ {t('skins.sellInShop')}</button>
                   : <button onClick={async () => {
-                      if (!confirm('Remove from shop?')) return
+                      if (!confirm(t('skins.removeFromShop'))) return
                       setActionWorking(true)
                       await supabase.from('shop_items').update({ is_active: false }).eq('id', actionSkin.shop_item_id!)
                       await supabase.from('book_skins').update({ shop_item_id: null }).eq('id', actionSkin.id)
@@ -451,9 +453,9 @@ export default function BookSkinsUserPage() {
                       if (fresh) setActionSkin(fresh as BookSkin)
                       setActionWorking(false)
                     }} disabled={actionWorking}
-                      className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-gray-200 bg-white text-gray-500 disabled:opacity-40 transition-colors">🛍️ In shop ✓</button>}
+                      className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-gray-200 bg-white text-gray-500 disabled:opacity-40 transition-colors">🛍️ {t('skins.inShop')} ✓</button>}
                 <button onClick={() => adminSkinAction(actionSkin, 'delete')} disabled={actionWorking}
-                  className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 transition-colors col-span-2">🗑️ Delete</button>
+                  className="py-2 px-3 rounded-xl text-sm font-semibold border-2 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 transition-colors col-span-2">🗑️ {t('skins.delete')}</button>
               </div>
               {/* Layout editor — cover skins only */}
               {actionSkin.skin_type === 'cover' && (
@@ -466,7 +468,7 @@ export default function BookSkinsUserPage() {
                   }}
                   className="w-full py-2 px-3 text-sm font-semibold rounded-xl border-2 border-dashed border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
                 >
-                  🎨 Edit Title &amp; Button Layout
+                  🎨 {t('skins.editLayout')}
                 </button>
               )}
               {/* Overlay animation editor — cover skins (always show for covers; editor handles empty state) */}
@@ -475,16 +477,16 @@ export default function BookSkinsUserPage() {
                   onClick={() => { openOverlayEditor(actionSkin); setActionSkin(null) }}
                   className="w-full py-2 px-3 text-sm font-semibold rounded-xl border-2 border-dashed border-purple-400 text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors"
                 >
-                  ✨ Animate Overlay Objects{!(actionSkin as any).has_overlays ? ' (none yet)' : ''}
+                  ✨ {t('skins.animateOverlays')}{!(actionSkin as any).has_overlays ? t('skins.noneYet') : ''}
                 </button>
               )}
               {showSellInput && (
                 <div className="flex gap-2">
                   <input type="number" min={1} value={sellPrice} onChange={e => setSellPrice(e.target.value)}
-                    placeholder="Price (points)" className="flex-1 px-3 py-2 border-2 border-amber-200 rounded-xl text-sm bg-white" />
+                    placeholder={t('skins.pricePoints')} className="flex-1 px-3 py-2 border-2 border-amber-200 rounded-xl text-sm bg-white" />
                   <button onClick={() => adminSkinAction(actionSkin, 'sell')} disabled={actionWorking || !sellPrice}
                     className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-semibold rounded-xl text-sm">
-                    {actionWorking ? '⏳' : 'List'}
+                    {actionWorking ? '⏳' : t('skins.list')}
                   </button>
                 </div>
               )}
@@ -533,6 +535,7 @@ function SkinPicker({
   isAdmin?: boolean
   onManage?: (skin: BookSkin) => void
 }) {
+  const { t } = useLanguage()
   const defaultSkin = skins.find(s => s.is_default) ?? null
 
   return (
@@ -574,7 +577,7 @@ function SkinPicker({
                 <button
                   onClick={e => { e.stopPropagation(); onManage(skin) }}
                   className="absolute top-1 right-1 z-10 text-xs bg-amber-500/90 hover:bg-amber-600 text-white px-1.5 py-0.5 rounded-md font-semibold shadow"
-                  title="Manage this skin"
+                  title={t('skins.manageThisSkin')}
                 >⚙️</button>
               )}
             </div>
@@ -585,7 +588,7 @@ function SkinPicker({
             onClick={() => window.location.href = '/shop'}
           >
             <div className="text-2xl mb-1">🛍️</div>
-            <p className="text-xs font-medium text-gray-500">More in Shop</p>
+            <p className="text-xs font-medium text-gray-500">{t('skins.moreInShop')}</p>
           </div>
         </div>
       </Card.Body>
@@ -606,6 +609,7 @@ const ZP_KEYFRAMES = buildKeyframesCSS('zp') + `
 function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
   skinId: string; coverImageUrl: string; coverLayout?: any; label: string
 }) {
+  const { t } = useLanguage()
   const [overlays, setOverlays] = React.useState<any[]>([])
 
   React.useEffect(() => {
@@ -659,7 +663,7 @@ function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
         {/* Title */}
         <div className="absolute text-center px-4 w-full" style={{ left: `${titleLayout?.x ?? 50}%`, top: `${titleLayout?.y ?? 22}%`, transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
           <h2 className="font-bold leading-snug" style={{ fontSize: titleLayout?.fontSize ?? 20, color: titleLayout?.color ?? '#2d1a00', fontFamily: '"Georgia","Times New Roman",serif', textShadow: (titleLayout?.shadow ?? true) ? '0 1px 8px rgba(255,255,255,0.6),0 0 16px rgba(0,0,0,0.4)' : undefined, letterSpacing: '0.04em' }}>
-            Challenge Title Preview
+            {t('skins.challengeTitlePreview')}
           </h2>
         </div>
         {/* Open the Book prompt */}
@@ -669,7 +673,7 @@ function ZoomPreviewCover({ skinId, coverImageUrl, coverLayout, label }: {
             textShadow: '0 1px 4px rgba(0,0,0,0.8)', background: 'rgba(40,25,5,0.72)', border: '1px solid rgba(200,160,60,0.55)',
             backdropFilter: 'blur(6px)', animation: 'zp-pulse-glow 2.5s ease-in-out infinite', pointerEvents: 'none' }}>
           <span style={{ animation: 'zp-wiggle 2s ease-in-out infinite', display: 'inline-block' }}>📜</span>
-          <span style={{ letterSpacing: '0.06em' }}>Open the Book</span>
+          <span style={{ letterSpacing: '0.06em' }}>{t('skins.openTheBook')}</span>
         </div>
       </div>
     </>
@@ -706,6 +710,7 @@ function SkinOption({
   skinId?: string
   coverLayout?: any
 }) {
+  const { t } = useLanguage()
   const [zoomOpen, setZoomOpen] = React.useState(false)
 
   return (

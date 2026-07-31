@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -21,6 +22,7 @@ interface UserEntry {
 }
 
 export default function StudentsPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const supabase = createClient()
 
@@ -114,9 +116,9 @@ export default function StudentsPage() {
   const displayCount = showAll ? allUsers.length : studentCount
 
   const roleLabel = (role?: string) => {
-    if (role === 'teacher') return <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">Teacher</span>
-    if (role === 'administrator') return <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">Admin</span>
-    if (role === 'none') return <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">No role</span>
+    if (role === 'teacher') return <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">{t('students.roleTeacher')}</span>
+    if (role === 'administrator') return <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">{t('students.roleAdmin')}</span>
+    if (role === 'none') return <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">{t('students.roleNone')}</span>
     return null
   }
 
@@ -125,7 +127,7 @@ export default function StudentsPage() {
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">📊</div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">{t('status.loading')}</p>
         </div>
       </div>
     )
@@ -134,7 +136,7 @@ export default function StudentsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       <PageHeader
-        breadcrumbs={[{ label: 'Students' }]}
+        breadcrumbs={[{ label: t('nav.students') }]}
         actions={
           <button
             onClick={() => setShowAll(v => !v)}
@@ -144,7 +146,7 @@ export default function StudentsPage() {
                 : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500'
             }`}
           >
-            {showAll ? 'All users' : 'Students only'}
+            {showAll ? t('students.allUsers') : t('students.studentsOnly')}
           </button>
         }
         maxWidth="max-w-4xl"
@@ -162,7 +164,7 @@ export default function StudentsPage() {
           </div>
           <input
             type="text"
-            placeholder="Search by name or email..."
+            placeholder={t('students.searchPlaceholder')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all bg-white"
@@ -173,7 +175,7 @@ export default function StudentsPage() {
           <Card className="text-center py-16">
             <div className="text-5xl mb-4">👥</div>
             <h3 className="text-lg font-semibold text-gray-700">
-              {search ? 'No users found' : showAll ? 'No users yet' : 'No students yet'}
+              {search ? t('students.noneFound') : showAll ? t('students.noUsers') : t('students.noStudents')}
             </h3>
           </Card>
         ) : (

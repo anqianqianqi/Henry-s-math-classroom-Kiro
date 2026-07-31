@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
@@ -42,6 +43,7 @@ interface TagGroupInfo {
 }
 
 export default function SchedulesPage() {
+  const { t } = useLanguage()
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [classes, setClasses] = useState<ClassInfo[]>([])
   const [tags, setTags] = useState<TagInfo[]>([])
@@ -236,20 +238,20 @@ export default function SchedulesPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
-        <p className="text-gray-500">Loading schedules...</p>
+        <p className="text-gray-500">{t('admin.loadingSchedules')}</p>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
-      <PageHeader breadcrumbs={[{ label: 'Admin' }, { label: 'Scheduler' }]} maxWidth="max-w-4xl" />
+      <PageHeader breadcrumbs={[{ label: t('admin.section') }, { label: t('admin.scheduler') }]} maxWidth="max-w-4xl" />
 
       <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-6">
         {/* Create new schedule */}
         <Card>
           <Card.Header>
-            <Card.Title>Create Schedule</Card.Title>
+            <Card.Title>{t('admin.createSchedule')}</Card.Title>
             <p className="text-sm text-gray-600 mt-1">
               Auto-assign challenges from selected tags to a class on a recurring schedule.
             </p>
@@ -260,20 +262,20 @@ export default function SchedulesPage() {
             <div className="space-y-4">
               {/* Class */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin.class')}</label>
                 <select
                   value={newClassId}
                   onChange={e => setNewClassId(e.target.value)}
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl bg-white"
                 >
-                  <option value="">Select a class...</option>
+                  <option value="">{t('admin.selectClass')}</option>
                   {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
 
               {/* Tags */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tags (challenge pool)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin.tagPool')}</label>
                 {tagGroups.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-2">
                     <span className="text-xs text-gray-400 self-center mr-1">Groups:</span>
@@ -304,26 +306,26 @@ export default function SchedulesPage() {
                       {tag.name}
                     </button>
                   ))}
-                  {tags.length === 0 && <p className="text-sm text-gray-400">No tags created yet. Go to Manage Tags first.</p>}
+                  {tags.length === 0 && <p className="text-sm text-gray-400">{t('admin.noTagsYet')}</p>}
                 </div>
               </div>
 
               {/* Frequency + per day */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin.frequency')}</label>
                   <select
                     value={newFrequency}
                     onChange={e => setNewFrequency(e.target.value)}
                     className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl bg-white"
                   >
-                    <option value="daily">Daily</option>
-                    <option value="weekdays">Weekdays only</option>
-                    <option value="weekly">Weekly (Mondays)</option>
+                    <option value="daily">{t('admin.freqDaily')}</option>
+                    <option value="weekdays">{t('admin.freqWeekdaysOnly')}</option>
+                    <option value="weekly">{t('admin.freqWeeklyMondays')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Challenges per day</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin.challengesPerDay')}</label>
                   <input
                     type="number"
                     min={1}
@@ -349,7 +351,7 @@ export default function SchedulesPage() {
           </Card.Header>
           <Card.Body>
             {schedules.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">No schedules yet.</p>
+              <p className="text-center text-gray-500 py-8">{t('admin.noSchedules')}</p>
             ) : (
               <div className="space-y-3">
                 {schedules.map(schedule => (
@@ -389,15 +391,15 @@ export default function SchedulesPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="text-xs text-gray-500 mb-1 block">Frequency</label>
+                            <label className="text-xs text-gray-500 mb-1 block">{t('admin.frequency')}</label>
                             <select value={editFrequency} onChange={e => setEditFrequency(e.target.value)} className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
-                              <option value="daily">Daily</option>
-                              <option value="weekdays">Weekdays</option>
-                              <option value="weekly">Weekly</option>
+                              <option value="daily">{t('admin.freqDaily')}</option>
+                              <option value="weekdays">{t('admin.freqWeekdays')}</option>
+                              <option value="weekly">{t('admin.freqWeekly')}</option>
                             </select>
                           </div>
                           <div>
-                            <label className="text-xs text-gray-500 mb-1 block">Per day</label>
+                            <label className="text-xs text-gray-500 mb-1 block">{t('admin.perDay')}</label>
                             <input type="number" min={1} max={5} value={editPerDay} onChange={e => setEditPerDay(parseInt(e.target.value) || 1)} className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm" />
                           </div>
                         </div>
@@ -445,9 +447,9 @@ export default function SchedulesPage() {
                       <div className="mt-3 pt-3 border-t border-gray-200">
                         <h4 className="text-sm font-medium text-gray-700 mb-2">📋 Assignment History</h4>
                         {historyLoading ? (
-                          <p className="text-sm text-gray-400">Loading...</p>
+                          <p className="text-sm text-gray-400">{t('status.loading')}</p>
                         ) : (historyData[schedule.id] || []).length === 0 ? (
-                          <p className="text-sm text-gray-400">No challenges assigned yet.</p>
+                          <p className="text-sm text-gray-400">{t('admin.noChallengesAssigned')}</p>
                         ) : (
                           <div className="space-y-1.5 max-h-48 overflow-y-auto">
                             {(historyData[schedule.id] || []).map((entry, idx) => (

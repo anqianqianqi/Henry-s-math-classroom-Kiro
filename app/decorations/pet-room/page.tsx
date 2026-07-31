@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useRef, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -36,6 +37,7 @@ interface SandboxState {
 }
 
 export default function PetRoomPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -437,16 +439,16 @@ export default function PetRoomPage() {
   }
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Loading...</p></div>
+    return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">{t('status.loading')}</p></div>
   }
 
   const visibleBgs = isAdmin ? backgrounds : backgrounds.filter(b => b.is_active)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
-      <PageHeader breadcrumbs={[{ label: 'Decorations', href: '/decorations' }, { label: 'Pet Room' }]} />
+      <PageHeader breadcrumbs={[{ label: t('nav.decorations'), href: '/decorations' }, { label: t('decor.petRoom') }]} />
       <main className="max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <p className="text-gray-500 mb-6">Choose a room background for your pet on the dashboard.</p>
+        <p className="text-gray-500 mb-6">{t('petRoom.intro')}</p>
 
         {/* ── Admin tools ──────────────────────────────────────────────────── */}
         {isAdmin && (
@@ -669,7 +671,7 @@ export default function PetRoomPage() {
         {visibleBgs.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <div className="text-5xl mb-4">🏠</div>
-            <p className="font-medium">No room backgrounds available yet.</p>
+            <p className="font-medium">{t('petRoom.none')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -696,9 +698,9 @@ export default function PetRoomPage() {
                         </button>
                       </div>
                     )}
-                  {isInactive && <div className="absolute inset-0 bg-gray-900/50 flex flex-col items-center justify-center gap-1"><span className="text-2xl">⚠️</span><span className="text-white text-xs font-bold bg-gray-900/70 px-2 py-1 rounded-lg">Unavailable</span></div>}
+                  {isInactive && <div className="absolute inset-0 bg-gray-900/50 flex flex-col items-center justify-center gap-1"><span className="text-2xl">⚠️</span><span className="text-white text-xs font-bold bg-gray-900/70 px-2 py-1 rounded-lg">{t('petRoom.unavailable')}</span></div>}
                     {!isPublic && isAdmin && <div className="absolute top-2 left-2 text-xs bg-gray-800/70 text-white px-2 py-0.5 rounded font-semibold">🔒 Admin only</div>}
-                    {isOwned && !isAdmin && <div className="absolute top-2 left-2 text-xs bg-purple-600/80 text-white px-2 py-0.5 rounded font-semibold">🛒 Owned</div>}
+                    {isOwned && !isAdmin && <div className="absolute top-2 left-2 text-xs bg-purple-600/80 text-white px-2 py-0.5 rounded font-semibold">🛒 {t('petRoom.owned')}</div>}
                   </div>
                   <div className={`px-4 py-3 flex items-center justify-between ${isSelected ? 'bg-primary-50' : 'bg-white'}`}>
                     <div className="min-w-0">
@@ -706,8 +708,8 @@ export default function PetRoomPage() {
                       {bg.description && <p className="text-xs text-gray-500 mt-0.5 truncate">{bg.description}</p>}
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
-                      {isSelected && <span className="text-xs font-bold text-primary-600 bg-primary-100 px-2 py-1 rounded-full">✓ Active</span>}
-                      {bg.is_default && !isSelected && !isOwned && <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">Default</span>}
+                      {isSelected && <span className="text-xs font-bold text-primary-600 bg-primary-100 px-2 py-1 rounded-full">✓ {t('petRoom.active')}</span>}
+                      {bg.is_default && !isSelected && !isOwned && <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">{t('petRoom.default')}</span>}
                       {isAdmin && (
                         <button onClick={e => { e.stopPropagation(); setActionBg(bg); setActionError(null); setShowSellInput(false); setSellPrice('') }}
                           className="text-xs px-2 py-1 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 font-semibold transition-colors">
@@ -722,8 +724,8 @@ export default function PetRoomPage() {
           </div>
         )}
 
-        {saving && <div className="fixed bottom-6 right-6 bg-primary-600 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium">Saving…</div>}
-        {photoSaving && <div className="fixed bottom-6 left-6 bg-purple-600 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium">Updating frame photo…</div>}
+        {saving && <div className="fixed bottom-6 right-6 bg-primary-600 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium">{t('status.saving')}</div>}
+        {photoSaving && <div className="fixed bottom-6 left-6 bg-purple-600 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium">{t('petRoom.updatingPhoto')}</div>}
 
         {/* ── Frame photo picker — shown if user has blindbox images ─────── */}
         {!isAdmin && blindboxImages.length > 0 && (
@@ -753,7 +755,7 @@ export default function PetRoomPage() {
                   <button
                     onClick={e => { e.stopPropagation(); setLightbox(url) }}
                     className="absolute top-1 right-1 w-6 h-6 bg-black/50 hover:bg-black/70 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="View full size"
+                    title={t('petRoom.viewFullSize')}
                   >
                     🔍
                   </button>

@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
@@ -26,6 +27,7 @@ interface ClassData {
 }
 
 export default function ExploreClassesPage() {
+  const { t } = useLanguage()
   const [classes, setClasses] = useState<ClassData[]>([])
   const [filteredClasses, setFilteredClasses] = useState<ClassData[]>([])
   const [loading, setLoading] = useState(true)
@@ -70,7 +72,7 @@ export default function ExploreClassesPage() {
 
       const classesWithTeacher = data.map((cls: any) => ({
         ...cls,
-        teacher_name: cls.profiles?.full_name || 'Unknown Teacher'
+        teacher_name: cls.profiles?.full_name || t('class.unknownTeacher')
       }))
 
       setClasses(classesWithTeacher)
@@ -107,7 +109,7 @@ export default function ExploreClassesPage() {
 
   function formatSchedule(schedule: any) {
     if (!schedule || !Array.isArray(schedule) || schedule.length === 0) {
-      return 'Schedule TBA'
+      return t('class.scheduleTba')
     }
     const first = schedule[0]
     if (schedule.length === 1) {
@@ -250,10 +252,10 @@ export default function ExploreClassesPage() {
           
           <div className="max-w-3xl mx-auto text-center mb-10">
             <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 bg-clip-text text-transparent">
-              Explore Classes
+              {t('class.explore')}
             </h1>
             <p className="text-xl text-slate-600">
-              Find the perfect class for your learning journey
+              {t('class.exploreIntro')}
             </p>
           </div>
 
@@ -263,7 +265,7 @@ export default function ExploreClassesPage() {
               <div className="flex-1 relative group">
                 <input
                   type="text"
-                  placeholder="Search by class name, teacher, or topic..."
+                  placeholder={t('class.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full px-6 py-4 pl-14 text-slate-900 bg-white rounded-xl 
@@ -290,20 +292,11 @@ export default function ExploreClassesPage() {
                          focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all 
                          text-lg font-medium cursor-pointer shadow-sm hover:shadow-md"
               >
-                <option value="all">All Grades</option>
-                <option value="K">Kindergarten</option>
-                <option value="1">Grade 1</option>
-                <option value="2">Grade 2</option>
-                <option value="3">Grade 3</option>
-                <option value="4">Grade 4</option>
-                <option value="5">Grade 5</option>
-                <option value="6">Grade 6</option>
-                <option value="7">Grade 7</option>
-                <option value="8">Grade 8</option>
-                <option value="9">Grade 9</option>
-                <option value="10">Grade 10</option>
-                <option value="11">Grade 11</option>
-                <option value="12">Grade 12</option>
+                <option value="all">{t('class.allGrades')}</option>
+                <option value="K">{t('class.kindergarten')}</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
+                  <option key={n} value={String(n)}>{t('class.grade', { n })}</option>
+                ))}
               </select>
             </div>
 
@@ -322,10 +315,10 @@ export default function ExploreClassesPage() {
         {filteredClasses.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-7xl mb-6">🔍</div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">No classes found</h2>
-            <p className="text-lg text-gray-600 mb-6">Try adjusting your search or filters</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">{t('class.noneFound')}</h2>
+            <p className="text-lg text-gray-600 mb-6">{t('class.adjustFilters')}</p>
             <Button onClick={() => { setSearchQuery(''); setSelectedGrade('all') }}>
-              Clear Filters
+              {t('class.clearFilters')}
             </Button>
           </div>
         ) : (
@@ -454,7 +447,7 @@ export default function ExploreClassesPage() {
                           }`}>
                             {spotsAvailable > 0 
                               ? `${spotsAvailable} spot${spotsAvailable !== 1 ? 's' : ''} left`
-                              : 'Class full'
+                              : t('class.full')
                             }
                           </span>
                         </div>
@@ -467,7 +460,7 @@ export default function ExploreClassesPage() {
                                text-white font-semibold rounded-xl text-center
                                transition-all duration-200 group-hover:shadow-md"
                     >
-                      View Details →
+                      {t('class.viewDetails')}
                     </button>
                   </div>
                 </div>

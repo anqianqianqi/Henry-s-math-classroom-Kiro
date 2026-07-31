@@ -18,6 +18,7 @@ export const dynamic = 'force-dynamic'
  */
 
 import { useCallback, useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -30,6 +31,7 @@ import type { BookSpec, BookTexturePackage } from '@/lib/types/challengeRoom'
 type Half = 'cover' | 'inner'
 
 export default function BookBundlesAdminPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const supabase = createClient()
 
@@ -88,7 +90,7 @@ export default function BookBundlesAdminPage() {
 
     const source = kind === 'cover' ? coverUrl : innerUrl
     if (refine && !changePrompt[kind].trim()) {
-      setError('Describe what to change before refining.')
+      setError(t('design.describeChange'))
       return
     }
 
@@ -122,7 +124,7 @@ export default function BookBundlesAdminPage() {
     setError(null)
     setSuccess(null)
     if (!coverUrl || !innerUrl) {
-      setError('Generate both the cover and the inner page before saving — a bundle is the pair.')
+      setError(t('bundle.needBoth'))
       return
     }
     if (!name.trim()) { setError('Give the bundle a name.'); return }
@@ -238,7 +240,7 @@ export default function BookBundlesAdminPage() {
         disabled={busy !== null}
         className="w-full"
       >
-        {url ? 'Regenerate' : `Generate ${label.toLowerCase()}`}
+        {url ? t('design.regenerate') : t('bundle.generateLabel', { what: label.toLowerCase() })}
       </Button>
 
       {url && (
@@ -247,7 +249,7 @@ export default function BookBundlesAdminPage() {
             rows={2}
             value={changePrompt[kind]}
             onChange={e => setChangePrompt(prev => ({ ...prev, [kind]: e.target.value }))}
-            placeholder="Refine — e.g. warmer paper, finer gold linework"
+            placeholder={t('bundle.refinePlaceholder')}
             className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-400"
           />
           <Button
@@ -258,7 +260,7 @@ export default function BookBundlesAdminPage() {
             disabled={busy !== null || !changePrompt[kind].trim()}
             className="w-full"
           >
-            Refine
+            {t('design.refine')}
           </Button>
         </div>
       )}
@@ -276,10 +278,10 @@ export default function BookBundlesAdminPage() {
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <PageHeader breadcrumbs={[{ label: 'Decorations', href: '/decorations' }, { label: 'Book Bundles' }]} />
+        <PageHeader breadcrumbs={[{ label: t('nav.decorations'), href: '/decorations' }, { label: t('bundle.pageTitle') }]} />
         <main className="mx-auto max-w-2xl px-4 py-12">
           <Card><Card.Body>
-            <p className="text-sm text-gray-600">This page is for teachers and administrators.</p>
+            <p className="text-sm text-gray-600">{t('design.teachersOnly')}</p>
           </Card.Body></Card>
         </main>
       </div>
@@ -288,7 +290,7 @@ export default function BookBundlesAdminPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
-      <PageHeader breadcrumbs={[{ label: 'Decorations', href: '/decorations' }, { label: 'Book Bundles' }]} />
+      <PageHeader breadcrumbs={[{ label: t('nav.decorations'), href: '/decorations' }, { label: t('bundle.pageTitle') }]} />
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
@@ -296,7 +298,7 @@ export default function BookBundlesAdminPage() {
             <strong>These are ChallengeRoom textures, not book skins.</strong> They wrap the
             3D book edge to edge, so they only appear for students who have a challenge room
             selected. For the flat book on the normal challenge page, use{' '}
-            <a href="/admin/book-skins" className="underline">Upload Book Skins</a> instead.
+            <a href="/admin/book-skins" className="underline">{t('bundle.uploadInstead')}</a>.
           </p>
         </div>
 
@@ -312,7 +314,7 @@ export default function BookBundlesAdminPage() {
           <Card>
             <Card.Body className="space-y-4">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-bold text-gray-900">Bundle recipe</h2>
+                <h2 className="text-lg font-bold text-gray-900">{t('bundle.recipe')}</h2>
                 <Button variant="secondary" size="sm" onClick={() => setSpec(randomBookSpec())}>
                   🎲 Randomise
                 </Button>
@@ -336,23 +338,23 @@ export default function BookBundlesAdminPage() {
               </div>
 
               <div className="space-y-3">
-                {field('Collection name', 'name')}
-                {field('Mood', 'mood')}
-                {field('Palette', 'palette')}
-                {field('Paper', 'paper')}
-                {field('Frame', 'frame')}
+                {field(t('bundle.collectionName'), 'name')}
+                {field(t('design.mood'), 'mood')}
+                {field(t('design.palette'), 'palette')}
+                {field(t('bundle.paper'), 'paper')}
+                {field(t('bundle.frame'), 'frame')}
 
                 <p className="pt-1 text-xs font-medium text-gray-500">
                   Corner clusters — cover only; the inner page stays clear of them
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  {clusterField('Top left', 0)}
-                  {clusterField('Top right', 1)}
-                  {clusterField('Bottom left', 2)}
-                  {clusterField('Bottom right', 3)}
+                  {clusterField(t('bundle.topLeft'), 0)}
+                  {clusterField(t('bundle.topRight'), 1)}
+                  {clusterField(t('bundle.bottomLeft'), 2)}
+                  {clusterField(t('bundle.bottomRight'), 3)}
                 </div>
 
-                {field('Extra art direction (optional)', 'notes', true)}
+                {field(t('bundle.extraArt'), 'notes', true)}
               </div>
             </Card.Body>
           </Card>
@@ -360,7 +362,7 @@ export default function BookBundlesAdminPage() {
           {/* ── The pair ───────────────────────────────────────────────── */}
           <Card>
             <Card.Body className="space-y-4">
-              <h2 className="text-lg font-bold text-gray-900">Cover &amp; inner page</h2>
+              <h2 className="text-lg font-bold text-gray-900">{t('bundle.coverAndInner')}</h2>
               <div className="grid grid-cols-2 gap-4">
                 {half('cover', coverUrl, 'Cover', 'Shows on the closed book. Four corner clusters, empty centre.')}
                 {half('inner', innerUrl, 'Inner page', 'Both open pages. Must stay ~75% blank — the problem is printed onto it.')}
@@ -373,29 +375,29 @@ export default function BookBundlesAdminPage() {
         {(coverUrl || innerUrl) && (
           <Card>
             <Card.Body className="space-y-4">
-              <h2 className="text-lg font-bold text-gray-900">Save bundle</h2>
+              <h2 className="text-lg font-bold text-gray-900">{t('bundle.save')}</h2>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Name</label>
+                  <label className="text-xs font-medium text-gray-600">{t('design.name')}</label>
                   <input type="text" value={name} onChange={e => setName(e.target.value)}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Description (optional)</label>
+                  <label className="text-xs font-medium text-gray-600">{t('design.descriptionOptional')}</label>
                   <input type="text" value={description} onChange={e => setDescription(e.target.value)}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Visibility</label>
+                  <label className="text-xs font-medium text-gray-600">{t('design.visibility')}</label>
                   <select value={visibility} onChange={e => setVisibility(e.target.value as 'admin_only' | 'public')}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900">
-                    <option value="admin_only">Admin only</option>
-                    <option value="public">Public</option>
+                    <option value="admin_only">{t('design.adminOnly')}</option>
+                    <option value="public">{t('design.public')}</option>
                   </select>
                 </div>
               </div>
               <Button variant="primary" onClick={save} isLoading={saving} disabled={saving || !coverUrl || !innerUrl}>
-                Save bundle
+                {t('bundle.save')}
               </Button>
               {(!coverUrl || !innerUrl) && (
                 <p className="text-xs text-amber-700">
@@ -412,7 +414,7 @@ export default function BookBundlesAdminPage() {
           <Card.Body className="space-y-3">
             <h2 className="text-lg font-bold text-gray-900">Saved bundles ({packages.length})</h2>
             {packages.length === 0 ? (
-              <p className="text-sm text-gray-400">No bundles yet.</p>
+              <p className="text-sm text-gray-400">{t('bundle.none')}</p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {packages.map(pkg => (
@@ -434,7 +436,7 @@ export default function BookBundlesAdminPage() {
                         </span>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="secondary" size="sm" onClick={() => reopen(pkg)}>Reopen</Button>
+                        <Button variant="secondary" size="sm" onClick={() => reopen(pkg)}>{t('design.reopen')}</Button>
                         <Button variant="ghost" size="sm" onClick={() => toggleActive(pkg)}>
                           {pkg.is_active ? 'Deactivate' : 'Activate'}
                         </Button>

@@ -15,7 +15,7 @@ export const settings = {
   'settings.nickname': { en: 'Nickname (shown to classmates)', zh: '昵称（同学看到的名字）' },
   'settings.nicknameHint': {
     en: 'Optional — displayed instead of your full name to other students',
-    zh: '可选——其他同学会看到昵称而不是你的全名',
+    zh: '可选——其他同学会看到昵称而不是您的全名',
   },
   'settings.saveProfile': { en: 'Save Profile', zh: '保存资料' },
   'settings.saved': { en: 'Saved!', zh: '已保存！' },

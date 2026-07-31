@@ -196,12 +196,12 @@ export function MyBubblesPanel({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-900">
-            🫧 My Bubbles
+            🫧 {t('myBubbles.mine')}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('action.close')}
             className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
           >
             ✕
@@ -210,20 +210,23 @@ export function MyBubblesPanel({
 
         {/* Tabs */}
         <div className="flex border-b border-gray-100">
-          {(['active', 'expired'] as const).map((t) => (
+          {/* `tabKey`, not `t` — `t` is the translate function in this scope. */}
+          {(['active', 'expired'] as const).map((tabKey) => (
             <button
-              key={t}
+              key={tabKey}
               type="button"
-              onClick={() => setTab(t)}
+              onClick={() => setTab(tabKey)}
               className={`
                 flex-1 py-2.5 text-sm font-medium transition-colors
-                ${tab === t
+                ${tab === tabKey
                   ? 'border-b-2 border-primary-500 text-primary-600'
                   : 'text-gray-500 hover:text-gray-700'
                 }
               `}
             >
-              {t === 'active' ? `Active (${active.length})` : `Expired (${expired.length})`}
+              {tabKey === 'active'
+                ? t('myBubbles.tabActive', { count: active.length })
+                : t('myBubbles.tabExpired', { count: expired.length })}
             </button>
           ))}
         </div>
@@ -236,7 +239,7 @@ export function MyBubblesPanel({
             </div>
           ) : displayed.length === 0 ? (
             <div className="py-12 text-center text-sm text-gray-400">
-              {tab === 'active' ? 'No active bubbles.' : 'No expired bubbles.'}
+              {tab === 'active' ? t('myBubbles.noneActive') : t('myBubbles.noneExpired')}
             </div>
           ) : (
             displayed.map((b) => {
@@ -272,7 +275,7 @@ export function MyBubblesPanel({
                       )}
                       {isActive ? (
                         <span className="text-xs text-emerald-600 bg-emerald-50 rounded-full px-2 py-0.5">
-                          Expires in {daysUntil(b.expires_at)}d
+                          {t('myBubbles.expiresIn', { days: daysUntil(b.expires_at) })}
                         </span>
                       ) : (
                         <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
@@ -300,7 +303,7 @@ export function MyBubblesPanel({
                           transition-colors
                         "
                       >
-                        {busy ? '…' : 'Expire'}
+                        {busy ? '…' : t('myBubbles.expire')}
                       </button>
                     ) : (
                       <button
@@ -315,14 +318,14 @@ export function MyBubblesPanel({
                           transition-colors
                         "
                       >
-                        {busy ? '…' : '↻ Revive'}
+                        {busy ? '…' : `↻ ${t('myBubbles.revive')}`}
                       </button>
                     )}
                     <button
                       type="button"
                       disabled={busy}
                       onClick={() => handleDelete(b.id)}
-                      title="Delete permanently"
+                      title={t('myBubbles.deletePermanently')}
                       className="
                         text-xs font-medium
                         px-2.5 py-1.5 rounded-lg

@@ -16,6 +16,7 @@ export const dynamic = 'force-dynamic'
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import dynamicImport from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
@@ -64,6 +65,7 @@ interface TexturePackageOption {
 }
 
 export default function ChallengeRoomsAdminPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const supabase = createClient()
 
@@ -156,7 +158,7 @@ export default function ChallengeRoomsAdminPage() {
       return
     }
     if (refine && !changePrompt.trim()) {
-      setError('Describe what to change before refining.')
+      setError(t('design.describeChange'))
       return
     }
 
@@ -195,7 +197,7 @@ export default function ChallengeRoomsAdminPage() {
     setSuccess(null)
 
     if (!plateUrl) {
-      setError('Generate a room plate first.')
+      setError(t('roomAdmin.needPlate'))
       return
     }
     if (!roomName.trim()) {
@@ -315,11 +317,11 @@ export default function ChallengeRoomsAdminPage() {
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <PageHeader breadcrumbs={[{ label: 'Decorations', href: '/decorations' }, { label: 'Challenge Rooms' }]} />
+        <PageHeader breadcrumbs={[{ label: t('nav.decorations'), href: '/decorations' }, { label: t('roomAdmin.pageTitle') }]} />
         <main className="mx-auto max-w-2xl px-4 py-12">
           <Card>
             <Card.Body>
-              <p className="text-sm text-gray-600">This page is for teachers and administrators.</p>
+              <p className="text-sm text-gray-600">{t('design.teachersOnly')}</p>
             </Card.Body>
           </Card>
         </main>
@@ -330,7 +332,7 @@ export default function ChallengeRoomsAdminPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       <PageHeader
-        breadcrumbs={[{ label: 'Decorations', href: '/decorations' }, { label: 'Challenge Rooms' }]}
+        breadcrumbs={[{ label: t('nav.decorations'), href: '/decorations' }, { label: t('roomAdmin.pageTitle') }]}
       />
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
@@ -340,7 +342,7 @@ export default function ChallengeRoomsAdminPage() {
 
         {!modelUrl && (
           <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
-            <p className="text-sm font-semibold text-amber-800">Book model not configured</p>
+            <p className="text-sm font-semibold text-amber-800">{t('roomAdmin.modelMissing')}</p>
             <p className="mt-1 text-xs text-amber-700">{MODEL_SETUP_HINT}</p>
           </div>
         )}
@@ -361,7 +363,7 @@ export default function ChallengeRoomsAdminPage() {
           <Card>
             <Card.Body className="space-y-4">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-bold text-gray-900">Room recipe</h2>
+                <h2 className="text-lg font-bold text-gray-900">{t('roomAdmin.recipe')}</h2>
                 <Button variant="secondary" size="sm" onClick={() => setSpec(randomRoomSpec())}>
                   🎲 Randomise
                 </Button>
@@ -385,20 +387,20 @@ export default function ChallengeRoomsAdminPage() {
               </div>
 
               <div className="space-y-3">
-                {field('Theme name', 'name')}
-                {field('Mood', 'mood')}
-                {field('Palette', 'palette')}
-                {field('Architecture', 'architecture', true)}
-                {field('Materials', 'materials')}
-                {field('Lighting', 'lighting')}
-                {field('Outside the window', 'outsideView')}
-                {field('Decorative accent', 'accent')}
+                {field(t('roomAdmin.themeName'), 'name')}
+                {field(t('design.mood'), 'mood')}
+                {field(t('design.palette'), 'palette')}
+                {field(t('roomAdmin.architecture'), 'architecture', true)}
+                {field(t('roomAdmin.materials'), 'materials')}
+                {field(t('roomAdmin.lighting'), 'lighting')}
+                {field(t('roomAdmin.outsideView'), 'outsideView')}
+                {field(t('roomAdmin.accent'), 'accent')}
 
                 <div className="grid grid-cols-2 gap-3">
-                  {objectField('Left object 1', 'leftObjects', 0)}
-                  {objectField('Left object 2', 'leftObjects', 1)}
-                  {objectField('Right object 1', 'rightObjects', 0)}
-                  {objectField('Right object 2', 'rightObjects', 1)}
+                  {objectField(t('roomAdmin.leftObject', { n: 1 }), 'leftObjects', 0)}
+                  {objectField(t('roomAdmin.leftObject', { n: 2 }), 'leftObjects', 1)}
+                  {objectField(t('roomAdmin.rightObject', { n: 1 }), 'rightObjects', 0)}
+                  {objectField(t('roomAdmin.rightObject', { n: 2 }), 'rightObjects', 1)}
                 </div>
 
                 {field('Extra art direction (optional)', 'notes', true)}
@@ -411,7 +413,7 @@ export default function ChallengeRoomsAdminPage() {
                 disabled={generating}
                 className="w-full"
               >
-                {plateUrl ? 'Generate a new plate' : 'Generate room plate'}
+                {plateUrl ? t('roomAdmin.generateNewPlate') : t('roomAdmin.generatePlate')}
               </Button>
 
               {plateUrl && (
@@ -423,7 +425,7 @@ export default function ChallengeRoomsAdminPage() {
                     rows={2}
                     value={changePrompt}
                     onChange={e => setChangePrompt(e.target.value)}
-                    placeholder="e.g. make the lamp warmer and add more depth to the window reveal"
+                    placeholder={t('roomAdmin.refinePlaceholder')}
                     className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-400"
                   />
                   <Button
@@ -434,7 +436,7 @@ export default function ChallengeRoomsAdminPage() {
                     disabled={generating || !changePrompt.trim()}
                     className="w-full"
                   >
-                    Refine
+                    {t('design.refine')}
                   </Button>
                 </div>
               )}
@@ -445,7 +447,7 @@ export default function ChallengeRoomsAdminPage() {
           <div className="space-y-4">
             <Card>
               <Card.Body className="space-y-3">
-                <h2 className="text-lg font-bold text-gray-900">Book placement</h2>
+                <h2 className="text-lg font-bold text-gray-900">{t('roomAdmin.placement')}</h2>
 
                 {!plateUrl ? (
                   <div
@@ -480,20 +482,20 @@ export default function ChallengeRoomsAdminPage() {
                       onPlayingChange={setPlaying}
                     />
                     <p className="text-xs text-gray-400">
-                      Drag the book to move it · scroll to scale
+                      {t('roomAdmin.dragHint')}
                     </p>
                   </>
                 )}
 
                 {packages.length > 0 && plateUrl && modelUrl && (
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600">Preview with book package</label>
+                    <label className="text-xs font-medium text-gray-600">{t('roomAdmin.previewWithPackage')}</label>
                     <select
                       value={packageId}
                       onChange={e => setPackageId(e.target.value)}
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
                     >
-                      <option value="">Plain pages (no package)</option>
+                      <option value="">{t('roomAdmin.plainPages')}</option>
                       {packages.map(p => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
@@ -525,7 +527,7 @@ export default function ChallengeRoomsAdminPage() {
                       ⏭ Open spread
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => setPlacement(DEFAULT_PLACEMENT)}>
-                      Reset placement
+                      {t('roomAdmin.resetPlacement')}
                     </Button>
                   </div>
 
@@ -586,10 +588,10 @@ export default function ChallengeRoomsAdminPage() {
         {plateUrl && (
           <Card>
             <Card.Body className="space-y-4">
-              <h2 className="text-lg font-bold text-gray-900">Save room</h2>
+              <h2 className="text-lg font-bold text-gray-900">{t('roomAdmin.save')}</h2>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Name</label>
+                  <label className="text-xs font-medium text-gray-600">{t('design.name')}</label>
                   <input
                     type="text"
                     value={roomName}
@@ -598,7 +600,7 @@ export default function ChallengeRoomsAdminPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Description (optional)</label>
+                  <label className="text-xs font-medium text-gray-600">{t('design.descriptionOptional')}</label>
                   <input
                     type="text"
                     value={roomDescription}
@@ -607,19 +609,19 @@ export default function ChallengeRoomsAdminPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Visibility</label>
+                  <label className="text-xs font-medium text-gray-600">{t('design.visibility')}</label>
                   <select
                     value={visibility}
                     onChange={e => setVisibility(e.target.value as 'admin_only' | 'public')}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
                   >
-                    <option value="admin_only">Admin only</option>
-                    <option value="public">Public</option>
+                    <option value="admin_only">{t('design.adminOnly')}</option>
+                    <option value="public">{t('design.public')}</option>
                   </select>
                 </div>
               </div>
               <Button variant="primary" onClick={save} isLoading={saving} disabled={saving}>
-                Save challenge room
+                {t('roomAdmin.save')}
               </Button>
               {compiledPrompt && (
                 <details className="text-xs text-gray-500">
@@ -638,7 +640,7 @@ export default function ChallengeRoomsAdminPage() {
           <Card.Body className="space-y-3">
             <h2 className="text-lg font-bold text-gray-900">Saved rooms ({rooms.length})</h2>
             {rooms.length === 0 ? (
-              <p className="text-sm text-gray-400">No challenge rooms yet.</p>
+              <p className="text-sm text-gray-400">{t('roomAdmin.none')}</p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {rooms.map(room => (
@@ -656,7 +658,7 @@ export default function ChallengeRoomsAdminPage() {
                         </span>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="secondary" size="sm" onClick={() => editRoom(room)}>Retune</Button>
+                        <Button variant="secondary" size="sm" onClick={() => editRoom(room)}>{t('roomAdmin.retune')}</Button>
                         <Button variant="ghost" size="sm" onClick={() => toggleActive(room)}>
                           {room.is_active ? 'Deactivate' : 'Activate'}
                         </Button>

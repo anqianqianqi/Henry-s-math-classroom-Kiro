@@ -16,6 +16,7 @@ export const dynamic = 'force-dynamic'
  */
 
 import { useCallback, useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -30,6 +31,7 @@ interface Prefs {
 }
 
 export default function ChallengeRoomsPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const supabase = createClient()
 
@@ -92,14 +94,12 @@ export default function ChallengeRoomsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
-      <PageHeader breadcrumbs={[{ label: 'Decorations', href: '/decorations' }, { label: 'Challenge Room' }]} />
+      <PageHeader breadcrumbs={[{ label: t('nav.decorations'), href: '/decorations' }, { label: t('decor.roomHeading') }]} />
 
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
         <p className="mb-6 text-sm text-gray-500">
-          The Challenge Room replaces the flat book with a 3D room and an animated book.
-          It appears on desktop, on challenges imported from a .henryproblem file. Without
-          a room selected you get the usual book from{' '}
-          <a href="/book-skins" className="text-primary-600 underline">Book Cover &amp; Page</a>.
+          {t('roomPage.introA')}{' '}
+          <a href="/book-skins" className="text-primary-600 underline">{t('roomPage.introLink')}</a>{t('roomPage.introB')}
         </p>
 
         {error && (
@@ -109,7 +109,7 @@ export default function ChallengeRoomsPage() {
         )}
 
         {loading ? (
-          <div className="py-16 text-center text-gray-400">Loading your collection…</div>
+          <div className="py-16 text-center text-gray-400">{t('decor.loadingCollection')}</div>
         ) : (
           <>
             <RoomCollection

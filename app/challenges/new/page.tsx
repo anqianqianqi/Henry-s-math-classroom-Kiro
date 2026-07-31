@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -29,6 +30,7 @@ interface Class {
 }
 
 export default function NewChallengePage() {
+  const { t, language } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -49,7 +51,8 @@ export default function NewChallengePage() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [tags, setTags] = useState<string[]>([])
   const [availableTags, setAvailableTags] = useState<TagOption[]>([])
-  const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
+  // Follows the site-wide switcher; there is no second language control.
+  const tagLang = language
   const [maxPoints, setMaxPoints] = useState(100)
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   const [allStudents, setAllStudents] = useState<Array<{id: string, name: string, email?: string}>>([])
@@ -1000,17 +1003,6 @@ export default function NewChallengePage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">Tags (Optional)</label>
-                  <select
-                    value={tagLang}
-                    onChange={e => {
-                      const lang = e.target.value as 'en' | 'zh'
-                      setTagLang(lang)
-                    }}
-                    className="text-xs px-2 py-1 border border-gray-200 rounded-lg"
-                  >
-                    <option value="en">EN</option>
-                    <option value="zh">CN</option>
-                  </select>
                 </div>
                 <TagInput
                   selectedTagIds={tags}
