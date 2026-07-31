@@ -174,6 +174,29 @@ export const plainHenryTheme: HenrySheetTheme = {
   },
 }
 
+/**
+ * For the 3D challenge room: the worksheet sits directly on the book's own
+ * page art, so it must not paint a page of its own. Paper and card go fully
+ * transparent and the borders soften to ink-on-paper rules, leaving the
+ * botanical inner-page texture showing through behind the wording.
+ *
+ * Text colours are untouched — the page art is a warm cream, the same surface
+ * the palette's ink was chosen against.
+ */
+export const pageNativeHenryTheme: HenrySheetTheme = {
+  palette: {
+    ...henryPalette,
+    paper: 'transparent',
+    card: 'transparent',
+    border: 'rgba(100,60,10,0.22)',
+  },
+  header: {
+    ...defaultHenryTheme.header,
+    // The header strip is the one surface that keeps a fill: it is the
+    // worksheet's identity and reads as a printed banner, not a floating card.
+  },
+}
+
 /** Resolve a palette key plus optional opacity to a CSS colour. */
 export function themeColor(
   palette: HenryPalette,

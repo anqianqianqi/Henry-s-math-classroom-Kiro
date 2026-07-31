@@ -9,6 +9,8 @@ import { localDateString, localDateOffset } from '@/lib/utils/date'
 import { HomeButton } from '@/components/ui/HomeButton'
 import { ChallengeBookShell, type ChallengeScene } from '@/components/challenge-room/ChallengeBookShell'
 import { HenryProblemSheet } from '@/components/HenryProblemSheet'
+import { pageNativeHenryTheme } from '@/lib/henry-theme'
+import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import { readStoredHenryProblem } from '@/lib/henryproblem'
 import { useUserBadges } from '@/lib/hooks/useUserBadges'
 import { UserNameWithBadges } from '@/components/UserNameWithBadges'
@@ -117,6 +119,7 @@ export default function ChallengePage() {
   // 3D challenge room — only set when the student has selected one. Null keeps
   // the page on the existing 2D MagicBookReveal path.
   const [challengeScene, setChallengeScene] = useState<ChallengeScene | null>(null)
+  const isDesktop = useIsDesktop()
   // TA grading state — richer type with streaming progress + suggestion solution
   const [taGrades, setTaGrades] = useState<Record<string, {
     suggested_score: number; max_score: number; confidence: number
@@ -343,7 +346,15 @@ export default function ChallengePage() {
     // ── 3D challenge room ─────────────────────────────────────────────────
     // Fire-and-forget: if anything here fails or is unset, challengeScene stays
     // null and the page renders the existing 2D book.
-    if (userPrefData?.challenge_room_id) {
+    //
+    // Gated on the challenge carrying a .henryproblem snapshot. The room's
+    // pages present title / score / tags / graph / bilingual wording as
+    // structured fields laid straight onto the paper; a challenge without that
+    // snapshot has only free-form description and image_url, which has no
+    // page-native layout — so those keep the 2D book.
+    const hasHenryProblem = !!readStoredHenryProblem((challengeData as any)?.henryproblem)
+
+    if (userPrefData?.challenge_room_id && hasHenryProblem) {
       ;(async () => {
         try {
           const [roomResult, packageResult] = await Promise.all([
@@ -1341,6 +1352,12 @@ export default function ChallengePage() {
   // Challenges imported from a .henryproblem render as the Henry worksheet
   // instead of the plain description + image pair.
   const henrySheet = readStoredHenryProblem((challenge as any).henryproblem)
+  /**
+   * True when this render goes through the 3D room. The problem and solution
+   * then sit directly on the book's page art, so every surface that would
+   * otherwise paint its own card has to go transparent.
+   */
+  const onBookPage = !!challengeScene && isDesktop
 
   const hasSubmitted = !!userSubmission
   const canSeeOthers = (hasSubmitted && userSubmission?.is_locked) || isTeacher
@@ -1458,7 +1475,7 @@ export default function ChallengePage() {
             <>{hasSubmitted && !isEditing ? (
               <>
               {/* Show submitted solution */}
-              <Card className="mb-4 border-2 border-primary-500">
+              <Card className={onBookPage ? 'mb-4 !bg-transparent !shadow-none border-2 border-[rgba(100,60,10,0.3)] hover:!shadow-none hover:!translate-y-0' : 'mb-4 border-2 border-primary-500'}>
                 <Card.Header>
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <Card.Title className="flex items-center gap-2 flex-wrap">
@@ -1537,21 +1554,23 @@ export default function ChallengePage() {
               </>
             ) : (
               // Show submission form
-              <Card className="mb-4">
-                <Card.Header>
+              <Card className={onBookPage ? 'mb-4 !bg-transparent !shadow-none !border-0 hover:!shadow-none hover:!translate-y-0' : 'mb-4'}>
+                <Card.Header className={onBookPage ? '!border-b-0 !px-0' : ''}>
                   <Card.Title className="flex items-center gap-2">
                     <span>✍️</span>
                     {hasSubmitted ? 'Edit Your Solution' : 'Your Solution'}
                   </Card.Title>
                 </Card.Header>
-                <Card.Body>
+                <Card.Body className={onBookPage ? '!px-0' : ''}>
                   <textarea
                     value={solution}
                     onChange={(e) => setSolution(e.target.value)}
                     placeholder="Write your solution here... Show your work!"
-                    className="w-full h-48 p-4 border-2 border-gray-200 rounded-2xl 
-                             focus:border-primary-500 focus:ring-2 focus:ring-primary-200
-                             resize-none transition-colors"
+                    className={`w-full h-48 p-4 border-2 rounded-2xl resize-none transition-colors focus:ring-2 ${
+                      onBookPage
+                        ? 'bg-transparent border-[rgba(100,60,10,0.28)] text-[#2d1a00] placeholder-[rgba(100,60,10,0.45)] focus:border-[rgba(100,60,10,0.5)] focus:ring-[rgba(100,60,10,0.15)]'
+                        : 'border-gray-200 focus:border-primary-500 focus:ring-primary-200'
+                    }`}
                   />
                   <div className="mt-3">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1736,7 +1755,7 @@ export default function ChallengePage() {
                   </div>
                 ) : (
                   <div className="flex items-start gap-2">
-                    <div className="flex-1 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <div className={`flex-1 p-3 border rounded-xl ${onBookPage ? 'bg-transparent border-[rgba(180,120,40,0.35)]' : 'bg-amber-50 border-amber-200'}`}>
                       <p className="text-xs font-medium text-amber-600 mb-1">💡 Hint</p>
                       {challenge.hint && (
                         <p className="text-sm text-amber-800 whitespace-pre-wrap mb-2">{challenge.hint}</p>
