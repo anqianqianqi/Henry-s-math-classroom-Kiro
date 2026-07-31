@@ -78,4 +78,6 @@ export const auth = {
   'auth.newPassword': { en: 'New Password', zh: '新密码' },
   'auth.confirmNewPassword': { en: 'Confirm New Password', zh: '确认新密码' },
   'auth.updatePassword': { en: 'Update Password', zh: '更新密码' },
+  'auth.signingIn': { en: 'Signing in…', zh: '正在登录…' },
+  'auth.signingOut': { en: 'Signing out…', zh: '正在退出…' },
 } as const

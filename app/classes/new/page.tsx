@@ -3,11 +3,24 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { generateOccurrences } from '@/lib/utils/occurrences'
+
+/** Weekday values as stored, paired with their catalog key. */
+const DAY_KEYS = [
+  ['Monday', 'day.monday'],
+  ['Tuesday', 'day.tuesday'],
+  ['Wednesday', 'day.wednesday'],
+  ['Thursday', 'day.thursday'],
+  ['Friday', 'day.friday'],
+  ['Saturday', 'day.saturday'],
+  ['Sunday', 'day.sunday'],
+] as const
+
 
 interface ScheduleSlot {
   id: string
@@ -17,6 +30,7 @@ interface ScheduleSlot {
 }
 
 export default function NewClassPage() {
+  const { t } = useLanguage()
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -289,7 +303,7 @@ export default function NewClassPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 Class Created!
               </h2>
-              <p className="text-gray-600">Redirecting to your new class...</p>
+              <p className="text-gray-600">{t('classForm.redirecting')}</p>
             </div>
           </div>
         </div>
@@ -303,7 +317,7 @@ export default function NewClassPage() {
               ←
             </Button>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">New Class</h1>
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">{t('classForm.newClass')}</h1>
             </div>
           </div>
         </div>
@@ -317,7 +331,7 @@ export default function NewClassPage() {
                 <div className="p-4 bg-red-50 border-2 border-red-200 rounded-2xl flex items-start gap-3">
                   <span className="text-2xl">⚠️</span>
                   <div className="flex-1">
-                    <p className="font-semibold text-red-900">Oops!</p>
+                    <p className="font-semibold text-red-900">{t('classForm.oops')}</p>
                     <p className="text-sm text-red-700">{error}</p>
                   </div>
                 </div>
@@ -327,7 +341,7 @@ export default function NewClassPage() {
               <div>
                 <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                   <span>✨</span>
-                  <span>Class Name</span>
+                  <span>{t('classForm.className')}</span>
                   <span className="text-red-500">*</span>
                   {validFields.name && <span className="text-primary-500">✅</span>}
                 </label>
@@ -338,7 +352,7 @@ export default function NewClassPage() {
                     setFormData({ ...formData, name: e.target.value })
                     validateField('name', e.target.value)
                   }}
-                  placeholder="e.g., Algebra 1 - Spring 2026"
+                  placeholder={t('classForm.classNamePlaceholder')}
                   className={`w-full p-4 text-lg border-2 rounded-2xl 
                            focus:border-primary-500 focus:ring-4 focus:ring-primary-100
                            transition-all duration-200 ${
@@ -350,7 +364,7 @@ export default function NewClassPage() {
                 {showValidationErrors && !validFields.name && (
                   <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
                     <span>⚠️</span>
-                    <span>Class name is required (at least 3 characters)</span>
+                    <span>{t('classForm.classNameRequired')}</span>
                   </p>
                 )}
               </div>
@@ -359,13 +373,13 @@ export default function NewClassPage() {
               <div>
                 <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                   <span>📝</span>
-                  <span>Description</span>
+                  <span>{t('class.description')}</span>
                   <span className="text-sm font-normal text-gray-500">(optional)</span>
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Brief description of what students will learn..."
+                  placeholder={t('classForm.descriptionPlaceholder')}
                   rows={4}
                   maxLength={500}
                   className="w-full p-4 text-lg border-2 border-gray-200 rounded-2xl 
@@ -386,7 +400,7 @@ export default function NewClassPage() {
               <div>
                 <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                   <span>📅</span>
-                  <span>Class Schedule</span>
+                  <span>{t('classForm.schedule')}</span>
                   <span className="text-red-500">*</span>
                   {validFields.schedule && <span className="text-primary-500">✅</span>}
                 </label>
@@ -418,14 +432,10 @@ export default function NewClassPage() {
                                      focus:border-primary-500 focus:ring-4 focus:ring-primary-100
                                      transition-all duration-200 bg-white"
                           >
-                            <option value="">Select day...</option>
-                            <option value="Monday">Monday</option>
-                            <option value="Tuesday">Tuesday</option>
-                            <option value="Wednesday">Wednesday</option>
-                            <option value="Thursday">Thursday</option>
-                            <option value="Friday">Friday</option>
-                            <option value="Saturday">Saturday</option>
-                            <option value="Sunday">Sunday</option>
+                            <option value="">{t('classForm.selectDay')}</option>
+                            {DAY_KEYS.map(([value, key]) => (
+                              <option key={value} value={value}>{t(key)}</option>
+                            ))}
                           </select>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
@@ -478,13 +488,13 @@ export default function NewClassPage() {
                            rounded-xl transition-colors font-medium"
                 >
                   <span>➕</span>
-                  <span>Add Another Meeting Time</span>
+                  <span>{t('classForm.addMeeting')}</span>
                 </button>
 
                 {!validFields.schedule && scheduleSlots.every(s => !s.day && !s.startTime && !s.endTime) && (
                   <p className="mt-2 text-sm text-gray-500 flex items-center gap-2">
                     <span>💡</span>
-                    <span>Add at least one meeting time</span>
+                    <span>{t('classForm.needMeeting')}</span>
                   </p>
                 )}
               </div>
@@ -493,7 +503,7 @@ export default function NewClassPage() {
               <div>
                 <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                   <span>🗓️</span>
-                  <span>Class Dates</span>
+                  <span>{t('classForm.classDates')}</span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -519,7 +529,7 @@ export default function NewClassPage() {
                     {showValidationErrors && !validFields.start_date && (
                       <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
                         <span>⚠️</span>
-                        <span>Start date is required</span>
+                        <span>{t('classForm.startRequired')}</span>
                       </p>
                     )}
                   </div>
@@ -582,7 +592,7 @@ export default function NewClassPage() {
                     <div>
                       <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                         <span>🖼️</span>
-                        <span>Cover Image</span>
+                        <span>{t('classForm.coverImage')}</span>
                         <span className="text-sm font-normal text-gray-500">(recommended)</span>
                       </label>
                       {coverImagePreview ? (
@@ -626,12 +636,12 @@ export default function NewClassPage() {
                     <div>
                       <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                         <span>🎯</span>
-                        <span>Who is this class for?</span>
+                        <span>{t('classForm.whoFor')}</span>
                       </label>
                       <textarea
                         value={formData.target_audience}
                         onChange={(e) => setFormData({ ...formData, target_audience: e.target.value })}
-                        placeholder="Describe the ideal student for this class..."
+                        placeholder={t('classForm.whoForPlaceholder')}
                         rows={3}
                         className="w-full p-4 border-2 border-gray-200 rounded-xl 
                                  focus:border-primary-500 focus:ring-4 focus:ring-primary-100
@@ -649,7 +659,7 @@ export default function NewClassPage() {
                           type="text"
                           value={formData.age_range}
                           onChange={(e) => setFormData({ ...formData, age_range: e.target.value })}
-                          placeholder="e.g., Grades 3-5 or Ages 8-10"
+                          placeholder={t('classForm.ageRangePlaceholder')}
                           className="w-full p-3 border-2 border-gray-200 rounded-xl 
                                    focus:border-primary-500 focus:ring-4 focus:ring-primary-100
                                    transition-all duration-200"
@@ -666,10 +676,10 @@ export default function NewClassPage() {
                                    focus:border-primary-500 focus:ring-4 focus:ring-primary-100
                                    transition-all duration-200 bg-white"
                         >
-                          <option value="">Select level...</option>
-                          <option value="beginner">Beginner</option>
-                          <option value="intermediate">Intermediate</option>
-                          <option value="advanced">Advanced</option>
+                          <option value="">{t('classForm.selectLevel')}</option>
+                          <option value="beginner">{t('classForm.beginner')}</option>
+                          <option value="intermediate">{t('classForm.intermediate')}</option>
+                          <option value="advanced">{t('classForm.advanced')}</option>
                         </select>
                       </div>
                     </div>
@@ -678,13 +688,13 @@ export default function NewClassPage() {
                     <div>
                       <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                         <span>📋</span>
-                        <span>Prerequisites</span>
+                        <span>{t('classForm.prerequisites')}</span>
                         <span className="text-sm font-normal text-gray-500">(optional)</span>
                       </label>
                       <textarea
                         value={formData.prerequisites}
                         onChange={(e) => setFormData({ ...formData, prerequisites: e.target.value })}
-                        placeholder="Any required knowledge or skills..."
+                        placeholder={t('classForm.prerequisitesPlaceholder')}
                         rows={2}
                         className="w-full p-4 border-2 border-gray-200 rounded-xl 
                                  focus:border-primary-500 focus:ring-4 focus:ring-primary-100
@@ -696,12 +706,12 @@ export default function NewClassPage() {
                     <div>
                       <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                         <span>📚</span>
-                        <span>Syllabus / What&apos;s Included</span>
+                        <span>{t('classForm.syllabus')}</span>
                       </label>
                       <textarea
                         value={formData.syllabus}
                         onChange={(e) => setFormData({ ...formData, syllabus: e.target.value })}
-                        placeholder="Course topics, modules, and what students will learn..."
+                        placeholder={t('classForm.syllabusPlaceholder')}
                         rows={5}
                         className="w-full p-4 border-2 border-gray-200 rounded-xl 
                                  focus:border-primary-500 focus:ring-4 focus:ring-primary-100
@@ -713,7 +723,7 @@ export default function NewClassPage() {
                     <div>
                       <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                         <span>🎓</span>
-                        <span>Learning Objectives</span>
+                        <span>{t('classForm.objectives')}</span>
                         <span className="text-sm font-normal text-gray-500">(optional)</span>
                       </label>
                       <div className="space-y-3">
@@ -747,7 +757,7 @@ export default function NewClassPage() {
                                  rounded-xl transition-colors font-medium"
                       >
                         <span>➕</span>
-                        <span>Add Objective</span>
+                        <span>{t('classForm.addObjective')}</span>
                       </button>
                     </div>
 
@@ -760,7 +770,7 @@ export default function NewClassPage() {
                         <textarea
                           value={formData.materials_provided}
                           onChange={(e) => setFormData({ ...formData, materials_provided: e.target.value })}
-                          placeholder="Worksheets, textbooks, etc."
+                          placeholder={t('classForm.materialsPlaceholder')}
                           rows={3}
                           className="w-full p-3 border-2 border-gray-200 rounded-xl 
                                    focus:border-primary-500 focus:ring-4 focus:ring-primary-100
@@ -774,7 +784,7 @@ export default function NewClassPage() {
                         <textarea
                           value={formData.homework_expectations}
                           onChange={(e) => setFormData({ ...formData, homework_expectations: e.target.value })}
-                          placeholder="Time commitment, frequency..."
+                          placeholder={t('classForm.commitmentPlaceholder')}
                           rows={3}
                           className="w-full p-3 border-2 border-gray-200 rounded-xl 
                                    focus:border-primary-500 focus:ring-4 focus:ring-primary-100
@@ -787,13 +797,13 @@ export default function NewClassPage() {
                     <div>
                       <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                         <span>👨‍🏫</span>
-                        <span>About the Teacher</span>
+                        <span>{t('classForm.aboutTeacher')}</span>
                         <span className="text-sm font-normal text-gray-500">(optional)</span>
                       </label>
                       <textarea
                         value={formData.teacher_bio}
                         onChange={(e) => setFormData({ ...formData, teacher_bio: e.target.value })}
-                        placeholder="Your qualifications, experience, and teaching approach..."
+                        placeholder={t('classForm.aboutTeacherPlaceholder')}
                         rows={4}
                         className="w-full p-4 border-2 border-gray-200 rounded-xl 
                                  focus:border-primary-500 focus:ring-4 focus:ring-primary-100
@@ -810,7 +820,7 @@ export default function NewClassPage() {
                         type="text"
                         value={formData.teaching_style}
                         onChange={(e) => setFormData({ ...formData, teaching_style: e.target.value })}
-                        placeholder="e.g., Interactive, Project-based, Lecture-style"
+                        placeholder={t('classForm.teachingStylePlaceholder')}
                         className="w-full p-3 border-2 border-gray-200 rounded-xl 
                                  focus:border-primary-500 focus:ring-4 focus:ring-primary-100
                                  transition-all duration-200"

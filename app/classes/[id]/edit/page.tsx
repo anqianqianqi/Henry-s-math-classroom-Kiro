@@ -1,11 +1,24 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { FormField } from '@/components/ui/FormField'
 import { HomeButton } from '@/components/ui/HomeButton'
+
+/** Weekday values as stored, paired with their catalog key. */
+const DAY_KEYS = [
+  ['Monday', 'day.monday'],
+  ['Tuesday', 'day.tuesday'],
+  ['Wednesday', 'day.wednesday'],
+  ['Thursday', 'day.thursday'],
+  ['Friday', 'day.friday'],
+  ['Saturday', 'day.saturday'],
+  ['Sunday', 'day.sunday'],
+] as const
+
 
 interface ScheduleSlot {
   id: string
@@ -15,6 +28,7 @@ interface ScheduleSlot {
 }
 
 export default function EditClassPage() {
+  const { t } = useLanguage()
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -285,7 +299,7 @@ export default function EditClassPage() {
             </Button>
             <HomeButton />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Edit Class</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('classForm.editClass')}</h1>
         </div>
 
         <Card>
@@ -298,12 +312,12 @@ export default function EditClassPage() {
               )}
 
               <FormField 
-                label="Class Name" 
+                label={t('classForm.className')} 
                 required
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Algebra 1 - Spring 2026"
+                placeholder={t('classForm.classNamePlaceholder')}
               />
 
               <div>
@@ -313,7 +327,7 @@ export default function EditClassPage() {
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Brief description of the class..."
+                  placeholder={t('classForm.descriptionPlaceholder')}
                   rows={4}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -340,14 +354,10 @@ export default function EditClassPage() {
                             onChange={(e) => updateScheduleSlot(slot.id, 'day', e.target.value)}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           >
-                            <option value="">Select day...</option>
-                            <option value="Monday">Monday</option>
-                            <option value="Tuesday">Tuesday</option>
-                            <option value="Wednesday">Wednesday</option>
-                            <option value="Thursday">Thursday</option>
-                            <option value="Friday">Friday</option>
-                            <option value="Saturday">Saturday</option>
-                            <option value="Sunday">Sunday</option>
+                            <option value="">{t('classForm.selectDay')}</option>
+                            {DAY_KEYS.map(([value, key]) => (
+                              <option key={value} value={value}>{t(key)}</option>
+                            ))}
                           </select>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
@@ -396,13 +406,13 @@ export default function EditClassPage() {
                            rounded-lg transition-colors font-medium text-sm"
                 >
                   <span>➕</span>
-                  <span>Add Another Meeting Time</span>
+                  <span>{t('classForm.addMeeting')}</span>
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField 
-                  label="Start Date" 
+                  label={t('class.startDate')} 
                   required
                   type="date"
                   value={formData.start_date}
@@ -410,7 +420,7 @@ export default function EditClassPage() {
                 />
 
                 <FormField 
-                  label="End Date"
+                  label={t('class.endDate')}
                   type="date"
                   value={formData.end_date}
                   onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
@@ -445,8 +455,8 @@ export default function EditClassPage() {
                     className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                   />
                   <label htmlFor="is_public" className="flex-1 cursor-pointer">
-                    <div className="font-semibold text-gray-900">Make this class public</div>
-                    <div className="text-sm text-gray-600">Allow parents to discover and request trial classes</div>
+                    <div className="font-semibold text-gray-900">{t('classForm.makePublic')}</div>
+                    <div className="text-sm text-gray-600">{t('classForm.makePublicHint')}</div>
                   </label>
                 </div>
 
@@ -489,7 +499,7 @@ export default function EditClassPage() {
                           />
                           <label htmlFor="cover-image" className="cursor-pointer">
                             <div className="text-3xl mb-2">📸</div>
-                            <div className="text-sm text-gray-600">Click to upload (max 5MB)</div>
+                            <div className="text-sm text-gray-600">{t('classForm.uploadHint')}</div>
                           </label>
                         </div>
                       )}
@@ -502,7 +512,7 @@ export default function EditClassPage() {
                       <textarea
                         value={formData.target_audience}
                         onChange={(e) => setFormData({ ...formData, target_audience: e.target.value })}
-                        placeholder="Describe the ideal student..."
+                        placeholder={t('classForm.whoForPlaceholder')}
                         rows={3}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
@@ -510,11 +520,11 @@ export default function EditClassPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <FormField 
-                        label="Age/Grade Range"
+                        label={t('classForm.ageRange')}
                         type="text"
                         value={formData.age_range}
                         onChange={(e) => setFormData({ ...formData, age_range: e.target.value })}
-                        placeholder="e.g., Grades 3-5"
+                        placeholder={t('classForm.ageRangePlaceholder')}
                       />
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -526,9 +536,9 @@ export default function EditClassPage() {
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Select...</option>
-                          <option value="beginner">Beginner</option>
-                          <option value="intermediate">Intermediate</option>
-                          <option value="advanced">Advanced</option>
+                          <option value="beginner">{t('classForm.beginner')}</option>
+                          <option value="intermediate">{t('classForm.intermediate')}</option>
+                          <option value="advanced">{t('classForm.advanced')}</option>
                         </select>
                       </div>
                     </div>
@@ -540,7 +550,7 @@ export default function EditClassPage() {
                       <textarea
                         value={formData.prerequisites}
                         onChange={(e) => setFormData({ ...formData, prerequisites: e.target.value })}
-                        placeholder="Required knowledge or skills..."
+                        placeholder={t('classForm.prerequisitesPlaceholder')}
                         rows={2}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
@@ -553,7 +563,7 @@ export default function EditClassPage() {
                       <textarea
                         value={formData.syllabus}
                         onChange={(e) => setFormData({ ...formData, syllabus: e.target.value })}
-                        placeholder="Course topics and what students will learn..."
+                        placeholder={t('classForm.syllabusPlaceholder')}
                         rows={4}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
@@ -602,7 +612,7 @@ export default function EditClassPage() {
                         <textarea
                           value={formData.materials_provided}
                           onChange={(e) => setFormData({ ...formData, materials_provided: e.target.value })}
-                          placeholder="Worksheets, textbooks..."
+                          placeholder={t('classForm.materialsPlaceholder')}
                           rows={2}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
@@ -614,7 +624,7 @@ export default function EditClassPage() {
                         <textarea
                           value={formData.homework_expectations}
                           onChange={(e) => setFormData({ ...formData, homework_expectations: e.target.value })}
-                          placeholder="Time commitment..."
+                          placeholder={t('classForm.commitmentPlaceholder')}
                           rows={2}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
@@ -628,23 +638,23 @@ export default function EditClassPage() {
                       <textarea
                         value={formData.teacher_bio}
                         onChange={(e) => setFormData({ ...formData, teacher_bio: e.target.value })}
-                        placeholder="Your qualifications and experience..."
+                        placeholder={t('classForm.aboutTeacherPlaceholder')}
                         rows={3}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
 
                     <FormField 
-                      label="Teaching Style (optional)"
+                      label={t('classForm.teachingStyle')}
                       type="text"
                       value={formData.teaching_style}
                       onChange={(e) => setFormData({ ...formData, teaching_style: e.target.value })}
-                      placeholder="e.g., Interactive, Project-based"
+                      placeholder={t('classForm.teachingStylePlaceholder')}
                     />
 
                     <div className="grid grid-cols-3 gap-4">
                       <FormField 
-                        label="Max Students"
+                        label={t('classForm.maxStudents')}
                         type="number"
                         value={formData.max_students}
                         onChange={(e) => setFormData({ ...formData, max_students: e.target.value })}
@@ -652,7 +662,7 @@ export default function EditClassPage() {
                         min="1"
                       />
                       <FormField 
-                        label="Price ($)"
+                        label={t('classForm.price')}
                         type="number"
                         value={formData.price}
                         onChange={(e) => setFormData({ ...formData, price: e.target.value })}
@@ -661,15 +671,15 @@ export default function EditClassPage() {
                         step="0.01"
                       />
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('classForm.location')}</label>
                         <select
                           value={formData.location}
                           onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                         >
                           <option value="">Select...</option>
-                          <option value="Online">Online</option>
-                          <option value="In-person">In-person</option>
+                          <option value="Online">{t('classForm.online')}</option>
+                          <option value="In-person">{t('classForm.inPerson')}</option>
                           <option value="Hybrid">Hybrid</option>
                         </select>
                       </div>
