@@ -131,6 +131,9 @@ export default function ChallengePage() {
   // the page on the existing 2D MagicBookReveal path.
   const [challengeScene, setChallengeScene] = useState<ChallengeScene | null>(null)
   const isDesktop = useIsDesktop()
+  // Whether this reader turned the room off, kept so the page can say WHY it is
+  // showing the flat book rather than leaving it to be guessed.
+  const [roomOptOut, setRoomOptOut] = useState(false)
   // TA grading state — richer type with streaming progress + suggestion solution
   const [taGrades, setTaGrades] = useState<Record<string, {
     suggested_score: number; max_score: number; confidence: number
@@ -364,6 +367,7 @@ export default function ChallengePage() {
     // snapshot has only free-form description and image_url, which has no
     // page-native layout — so those keep the 2D book.
     const hasHenryProblem = !!readStoredHenryProblem((challengeData as any)?.henryproblem)
+    setRoomOptOut(!!userPrefData?.challenge_room_opt_out)
 
     // challenge_room_opt_out is the student saying "no room", which is not the
     // same as having chosen nothing — that falls through to the default below.
@@ -1487,6 +1491,32 @@ export default function ChallengePage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Why the flat book, for teachers only.
+
+            The 3D path needs four things at once and silently falls back when
+            any is missing, which is right for students — a misconfiguration
+            should degrade, not break — but it leaves an author with no way to
+            tell "this challenge has no snapshot" from "the window is too
+            narrow". Both look like the old book. */}
+        {isTeacher && !onBookPage && (
+          <p className="mb-3 text-xs text-gray-400">
+            Flat book:{' '}
+            {!henrySheet
+              ? (challenge as any).henryproblem
+                /* The column being non-null is not the same as the snapshot
+                   being usable — readStoredHenryProblem parses it and can
+                   reject it. Conflating the two sends you looking at the wrong
+                   thing, since a SQL null-check says the snapshot is fine. */
+                ? 'this challenge stores a .henryproblem snapshot, but it could not be read — so the room has no page-native layout to print. Re-importing the file should repair it.'
+                : 'this challenge has no .henryproblem snapshot. Re-import it from a .henryproblem file to use the room.'
+              : roomOptOut
+                ? 'you turned the challenge room off in Decorations.'
+                : !isDesktop
+                  ? `the window is ${typeof window !== 'undefined' ? window.innerWidth : 0}px wide; the room needs 768px. It is desktop-only so tablets never download the 3D model.`
+                  : 'no challenge room is selected and no default is set.'}
+          </p>
         )}
 
         {/* Challenge Card — ChallengeBookShell picks the 3D room when the student
