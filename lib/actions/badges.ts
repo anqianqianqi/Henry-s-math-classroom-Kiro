@@ -424,7 +424,7 @@ export async function revokeBadge(
     if (!user) return { error: 'Unauthorized' }
     if (!(await isTeacherOrAdmin(supabase, user.id))) return { error: 'Unauthorized' }
 
-    // Fetch to get user_id + badge info for notification
+    // Fetch to get user_id + badge info for notification (regular client is fine for read)
     const { data: ub } = await supabase
       .from('user_badges')
       .select('user_id, badge:badge_definitions(name, emoji)')
@@ -434,7 +434,14 @@ export async function revokeBadge(
 
     if (!ub) return { error: 'Active badge not found.' }
 
-    const { error } = await supabase
+    // Use service role to bypass RLS for the UPDATE
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js')
+    const serviceSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+
+    const { error } = await serviceSupabase
       .from('user_badges')
       .update({ revoked_at: new Date().toISOString(), revoked_by: user.id })
       .eq('id', userBadgeId)
