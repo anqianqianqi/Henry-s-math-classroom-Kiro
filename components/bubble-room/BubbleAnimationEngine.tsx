@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { weightedShuffle } from '@/lib/utils/bubbleRoom'
 import type { BubbleInstance, BubbleQuestion } from '@/lib/types/bubbleRoom'
 import { QuestionBubble } from './QuestionBubble'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 export interface BubbleAnimationEngineProps {
   questions: BubbleQuestion[]
@@ -72,6 +73,7 @@ export function BubbleAnimationEngine({
   onAskQuestion,
   searchQuery = '',
 }: BubbleAnimationEngineProps) {
+  const { t } = useLanguage()
   const [visible, setVisible] = useState<BubbleInstance[]>([])
   const cycleQueueRef = useRef<BubbleQuestion[]>([])
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -193,9 +195,9 @@ export function BubbleAnimationEngine({
         </div>
 
         <div className="text-center space-y-2">
-          <h3 className="text-xl font-semibold text-gray-800">No questions yet!</h3>
+          <h3 className="text-xl font-semibold text-gray-800">{t('bubble.noQuestions')}</h3>
           <p className="text-sm text-gray-500 max-w-xs">
-            Be the first to ask a question. Your bubble will float up for everyone to see.
+            {t('bubble.beFirst')}
           </p>
         </div>
 
@@ -211,7 +213,7 @@ export function BubbleAnimationEngine({
               focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2
             "
           >
-            Ask the First Question
+            {t('bubble.askFirst')}
           </button>
         )}
       </div>
@@ -222,7 +224,7 @@ export function BubbleAnimationEngine({
   return (
     <div
       className="relative w-full h-full overflow-hidden"
-      aria-label="Bubble animation area"
+      aria-label={t('bubble.animationArea')}
       aria-live="polite"
       aria-relevant="additions"
     >

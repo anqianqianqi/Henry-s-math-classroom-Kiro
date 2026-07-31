@@ -52,4 +52,122 @@ export const bubbleRoom = {
   'bubble.noResults': { en: 'No questions found for', zh: '没有找到相关问题：' },
   'bubble.challenge': { en: 'Challenge', zh: '挑战题' },
   'bubble.linkedToChallenge': { en: 'Linked to current challenge', zh: '已关联当前挑战题' },
+
+  // ── Duplicate warning ────────────────────────────────────
+  'bubble.duplicateIntroOne': {
+    en: 'Before posting, take a look at this similar question. It might already have the answer you need!',
+    zh: '发布前先看看这个相似的问题吧，答案可能已经在里面了！',
+  },
+  'bubble.duplicateIntroMany': {
+    en: 'Before posting, take a look at these similar questions. They might already have the answer you need!',
+    zh: '发布前先看看这些相似的问题吧，答案可能已经在里面了！',
+  },
+  'bubble.byAuthor': { en: 'by {name}', zh: '由 {name} 提问' },
+  'bubble.percentSimilar': { en: '{percent}% similar', zh: '相似度 {percent}%' },
+
+  // ── Assigned tray ────────────────────────────────────────
+  'bubble.assignedTitle': { en: 'Assigned to You', zh: '指派给你的问题' },
+  'bubble.assignedCounts': {
+    en: '{pending} pending · {responded} responded',
+    zh: '{pending} 个待回复 · {responded} 个已回复',
+  },
+  'bubble.refresh': { en: 'Refresh', zh: '刷新' },
+  'bubble.noneAssigned': {
+    en: 'No questions assigned to you yet',
+    zh: '还没有指派给你的问题',
+  },
+  'bubble.allCaughtUp': {
+    en: 'All caught up — no pending questions',
+    zh: '全部完成——没有待回复的问题',
+  },
+  'bubble.respondedCount': { en: 'Responded ({count})', zh: '已回复（{count}）' },
+  'bubble.hide': { en: 'hide', zh: '收起' },
+  'bubble.show': { en: 'show', zh: '展开' },
+  'bubble.pendingBadge': { en: 'Pending', zh: '待回复' },
+  'bubble.doneBadge': { en: 'Done', zh: '已完成' },
+  'bubble.byAuthorOn': { en: 'by {name} · {date}', zh: '{name} · {date}' },
+
+  // ── Room top bar and TA badge ────────────────────────────
+  'bubble.applyTaTitle': { en: 'Apply to be a Bubble Room TA', zh: '申请成为泡泡问答室助教' },
+  'bubble.applyTa': { en: 'Apply TA', zh: '申请助教' },
+  'bubble.taStatusTitle': { en: 'View your TA application status', zh: '查看你的助教申请状态' },
+  'bubble.taPending': { en: 'Pending…', zh: '审核中…' },
+  'bubble.reviewTaTitle': { en: 'Review TA Applications', zh: '审核助教申请' },
+  'bubble.taApps': { en: 'TA Apps', zh: '助教申请' },
+  'bubble.assignedTitleAttr': { en: 'Questions assigned to you', zh: '指派给你的问题' },
+  'bubble.assigned': { en: 'Assigned', zh: '指派' },
+  'bubble.loadingAuthor': { en: 'Loading…', zh: '加载中…' },
+
+  // ── Search results ───────────────────────────────────────
+  'bubble.noResultsFor': {
+    en: 'No questions found for “{query}”',
+    zh: '没有找到与“{query}”相关的问题',
+  },
+  'bubble.askAbout': { en: 'Ask about “{query}”', zh: '提问“{query}”' },
+
+  // ── Composition form ─────────────────────────────────────
+  'bubble.postAQuestion': { en: 'Post a question', zh: '发布问题' },
+  'bubble.attachImage': { en: 'Attach image', zh: '添加图片' },
+  'bubble.removeImage': { en: 'Remove image', zh: '移除图片' },
+  'bubble.errImageType': {
+    en: 'Only JPEG, PNG, GIF, or WebP images are allowed.',
+    zh: '只支持 JPEG、PNG、GIF 或 WebP 格式的图片。',
+  },
+  'bubble.errImageSize': { en: 'Image must be 10 MB or smaller.', zh: '图片不能超过 10 MB。' },
+  'bubble.errNoTitle': {
+    en: 'Please enter a title for your question.',
+    zh: '请为你的问题填写标题。',
+  },
+  'bubble.errNoText': {
+    en: 'Please enter your question before submitting.',
+    zh: '请先写下你的问题再提交。',
+  },
+  'bubble.errTextTooLong': {
+    en: 'Question must be {max} characters or fewer.',
+    zh: '问题不能超过 {max} 个字符。',
+  },
+  'bubble.errTitleTooLong': {
+    en: 'Title must be 120 characters or fewer.',
+    zh: '标题不能超过 120 个字符。',
+  },
+
+  // ── Search bar ───────────────────────────────────────────
+  'bubble.searchPlaceholder': { en: 'Search questions…', zh: '搜索问题……' },
+  'bubble.clearSearch': { en: 'Clear search', zh: '清除搜索' },
+  'bubble.suggestions': { en: 'Question suggestions', zh: '问题建议' },
+  'bubble.showMore': { en: 'Show more', zh: '显示更多' },
+
+  // ── Question detail ──────────────────────────────────────
+  'bubble.openChallenge': { en: 'Open full challenge in new tab', zh: '在新标签页打开完整挑战题' },
+  'bubble.viewQuestionImage': { en: 'View full question image', zh: '查看问题原图' },
+  'bubble.viewResponseImage': { en: 'View full response image', zh: '查看回复原图' },
+  'bubble.loadingResponses': { en: 'Loading responses', zh: '正在加载回复' },
+  'bubble.postAResponse': { en: 'Post a response', zh: '发布回复' },
+  'bubble.attachResponseImage': { en: 'Attach image to response', zh: '为回复添加图片' },
+  'bubble.deleteThisQuestion': { en: 'Delete this question', zh: '删除这个问题' },
+  'bubble.deleting': { en: 'Deleting…', zh: '正在删除…' },
+  'bubble.errResponseEmpty': { en: 'Response cannot be empty.', zh: '回复内容不能为空。' },
+  'bubble.errPostResponse': {
+    en: 'Failed to post your response. Please try again.',
+    zh: '回复发布失败，请重试。',
+  },
+  'bubble.errDelete': { en: 'Failed to delete. Please try again.', zh: '删除失败，请重试。' },
+
+  // ── TA application ───────────────────────────────────────
+  'bubble.taBlurb': {
+    en: 'Bubble Room TAs help other students by answering questions. Your application will be reviewed by a teacher.',
+    zh: '泡泡问答室助教通过回答问题来帮助其他同学。你的申请将由老师审核。',
+  },
+  'bubble.taPitchPlaceholder': {
+    en: "Tell the teacher a bit about yourself and why you'd make a good TA…",
+    zh: '简单介绍一下你自己，以及你为什么适合当助教……',
+  },
+  'bubble.taSubmitApplication': { en: 'Submit Application', zh: '提交申请' },
+  'bubble.taWaiting': {
+    en: 'Waiting for a teacher to review your application.',
+    zh: '正在等待老师审核你的申请。',
+  },
+  'bubble.taYourPitch': { en: 'Your pitch', zh: '你的自荐' },
+  'bubble.taNoPitch': { en: 'No pitch submitted.', zh: '没有提交自荐内容。' },
+  'bubble.animationArea': { en: 'Bubble animation area', zh: '泡泡动画区域' },
 } as const

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { CommentThread } from '@/components/CommentThread'
+import { TranslatedContent } from '@/components/TranslatedContent'
 import { localDateString, localDateOffset } from '@/lib/utils/date'
 import { HomeButton } from '@/components/ui/HomeButton'
 import { ChallengeBookShell, type ChallengeScene } from '@/components/challenge-room/ChallengeBookShell'
@@ -34,6 +35,9 @@ interface Submission {
   id: string
   user_id: string
   content: string
+  /** Stored translations, filled on first read in the other language. */
+  content_en?: string | null
+  content_zh?: string | null
   image_url?: string | null
   points?: number | null
   is_locked?: boolean
@@ -49,6 +53,9 @@ interface Comment {
   submission_id: string
   user_id: string
   content: string
+  /** Stored translations, cleared on edit so they cannot describe old wording. */
+  content_en?: string | null
+  content_zh?: string | null
   image_url?: string | null
   created_at: string
   profiles: {
@@ -124,6 +131,9 @@ export default function ChallengePage() {
   // the page on the existing 2D MagicBookReveal path.
   const [challengeScene, setChallengeScene] = useState<ChallengeScene | null>(null)
   const isDesktop = useIsDesktop()
+  // Whether this reader turned the room off, kept so the page can say WHY it is
+  // showing the flat book rather than leaving it to be guessed.
+  const [roomOptOut, setRoomOptOut] = useState(false)
   // TA grading state — richer type with streaming progress + suggestion solution
   const [taGrades, setTaGrades] = useState<Record<string, {
     suggested_score: number; max_score: number; confidence: number
@@ -357,6 +367,7 @@ export default function ChallengePage() {
     // snapshot has only free-form description and image_url, which has no
     // page-native layout — so those keep the 2D book.
     const hasHenryProblem = !!readStoredHenryProblem((challengeData as any)?.henryproblem)
+    setRoomOptOut(!!userPrefData?.challenge_room_opt_out)
 
     // challenge_room_opt_out is the student saying "no room", which is not the
     // same as having chosen nothing — that falls through to the default below.
@@ -652,7 +663,16 @@ export default function ChallengePage() {
   async function handleEditComment(commentId: string, newContent: string) {
     const { error } = await supabase
       .from('submission_comments')
-      .update({ content: newContent })
+      .update({
+        content: newContent,
+        // Clear the translations with the text they were made from, or a reader
+        // in the other language keeps seeing the version before the edit — with
+        // no sign anything changed. Blanking them makes the next read
+        // regenerate against the new wording.
+        content_en: null,
+        content_zh: null,
+        content_lang: null,
+      })
       .eq('id', commentId)
       .eq('user_id', userId!) // only own comments
 
@@ -661,7 +681,9 @@ export default function ChallengePage() {
         const updated = { ...prev }
         for (const subId in updated) {
           updated[subId] = updated[subId].map(c =>
-            c.id === commentId ? { ...c, content: newContent } : c
+            c.id === commentId
+              ? { ...c, content: newContent, content_en: null, content_zh: null }
+              : c
           )
         }
         return updated
@@ -1471,6 +1493,32 @@ export default function ChallengePage() {
           </div>
         )}
 
+        {/* Why the flat book, for teachers only.
+
+            The 3D path needs four things at once and silently falls back when
+            any is missing, which is right for students — a misconfiguration
+            should degrade, not break — but it leaves an author with no way to
+            tell "this challenge has no snapshot" from "the window is too
+            narrow". Both look like the old book. */}
+        {isTeacher && !onBookPage && (
+          <p className="mb-3 text-xs text-gray-400">
+            Flat book:{' '}
+            {!henrySheet
+              ? (challenge as any).henryproblem
+                /* The column being non-null is not the same as the snapshot
+                   being usable — readStoredHenryProblem parses it and can
+                   reject it. Conflating the two sends you looking at the wrong
+                   thing, since a SQL null-check says the snapshot is fine. */
+                ? 'this challenge stores a .henryproblem snapshot, but it could not be read — so the room has no page-native layout to print. Re-importing the file should repair it.'
+                : 'this challenge has no .henryproblem snapshot. Re-import it from a .henryproblem file to use the room.'
+              : roomOptOut
+                ? 'you turned the challenge room off in Decorations.'
+                : !isDesktop
+                  ? `the window is ${typeof window !== 'undefined' ? window.innerWidth : 0}px wide; the room needs 768px. It is desktop-only so tablets never download the 3D model.`
+                  : 'no challenge room is selected and no default is set.'}
+          </p>
+        )}
+
         {/* Challenge Card — ChallengeBookShell picks the 3D room when the student
             has one selected on desktop, otherwise the 2D MagicBookReveal book */}
         <ChallengeBookShell
@@ -1526,9 +1574,14 @@ export default function ChallengePage() {
                   </div>
                 </Card.Header>
                 <Card.Body>
-                  <p className="text-gray-700 whitespace-pre-wrap mb-3">
-                    {userSubmission.content}
-                  </p>
+                  <TranslatedContent
+                    kind="submission"
+                    id={userSubmission.id}
+                    content={userSubmission.content}
+                    contentEn={userSubmission.content_en}
+                    contentZh={userSubmission.content_zh}
+                    className="text-gray-700 whitespace-pre-wrap mb-3"
+                  />
                   {userSubmission.image_url && (
                     <img src={userSubmission.image_url} alt="Solution" className="max-w-full max-h-64 rounded-lg border mb-3" />
                   )}
@@ -1982,9 +2035,14 @@ export default function ChallengePage() {
                               {formatTimeAgo(submission.submitted_at)}
                             </p>
                           </div>
-                          <p className="text-gray-700 whitespace-pre-wrap mb-3">
-                            {submission.content}
-                          </p>
+                          <TranslatedContent
+                            kind="submission"
+                            id={submission.id}
+                            content={submission.content}
+                            contentEn={submission.content_en}
+                            contentZh={submission.content_zh}
+                            className="text-gray-700 whitespace-pre-wrap mb-3"
+                          />
                           {submission.image_url && (
                             <img src={submission.image_url} alt="Solution" className="max-w-full max-h-64 rounded-lg border mb-3" />
                           )}

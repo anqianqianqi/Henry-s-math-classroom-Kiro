@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import { Card } from '@/components/ui/Card'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 export default function SignUpPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [nickname, setNickname] = useState('')
@@ -24,12 +26,12 @@ export default function SignUpPage() {
 
     // Validation
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError(t('auth.passwordsDoNotMatch'))
       return
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError(t('auth.passwordTooShort'))
       return
     }
 
@@ -51,13 +53,13 @@ export default function SignUpPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error ?? 'An unexpected error occurred')
+        setError(data.error ?? t('auth.unexpectedError'))
         return
       }
 
       setEmailSent(true)
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError(t('auth.unexpectedError'))
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -71,13 +73,13 @@ export default function SignUpPage() {
           href="/login"
           className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 py-2 px-3 -ml-3 rounded-lg active:bg-gray-100"
         >
-          ← Back
+          ← {t('action.back')}
         </a>
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
-            Henry&apos;s Math Classroom
+            {t('auth.appName')}
           </h1>
-          <p className="mt-2 text-gray-600">Create your account</p>
+          <p className="mt-2 text-gray-600">{t('auth.signUpSubtitle')}</p>
         </div>
 
         {emailSent ? (
@@ -85,16 +87,15 @@ export default function SignUpPage() {
             <Card.Body>
               <div className="text-center py-6 space-y-4">
                 <span className="text-5xl">📧</span>
-                <h2 className="text-xl font-semibold text-gray-900">Check your email</h2>
+                <h2 className="text-xl font-semibold text-gray-900">{t('auth.checkEmail')}</h2>
                 <p className="text-gray-600">
-                  We sent a confirmation link to <span className="font-medium">{email}</span>.
-                  Click the link in the email to activate your account.
+                  {t('auth.confirmationSent', { email })}
                 </p>
                 <p className="text-sm text-gray-500">
-                  Didn&apos;t receive it? Check your spam folder.
+                  {t('auth.didNotReceive')}
                 </p>
                 <a href="/login" className="text-blue-600 hover:underline text-sm">
-                  Go to Sign In
+                  {t('auth.goToSignIn')}
                 </a>
               </div>
             </Card.Body>
@@ -111,7 +112,7 @@ export default function SignUpPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <FormField
-                  label="First Name"
+                  label={t('auth.firstName')}
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
@@ -120,7 +121,7 @@ export default function SignUpPage() {
                 />
 
                 <FormField
-                  label="Last Name"
+                  label={t('auth.lastName')}
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
@@ -130,16 +131,16 @@ export default function SignUpPage() {
               </div>
 
               <FormField
-                label="Nickname (shown to classmates)"
+                label={t('auth.nickname')}
                 type="text"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 placeholder="e.g. Johnny"
-                helperText="Optional — displayed instead of your full name to other students"
+                helperText={t('auth.nicknameHint')}
               />
 
               <FormField
-                label="Email"
+                label={t('auth.email')}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -148,17 +149,17 @@ export default function SignUpPage() {
               />
 
               <FormField
-                label="Password"
+                label={t('auth.password')}
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                helperText="At least 6 characters"
+                helperText={t('auth.passwordHint')}
                 required
               />
 
               <FormField
-                label="Confirm Password"
+                label={t('auth.confirmPassword')}
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -173,15 +174,15 @@ export default function SignUpPage() {
                 isLoading={isLoading}
                 className="w-full"
               >
-                Create Account
+                {t('auth.createAccount')}
               </Button>
             </form>
           </Card.Body>
           <Card.Footer>
             <p className="text-sm text-center text-gray-600">
-              Already have an account?{' '}
+              {t('auth.haveAccount')}{' '}
               <a href="/login" className="text-blue-600 hover:underline">
-                Sign in
+                {t('auth.signIn')}
               </a>
             </p>
           </Card.Footer>

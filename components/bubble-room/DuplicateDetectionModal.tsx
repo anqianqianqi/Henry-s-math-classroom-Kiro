@@ -33,7 +33,7 @@ export function DuplicateDetectionModal({
   onConfirm,
   onCancel,
 }: DuplicateDetectionModalProps) {
-  const { language } = useLanguage()
+  const { t, language } = useLanguage()
   return (
     /* Backdrop */
     <div
@@ -59,18 +59,18 @@ export function DuplicateDetectionModal({
               id="duplicate-modal-title"
               className="text-lg font-semibold text-gray-900"
             >
-              Similar question already exists
+              {t('bubble.duplicateTitle')}
             </h2>
             <p className="mt-1 text-sm text-gray-500">
-              Before posting, take a look at{' '}
-              {matches.length === 1 ? 'this similar question' : 'these similar questions'}.
-              They might already have the answer you need!
+              {matches.length === 1
+                ? t('bubble.duplicateIntroOne')
+                : t('bubble.duplicateIntroMany')}
             </p>
           </div>
         </div>
 
         {/* Match list */}
-        <ul className="space-y-3" aria-label="Similar existing questions">
+        <ul className="space-y-3" aria-label={t('bubble.duplicateTitle')}>
           {matches.map((match) => (
             <li
               key={match.question.id}
@@ -79,18 +79,18 @@ export function DuplicateDetectionModal({
               <MatchText question={match.question} language={language} />
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">
-                  by {match.question.author_display_name}
+                  {t('bubble.byAuthor', { name: match.question.author_display_name })}
                 </span>
                 <span className="text-gray-200">·</span>
                 <span className="text-xs font-medium text-purple-600">
-                  {Math.round(match.score * 100)}% similar
+                  {t('bubble.percentSimilar', { percent: Math.round(match.score * 100) })}
                 </span>
                 {match.question.response_count > 0 && (
                   <>
                     <span className="text-gray-200">·</span>
                     <span className="text-xs text-gray-400">
                       {match.question.response_count}{' '}
-                      {match.question.response_count === 1 ? 'response' : 'responses'}
+                      {t(match.question.response_count === 1 ? 'bubble.response' : 'bubble.responses')}
                     </span>
                   </>
                 )}
@@ -107,7 +107,7 @@ export function DuplicateDetectionModal({
             onClick={onCancel}
             className="flex-1"
           >
-            No, go back
+            {t('bubble.goBack')}
           </Button>
           <Button
             variant="primary"
@@ -116,7 +116,7 @@ export function DuplicateDetectionModal({
             autoFocus
             className="flex-1"
           >
-            Yes, post anyway
+            {t('bubble.postAnyway')}
           </Button>
         </div>
       </div>

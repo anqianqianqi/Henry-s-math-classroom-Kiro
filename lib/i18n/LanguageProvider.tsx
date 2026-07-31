@@ -32,8 +32,8 @@ const STORAGE_KEY = 'henry-language'
 interface LanguageContextValue {
   language: Language
   setLanguage: (language: Language) => void
-  /** Translate a catalog key. */
-  t: (key: TranslationKey) => string
+  /** Translate a catalog key. `params` fill `{name}` placeholders in it. */
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
   /** Pick between two already-authored strings, e.g. bilingual DB columns. */
   pick: (en: string | null | undefined, zh: string | null | undefined) => string
   /** False until the stored preference has been read, for suppressing flashes. */
@@ -111,7 +111,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<LanguageContextValue>(() => ({
     language,
     setLanguage,
-    t: (key: TranslationKey) => translate(key, language),
+    t: (key: TranslationKey, params?: Record<string, string | number>) => translate(key, language, params),
     pick: (en, zh) => (language === 'zh' ? (zh || en || '') : (en || zh || '')),
     ready,
   }), [language, setLanguage, ready])
@@ -129,7 +129,7 @@ export function useLanguage(): LanguageContextValue {
   return {
     language: 'en',
     setLanguage: () => {},
-    t: (key: TranslationKey) => translate(key, 'en'),
+    t: (key: TranslationKey, params?: Record<string, string | number>) => translate(key, 'en', params),
     pick: (en, zh) => en || zh || '',
     ready: true,
   }

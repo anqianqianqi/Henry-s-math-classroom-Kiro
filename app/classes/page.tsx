@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 interface Class {
   id: string
@@ -31,6 +32,7 @@ export default function ClassesPage() {
   const [isTeacher, setIsTeacher] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+  const { t, language } = useLanguage()
 
   useEffect(() => {
     loadClasses()
@@ -90,7 +92,7 @@ export default function ClassesPage() {
       }
     } catch (err) {
       console.error('Load classes error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load classes')
+      setError(err instanceof Error ? err.message : t('class.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -116,11 +118,11 @@ export default function ClassesPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <PageHeader
-        breadcrumbs={[{ label: 'Classes' }]}
+        breadcrumbs={[{ label: t('nav.classes') }]}
         actions={isTeacher ? (
           <Button size="sm" onClick={() => router.push('/classes/new')}>
-            <span className="sm:hidden">+ New</span>
-            <span className="hidden sm:inline">Create New Class</span>
+            <span className="sm:hidden">{t('class.new')}</span>
+            <span className="hidden sm:inline">{t('class.createNew')}</span>
           </Button>
         ) : undefined}
         maxWidth="max-w-6xl"
@@ -137,10 +139,10 @@ export default function ClassesPage() {
           <Card>
             <Card.Body>
               <div className="text-center py-12">
-                <p className="text-gray-600 mb-4">{isTeacher ? 'No classes yet' : 'You are not enrolled in any classes yet'}</p>
+                <p className="text-gray-600 mb-4">{isTeacher ? t('class.noClasses') : t('class.notEnrolled')}</p>
                 {isTeacher && (
                   <Button onClick={() => router.push('/classes/new')}>
-                    Create Your First Class
+                    {t('class.createFirst')}
                   </Button>
                 )}
               </div>
@@ -155,12 +157,12 @@ export default function ClassesPage() {
                 </Card.Header>
                 <Card.Body>
                   <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                    {cls.description || 'No description'}
+                    {cls.description || t('class.noDescription')}
                   </p>
                   <div className="space-y-2 text-sm">
                     {cls.schedule && cls.schedule.length > 0 && (
                       <div className="text-gray-500">
-                        <span className="font-medium">Schedule:</span>
+                        <span className="font-medium">{t('class.schedule')}</span>
                         <div className="mt-1 space-y-1">
                           {cls.schedule.map((slot, index) => (
                             <div key={index} className="text-xs">
@@ -171,8 +173,8 @@ export default function ClassesPage() {
                       </div>
                     )}
                     <p className="text-gray-500">
-                      <span className="font-medium">Starts:</span>{' '}
-                      {new Date(cls.start_date).toLocaleDateString()}
+                      <span className="font-medium">{t('class.starts')}</span>{' '}
+                      {new Date(cls.start_date).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US')}
                     </p>
                   </div>
                 </Card.Body>
@@ -183,7 +185,7 @@ export default function ClassesPage() {
                     onClick={() => router.push(`/classes/${cls.id}`)}
                     className="w-full"
                   >
-                    View Class
+                    {t('class.viewClass')}
                   </Button>
                 </Card.Footer>
               </Card>
