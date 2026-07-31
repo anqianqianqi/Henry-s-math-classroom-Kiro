@@ -52,4 +52,38 @@ export const bubbleRoom = {
   'bubble.noResults': { en: 'No questions found for', zh: '没有找到相关问题：' },
   'bubble.challenge': { en: 'Challenge', zh: '挑战题' },
   'bubble.linkedToChallenge': { en: 'Linked to current challenge', zh: '已关联当前挑战题' },
+
+  // ── Duplicate warning ────────────────────────────────────
+  'bubble.duplicateIntroOne': {
+    en: 'Before posting, take a look at this similar question. It might already have the answer you need!',
+    zh: '发布前先看看这个相似的问题吧，答案可能已经在里面了！',
+  },
+  'bubble.duplicateIntroMany': {
+    en: 'Before posting, take a look at these similar questions. They might already have the answer you need!',
+    zh: '发布前先看看这些相似的问题吧，答案可能已经在里面了！',
+  },
+  'bubble.byAuthor': { en: 'by {name}', zh: '由 {name} 提问' },
+  'bubble.percentSimilar': { en: '{percent}% similar', zh: '相似度 {percent}%' },
+
+  // ── Assigned tray ────────────────────────────────────────
+  'bubble.assignedTitle': { en: 'Assigned to You', zh: '指派给你的问题' },
+  'bubble.assignedCounts': {
+    en: '{pending} pending · {responded} responded',
+    zh: '{pending} 个待回复 · {responded} 个已回复',
+  },
+  'bubble.refresh': { en: 'Refresh', zh: '刷新' },
+  'bubble.noneAssigned': {
+    en: 'No questions assigned to you yet',
+    zh: '还没有指派给你的问题',
+  },
+  'bubble.allCaughtUp': {
+    en: 'All caught up — no pending questions',
+    zh: '全部完成——没有待回复的问题',
+  },
+  'bubble.respondedCount': { en: 'Responded ({count})', zh: '已回复（{count}）' },
+  'bubble.hide': { en: 'hide', zh: '收起' },
+  'bubble.show': { en: 'show', zh: '展开' },
+  'bubble.pendingBadge': { en: 'Pending', zh: '待回复' },
+  'bubble.doneBadge': { en: 'Done', zh: '已完成' },
+  'bubble.byAuthorOn': { en: 'by {name} · {date}', zh: '{name} · {date}' },
 } as const
