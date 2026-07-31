@@ -7,11 +7,13 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 export default function DecorationsPage() {
   const router = useRouter()
   const supabase = createClient()
   const [isAdmin, setIsAdmin] = useState(false)
+  const { t, pick } = useLanguage()
 
   useEffect(() => {
     async function checkRole() {
@@ -31,24 +33,33 @@ export default function DecorationsPage() {
   const decorations = [
     {
       icon: '📖',
-      title: 'Book Cover & Page',
-      subtitle: 'Customise your challenge book',
+      title: t('decor.bookCoverPage'),
+      subtitle: pick('Customise your challenge book', '自定义你的挑战书'),
       href: '/book-skins',
-      description: 'Choose cover skins and page styles for the book that appears on every challenge.',
+      description: pick(
+        'Choose cover skins and page styles for the book that appears on every challenge.',
+        '为每道挑战题中出现的书本选择封面与内页样式。',
+      ),
     },
     {
       icon: '🏛️',
-      title: 'Challenge Room',
-      subtitle: 'Your 3D reading room',
+      title: t('decor.challengeRoom'),
+      subtitle: pick('Your 3D reading room', '你的 3D 阅读房间'),
       href: '/challenge-rooms',
-      description: 'Swap the flat book for a 3D room with an animated book, and pick the cover / inner-page bundle that wraps it.',
+      description: pick(
+        'Swap the flat book for a 3D room with an animated book, and pick the cover / inner-page bundle that wraps it.',
+        '把平面书本换成带动画书本的 3D 房间，并选择包裹它的封面与内页组合。',
+      ),
     },
     {
       icon: '🏠',
-      title: 'Pet Room',
-      subtitle: "Your pet's home background",
+      title: t('decor.petRoom'),
+      subtitle: pick("Your pet's home background", '宠物的家园背景'),
       href: '/decorations/pet-room',
-      description: 'Browse and select room backgrounds for your pet area on the dashboard.',
+      description: pick(
+        'Browse and select room backgrounds for your pet area on the dashboard.',
+        '浏览并选择主页宠物区域的房间背景。',
+      ),
     },
   ]
 
@@ -95,7 +106,7 @@ export default function DecorationsPage() {
       <PageHeader breadcrumbs={[{ label: 'Decorations' }]} />
 
       <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <p className="text-gray-500 mb-8">Personalise your classroom experience.</p>
+        <p className="text-gray-500 mb-8">{pick('Personalise your classroom experience.', '个性化你的课堂体验。')}</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {decorations.map(d => (
@@ -114,7 +125,7 @@ export default function DecorationsPage() {
         {isAdmin && (
           <>
             <h2 className="text-lg font-bold text-gray-700 mt-10 mb-4 flex items-center gap-2">
-              <span>🔧</span> Admin Tools
+              <span>🔧</span> {t('decor.adminTools')}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {adminItems.map(d => (

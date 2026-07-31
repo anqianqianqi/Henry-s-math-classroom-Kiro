@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import DesktopPetWrapper from '@/components/desktop-pet/DesktopPetWrapper'
+import { LanguageProvider } from '@/lib/i18n/LanguageProvider'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,8 +31,13 @@ export default function RootLayout({
     <html lang="en">
       <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       <body className="pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-        {children}
-        <DesktopPetWrapper />
+        {/* Provider and switcher live here so the control exists on every page.
+            PageHeader would have covered only 16 of 36. */}
+        <LanguageProvider>
+          {children}
+          <LanguageSwitcher />
+          <DesktopPetWrapper />
+        </LanguageProvider>
       </body>
     </html>
   )
