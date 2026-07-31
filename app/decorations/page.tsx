@@ -54,6 +54,13 @@ export default function DecorationsPage() {
       description: 'Generate a challenge room background with AI, then position the animated book on the table and save it.',
     },
     {
+      icon: '📚',
+      title: 'Upload BookSkinBundle',
+      subtitle: 'Admin: ChallengeRoom textures',
+      href: '/admin/book-bundles',
+      description: 'Design a matched cover + inner-page pair that wraps the 3D book. Only used by the ChallengeRoom — for the flat book, use Upload Book Skins.',
+    },
+    {
       icon: '🖼️',
       title: 'Upload Book Skins',
       subtitle: 'Admin: manage skins',

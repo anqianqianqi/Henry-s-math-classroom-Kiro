@@ -26,6 +26,40 @@ export interface RoomSpec {
   notes: string
 }
 
+/**
+ * Art direction for a cover + inner-page pair.
+ *
+ * Distinct from a book_skins cover: those are book-shaped transparent PNGs
+ * composited in the DOM with a title layout and overlay objects. These are
+ * full-bleed 3:4 UV textures mapped onto the GLB, so the two are not
+ * interchangeable — which is why they live in their own table.
+ */
+export interface BookSpec {
+  name: string
+  mood: string
+  palette: string
+  paper: string
+  frame: string
+  /** Exactly four: top-left, top-right, bottom-left, bottom-right. */
+  cornerClusters: [string, string, string, string]
+  notes: string
+}
+
+/** A book_texture_packages row. */
+export interface BookTexturePackage {
+  id: string
+  name: string
+  description: string | null
+  cover_url: string
+  inner_url: string
+  recipe: BookSpec | null
+  visibility: 'admin_only' | 'public'
+  is_active: boolean
+  shop_item_id: string | null
+  created_by: string
+  created_at: string
+}
+
 /** 6-DOF book placement, tuned by an admin against one specific room plate. */
 export interface Placement {
   /** horizontal offset in world units */
