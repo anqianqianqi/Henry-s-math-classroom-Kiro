@@ -32,6 +32,25 @@ CREATE INDEX IF NOT EXISTS idx_btp_default_lookup
 COMMENT ON COLUMN book_texture_packages.is_default IS
   'The bundle used when a student has a challenge room but no bundle selected. At most one, enforced by idx_btp_single_default.';
 
+-- ── 1b. Default room ────────────────────────────────────────
+-- Same idea for rooms. Setting a default room switches every student to the 3D
+-- challenge room (on desktop, on .henryproblem challenges) unless they have
+-- picked a different one — so treat it as a launch switch, not a cosmetic flag.
+ALTER TABLE challenge_rooms
+  ADD COLUMN IF NOT EXISTS is_default BOOLEAN NOT NULL DEFAULT false;
+
+DROP INDEX IF EXISTS idx_cr_single_default;
+CREATE UNIQUE INDEX idx_cr_single_default
+  ON challenge_rooms ((is_default))
+  WHERE is_default;
+
+CREATE INDEX IF NOT EXISTS idx_cr_default_lookup
+  ON challenge_rooms (is_default)
+  WHERE is_default AND is_active;
+
+COMMENT ON COLUMN challenge_rooms.is_default IS
+  'Room used when a student has not chosen one. At most one, enforced by idx_cr_single_default. Setting this turns the 3D room on for everyone.';
+
 -- ── 2. Inner-page skins: retained, not dropped ──────────────
 -- The UI no longer offers a page-skin collection, so every open book uses the
 -- default page skin. That makes the default load-bearing: if none exists, the

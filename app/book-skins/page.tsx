@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { BundleCollection } from '@/components/challenge-room/BundleCollection'
+import { RoomCollection } from '@/components/challenge-room/RoomCollection'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { HomeButton } from '@/components/ui/HomeButton'
@@ -319,6 +320,23 @@ export default function BookSkinsUserPage() {
                 uses the default page skin, so there is nothing to choose. The
                 rows and the default are untouched in the database — see
                 supabase/add-bundle-default-and-retire-page-skins.sql. */}
+
+            {/* ── Challenge Room picker ── */}
+            <RoomCollection
+              isAdmin={isAdmin}
+              selectedId={prefs.challenge_room_id ?? null}
+              onSelect={(id) => {
+                // Clearing the room must clear the bundle with it —
+                // ubsp_package_requires_room rejects a bundle without a room.
+                const newPrefs = {
+                  ...prefs,
+                  challenge_room_id: id,
+                  texture_package_id: id ? prefs.texture_package_id : null,
+                }
+                setPrefs(newPrefs)
+                savePrefs(newPrefs)
+              }}
+            />
 
             {/* ── Challenge Room bundle picker ── */}
             <BundleCollection

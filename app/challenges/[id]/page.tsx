@@ -354,23 +354,39 @@ export default function ChallengePage() {
     // page-native layout — so those keep the 2D book.
     const hasHenryProblem = !!readStoredHenryProblem((challengeData as any)?.henryproblem)
 
-    if (userPrefData?.challenge_room_id && hasHenryProblem) {
+    if (hasHenryProblem) {
       ;(async () => {
         try {
-          const [roomResult, packageResult] = await Promise.all([
-            supabase
-              .from('challenge_rooms')
-              .select('room_url, placement, animation')
-              .eq('id', userPrefData.challenge_room_id)
-              .maybeSingle(),
-            userPrefData.texture_package_id
-              ? supabase
-                  .from('book_texture_packages')
-                  .select('cover_url, inner_url')
-                  .eq('id', userPrefData.texture_package_id)
-                  .maybeSingle()
-              : Promise.resolve({ data: null }),
-          ])
+          // Selection wins; otherwise fall back to whatever an admin marked
+          // default. A default room is how the 3D path gets switched on for
+          // students who have never opened the decorations page.
+          const roomQuery = userPrefData?.challenge_room_id
+            ? supabase
+                .from('challenge_rooms')
+                .select('room_url, placement, animation')
+                .eq('id', userPrefData.challenge_room_id)
+                .maybeSingle()
+            : supabase
+                .from('challenge_rooms')
+                .select('room_url, placement, animation')
+                .eq('is_default', true)
+                .eq('is_active', true)
+                .maybeSingle()
+
+          const packageQuery = userPrefData?.texture_package_id
+            ? supabase
+                .from('book_texture_packages')
+                .select('cover_url, inner_url')
+                .eq('id', userPrefData.texture_package_id)
+                .maybeSingle()
+            : supabase
+                .from('book_texture_packages')
+                .select('cover_url, inner_url')
+                .eq('is_default', true)
+                .eq('is_active', true)
+                .maybeSingle()
+
+          const [roomResult, packageResult] = await Promise.all([roomQuery, packageQuery])
 
           const room = (roomResult as any).data
           if (!room?.room_url || !room.placement || !room.animation) return

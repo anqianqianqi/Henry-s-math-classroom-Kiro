@@ -98,6 +98,9 @@ export interface ChallengeRoom {
   model_key: string
   visibility: 'admin_only' | 'public'
   is_active: boolean
+  /** At most one, enforced by idx_cr_single_default. Setting it turns the 3D
+   *  room on for every student who has not chosen one. */
+  is_default: boolean
   shop_item_id: string | null
   created_by: string
   created_at: string
