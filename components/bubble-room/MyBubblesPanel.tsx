@@ -182,7 +182,7 @@ export function MyBubblesPanel({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-900">
-            {currentUserRole === 'teacher' ? '🫧 All Bubbles' : '🫧 My Bubbles'}
+            🫧 My Bubbles
           </h2>
           <button
             type="button"

@@ -340,7 +340,7 @@ export function BubbleRoomPage({
           <button
             type="button"
             onClick={() => setShowMyBubbles(true)}
-            title={currentUserRole === 'teacher' ? 'All Bubbles' : 'My Bubbles'}
+            title="My Bubbles"
             className="
               shrink-0 flex items-center gap-1
               px-3 py-2 rounded-xl
@@ -349,7 +349,7 @@ export function BubbleRoomPage({
               focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2
             "
           >
-            🫧 <span className="hidden sm:inline">{currentUserRole === 'teacher' ? 'Bubbles' : 'Mine'}</span>
+            🫧 <span className="hidden sm:inline">My Bubbles</span>
           </button>
 
           {currentUserRole === 'student' && !isTA && !taPending && (
