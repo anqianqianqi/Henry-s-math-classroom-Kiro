@@ -18,7 +18,7 @@
 
 import { useEffect, useState } from 'react'
 import type { Language } from './catalog'
-import { localizeQuestion, type TranslatableText } from './localize'
+import { localizeQuestion, looksUntranslated, type TranslatableText } from './localize'
 
 export type PostKind = 'question' | 'response' | 'submission' | 'comment'
 
@@ -134,7 +134,12 @@ export function useOnDemandTranslation<T extends TranslatableText>(
     title_zh: firstFilled(item?.title_zh, fetched?.title_zh),
   } as T
 
-  const missing = !(language === 'zh' ? merged.text_zh : merged.text_en)
+  // Missing covers two cases: never translated, and frozen by an older build as
+  // the original in both slots. Without the second the column looks filled, the
+  // request is never made, and the self-healing path in the route never runs.
+  const missing =
+    !(language === 'zh' ? merged.text_zh : merged.text_en) ||
+    looksUntranslated(item?.text, merged.text_en, merged.text_zh)
 
   useEffect(() => {
     if (!enabled || !id || !item || !missing) return

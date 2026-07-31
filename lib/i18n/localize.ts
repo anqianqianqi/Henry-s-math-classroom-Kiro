@@ -25,6 +25,32 @@ export function pickTranslation(
   return chosen?.trim() ? chosen : original
 }
 
+/**
+ * Whether a stored pair is really just the original twice over.
+ *
+ * An earlier version of the translate-post route stored exactly that whenever
+ * no engine answered, which marked the row finished forever. Both the reader
+ * and the route check for the shape, so such rows heal themselves on the next
+ * view rather than needing a repair script run against the database.
+ *
+ * Pure math is excluded deliberately: "$x = 2y$" really is identical in both
+ * languages and is never sent to an engine, so a row like that is genuinely
+ * finished and must not retranslate on every single view.
+ *
+ * Shared by client and server so the two can never disagree about which rows
+ * still need work — a disagreement would mean either endless retranslation or
+ * a row nobody ever retries.
+ */
+export function looksUntranslated(
+  original: string | null | undefined,
+  en: string | null | undefined,
+  zh: string | null | undefined,
+): boolean {
+  if (!original?.trim()) return false
+  if (en !== original || zh !== original) return false
+  return /\p{L}/u.test(original.replace(/\$[^$]*\$/g, ''))
+}
+
 /** Shapes carrying a translated body, and optionally a translated title. */
 export interface TranslatableText {
   text: string

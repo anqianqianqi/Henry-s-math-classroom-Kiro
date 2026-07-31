@@ -24,6 +24,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
 import { translateUserText } from '@/lib/i18n/translateUserText'
+import { looksUntranslated } from '@/lib/i18n/localize'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,10 +87,18 @@ export async function POST(request: NextRequest) {
     const filled = (v: string | null | undefined) => Boolean(v && v.trim())
 
     // Already translated by an earlier reader — return it and spend nothing.
-    const bodyDone = filled(r[`${spec.body}_en`]) && filled(r[`${spec.body}_zh`])
+    // looksUntranslated catches rows an older build froze as the original twice
+    // over, so those retranslate here rather than staying stuck forever.
+    const bodyDone =
+      filled(r[`${spec.body}_en`]) &&
+      filled(r[`${spec.body}_zh`]) &&
+      !looksUntranslated(r[spec.body], r[`${spec.body}_en`], r[`${spec.body}_zh`])
+
     const titleDone = !spec.title
       || !filled(r[spec.title])
-      || (filled(r[`${spec.title}_en`]) && filled(r[`${spec.title}_zh`]))
+      || (filled(r[`${spec.title}_en`])
+          && filled(r[`${spec.title}_zh`])
+          && !looksUntranslated(r[spec.title], r[`${spec.title}_en`], r[`${spec.title}_zh`]))
 
     if (bodyDone && titleDone) {
       return NextResponse.json({
