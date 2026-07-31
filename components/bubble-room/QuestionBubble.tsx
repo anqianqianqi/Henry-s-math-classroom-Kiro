@@ -138,14 +138,13 @@ export function QuestionBubble({ instance, onClick, searchQuery = '', dying = fa
           left: `${x}%`,
           bottom: '-80px',
           transform: 'translateX(-50%)',
-          animationPlayState: phase !== 'idle' ? 'paused' : 'running',
+          animationPlayState: (phase !== 'idle' || dying) ? 'paused' : 'running',
           animationDuration: `${speed}s`,
           animationTimingFunction: 'ease-out',
           animationFillMode: 'forwards',
-          // Fade out when dying — keeps the bubble at its current position
-          // while transitioning opacity to 0, so users don't see it snap back
-          opacity: dying ? 0 : 1,
-          transition: dying ? 'opacity 0.3s ease-out' : undefined,
+          // When dying: pause the animation to freeze position, then hide instantly.
+          // visibility:hidden doesn't conflict with animation-controlled opacity.
+          visibility: dying ? 'hidden' : undefined,
           pointerEvents: dying ? 'none' : undefined,
         } as React.CSSProperties
       }
