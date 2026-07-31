@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { CommentThread } from '@/components/CommentThread'
+import { TranslatedContent } from '@/components/TranslatedContent'
 import { localDateString, localDateOffset } from '@/lib/utils/date'
 import { HomeButton } from '@/components/ui/HomeButton'
 import { ChallengeBookShell, type ChallengeScene } from '@/components/challenge-room/ChallengeBookShell'
@@ -34,6 +35,9 @@ interface Submission {
   id: string
   user_id: string
   content: string
+  /** Stored translations, filled on first read in the other language. */
+  content_en?: string | null
+  content_zh?: string | null
   image_url?: string | null
   points?: number | null
   is_locked?: boolean
@@ -49,6 +53,9 @@ interface Comment {
   submission_id: string
   user_id: string
   content: string
+  /** Stored translations, cleared on edit so they cannot describe old wording. */
+  content_en?: string | null
+  content_zh?: string | null
   image_url?: string | null
   created_at: string
   profiles: {
@@ -652,7 +659,16 @@ export default function ChallengePage() {
   async function handleEditComment(commentId: string, newContent: string) {
     const { error } = await supabase
       .from('submission_comments')
-      .update({ content: newContent })
+      .update({
+        content: newContent,
+        // Clear the translations with the text they were made from, or a reader
+        // in the other language keeps seeing the version before the edit — with
+        // no sign anything changed. Blanking them makes the next read
+        // regenerate against the new wording.
+        content_en: null,
+        content_zh: null,
+        content_lang: null,
+      })
       .eq('id', commentId)
       .eq('user_id', userId!) // only own comments
 
@@ -661,7 +677,9 @@ export default function ChallengePage() {
         const updated = { ...prev }
         for (const subId in updated) {
           updated[subId] = updated[subId].map(c =>
-            c.id === commentId ? { ...c, content: newContent } : c
+            c.id === commentId
+              ? { ...c, content: newContent, content_en: null, content_zh: null }
+              : c
           )
         }
         return updated
@@ -1526,9 +1544,14 @@ export default function ChallengePage() {
                   </div>
                 </Card.Header>
                 <Card.Body>
-                  <p className="text-gray-700 whitespace-pre-wrap mb-3">
-                    {userSubmission.content}
-                  </p>
+                  <TranslatedContent
+                    kind="submission"
+                    id={userSubmission.id}
+                    content={userSubmission.content}
+                    contentEn={userSubmission.content_en}
+                    contentZh={userSubmission.content_zh}
+                    className="text-gray-700 whitespace-pre-wrap mb-3"
+                  />
                   {userSubmission.image_url && (
                     <img src={userSubmission.image_url} alt="Solution" className="max-w-full max-h-64 rounded-lg border mb-3" />
                   )}
@@ -1982,9 +2005,14 @@ export default function ChallengePage() {
                               {formatTimeAgo(submission.submitted_at)}
                             </p>
                           </div>
-                          <p className="text-gray-700 whitespace-pre-wrap mb-3">
-                            {submission.content}
-                          </p>
+                          <TranslatedContent
+                            kind="submission"
+                            id={submission.id}
+                            content={submission.content}
+                            contentEn={submission.content_en}
+                            contentZh={submission.content_zh}
+                            className="text-gray-700 whitespace-pre-wrap mb-3"
+                          />
                           {submission.image_url && (
                             <img src={submission.image_url} alt="Solution" className="max-w-full max-h-64 rounded-lg border mb-3" />
                           )}
