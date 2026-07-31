@@ -616,12 +616,19 @@ export async function fetchAssignableUsers(): Promise<ActionResult<Array<{
       .is('class_id', null)
       .in('roles.name', ['teacher', 'administrator'])
 
-    // TA badge holders
-    const { data: taBadgeRows } = await supabase
+    // TA badge holders — look up badge id first, then filter user_badges
+    const { data: taBadgeDef } = await supabase
+      .from('badge_definitions')
+      .select('id')
+      .eq('slug', 'bubble_room_ta')
+      .single()
+
+    const taBadgeRows = taBadgeDef ? await supabase
       .from('user_badges')
-      .select('user_id, badge:badge_definitions!inner(slug), profile:profiles!user_id(full_name, nickname)')
-      .eq('badge_definitions.slug', 'bubble_room_ta')
+      .select('user_id, profile:profiles!user_badges_user_id_fkey(full_name, nickname)')
+      .eq('badge_id', taBadgeDef.id)
       .is('revoked_at', null)
+      .then(r => r.data) : []
 
     const result = new Map<string, { id: string; name: string; role: 'teacher' | 'ta' }>()
 
