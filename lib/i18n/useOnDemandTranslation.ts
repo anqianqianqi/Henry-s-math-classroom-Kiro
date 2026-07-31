@@ -121,18 +121,7 @@ export function useOnDemandTranslation<T extends TranslatableText>(
   )
   const [pending, setPending] = useState(false)
 
-  // Whatever came with the row wins; anything fetched only fills the gaps. A
-  // fetched null must never blank out a value the row already had.
-  const firstFilled = (...values: (string | null | undefined)[]) =>
-    values.find(v => v?.trim()) ?? null
-
-  const merged = {
-    ...(item ?? { text: '' }),
-    text_en: firstFilled(item?.text_en, fetched?.text_en),
-    text_zh: firstFilled(item?.text_zh, fetched?.text_zh),
-    title_en: firstFilled(item?.title_en, fetched?.title_en),
-    title_zh: firstFilled(item?.title_zh, fetched?.title_zh),
-  } as T
+  const merged = mergeTranslations(item, fetched) as T
 
   // Missing covers two cases: never translated, and frozen by an older build as
   // the original in both slots. Without the second the column looks filled, the
@@ -163,6 +152,38 @@ export function useOnDemandTranslation<T extends TranslatableText>(
 
   const localized = localizeQuestion(merged, language)
   return { ...localized, pending: pending && missing }
+}
+
+/**
+ * Combine what arrived with the row and what was fetched afterwards.
+ *
+ * A freshly fetched translation WINS. The fetch is the newer information — the
+ * row was loaded when the page was, the translation came back just now.
+ * Preferring the row meant a healed value was computed, returned, stored and
+ * then discarded on render: a row frozen as the original had a non-empty
+ * text_zh, so the stale English beat the real Chinese and only a page reload
+ * showed it.
+ *
+ * Empty values are skipped in both directions, so a failed fetch falls back to
+ * the row rather than blanking the text on screen.
+ *
+ * Exported and pure so this precedence is testable without a DOM — it is
+ * exactly the part that was wrong.
+ */
+export function mergeTranslations(
+  item: TranslatableText | null | undefined,
+  fetched: Fields | null,
+): TranslatableText {
+  const firstFilled = (...values: (string | null | undefined)[]) =>
+    values.find(v => v?.trim()) ?? null
+
+  return {
+    ...(item ?? { text: '' }),
+    text_en: firstFilled(fetched?.text_en, item?.text_en),
+    text_zh: firstFilled(fetched?.text_zh, item?.text_zh),
+    title_en: firstFilled(fetched?.title_en, item?.title_en),
+    title_zh: firstFilled(fetched?.title_zh, item?.title_zh),
+  }
 }
 
 /** Prefetch without rendering — e.g. when a thread is about to be expanded. */
