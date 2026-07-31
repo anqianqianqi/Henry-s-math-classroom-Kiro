@@ -600,10 +600,10 @@ export function QuestionDetailModal({
           // Match exact bubble gradient stops:
           // Regular:   blue-200 → purple-100 → pink-100  (#bfdbfe → #f3e8ff → #fce7f3)
           // Challenge: blue-200 → purple-100 → pink-100 (purple palette)
-          // Regular:   yellow-200 → yellow-100 → yellow-50 (yellow palette)
+          // Regular:   yellow-100 → yellow-50 → white (lighter than bubble, dreamy)
           background: question.challenge_id
             ? 'linear-gradient(145deg, rgba(191,219,254,0.93) 0%, rgba(243,232,255,0.89) 45%, rgba(252,231,243,0.93) 100%)'
-            : 'linear-gradient(145deg, rgba(254,240,138,0.93) 0%, rgba(254,249,195,0.89) 45%, rgba(254,252,232,0.93) 100%)',
+            : 'linear-gradient(145deg, rgba(254,249,195,0.92) 0%, rgba(254,252,232,0.88) 45%, rgba(255,255,255,0.90) 100%)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: question.challenge_id
