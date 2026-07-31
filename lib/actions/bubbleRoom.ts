@@ -529,6 +529,7 @@ export async function searchQuestions(
         `id, class_id, user_id, challenge_id, title, text, image_url, created_at, updated_at,
          profiles:user_id ( full_name, nickname )`,
       )
+      .or(`expires_at.gt.${new Date().toISOString()},expires_at.is.null`)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit) // fetch one extra to detect hasMore
 
