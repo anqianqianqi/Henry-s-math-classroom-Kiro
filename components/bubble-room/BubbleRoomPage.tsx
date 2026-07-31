@@ -143,6 +143,10 @@ export function BubbleRoomPage({
         },
         (payload) => {
           const newRow = payload.new as any
+
+          // Don't add expired bubbles to the room
+          if (newRow.expires_at && new Date(newRow.expires_at) <= new Date()) return
+
           const newQuestion: BubbleQuestion = {
             id: newRow.id,
             class_id: newRow.class_id,
@@ -153,6 +157,7 @@ export function BubbleRoomPage({
             image_url: newRow.image_url ?? null,
             created_at: newRow.created_at,
             updated_at: newRow.updated_at,
+            expires_at: newRow.expires_at ?? null,
             author_display_name: t('bubble.loadingAuthor'),
             response_count: 0,
             unique_view_count: 0,
@@ -174,6 +179,22 @@ export function BubbleRoomPage({
           const deletedId = (payload.old as any).id
           setQuestions((prev) => prev.filter((q) => q.id !== deletedId))
           setSelectedQuestion((prev) => (prev?.id === deletedId ? null : prev))
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'bubble_room_questions',
+        },
+        (payload) => {
+          const updated = payload.new as any
+          // Remove from the room if it has been manually expired
+          if (updated.expires_at && new Date(updated.expires_at) <= new Date()) {
+            setQuestions((prev) => prev.filter((q) => q.id !== updated.id))
+            setSelectedQuestion((prev) => (prev?.id === updated.id ? null : prev))
+          }
         },
       )
       .subscribe()
