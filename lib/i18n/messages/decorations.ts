@@ -141,4 +141,20 @@ export const decorations = {
   'petRoom.default': { en: 'Default', zh: '默认' },
   'petRoom.updatingPhoto': { en: 'Updating frame photo…', zh: '正在更新相框照片…' },
   'petRoom.viewFullSize': { en: 'View full size', zh: '查看原图' },
+
+  // ── Challenge room collection page ───────────────────────
+  //
+  // These three are POSITIONAL: introA, then a link, then introB. Splitting a
+  // sentence is normally wrong, but the link sits inside it and t() returns a
+  // string, not JSX. It works because both languages put the link mid-sentence
+  // — English '…the usual book from [link].' and Chinese '…仍会使用来自 [link]
+  // 的普通书本。' — so introB carries the Chinese tail that follows the link.
+  // If you reword these, keep that shape or the sentence breaks apart.
+  'roomPage.introA': {
+    en: 'The Challenge Room replaces the flat book with a 3D room and an animated book. It appears on desktop, on challenges imported from a .henryproblem file. Without a room selected you get the usual book from',
+    zh: '挑战房间会把平面的书替换成 3D 房间和会翻页的书。它只在桌面端、且挑战题来自 .henryproblem 文件时出现。没有选择房间时，仍会使用来自',
+  },
+  'roomPage.introLink': { en: 'Book Cover & Page', zh: '书本与封面' },
+  'roomPage.introB': { en: '.', zh: '的普通书本。' },
+  'templates.title': { en: 'Templates', zh: '模板' },
 } as const

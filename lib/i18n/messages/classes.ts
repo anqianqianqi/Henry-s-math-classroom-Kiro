@@ -86,6 +86,54 @@ export const classes = {
   'class.viewDetails': { en: 'View Details →', zh: '查看详情 →' },
   'class.scheduleTba': { en: 'Schedule TBA', zh: '时间待定' },
 
+  // ── Students roster ──────────────────────────────────────
+  'students.roleTeacher': { en: 'Teacher', zh: '老师' },
+  'students.roleAdmin': { en: 'Admin', zh: '管理员' },
+  'students.roleNone': { en: 'No role', zh: '无角色' },
+  'students.searchPlaceholder': { en: 'Search by name or email…', zh: '按姓名或邮箱搜索……' },
+  'students.allUsers': { en: 'All users', zh: '全部用户' },
+  'students.studentsOnly': { en: 'Students only', zh: '仅学生' },
+  'students.noneFound': { en: 'No users found', zh: '没有找到用户' },
+  'students.noUsers': { en: 'No users yet', zh: '暂无用户' },
+  'students.noStudents': { en: 'No students yet', zh: '暂无学生' },
+
+  // ── Student history ──────────────────────────────────────
+  'students.loadingHistory': { en: 'Loading history…', zh: '正在加载记录…' },
+  'students.submitted': { en: 'Challenges Submitted', zh: '已提交挑战题' },
+  'students.graded': { en: 'Graded', zh: '已批改' },
+  'students.avgScore': { en: 'Avg Score', zh: '平均分' },
+  'students.byTopic': {
+    en: 'Score & completion breakdown by topic',
+    zh: '按知识点划分的得分与完成情况',
+  },
+  'students.noSubmissions': { en: 'No submissions yet', zh: '还没有提交记录' },
+  'students.noSubmissionsBody': {
+    en: "This student hasn't submitted any challenges.",
+    zh: '这位学生还没有提交过挑战题。',
+  },
+  'students.notGraded': { en: 'Not graded', zh: '未批改' },
+  'students.view': { en: 'View →', zh: '查看 →' },
+
+  // ── Join requests ────────────────────────────────────────
+  'joinReq.title': { en: 'Join Requests', zh: '加入申请' },
+  'joinReq.pending': { en: 'Pending Requests', zh: '待处理申请' },
+  'joinReq.none': { en: 'No pending requests 🎉', zh: '没有待处理的申请 🎉' },
+  'joinReq.history': { en: 'History', zh: '历史记录' },
+  'joinReq.approve': { en: 'Approve', zh: '通过' },
+  'joinReq.deny': { en: 'Deny', zh: '拒绝' },
+  'joinReq.updateFailed': { en: 'Failed to update request', zh: '更新申请失败' },
+
+  // ── Grading ──────────────────────────────────────────────
+  'grade.loadingSubmissions': { en: 'Loading submissions…', zh: '正在加载提交…' },
+  'grade.pageTitle': { en: 'Grade Submissions', zh: '批改提交' },
+  'grade.filterByDate': { en: 'Filter by date:', zh: '按日期筛选：' },
+  'grade.clear': { en: 'Clear', zh: '清除' },
+  'grade.needsGrading': { en: 'Needs Grading', zh: '待批改' },
+  'grade.answer': { en: 'Answer', zh: '解答' },
+  'grade.pts': { en: 'pts', zh: '分' },
+  'grade.grade': { en: 'Grade', zh: '批改' },
+  'grade.editGrade': { en: 'Edit Grade', zh: '修改评分' },
+
   'grade.title': { en: 'Grade Homework', zh: '批改作业' },
   'grade.ungraded': { en: 'Ungraded', zh: '待批改' },
   'grade.graded': { en: 'Graded', zh: '已批改' },

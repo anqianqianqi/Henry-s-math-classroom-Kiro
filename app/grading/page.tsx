@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -27,6 +28,7 @@ interface Submission {
 type Tab = 'ungraded' | 'history'
 
 export default function GradingPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const supabase = createClient()
 
@@ -153,7 +155,7 @@ export default function GradingPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
-        <p className="text-gray-500">Loading submissions...</p>
+        <p className="text-gray-500">{t('grade.loadingSubmissions')}</p>
       </div>
     )
   }
@@ -169,7 +171,7 @@ export default function GradingPage() {
               ← Back
             </Button>
             <HomeButton />
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900">Grade Submissions</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900">{t('grade.pageTitle')}</h1>
           </div>
         </div>
       </header>
@@ -181,7 +183,7 @@ export default function GradingPage() {
 
         {/* Date filter */}
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-medium text-gray-600">Filter by date:</span>
+          <span className="text-sm font-medium text-gray-600">{t('grade.filterByDate')}</span>
           <div className="flex items-center gap-2">
             <input
               type="date"
@@ -202,7 +204,7 @@ export default function GradingPage() {
               onClick={() => { setDateFrom(''); setDateTo('') }}
               className="text-sm text-gray-400 hover:text-gray-700 transition-colors"
             >
-              Clear
+              {t('grade.clear')}
             </button>
           )}
         </div>
@@ -217,7 +219,7 @@ export default function GradingPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            Needs Grading
+            {t('grade.needsGrading')}
             {ungraded.length > 0 && (
               <span className="ml-2 bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
                 {ungraded.length}
@@ -290,7 +292,7 @@ export default function GradingPage() {
                       {/* Answer */}
                       {s.answer && (
                         <div className="bg-gray-50 rounded-lg px-4 py-3">
-                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Answer</p>
+                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{t('grade.answer')}</p>
                           <p className="text-sm text-gray-800 whitespace-pre-wrap">{s.answer}</p>
                         </div>
                       )}
@@ -324,7 +326,7 @@ export default function GradingPage() {
                                 disabled={g.saving || !g.points}
                                 onClick={() => handleGrade(s.id, s.max_points)}
                               >
-                                {g.saving ? 'Saving…' : 'Save'}
+                                {g.saving ? t('status.saving') : t('action.save')}
                               </Button>
                               <Button
                                 size="sm"
@@ -344,7 +346,7 @@ export default function GradingPage() {
                                   [s.id]: { points: '', saving: false }
                                 }))}
                               >
-                                Grade
+                                {t('grade.grade')}
                               </Button>
                               <button
                                 onClick={() => handleMarkReviewed(s.id)}
@@ -407,7 +409,7 @@ export default function GradingPage() {
                                 [s.id]: { points: String(s.points ?? ''), saving: false }
                               }))}
                             >
-                              Edit Grade
+                              {t('grade.editGrade')}
                             </Button>
                           )}
                         </div>
