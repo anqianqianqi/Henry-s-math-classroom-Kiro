@@ -45,6 +45,8 @@ export interface ChallengeBookShellProps {
   coverOverlays?: OverlayObject[]
   /** Present only when the student has a challenge room selected. */
   scene?: ChallengeScene | null
+  /** Plain text printed onto the book page in the 3D path. Ignored in 2D. */
+  problemPreview?: { title: string; body: string }
 }
 
 export function ChallengeBookShell({
@@ -58,6 +60,7 @@ export function ChallengeBookShell({
   coverFrameUrls,
   coverOverlays,
   scene,
+  problemPreview,
 }: ChallengeBookShellProps) {
   const isDesktop = useIsDesktop()
   const modelUrl = bookModelUrl()
@@ -74,6 +77,7 @@ export function ChallengeBookShell({
         innerUrl={scene.innerUrl}
         placement={scene.placement}
         animation={scene.animation}
+        problemPreview={problemPreview}
       >
         {children}
       </Book3DReveal>

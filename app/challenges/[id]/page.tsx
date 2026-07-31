@@ -1442,6 +1442,7 @@ export default function ChallengePage() {
             has one selected on desktop, otherwise the 2D MagicBookReveal book */}
         <ChallengeBookShell
           scene={challengeScene}
+          problemPreview={{ title: challenge.title, body: challenge.description ?? '' }}
           title={challenge.title}
           date={new Date(challenge.challenge_date + 'T12:00:00').toLocaleDateString('en-US', {
             month: 'long',

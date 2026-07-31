@@ -24,7 +24,7 @@
  * three.js or the GLB.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamicImport from 'next/dynamic'
 import {
   DEFAULT_PLACEMENT,
@@ -51,6 +51,12 @@ export interface Book3DRevealProps {
   innerUrl?: string | null
   placement: Placement
   animation: AnimationConfig
+  /**
+   * Plain text printed onto the left page once the book opens, so the problem
+   * appears written in the book rather than announced by a banner. Preview only
+   * — the working copy lives in the zoomed DOM pages.
+   */
+  problemPreview?: { title: string; body: string }
 }
 
 type Phase = 'closed' | 'opening' | 'open' | 'zoomed'
@@ -72,6 +78,7 @@ export function Book3DReveal({
   innerUrl,
   placement,
   animation,
+  problemPreview,
 }: Book3DRevealProps) {
   const [phase, setPhase] = useState<Phase>('closed')
   const [frame, setFrame] = useState(animation.startFrame)
@@ -168,6 +175,39 @@ export function Book3DReveal({
 
   const zoomed = phase === 'zoomed'
 
+  /**
+   * Where the book sits on the stage, in percent.
+   *
+   * The camera is orthographic and the model is centred on its group's origin,
+   * so world -> screen is a plain linear map and the group's own x/y IS the
+   * book's centre. No raycasting or projection needed: the frustum is
+   * viewHeight 4 by viewWidth 6 (the stage is locked to 3:2).
+   */
+  const bookCentre = {
+    left: `${50 + (placement.x / 6) * 100}%`,
+    top: `${50 - (placement.y / 4) * 100}%`,
+  }
+
+  /**
+   * Preview printed into the two page textures once the book is open.
+   *
+   * Memoised on purpose: this is a dependency of the stage's texture effect, so
+   * a fresh object each render would re-composite both canvases and reload the
+   * textures on every parent render.
+   */
+  const pagePreview = useMemo(
+    () => ({
+      left: problemPreview
+        ? { heading: problemPreview.title, body: problemPreview.body }
+        : undefined,
+      right: {
+        heading: 'Your Solution',
+        footer: 'Click the book to write your answer',
+      },
+    }),
+    [problemPreview?.title, problemPreview?.body],
+  )
+
   // Page art doubles as the DOM page background so the zoomed spread matches
   // the textures the student just watched settle.
   const pageStyle: React.CSSProperties = innerUrl
@@ -240,28 +280,37 @@ export function Book3DReveal({
             onPlayingChange={setPlaying}
             interactive={false}
             onCanvasClick={phase === 'closed' ? openBook : phase === 'open' ? zoomIn : undefined}
+            // Only print once the flip has settled — mid-turn the left page is
+            // airborne and the text would tumble through the air with it.
+            pagePreview={phase === 'open' || zoomed ? pagePreview : undefined}
           />
         </div>
 
         {/* ── Affordances ─────────────────────────────────────────────── */}
+        {/* Sits on the cover itself rather than at the foot of the room, so it
+            reads as a label on the book you are about to pick up. */}
         {phase === 'closed' && (
           <button
             type="button"
             onClick={openBook}
-            className="absolute inset-x-0 bottom-6 mx-auto flex w-fit flex-col items-center gap-1 rounded-full bg-black/45 px-5 py-2 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+            style={{ ...bookCentre, transform: 'translate(-50%, -50%)' }}
+            className="absolute flex w-fit flex-col items-center gap-0.5 rounded-full bg-black/55 px-5 py-2 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
           >
             <span className="text-sm font-semibold">Open the book</span>
-            <span className="text-[11px] opacity-70">{title}</span>
+            <span className="text-[11px] opacity-75">{title}</span>
           </button>
         )}
 
+        {/* Once open, the problem is printed on the page itself, so this is a
+            quiet hint rather than a banner announcing what to do. */}
         {phase === 'open' && (
           <button
             type="button"
             onClick={zoomIn}
-            className="absolute inset-x-0 bottom-6 mx-auto w-fit rounded-full bg-black/45 px-5 py-2 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+            style={{ left: bookCentre.left, top: `calc(${bookCentre.top} + 22%)`, transform: 'translate(-50%, -50%)' }}
+            className="absolute w-fit rounded-full bg-black/35 px-3.5 py-1.5 text-xs font-medium text-white/90 backdrop-blur-sm transition-colors hover:bg-black/60 hover:text-white"
           >
-            Click the book to work on the problem
+            Click to read and answer
           </button>
         )}
 

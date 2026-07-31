@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { renderPageCanvas, type PageContent } from '@/lib/challengeRoom/pageTexture'
 import {
   BOOK_MATERIALS,
   MIRRORED_U_MATERIALS,
@@ -43,6 +44,8 @@ export interface RoomPlacementStageProps {
   onCanvasClick?: () => void
   /** Hides the room plate so the book can be cross-faded onto another surface. */
   hideRoom?: boolean
+  /** Preview text printed into the two visible page textures at the spread. */
+  pagePreview?: { left?: PageContent; right?: PageContent }
 }
 
 const deg = (value: number) => THREE.MathUtils.degToRad(value)
@@ -65,6 +68,7 @@ export function RoomPlacementStage({
   interactive = true,
   onCanvasClick,
   hideRoom = false,
+  pagePreview,
 }: RoomPlacementStageProps) {
   const stageRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -395,9 +399,38 @@ export function RoomPlacementStage({
         material.needsUpdate = true
       }
 
+      /**
+       * Bake the problem/solution preview into the two visible page textures so
+       * it reads as writing on the paper — the 3D pipeline then supplies the
+       * perspective, curl and lighting. The mirror correction above still runs,
+       * which is what keeps the left page's text the right way round.
+       */
+      const printed = (content: PageContent | undefined) => {
+        if (!content || !inner?.image) return null
+        try {
+          const canvas = renderPageCanvas(inner.image as CanvasImageSource, content)
+          const texture = new THREE.CanvasTexture(canvas)
+          texture.colorSpace = THREE.SRGBColorSpace
+          texture.flipY = false
+          texture.wrapS = THREE.ClampToEdgeWrapping
+          texture.wrapT = THREE.ClampToEdgeWrapping
+          texture.anisotropy = maxAnisotropy
+          texture.needsUpdate = true
+          appliedTexturesRef.current.push(texture)
+          return texture
+        } catch (err) {
+          // A tainted canvas or missing 2D context must not cost us the book
+          console.error('[RoomPlacementStage] page preview render failed:', err)
+          return null
+        }
+      }
+
+      const leftPrinted = printed(pagePreview?.left)
+      const rightPrinted = printed(pagePreview?.right)
+
       assign(BOOK_MATERIALS.cover, cover)
-      assign(BOOK_MATERIALS.leftPage, inner)
-      assign(BOOK_MATERIALS.rightPage, inner)
+      assign(BOOK_MATERIALS.leftPage, leftPrinted ?? inner)
+      assign(BOOK_MATERIALS.rightPage, rightPrinted ?? inner)
       for (const name of BOOK_MATERIALS.otherPages) assign(name, inner)
 
       // Retain the shared originals too — they are now bound to materials, so
@@ -407,7 +440,7 @@ export function RoomPlacementStage({
     })
 
     return () => { cancelled = true }
-  }, [coverUrl, innerUrl, modelReady])
+  }, [coverUrl, innerUrl, modelReady, pagePreview])
 
   // ── Drag to move, wheel to scale ─────────────────────────────────────────
   const dragRef = useRef<{ id: number; x: number; y: number; startX: number; startY: number } | null>(null)
