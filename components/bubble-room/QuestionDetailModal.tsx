@@ -699,7 +699,7 @@ export function QuestionDetailModal({
                     <a href={challengeContext.image_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={challengeContext.image_url} alt="Challenge image"
-                        className="max-h-48 rounded-lg border border-purple-200 object-contain bg-white w-full hover:opacity-90 transition-opacity" />
+                        className="rounded-lg border border-purple-200 w-full hover:opacity-90 transition-opacity" />
                     </a>
                   )}
                 </div>
