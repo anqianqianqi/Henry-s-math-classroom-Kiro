@@ -105,6 +105,15 @@ export interface HenryHeaderTheme {
 export interface HenrySheetTheme {
   palette: HenryPalette
   header: HenryHeaderTheme
+  /**
+   * Rule drawn under the Title/Score row.
+   *
+   * The default theme rules under the banner instead (header.rule) and leaves
+   * this unset. Setting it — and clearing header.rule — moves the divider below
+   * title and score, so the header block reads as banner, date, title, then
+   * the line that opens the problem.
+   */
+  titleRule?: { color: keyof HenryPalette; thickness: string }
 }
 
 export const henryPalette: HenryPalette = {
@@ -172,6 +181,43 @@ export const plainHenryTheme: HenrySheetTheme = {
     logo: { src: '/henry-math-logo.png', size: '2em', overlap: '0.6em' },
     rule: { color: 'green', thickness: '0.1em' },
   },
+}
+
+/**
+ * For the 3D challenge room: the worksheet sits directly on the book's own
+ * page art, so it must not paint a page of its own. Paper and card go fully
+ * transparent and the borders soften to ink-on-paper rules, leaving the
+ * botanical inner-page texture showing through behind the wording.
+ *
+ * Text colours are untouched — the page art is a warm cream, the same surface
+ * the palette's ink was chosen against.
+ */
+export const pageNativeHenryTheme: HenrySheetTheme = {
+  palette: {
+    ...henryPalette,
+    // The sheet root, the wording panels and the graph box all paint
+    // `card`/`paper` and outline themselves with `border`. Transparent fills
+    // alone still leave three nested rounded outlines, which read as a page
+    // inside a page just as much as the fills did — so the border goes too.
+    // What is left is title, score, tags, graph and wording sitting on the
+    // book's own paper with nothing drawn under or around them.
+    paper: 'transparent',
+    card: 'transparent',
+    border: 'transparent',
+  },
+  header: {
+    ...defaultHenryTheme.header,
+    // The header strip is the one surface that keeps a fill: it is the
+    // worksheet's identity and reads as a printed banner, not a floating card.
+    // Larger here because it now sits at the very top of the page rather than
+    // partway down a card, so it carries the page.
+    height: '3.7em',
+    radius: '1em',
+    logo: { src: '/henry-math-logo.png', size: '3.3em', overlap: '1.1em' },
+    // Cleared so the divider can sit below title/score instead — see titleRule.
+    rule: null,
+  },
+  titleRule: { color: 'green', thickness: '0.12em' },
 }
 
 /** Resolve a palette key plus optional opacity to a CSS colour. */

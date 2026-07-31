@@ -5,6 +5,8 @@
  * Opens when they click the "🎓 Pending…" button in the Bubble Room header.
  */
 
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
+
 export interface TAStatusModalProps {
   note: string | null       // their submitted pitch
   appliedAt: string | null  // ISO date string
@@ -20,6 +22,7 @@ export function TAStatusModal({
   onWithdraw,
   isWithdrawing,
 }: TAStatusModalProps) {
+  const { t } = useLanguage()
   function formatDate(iso: string | null) {
     if (!iso) return ''
     try {
@@ -62,7 +65,7 @@ export function TAStatusModal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('action.close')}
             className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -75,20 +78,20 @@ export function TAStatusModal({
         <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2">
           <span className="text-sm" aria-hidden="true">⏳</span>
           <p className="text-sm text-amber-800 font-medium">
-            Waiting for a teacher to review your application.
+            {t('bubble.taWaiting')}
           </p>
         </div>
 
         {/* Their pitch */}
         {note ? (
           <div className="space-y-1">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Your pitch</p>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t('bubble.taYourPitch')}</p>
             <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 rounded-xl p-3 border border-gray-100">
               "{note}"
             </p>
           </div>
         ) : (
-          <p className="text-sm text-gray-400 italic">No pitch submitted.</p>
+          <p className="text-sm text-gray-400 italic">{t('bubble.taNoPitch')}</p>
         )}
 
         {/* Actions */}
@@ -98,7 +101,7 @@ export function TAStatusModal({
             onClick={onClose}
             className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            Close
+            {t('action.close')}
           </button>
           {onWithdraw && (
             <button

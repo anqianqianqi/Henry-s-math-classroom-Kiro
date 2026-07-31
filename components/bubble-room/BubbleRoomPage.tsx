@@ -21,6 +21,7 @@ import { SearchBar } from './SearchBar'
 import { BubbleAnimationEngine } from './BubbleAnimationEngine'
 import NotificationBell from '@/components/NotificationBell'
 import { HomeButton } from '@/components/ui/HomeButton'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { QuestionCompositionForm } from './QuestionCompositionForm'
 import { DuplicateDetectionModal } from './DuplicateDetectionModal'
 import { QuestionDetailModal } from './QuestionDetailModal'
@@ -70,6 +71,8 @@ export function BubbleRoomPage({
   currentUserIsTA = false,
   currentUserTAApplicationPending = false,
 }: BubbleRoomPageProps) {
+  const { t } = useLanguage()
+
   // ── Core state ────────────────────────────────────────────────────────────
   const [questions, setQuestions] = useState<BubbleQuestion[]>(initialQuestions)
   const [searchQuery, setSearchQuery] = useState('')
@@ -148,7 +151,7 @@ export function BubbleRoomPage({
             image_url: newRow.image_url ?? null,
             created_at: newRow.created_at,
             updated_at: newRow.updated_at,
-            author_display_name: 'Loading…',
+            author_display_name: t('bubble.loadingAuthor'),
             response_count: 0,
             unique_view_count: 0,
           }
@@ -299,7 +302,7 @@ export function BubbleRoomPage({
       <div className="sticky top-[52px] z-20 bg-white/80 backdrop-blur border-b border-gray-100 px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           <h1 className="text-lg font-bold text-gray-900 shrink-0 hidden sm:block">
-            💬 Bubble Room
+            💬 {t('bubble.title')}
           </h1>
 
           {/* Search (Req 4.1) */}
@@ -317,7 +320,7 @@ export function BubbleRoomPage({
           <button
             type="button"
             onClick={handleOpenCompositionForm}
-            aria-label="Ask a question"
+            aria-label={t('bubble.askQuestion')}
             className="
               shrink-0 flex items-center gap-1.5
               px-4 py-2 rounded-xl
@@ -336,7 +339,7 @@ export function BubbleRoomPage({
             <button
               type="button"
               onClick={() => setShowTAApplyModal(true)}
-              title="Apply to be a Bubble Room TA"
+              title={t('bubble.applyTaTitle')}
               className="
                 shrink-0 flex items-center gap-1
                 px-3 py-2 rounded-xl
@@ -345,14 +348,14 @@ export function BubbleRoomPage({
                 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2
               "
             >
-              🎓 <span className="hidden sm:inline">Apply TA</span>
+              🎓 <span className="hidden sm:inline">{t('bubble.applyTa')}</span>
             </button>
           )}
           {currentUserRole === 'student' && taPending && (
             <button
               type="button"
               onClick={() => setShowTAStatusModal(true)}
-              title="View your TA application status"
+              title={t('bubble.taStatusTitle')}
               className="
                 shrink-0 flex items-center gap-1
                 px-3 py-2 rounded-xl
@@ -361,7 +364,7 @@ export function BubbleRoomPage({
                 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2
               "
             >
-              🎓 <span className="hidden sm:inline">Pending…</span>
+              🎓 <span className="hidden sm:inline">{t('bubble.taPending')}</span>
             </button>
           )}
           {currentUserRole === 'student' && isTA && (
@@ -375,7 +378,7 @@ export function BubbleRoomPage({
             <button
               type="button"
               onClick={() => setShowTAPanel(true)}
-              title="Review TA Applications"
+              title={t('bubble.reviewTaTitle')}
               className="
                 shrink-0 flex items-center gap-1
                 px-3 py-2 rounded-xl
@@ -384,7 +387,7 @@ export function BubbleRoomPage({
                 focus:outline-none focus:ring-2 focus:ring-teal-400
               "
             >
-              🎓 <span className="hidden sm:inline">TA Apps</span>
+              🎓 <span className="hidden sm:inline">{t('bubble.taApps')}</span>
             </button>
           )}
 
@@ -393,7 +396,7 @@ export function BubbleRoomPage({
             <button
               type="button"
               onClick={() => setShowAssignedModal(true)}
-              title="Questions assigned to you"
+              title={t('bubble.assignedTitleAttr')}
               className="
                 shrink-0 flex items-center gap-1
                 px-3 py-2 rounded-xl
@@ -402,7 +405,7 @@ export function BubbleRoomPage({
                 focus:outline-none focus:ring-2 focus:ring-orange-400
               "
             >
-              📬 <span className="hidden sm:inline">Assigned</span>
+              📬 <span className="hidden sm:inline">{t('bubble.assigned')}</span>
             </button>
           )}
         </div>
@@ -426,7 +429,7 @@ export function BubbleRoomPage({
               /* No results state (Req 4.3) */
               <div className="flex flex-col items-center gap-4 pt-12">
                 <p className="text-gray-500 text-sm">
-                  No questions found for &ldquo;{searchQuery}&rdquo;
+                  {t('bubble.noResultsFor', { query: searchQuery })}
                 </p>
                 <button
                   type="button"
@@ -441,7 +444,7 @@ export function BubbleRoomPage({
                     transition-all
                   "
                 >
-                  Ask about &ldquo;{searchQuery}&rdquo;
+                  {t('bubble.askAbout', { query: searchQuery })}
                 </button>
               </div>
             ) : (
@@ -478,7 +481,7 @@ export function BubbleRoomPage({
                         <span>·</span>
                         <span>
                           {q.response_count}{' '}
-                          {q.response_count === 1 ? 'response' : 'responses'}
+                          {t(q.response_count === 1 ? 'bubble.response' : 'bubble.responses')}
                         </span>
                       </>
                     )}
@@ -545,7 +548,7 @@ export function BubbleRoomPage({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
           <div className="bg-white rounded-2xl px-6 py-4 shadow-xl flex items-center gap-3">
             <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-            <span className="text-sm font-medium text-gray-700">Posting your question…</span>
+            <span className="text-sm font-medium text-gray-700">{t('bubble.posting')}</span>
           </div>
         </div>
       )}

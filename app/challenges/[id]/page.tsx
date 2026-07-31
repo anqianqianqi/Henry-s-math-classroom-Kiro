@@ -5,10 +5,14 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { CommentThread } from '@/components/CommentThread'
+import { TranslatedContent } from '@/components/TranslatedContent'
 import { localDateString, localDateOffset } from '@/lib/utils/date'
 import { HomeButton } from '@/components/ui/HomeButton'
-import { MagicBookReveal } from '@/components/MagicBookReveal'
+import { ChallengeBookShell, type ChallengeScene } from '@/components/challenge-room/ChallengeBookShell'
 import { HenryProblemSheet } from '@/components/HenryProblemSheet'
+import { pageNativeHenryTheme } from '@/lib/henry-theme'
+import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { readStoredHenryProblem } from '@/lib/henryproblem'
 import { useUserBadges } from '@/lib/hooks/useUserBadges'
 import { UserNameWithBadges } from '@/components/UserNameWithBadges'
@@ -31,6 +35,9 @@ interface Submission {
   id: string
   user_id: string
   content: string
+  /** Stored translations, filled on first read in the other language. */
+  content_en?: string | null
+  content_zh?: string | null
   image_url?: string | null
   points?: number | null
   is_locked?: boolean
@@ -46,6 +53,9 @@ interface Comment {
   submission_id: string
   user_id: string
   content: string
+  /** Stored translations, cleared on edit so they cannot describe old wording. */
+  content_en?: string | null
+  content_zh?: string | null
   image_url?: string | null
   created_at: string
   profiles: {
@@ -99,7 +109,10 @@ export default function ChallengePage() {
   const [submittingComment, setSubmittingComment] = useState<{[submissionId: string]: boolean}>({})
   const [visibleComments, setVisibleComments] = useState<{[submissionId: string]: number}>({})
   const COMMENTS_INCREMENT = 5
-  const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
+  const { t, language } = useLanguage()
+  // Tag names have a row per language in challenge_tag_names, so they follow
+  // the global UI language rather than a second, separate control.
+  const tagLang = language
   const [tagNames, setTagNames] = useState<Record<string, Record<string, string>>>({}) // id → { en: name, zh: name }
   // Hint state
   const [showHint, setShowHint] = useState(false)
@@ -114,6 +127,13 @@ export default function ChallengePage() {
   const [defaultCoverLayout, setDefaultCoverLayout] = useState<any>(undefined)
   const [defaultCoverFrameUrls, setDefaultCoverFrameUrls] = useState<string[] | undefined>(undefined)
   const [defaultCoverOverlays, setDefaultCoverOverlays] = useState<any[]>([])
+  // 3D challenge room — only set when the student has selected one. Null keeps
+  // the page on the existing 2D MagicBookReveal path.
+  const [challengeScene, setChallengeScene] = useState<ChallengeScene | null>(null)
+  const isDesktop = useIsDesktop()
+  // Whether this reader turned the room off, kept so the page can say WHY it is
+  // showing the flat book rather than leaving it to be guessed.
+  const [roomOptOut, setRoomOptOut] = useState(false)
   // TA grading state — richer type with streaming progress + suggestion solution
   const [taGrades, setTaGrades] = useState<Record<string, {
     suggested_score: number; max_score: number; confidence: number
@@ -291,7 +311,9 @@ export default function ChallengePage() {
     ] = await Promise.all([
       supabase.from('daily_challenges').select('*').eq('id', params.id).single(),
       Promise.resolve(supabase.from('book_skins').select('skin_type, image_url, cover_layout, is_animated, has_overlays, id').eq('is_default', true).eq('is_active', true)).catch(() => ({ data: null })),
-      Promise.resolve(supabase.from('user_book_skin_preferences').select('cover_skin_id, page_skin_id').eq('user_id', user.id).maybeSingle()).catch(() => ({ data: null })),
+      // challenge_room_id / texture_package_id drive the 3D path. Joined here so
+      // the room costs no extra round trip; both are null for existing rows.
+      Promise.resolve(supabase.from('user_book_skin_preferences').select('cover_skin_id, page_skin_id, challenge_room_id, texture_package_id, challenge_room_opt_out').eq('user_id', user.id).maybeSingle()).catch(() => ({ data: null })),
       supabase.from('user_roles').select('role_id').eq('user_id', user.id).is('class_id', null),
     ])
 
@@ -334,6 +356,71 @@ export default function ChallengePage() {
     if (defCover?.cover_layout) setDefaultCoverLayout(defCover.cover_layout)
 
     const userPrefData = (userPrefResult as any).data
+
+    // ── 3D challenge room ─────────────────────────────────────────────────
+    // Fire-and-forget: if anything here fails or is unset, challengeScene stays
+    // null and the page renders the existing 2D book.
+    //
+    // Gated on the challenge carrying a .henryproblem snapshot. The room's
+    // pages present title / score / tags / graph / bilingual wording as
+    // structured fields laid straight onto the paper; a challenge without that
+    // snapshot has only free-form description and image_url, which has no
+    // page-native layout — so those keep the 2D book.
+    const hasHenryProblem = !!readStoredHenryProblem((challengeData as any)?.henryproblem)
+    setRoomOptOut(!!userPrefData?.challenge_room_opt_out)
+
+    // challenge_room_opt_out is the student saying "no room", which is not the
+    // same as having chosen nothing — that falls through to the default below.
+    if (hasHenryProblem && !userPrefData?.challenge_room_opt_out) {
+      ;(async () => {
+        try {
+          // Selection wins; otherwise fall back to whatever an admin marked
+          // default. A default room is how the 3D path gets switched on for
+          // students who have never opened the decorations page.
+          const roomQuery = userPrefData?.challenge_room_id
+            ? supabase
+                .from('challenge_rooms')
+                .select('room_url, placement, animation')
+                .eq('id', userPrefData.challenge_room_id)
+                .maybeSingle()
+            : supabase
+                .from('challenge_rooms')
+                .select('room_url, placement, animation')
+                .eq('is_default', true)
+                .eq('is_active', true)
+                .maybeSingle()
+
+          const packageQuery = userPrefData?.texture_package_id
+            ? supabase
+                .from('book_texture_packages')
+                .select('cover_url, inner_url')
+                .eq('id', userPrefData.texture_package_id)
+                .maybeSingle()
+            : supabase
+                .from('book_texture_packages')
+                .select('cover_url, inner_url')
+                .eq('is_default', true)
+                .eq('is_active', true)
+                .maybeSingle()
+
+          const [roomResult, packageResult] = await Promise.all([roomQuery, packageQuery])
+
+          const room = (roomResult as any).data
+          if (!room?.room_url || !room.placement || !room.animation) return
+          const pkg = (packageResult as any).data
+
+          setChallengeScene({
+            roomUrl: room.room_url,
+            placement: room.placement,
+            animation: room.animation,
+            coverUrl: pkg?.cover_url ?? null,
+            innerUrl: pkg?.inner_url ?? null,
+          })
+        } catch (err) {
+          console.error('[challenge] challenge room load failed:', err)
+        }
+      })()
+    }
 
     // bankItemId needed for submission lookup
     const bankItemId: string | null = challengeData?.is_bank_item
@@ -576,7 +663,16 @@ export default function ChallengePage() {
   async function handleEditComment(commentId: string, newContent: string) {
     const { error } = await supabase
       .from('submission_comments')
-      .update({ content: newContent })
+      .update({
+        content: newContent,
+        // Clear the translations with the text they were made from, or a reader
+        // in the other language keeps seeing the version before the edit — with
+        // no sign anything changed. Blanking them makes the next read
+        // regenerate against the new wording.
+        content_en: null,
+        content_zh: null,
+        content_lang: null,
+      })
       .eq('id', commentId)
       .eq('user_id', userId!) // only own comments
 
@@ -585,7 +681,9 @@ export default function ChallengePage() {
         const updated = { ...prev }
         for (const subId in updated) {
           updated[subId] = updated[subId].map(c =>
-            c.id === commentId ? { ...c, content: newContent } : c
+            c.id === commentId
+              ? { ...c, content: newContent, content_en: null, content_zh: null }
+              : c
           )
         }
         return updated
@@ -1271,7 +1369,7 @@ export default function ChallengePage() {
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">🎯</div>
-          <p className="text-gray-600">Loading challenge...</p>
+          <p className="text-gray-600">{t('challenge.loadingDetail')}</p>
         </div>
       </div>
     )
@@ -1298,6 +1396,12 @@ export default function ChallengePage() {
   // Challenges imported from a .henryproblem render as the Henry worksheet
   // instead of the plain description + image pair.
   const henrySheet = readStoredHenryProblem((challenge as any).henryproblem)
+  /**
+   * True when this render goes through the 3D room. The problem and solution
+   * then sit directly on the book's page art, so every surface that would
+   * otherwise paint its own card has to go transparent.
+   */
+  const onBookPage = !!challengeScene && isDesktop
 
   const hasSubmitted = !!userSubmission
   const canSeeOthers = (hasSubmitted && userSubmission?.is_locked) || isTeacher
@@ -1322,15 +1426,9 @@ export default function ChallengePage() {
               </Button>
               <HomeButton />
               <div className="flex items-center gap-2">
-                <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Challenge</h1>
-                <select
-                  value={tagLang}
-                  onChange={e => setTagLang(e.target.value as 'en' | 'zh')}
-                  className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white"
-                >
-                  <option value="en">EN</option>
-                  <option value="zh">CN</option>
-                </select>
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900">{t('challenge.label')}</h1>
+                {/* The EN/CN dropdown that lived here is gone — tag language
+                    now follows the global switcher. */}
               </div>
             </div>
             {isTeacher && (
@@ -1369,7 +1467,7 @@ export default function ChallengePage() {
                       <button onClick={() => { handleDuplicate(); setShowMenu(false) }} disabled={duplicating}
                         className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Copy</button>
                       <button onClick={() => { handleSaveAsTemplate(); setShowMenu(false) }} disabled={savingTemplate}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Save as Template</button>
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">{t('challenge.saveAsTemplate')}</button>
                       <button onClick={() => { setShowDeleteModal(true); setShowMenu(false) }}
                         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete</button>
                     </div>
@@ -1388,15 +1486,44 @@ export default function ChallengePage() {
             <div className="flex items-center gap-3">
               <span className="text-4xl">🎉</span>
               <div>
-                <h3 className="text-xl font-bold">Great job!</h3>
-                <p>You can now see what others wrote</p>
+                <h3 className="text-xl font-bold">{t('challenge.greatJob')}</h3>
+                <p>{t('challenge.canSeeOthers')}</p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Challenge Card — wrapped in MagicBookReveal for the ancient book opening experience */}
-        <MagicBookReveal
+        {/* Why the flat book, for teachers only.
+
+            The 3D path needs four things at once and silently falls back when
+            any is missing, which is right for students — a misconfiguration
+            should degrade, not break — but it leaves an author with no way to
+            tell "this challenge has no snapshot" from "the window is too
+            narrow". Both look like the old book. */}
+        {isTeacher && !onBookPage && (
+          <p className="mb-3 text-xs text-gray-400">
+            Flat book:{' '}
+            {!henrySheet
+              ? (challenge as any).henryproblem
+                /* The column being non-null is not the same as the snapshot
+                   being usable — readStoredHenryProblem parses it and can
+                   reject it. Conflating the two sends you looking at the wrong
+                   thing, since a SQL null-check says the snapshot is fine. */
+                ? 'this challenge stores a .henryproblem snapshot, but it could not be read — so the room has no page-native layout to print. Re-importing the file should repair it.'
+                : 'this challenge has no .henryproblem snapshot. Re-import it from a .henryproblem file to use the room.'
+              : roomOptOut
+                ? 'you turned the challenge room off in Decorations.'
+                : !isDesktop
+                  ? `the window is ${typeof window !== 'undefined' ? window.innerWidth : 0}px wide; the room needs 768px. It is desktop-only so tablets never download the 3D model.`
+                  : 'no challenge room is selected and no default is set.'}
+          </p>
+        )}
+
+        {/* Challenge Card — ChallengeBookShell picks the 3D room when the student
+            has one selected on desktop, otherwise the 2D MagicBookReveal book */}
+        <ChallengeBookShell
+          scene={challengeScene}
+          problemPreview={{ title: challenge.title, body: challenge.description ?? '' }}
           title={challenge.title}
           date={new Date(challenge.challenge_date + 'T12:00:00').toLocaleDateString('en-US', {
             month: 'long',
@@ -1412,7 +1539,7 @@ export default function ChallengePage() {
             <>{hasSubmitted && !isEditing ? (
               <>
               {/* Show submitted solution */}
-              <Card className="mb-4 border-2 border-primary-500">
+              <Card className={onBookPage ? 'mb-4 !bg-transparent !shadow-none border-2 border-[rgba(100,60,10,0.3)] hover:!shadow-none hover:!translate-y-0' : 'mb-4 border-2 border-primary-500'}>
                 <Card.Header>
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <Card.Title className="flex items-center gap-2 flex-wrap">
@@ -1447,9 +1574,14 @@ export default function ChallengePage() {
                   </div>
                 </Card.Header>
                 <Card.Body>
-                  <p className="text-gray-700 whitespace-pre-wrap mb-3">
-                    {userSubmission.content}
-                  </p>
+                  <TranslatedContent
+                    kind="submission"
+                    id={userSubmission.id}
+                    content={userSubmission.content}
+                    contentEn={userSubmission.content_en}
+                    contentZh={userSubmission.content_zh}
+                    className="text-gray-700 whitespace-pre-wrap mb-3"
+                  />
                   {userSubmission.image_url && (
                     <img src={userSubmission.image_url} alt="Solution" className="max-w-full max-h-64 rounded-lg border mb-3" />
                   )}
@@ -1491,25 +1623,27 @@ export default function ChallengePage() {
               </>
             ) : (
               // Show submission form
-              <Card className="mb-4">
-                <Card.Header>
-                  <Card.Title className="flex items-center gap-2">
+              <Card className={onBookPage ? 'mb-4 !bg-transparent !shadow-none !border-0 hover:!shadow-none hover:!translate-y-0' : 'mb-4'}>
+                <Card.Header className={onBookPage ? '!border-b-0 !px-0 !py-0' : ''}>
+                  <Card.Title className={`flex items-center gap-2 ${onBookPage ? 'justify-center' : ''}`}>
                     <span>✍️</span>
-                    {hasSubmitted ? 'Edit Your Solution' : 'Your Solution'}
+                    {hasSubmitted ? t('challenge.editSolution') : t('challenge.yourSolution')}
                   </Card.Title>
                 </Card.Header>
-                <Card.Body>
+                <Card.Body className={onBookPage ? '!px-0' : ''}>
                   <textarea
                     value={solution}
                     onChange={(e) => setSolution(e.target.value)}
-                    placeholder="Write your solution here... Show your work!"
-                    className="w-full h-48 p-4 border-2 border-gray-200 rounded-2xl 
-                             focus:border-primary-500 focus:ring-2 focus:ring-primary-200
-                             resize-none transition-colors"
+                    placeholder={t('challenge.solutionPlaceholder')}
+                    className={`w-full h-48 p-4 border-2 rounded-2xl resize-none transition-colors focus:ring-2 ${
+                      onBookPage
+                        ? 'bg-transparent border-[rgba(100,60,10,0.28)] text-[#2d1a00] placeholder-[rgba(100,60,10,0.45)] focus:border-[rgba(100,60,10,0.5)] focus:ring-[rgba(100,60,10,0.15)]'
+                        : 'border-gray-200 focus:border-primary-500 focus:ring-primary-200'
+                    }`}
                   />
                   <div className="mt-3">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      📷 Attach Image (Optional)
+                      {t('challenge.attachImage')}
                     </label>
                     <input
                       type="file"
@@ -1564,8 +1698,10 @@ export default function ChallengePage() {
             )}</>
           }
         >
-          {/* Tags */}
-          {challenge.tag_ids && challenge.tag_ids.length > 0 && (
+          {/* Tags — suppressed on the book page, where the worksheet prints its
+              own Tags row from the .henryproblem snapshot and this would be a
+              near-duplicate of it directly above. */}
+          {!onBookPage && challenge.tag_ids && challenge.tag_ids.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-5">
               {challenge.tag_ids.map((tagId: string) => {
                 const name = tagNames[tagId]?.[tagLang] || tagNames[tagId]?.['en'] || tagNames[tagId]?.['zh'] || tagId.slice(0, 8)
@@ -1591,7 +1727,21 @@ export default function ChallengePage() {
             <HenryProblemSheet
               problem={henrySheet.problem}
               graphUrl={challenge.image_url}
-              zoomable
+              // On the book page the worksheet must not paint a sheet of its
+              // own, and the spread is already the enlarged view — a second
+              // zoom layer inside it just adds a dead affordance.
+              theme={onBookPage ? pageNativeHenryTheme : undefined}
+              zoomable={!onBookPage}
+              subheader={onBookPage ? (
+                <p
+                  className="text-center text-sm italic"
+                  style={{ color: 'rgba(100,60,10,0.6)', fontFamily: 'Georgia, serif' }}
+                >
+                  — ✦ — {new Date(challenge.challenge_date + 'T12:00:00').toLocaleDateString('en-US', {
+                    month: 'long', day: 'numeric', year: 'numeric',
+                  })} — ✦ —
+                </p>
+              ) : undefined}
               className="mb-1"
             />
           ) : (
@@ -1629,7 +1779,7 @@ export default function ChallengePage() {
                     <textarea
                       value={hintDraft}
                       onChange={e => setHintDraft(e.target.value)}
-                      placeholder="Add a hint for students..."
+                      placeholder={t('challenge.hintPlaceholder')}
                       rows={3}
                       className="w-full px-3 py-2 text-sm border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-100 resize-none"
                     />
@@ -1690,7 +1840,7 @@ export default function ChallengePage() {
                   </div>
                 ) : (
                   <div className="flex items-start gap-2">
-                    <div className="flex-1 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <div className={`flex-1 p-3 border rounded-xl ${onBookPage ? 'bg-transparent border-[rgba(180,120,40,0.35)]' : 'bg-amber-50 border-amber-200'}`}>
                       <p className="text-xs font-medium text-amber-600 mb-1">💡 Hint</p>
                       {challenge.hint && (
                         <p className="text-sm text-amber-800 whitespace-pre-wrap mb-2">{challenge.hint}</p>
@@ -1703,7 +1853,7 @@ export default function ChallengePage() {
                         />
                       )}
                       {!challenge.hint && !(challenge as any).hint_image_url && (
-                        <span className="italic text-amber-400 text-sm">No hint added yet</span>
+                        <span className="italic text-amber-400 text-sm">{t('challenge.noHint')}</span>
                       )}
                     </div>
                     <Button size="sm" variant="ghost" onClick={() => {
@@ -1745,7 +1895,7 @@ export default function ChallengePage() {
               )}
             </div>
           )}
-        </MagicBookReveal>
+        </ChallengeBookShell>
 
         {/* Ask About This Challenge button — shown when challenge is assigned to at least one class (Req 1.2, 1.3) */}
         {assignedClassIds.length > 0 && (!challenge.challenge_date || challenge.challenge_date <= localDateString()) && (
@@ -1808,7 +1958,7 @@ export default function ChallengePage() {
               {showStudentList && (
                 <div className="mt-4 p-4 bg-white rounded-2xl">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-gray-900">Student Status</h4>
+                    <h4 className="font-semibold text-gray-900">{t('challenge.studentStatus')}</h4>
                     <button
                       onClick={() => setShowStudentList(false)}
                       className="text-sm text-gray-500 hover:text-gray-700"
@@ -1885,9 +2035,14 @@ export default function ChallengePage() {
                               {formatTimeAgo(submission.submitted_at)}
                             </p>
                           </div>
-                          <p className="text-gray-700 whitespace-pre-wrap mb-3">
-                            {submission.content}
-                          </p>
+                          <TranslatedContent
+                            kind="submission"
+                            id={submission.id}
+                            content={submission.content}
+                            contentEn={submission.content_en}
+                            contentZh={submission.content_zh}
+                            className="text-gray-700 whitespace-pre-wrap mb-3"
+                          />
                           {submission.image_url && (
                             <img src={submission.image_url} alt="Solution" className="max-w-full max-h-64 rounded-lg border mb-3" />
                           )}
@@ -2090,10 +2245,10 @@ export default function ChallengePage() {
                                       onChange={e => setTaGrades(prev => ({ ...prev, [submission.id]: { ...prev[submission.id], lessonType: e.target.value } as any }))}
                                       className="w-full text-xs px-2 py-1.5 border border-amber-200 rounded-lg bg-white"
                                     >
-                                      <option value="correct">TA was correct actually</option>
-                                      <option value="grading-rules">Wrong grading rule applied</option>
-                                      <option value="math-knowledge">TA misunderstood the math</option>
-                                      <option value="grading-style">Wrong comment style</option>
+                                      <option value="correct">{t('challenge.taWasCorrect')}</option>
+                                      <option value="grading-rules">{t('challenge.wrongRule')}</option>
+                                      <option value="math-knowledge">{t('challenge.taMisunderstood')}</option>
+                                      <option value="grading-style">{t('challenge.wrongCommentStyle')}</option>
                                     </select>
                                     <button
                                       disabled={taGrades[submission.id]?.feedbackSending}

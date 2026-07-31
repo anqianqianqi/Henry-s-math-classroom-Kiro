@@ -6,9 +6,11 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import { Card } from '@/components/ui/Card'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -39,12 +41,12 @@ export default function ResetPasswordPage() {
     setError('')
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError(t('auth.passwordTooShort'))
       return
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError(t('auth.passwordsDoNotMatch'))
       return
     }
 
@@ -62,7 +64,7 @@ export default function ResetPasswordPage() {
       // Success — redirect to dashboard
       router.push('/dashboard')
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError(t('auth.unexpectedError'))
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -72,7 +74,7 @@ export default function ResetPasswordPage() {
   if (!ready) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">Verifying reset link...</p>
+        <p className="text-gray-500">{t('auth.verifyingLink')}</p>
       </div>
     )
   }
@@ -84,11 +86,11 @@ export default function ResetPasswordPage() {
           href="/login"
           className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 py-2 px-3 -ml-3 rounded-lg active:bg-gray-100"
         >
-          ← Back
+          ← {t('action.back')}
         </a>
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Henry&apos;s Math Classroom</h1>
-          <p className="mt-2 text-gray-600">Set a new password</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('auth.appName')}</h1>
+          <p className="mt-2 text-gray-600">{t('auth.setNewPassword')}</p>
         </div>
 
         <Card>
@@ -101,17 +103,17 @@ export default function ResetPasswordPage() {
               )}
 
               <FormField
-                label="New Password"
+                label={t('auth.newPassword')}
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                helperText="At least 6 characters"
+                helperText={t('auth.passwordHint')}
                 required
               />
 
               <FormField
-                label="Confirm New Password"
+                label={t('auth.confirmNewPassword')}
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -126,7 +128,7 @@ export default function ResetPasswordPage() {
                 isLoading={isLoading}
                 className="w-full"
               >
-                Update Password
+                {t('auth.updatePassword')}
               </Button>
             </form>
           </Card.Body>

@@ -29,6 +29,13 @@ interface BookSkin {
 interface UserPrefs {
   cover_skin_id: string | null
   page_skin_id: string | null
+  /**
+   * Challenge room selection. Read here so the bundle picker knows whether a
+   * room is set — ubsp_package_requires_room rejects a bundle without one.
+   * There is no room picker on this page yet, so this is effectively read-only.
+   */
+  challenge_room_id: string | null
+  texture_package_id: string | null
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,7 +51,7 @@ export default function BookSkinsUserPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [allSkins, setAllSkins] = useState<BookSkin[]>([])
-  const [prefs, setPrefs] = useState<UserPrefs>({ cover_skin_id: null, page_skin_id: null })
+  const [prefs, setPrefs] = useState<UserPrefs>({ cover_skin_id: null, page_skin_id: null, challenge_room_id: null, texture_package_id: null })
   const [userId, setUserId] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -160,10 +167,15 @@ export default function BookSkinsUserPage() {
 
       const { data: prefRow } = await supabase
         .from('user_book_skin_preferences')
-        .select('cover_skin_id, page_skin_id')
+        .select('cover_skin_id, page_skin_id, challenge_room_id, texture_package_id')
         .eq('user_id', user.id)
         .maybeSingle()
-      if (prefRow) setPrefs({ cover_skin_id: prefRow.cover_skin_id, page_skin_id: prefRow.page_skin_id })
+      if (prefRow) setPrefs({
+        cover_skin_id: prefRow.cover_skin_id,
+        page_skin_id: prefRow.page_skin_id,
+        challenge_room_id: (prefRow as any).challenge_room_id ?? null,
+        texture_package_id: (prefRow as any).texture_package_id ?? null,
+      })
 
       setLoading(false)
     }
@@ -222,6 +234,9 @@ export default function BookSkinsUserPage() {
         user_id: userId,
         cover_skin_id: toSave.cover_skin_id,
         page_skin_id: toSave.page_skin_id,
+        // Deliberately NOT writing challenge_room_id / texture_package_id.
+        // /challenge-rooms owns those; writing the copy loaded at mount here
+        // would clobber a room chosen there after this page was opened.
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })
 
@@ -300,22 +315,28 @@ export default function BookSkinsUserPage() {
               onManage={(skin) => { setActionSkin(skin); setActionError(null); setShowSellInput(false); setSellPrice('') }}
             />
 
-            {/* ── Page skin picker ── */}
-            <SkinPicker
-              title="📄 Inner Page"
-              description="The background of the open book pages."
-              skins={pageSkins}
-              selectedId={effectivePage}
-              onSelect={(id) => {
-                const newPrefs = { ...prefs, page_skin_id: id }
-                setPrefs(newPrefs)
-                savePrefs(newPrefs)
-              }}
-              previewAspect={400 / 620}
-              skinType="page"
-              isAdmin={isAdmin}
-              onManage={(skin) => { setActionSkin(skin); setActionError(null); setShowSellInput(false); setSellPrice('') }}
-            />
+            {/* Inner-page skins are no longer a collection. Every open book
+                uses the default page skin, so there is nothing to choose. The
+                rows and the default are untouched in the database — see
+                supabase/add-bundle-default-and-retire-page-skins.sql. */}
+
+            {/* The Challenge Room and its book bundle live on their own page —
+                they are a matched pair (a bundle needs a room, enforced by
+                ubsp_package_requires_room), so managing them together avoids
+                picking one half and being refused on save. */}
+            <div className="rounded-2xl border border-gray-100 bg-white p-5">
+              <h2 className="text-lg font-bold text-gray-900">🏛️ Challenge Room</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Swap the flat book for a 3D room with an animated book, and choose the
+                cover / inner-page bundle that wraps it.
+              </p>
+              <a
+                href="/challenge-rooms"
+                className="mt-3 inline-block rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-600"
+              >
+                Open Challenge Room collection →
+              </a>
+            </div>
 
             {/* Auto-save indicator */}
             {saving && (

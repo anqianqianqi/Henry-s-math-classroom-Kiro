@@ -5,8 +5,10 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import { Card } from '@/components/ui/Card'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 export default function ForgotPasswordPage() {
+  const { t } = useLanguage()
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [sent, setSent] = useState(false)
@@ -30,7 +32,7 @@ export default function ForgotPasswordPage() {
 
       setSent(true)
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError(t('auth.unexpectedError'))
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -44,11 +46,11 @@ export default function ForgotPasswordPage() {
           href="/login"
           className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 py-2 px-3 -ml-3 rounded-lg active:bg-gray-100"
         >
-          ← Back
+          ← {t('action.back')}
         </a>
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Henry&apos;s Math Classroom</h1>
-          <p className="mt-2 text-gray-600">Reset your password</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('auth.appName')}</h1>
+          <p className="mt-2 text-gray-600">{t('auth.resetSubtitle')}</p>
         </div>
 
         <Card>
@@ -56,12 +58,11 @@ export default function ForgotPasswordPage() {
             {sent ? (
               <div className="text-center py-4 space-y-3">
                 <div className="text-4xl">📧</div>
-                <h2 className="text-lg font-semibold text-gray-900">Check your email</h2>
+                <h2 className="text-lg font-semibold text-gray-900">{t('auth.checkEmail')}</h2>
                 <p className="text-gray-600 text-sm">
-                  We sent a password reset link to <span className="font-medium">{email}</span>.
-                  Check your inbox and click the link to set a new password.
+                  {t('auth.resetSent', { email })}
                 </p>
-                <p className="text-xs text-gray-400">Didn&apos;t get it? Check your spam folder.</p>
+                <p className="text-xs text-gray-400">{t('auth.didNotGetIt')}</p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -72,11 +73,11 @@ export default function ForgotPasswordPage() {
                 )}
 
                 <p className="text-sm text-gray-600">
-                  Enter your email and we&apos;ll send you a link to reset your password.
+                  {t('auth.resetIntro')}
                 </p>
 
                 <FormField
-                  label="Email"
+                  label={t('auth.email')}
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -91,16 +92,16 @@ export default function ForgotPasswordPage() {
                   isLoading={isLoading}
                   className="w-full"
                 >
-                  Send Reset Link
+                  {t('auth.sendResetLink')}
                 </Button>
               </form>
             )}
           </Card.Body>
           <Card.Footer>
             <p className="text-sm text-center text-gray-600">
-              Remember your password?{' '}
+              {t('auth.rememberPassword')}{' '}
               <a href="/login" className="text-blue-600 hover:underline">
-                Sign in
+                {t('auth.signIn')}
               </a>
             </p>
           </Card.Footer>

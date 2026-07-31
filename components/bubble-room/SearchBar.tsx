@@ -13,6 +13,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { BubbleQuestion } from '@/lib/types/bubbleRoom'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 export interface SearchBarProps {
   /** Current search value (controlled) */
@@ -46,9 +47,12 @@ export function SearchBar({
   onLoadMore,
   onSuggestionClick,
   maxLength = 200,
-  placeholder = 'Search questions…',
+  // Defaulted from the catalog rather than a literal, so the placeholder
+  // follows the reader's language when the caller does not supply one.
+  placeholder,
   error,
 }: SearchBarProps) {
+  const { t } = useLanguage()
   const [localValue, setLocalValue] = useState(value)
   const [isOpen, setIsOpen] = useState(false)
   const [extraResults, setExtraResults] = useState<BubbleQuestion[]>([])
@@ -210,8 +214,8 @@ export function SearchBar({
           onChange={handleChange}
           onFocus={handleFocus}
           maxLength={maxLength}
-          placeholder={placeholder}
-          aria-label="Search questions"
+          placeholder={placeholder ?? t('bubble.searchPlaceholder')}
+          aria-label={t('bubble.search')}
           aria-expanded={showDropdown}
           aria-autocomplete="list"
           aria-haspopup="listbox"
@@ -233,7 +237,7 @@ export function SearchBar({
           <button
             type="button"
             onClick={handleClear}
-            aria-label="Clear search"
+            aria-label={t('bubble.clearSearch')}
             className="absolute right-3 text-gray-400 hover:text-gray-600 transition-colors"
           >
             <svg
@@ -259,7 +263,7 @@ export function SearchBar({
       {showDropdown && (
         <ul
           role="listbox"
-          aria-label="Question suggestions"
+          aria-label={t('bubble.suggestions')}
           className="
             absolute z-50 top-full left-0 right-0 mt-1
             bg-white rounded-xl border border-gray-100
@@ -337,10 +341,10 @@ export function SearchBar({
                 {isLoadingMore ? (
                   <span className="flex items-center justify-center gap-2">
                     <span className="w-3 h-3 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-                    Loading…
+                    {t('status.loading')}
                   </span>
                 ) : (
-                  'Show more'
+                  t('bubble.showMore')
                 )}
               </button>
             </li>

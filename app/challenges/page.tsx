@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { Card } from '@/components/ui/Card'
 import { runSchedulerForClass } from '@/lib/scheduler'
 import { Button } from '@/components/ui/Button'
@@ -62,7 +63,14 @@ export default function ChallengesPage() {
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false)
   const [availableTagsMap, setAvailableTagsMap] = useState<Record<string, string>>({}) // id → name
   const [allTagData, setAllTagData] = useState<any[]>([]) // raw tag data with all names
-  const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
+  /**
+   * Tag names come from challenge_tag_names, which has a row per language, so
+   * they follow the global UI language rather than a separate control. The old
+   * per-page dropdown that set this is gone — two language switches that could
+   * disagree was the confusing part.
+   */
+  const { t, language } = useLanguage()
+  const tagLang = language
   const tagDropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -951,7 +959,7 @@ export default function ChallengesPage() {
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">🎯</div>
-          <p className="text-gray-600">Loading challenges...</p>
+          <p className="text-gray-600">{t('challenge.loadingList')}</p>
         </div>
       </div>
     )
@@ -1007,14 +1015,9 @@ export default function ChallengesPage() {
         breadcrumbs={[{ label: 'Challenges' }]}
         actions={
           <div className="flex items-center gap-2">
-            <select
-              value={tagLang}
-              onChange={e => setTagLang(e.target.value as 'en' | 'zh')}
-              className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white"
-            >
-              <option value="en">EN</option>
-              <option value="zh">CN</option>
-            </select>
+            {/* The EN/CN dropdown that lived here is gone — tag language now
+                follows the global switcher, so there is one control instead of
+                two that could disagree. */}
             {isTeacher && (
               <>
                 <Button size="sm" onClick={() => router.push('/challenges/new')}>
@@ -1047,7 +1050,7 @@ export default function ChallengesPage() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by title or description..."
+                    placeholder={t('challenge.searchPlaceholder')}
                     className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl 
                              focus:border-primary-500 focus:ring-2 focus:ring-primary-100
                              transition-all"
@@ -1066,7 +1069,7 @@ export default function ChallengesPage() {
                              focus:border-primary-500 focus:ring-2 focus:ring-primary-100
                              transition-all bg-white"
                   >
-                    <option value="all">All Classes</option>
+                    <option value="all">{t('challenge.allClasses')}</option>
                     {classes.map(cls => (
                       <option key={cls.id} value={cls.name}>{cls.name}</option>
                     ))}
@@ -1085,11 +1088,11 @@ export default function ChallengesPage() {
                              focus:border-primary-500 focus:ring-2 focus:ring-primary-100
                              transition-all bg-white"
                   >
-                    <option value="all">All Dates</option>
-                    <option value="today">Today</option>
-                    <option value="this-week">This Week</option>
-                    <option value="upcoming">Upcoming</option>
-                    <option value="past">Past</option>
+                    <option value="all">{t('challenge.allDates')}</option>
+                    <option value="today">{t('challenge.today')}</option>
+                    <option value="this-week">{t('challenge.thisWeek')}</option>
+                    <option value="upcoming">{t('challenge.upcoming')}</option>
+                    <option value="past">{t('challenge.past')}</option>
                   </select>
                 </div>
               </div>
@@ -1100,7 +1103,7 @@ export default function ChallengesPage() {
                 const tagsWithNames = allTagIds.map(id => ({ id, name: availableTagsMap[id] || id.slice(0, 8) })).sort((a, b) => a.name.localeCompare(b.name))
                 return tagsWithNames.length > 0 ? (
                   <div className="mt-4 flex flex-wrap items-center gap-3">
-                    <label className="text-sm font-medium text-gray-700 shrink-0">Tags:</label>
+                    <label className="text-sm font-medium text-gray-700 shrink-0">{t('challenge.tagsLabel')}</label>
                     <div className="relative" ref={tagDropdownRef}>
                       <button
                         type="button"
@@ -1184,10 +1187,10 @@ export default function ChallengesPage() {
                 >
                   <option value="date-desc">Date (Newest First)</option>
                   <option value="date-asc">Date (Oldest First)</option>
-                  <option value="submissions-desc">Most Submissions</option>
-                  <option value="submissions-asc">Least Submissions</option>
-                  <option value="completion-desc">Highest Completion</option>
-                  <option value="completion-asc">Lowest Completion</option>
+                  <option value="submissions-desc">{t('challenge.mostSubmissions')}</option>
+                  <option value="submissions-asc">{t('challenge.leastSubmissions')}</option>
+                  <option value="completion-desc">{t('challenge.highestCompletion')}</option>
+                  <option value="completion-asc">{t('challenge.lowestCompletion')}</option>
                 </select>
 
                 {/* Results count */}
@@ -1404,25 +1407,25 @@ export default function ChallengesPage() {
                     <div className="text-2xl font-bold text-primary-600">
                       {graded.length > 0 ? `${totalEarned}/${totalPossible}` : '—'}
                     </div>
-                    <div className="text-xs text-gray-500 mt-0.5">Total Points</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{t('challenge.totalPoints')}</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">{graded.length}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">Graded</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{t('challenge.graded')}</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-yellow-500">{pending.length}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">Pending Grade</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{t('challenge.pendingGrade')}</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-gray-400">{notSubmitted.length}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">Not Submitted</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{t('challenge.notSubmittedStat')}</div>
                   </div>
                 </div>
                 {graded.length > 0 && totalPossible > 0 && (
                   <div className="mt-3">
                     <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>Score rate</span>
+                      <span>{t('challenge.scoreRate')}</span>
                       <span>{Math.round((totalEarned / totalPossible) * 100)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-1.5">
@@ -1653,7 +1656,7 @@ export default function ChallengesPage() {
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between gap-3 shrink-0">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Assign from Challenge Bank</h2>
+                <h2 className="text-lg font-bold text-gray-900">{t('challenge.assignFromBank')}</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
                   <span className="font-medium text-gray-700">{pickTarget.className}</span>
                   {' · '}
@@ -1675,7 +1678,7 @@ export default function ChallengesPage() {
                 type="text"
                 value={bankSearch}
                 onChange={e => setBankSearch(e.target.value)}
-                placeholder="Search by title, description or tag…"
+                placeholder={t('challenge.searchWithTag')}
                 autoFocus
                 className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-colors"
               />
@@ -1701,7 +1704,7 @@ export default function ChallengesPage() {
                 /* ── Confirm stage ── */
                 <div className="space-y-4 py-2">
                   <div className="p-4 rounded-xl bg-primary-50 border border-primary-200">
-                    <p className="text-xs font-semibold text-primary-500 uppercase tracking-wide mb-1">Selected challenge</p>
+                    <p className="text-xs font-semibold text-primary-500 uppercase tracking-wide mb-1">{t('challenge.selectedChallenge')}</p>
                     {(() => {
                       // .henryproblem items preview as the worksheet students
                       // will actually see, rather than a truncated description.
@@ -1775,7 +1778,7 @@ export default function ChallengesPage() {
                   const notHidden = showUsed || !usedBankIds.has(c.id)
                   return matchesSearch && notHidden
                 }).length === 0 ? (
-                <p className="text-center text-gray-400 py-8 text-sm">No challenges found</p>
+                <p className="text-center text-gray-400 py-8 text-sm">{t('challenge.noneFound')}</p>
               ) : (
                 bankChallenges
                   .filter(c => {

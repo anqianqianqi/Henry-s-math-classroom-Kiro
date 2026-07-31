@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { UserNameWithBadges } from '@/components/UserNameWithBadges'
+import { TranslatedContent } from '@/components/TranslatedContent'
 import type { BadgeInfo, UserBadgeMap } from '@/lib/hooks/useUserBadges'
 
 interface Comment {
@@ -9,6 +10,9 @@ interface Comment {
   submission_id: string
   user_id: string
   content: string
+  /** Stored translations, filled on first read in the other language. */
+  content_en?: string | null
+  content_zh?: string | null
   image_url?: string | null
   created_at: string
   profiles: {
@@ -193,7 +197,14 @@ export function CommentThread({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-gray-700 break-words whitespace-pre-wrap">{comment.content}</p>
+                  <TranslatedContent
+                    kind="comment"
+                    id={comment.id}
+                    content={comment.content}
+                    contentEn={comment.content_en}
+                    contentZh={comment.content_zh}
+                    className="text-gray-700 break-words whitespace-pre-wrap"
+                  />
                 )}
 
                 {comment.image_url && (

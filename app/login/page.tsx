@@ -6,9 +6,11 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import { Card } from '@/components/ui/Card'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -36,7 +38,7 @@ export default function LoginPage() {
         router.refresh()
       }
     } catch (err) {
-      setError('An unexpected error occurred')
+      setError(t('auth.unexpectedError'))
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -48,9 +50,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
-            Henry&apos;s Math Classroom
+            {t('auth.appName')}
           </h1>
-          <p className="mt-2 text-gray-600">Sign in to your account</p>
+          <p className="mt-2 text-gray-600">{t('auth.signInSubtitle')}</p>
         </div>
 
         <Card>
@@ -63,7 +65,7 @@ export default function LoginPage() {
               )}
 
               <FormField
-                label="Email"
+                label={t('auth.email')}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -72,7 +74,7 @@ export default function LoginPage() {
               />
 
               <FormField
-                label="Password"
+                label={t('auth.password')}
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -82,7 +84,7 @@ export default function LoginPage() {
 
               <div className="text-right -mt-2">
                 <a href="/forgot-password" className="text-sm text-blue-600 hover:underline">
-                  Forgot password?
+                  {t('auth.forgotPassword')}
                 </a>
               </div>
 
@@ -93,15 +95,15 @@ export default function LoginPage() {
                 isLoading={isLoading}
                 className="w-full"
               >
-                Sign In
+                {t('auth.signIn')}
               </Button>
             </form>
           </Card.Body>
           <Card.Footer>
             <p className="text-sm text-center text-gray-600">
-              Don&apos;t have an account?{' '}
+              {t('auth.noAccount')}{' '}
               <a href="/signup" className="text-blue-600 hover:underline">
-                Sign up
+                {t('auth.signUpLink')}
               </a>
             </p>
           </Card.Footer>

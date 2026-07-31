@@ -10,6 +10,8 @@
 
 import React, { useCallback, useRef, useState } from 'react'
 import type { BubbleInstance } from '@/lib/types/bubbleRoom'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { useOnDemandTranslation } from '@/lib/i18n/useOnDemandTranslation'
 
 export interface QuestionBubbleProps {
   instance: BubbleInstance
@@ -56,6 +58,10 @@ type BurstPhase = 'idle' | 'expand' | 'pop'
 
 export function QuestionBubble({ instance, onClick, searchQuery = '' }: QuestionBubbleProps) {
   const { question, id, x, drift, speed } = instance
+  const { language } = useLanguage()
+  // Show the reader's language; the original stays on the record for search.
+  // Translated on first sight if nobody has read this one in `language` yet.
+  const local = useOnDemandTranslation('question', question.id, question, language)
   const [phase, setPhase] = useState<BurstPhase>('idle')
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -68,12 +74,14 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
   const wobbleDelay = 2 + r2 * 6         // 2–8 s
   const wobbleDuration = 1.2 + r3 * 0.8  // 1.2–2.0 s per wobble cycle
 
-  // If there's a title, show it as the bubble label; otherwise fall back to body text preview
-  const bubbleLabel = question.title
-    ? question.title
-    : question.text.length > PREVIEW_MAX_LENGTH
-      ? question.text.slice(0, PREVIEW_MAX_LENGTH - 1) + '…'
-      : question.text
+  // If there's a title, show it as the bubble label; otherwise fall back to body
+  // text preview. Both read the localized copy — the untranslated fields are for
+  // search, not for display.
+  const bubbleLabel = local.title
+    ? local.title
+    : local.text.length > PREVIEW_MAX_LENGTH
+      ? local.text.slice(0, PREVIEW_MAX_LENGTH - 1) + '…'
+      : local.text
 
   const hasActivity = question.response_count > 0 || question.unique_view_count > 0
 
@@ -272,15 +280,15 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
 
         {/* ── Text content ──────────────────────────────────────────────── */}
         {/* Question title or body preview */}
-        {question.title ? (
+        {local.title ? (
           <>
             <p className="px-3 text-center text-[10px] font-bold text-gray-800 leading-tight break-words relative z-10">
-              {searchQuery ? highlightInBubble(question.title, searchQuery) : question.title}
+              {searchQuery ? highlightInBubble(local.title, searchQuery) : local.title}
             </p>
             <p className="px-3 text-center text-[9px] text-gray-500 leading-tight break-words mt-0.5 line-clamp-2 relative z-10">
-              {question.text.length > 40
-                ? question.text.slice(0, 39) + '…'
-                : question.text}
+              {local.text.length > 40
+                ? local.text.slice(0, 39) + '…'
+                : local.text}
             </p>
           </>
         ) : (

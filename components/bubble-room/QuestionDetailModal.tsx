@@ -27,6 +27,9 @@ import {
 } from '@/lib/actions/bubbleRoom'
 import type { BubbleQuestion, BubbleResponse } from '@/lib/types/bubbleRoom'
 import { Button } from '@/components/ui/Button'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import type { Language } from '@/lib/i18n/catalog'
+import { useOnDemandTranslation } from '@/lib/i18n/useOnDemandTranslation'
 import { BadgePill } from './BadgePill'
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
@@ -78,6 +81,8 @@ export function QuestionDetailModal({
   const responseInputRef = useRef<HTMLTextAreaElement>(null)
   const responseFileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
+  const { t, language } = useLanguage()
+  const local = useOnDemandTranslation('question', question.id, question, language)
 
   // ── On mount: record view + fetch responses + open Realtime channel ──────
   useEffect(() => {
@@ -132,6 +137,9 @@ export function QuestionDetailModal({
           question_id,
           user_id,
           text,
+          text_en,
+          text_zh,
+          text_lang,
           image_url,
           created_at,
           profiles:user_id ( full_name, nickname )
@@ -162,6 +170,9 @@ export function QuestionDetailModal({
             question_id: row.question_id,
             user_id: row.user_id,
             text: row.text,
+            text_en: row.text_en ?? null,
+            text_zh: row.text_zh ?? null,
+            text_lang: row.text_lang ?? null,
             image_url: row.image_url ?? null,
             created_at: row.created_at,
             responder_display_name: row.profiles?.nickname ?? row.profiles?.full_name ?? 'Unknown',
@@ -245,6 +256,9 @@ export function QuestionDetailModal({
                 question_id: row.question_id,
                 user_id: row.user_id,
                 text: row.text,
+            text_en: row.text_en ?? null,
+            text_zh: row.text_zh ?? null,
+            text_lang: row.text_lang ?? null,
                 image_url: row.image_url ?? null,
                 created_at: row.created_at,
                 responder_display_name: row.profiles?.nickname ?? row.profiles?.full_name ?? 'Unknown',
@@ -300,11 +314,11 @@ export function QuestionDetailModal({
     const file = e.target.files?.[0]
     if (!file) return
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      setResponseError('Only JPEG, PNG, GIF, or WebP images are allowed.')
+      setResponseError(t('bubble.errImageType'))
       return
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setResponseError('Image must be 10 MB or smaller.')
+      setResponseError(t('bubble.errImageSize'))
       return
     }
     setResponseError(null)
@@ -326,7 +340,7 @@ export function QuestionDetailModal({
 
     const trimmed = responseText.trim()
     if (!trimmed) {
-      setResponseError('Response cannot be empty.')
+      setResponseError(t('bubble.errResponseEmpty'))
       responseInputRef.current?.focus()
       return
     }
@@ -367,7 +381,7 @@ export function QuestionDetailModal({
       if (responseFileInputRef.current) responseFileInputRef.current.value = ''
       onResponseSubmitted()
     } catch (err) {
-      setResponseError(err instanceof Error ? err.message : 'Failed to post your response. Please try again.')
+      setResponseError(err instanceof Error ? err.message : t('bubble.errPostResponse'))
     } finally {
       setIsSubmitting(false)
     }
@@ -392,7 +406,7 @@ export function QuestionDetailModal({
       onDeleteQuestion(question.id)
       onClose()
     } catch {
-      setDeleteQuestionError('Failed to delete. Please try again.')
+      setDeleteQuestionError(t('bubble.errDelete'))
       setConfirmDeleteQuestion(false)
     } finally {
       setIsDeletingQuestion(false)
@@ -419,7 +433,7 @@ export function QuestionDetailModal({
       onDeleteResponse(responseId)
       setConfirmDeleteResponseId(null)
     } catch {
-      setDeleteResponseError('Failed to delete. Please try again.')
+      setDeleteResponseError(t('bubble.errDelete'))
       setConfirmDeleteResponseId(null)
     } finally {
       setDeletingResponseId(null)
@@ -673,7 +687,7 @@ export function QuestionDetailModal({
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-purple-600 hover:text-purple-800 hover:underline shrink-0 font-medium"
-                    title="Open full challenge in new tab"
+                    title={t('bubble.openChallenge')}
                     onClick={(e) => e.stopPropagation()}
                   >
                     View full challenge →
@@ -710,14 +724,14 @@ export function QuestionDetailModal({
                 id="question-detail-title"
                 className="text-base font-semibold text-gray-800 leading-snug mb-1"
               >
-                {question.title}
+                {local.title}
               </h2>
             )}
             <p
               id={question.title ? undefined : 'question-detail-title'}
               className={`leading-snug ${question.title ? 'text-sm text-gray-600' : 'text-base font-semibold text-gray-800'}`}
             >
-              {question.text}
+              {local.text}
             </p>
             {/* Question image */}
             {question.image_url && (
@@ -726,7 +740,7 @@ export function QuestionDetailModal({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block mt-2"
-                aria-label="View full question image"
+                aria-label={t('bubble.viewQuestionImage')}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -740,7 +754,7 @@ export function QuestionDetailModal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('action.close')}
             className="text-indigo-300 hover:text-indigo-600 transition-colors shrink-0"
           >
             <svg
@@ -766,21 +780,21 @@ export function QuestionDetailModal({
             )}
             {confirmDeleteQuestion ? (
               <div className="flex gap-2 items-center">
-                <span className="text-sm text-gray-600 font-medium">Delete this question and all its responses?</span>
+                <span className="text-sm text-gray-600 font-medium">{t('bubble.confirmDeleteQuestion')}</span>
                 <button
                   type="button"
                   onClick={handleDeleteQuestion}
                   disabled={isDeletingQuestion}
                   className="text-sm font-semibold text-gray-600 hover:text-gray-800 disabled:opacity-50"
                 >
-                  {isDeletingQuestion ? 'Deleting…' : 'Yes, delete'}
+                  {isDeletingQuestion ? t('bubble.deleting') : t('bubble.yesDelete')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmDeleteQuestion(false)}
                   className="text-sm text-gray-500 hover:text-gray-700"
                 >
-                  Cancel
+                  {t('action.cancel')}
                 </button>
               </div>
             ) : (
@@ -788,9 +802,9 @@ export function QuestionDetailModal({
                 type="button"
                 onClick={handleDeleteQuestion}
                 className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-                aria-label="Delete this question"
+                aria-label={t('bubble.deleteThisQuestion')}
               >
-                🗑 Delete Question
+                🗑 {t('bubble.deleteQuestion')}
               </button>
             )}
           </div>
@@ -800,11 +814,11 @@ export function QuestionDetailModal({
         <div className="relative z-10 flex-1 overflow-y-auto px-5 py-3 space-y-3">
           {loadingResponses ? (
             <div className="text-center py-6">
-              <div className="inline-block w-6 h-6 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" aria-label="Loading responses" />
+              <div className="inline-block w-6 h-6 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" aria-label={t('bubble.loadingResponses')} />
             </div>
           ) : responses.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">
-              No responses yet. Be the first to reply!
+              {t('bubble.noResponses')}
             </p>
           ) : (
             responses.map((response) => (
@@ -849,14 +863,14 @@ export function QuestionDetailModal({
                             disabled={deletingResponseId === response.id}
                             className="text-xs font-semibold text-gray-600 hover:text-gray-800 disabled:opacity-50"
                           >
-                            {deletingResponseId === response.id ? 'Deleting…' : 'Confirm'}
+                            {deletingResponseId === response.id ? t('bubble.deleting') : t('action.confirm')}
                           </button>
                           <button
                             type="button"
                             onClick={() => setConfirmDeleteResponseId(null)}
                             className="text-xs text-gray-500"
                           >
-                            Cancel
+                            {t('action.cancel')}
                           </button>
                         </div>
                       ) : (
@@ -872,7 +886,7 @@ export function QuestionDetailModal({
                     </div>
                   )}
                 </div>
-                <p className="text-sm text-gray-800 leading-relaxed">{response.text}</p>
+                <ResponseText response={response} language={language} />
                 {/* Response image */}
                 {response.image_url && (
                   <a
@@ -880,7 +894,7 @@ export function QuestionDetailModal({
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block mt-1.5"
-                    aria-label="View full response image"
+                    aria-label={t('bubble.viewResponseImage')}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -910,7 +924,7 @@ export function QuestionDetailModal({
             background: 'rgba(255,255,255,0.25)',
             backdropFilter: 'blur(8px)',
           }}
-          aria-label="Post a response"
+          aria-label={t('bubble.postAResponse')}
         >
           <textarea
             ref={responseInputRef}
@@ -918,7 +932,7 @@ export function QuestionDetailModal({
             onChange={(e) => setResponseText(e.target.value)}
             maxLength={2000}
             rows={2}
-            placeholder="Write a response…"
+            placeholder={t('bubble.writeResponse')}
             className={`
               w-full px-3 py-2 rounded-xl border text-sm text-gray-800 resize-none
               focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent
@@ -939,7 +953,7 @@ export function QuestionDetailModal({
               <button
                 type="button"
                 onClick={handleRemoveResponseImage}
-                aria-label="Remove image"
+                aria-label={t('bubble.removeImage')}
                 className="
                   absolute -top-2 -right-2
                   w-5 h-5 rounded-full bg-gray-700 text-white
@@ -967,7 +981,7 @@ export function QuestionDetailModal({
                 cursor-pointer hover:border-primary-400 hover:text-primary-500
                 transition-colors
               "
-              aria-label="Attach image to response"
+              aria-label={t('bubble.attachResponseImage')}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -989,7 +1003,7 @@ export function QuestionDetailModal({
               isLoading={isSubmitting}
               disabled={isSubmitting || responseText.trim().length === 0}
             >
-              Reply
+              {t('bubble.reply')}
             </Button>
           </div>
         </form>
@@ -997,4 +1011,26 @@ export function QuestionDetailModal({
       </div>
     </div>
   )
+}
+
+// ── Reply text ─────────────────────────────────────────────────────────────
+
+/**
+ * One reply's prose, in the reader's language.
+ *
+ * Separate from the list above only because the on-demand translation is a
+ * hook, and hooks cannot run inside a .map(). Each reply asks for its own
+ * translation the first time somebody reads the thread in a language it has
+ * not been rendered in yet; the result is stored server-side, so the rest of
+ * the class gets it immediately.
+ */
+function ResponseText({
+  response,
+  language,
+}: {
+  response: BubbleResponse
+  language: Language
+}) {
+  const { text } = useOnDemandTranslation('response', response.id, response, language)
+  return <p className="text-sm text-gray-800 leading-relaxed">{text}</p>
 }

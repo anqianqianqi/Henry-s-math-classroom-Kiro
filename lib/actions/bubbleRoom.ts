@@ -13,6 +13,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { BubbleQuestion, BubbleResponse, BubbleQuestionAssignment } from '@/lib/types/bubbleRoom'
 import { evaluateRuleBadges } from '@/lib/actions/badges'
+import { detectLanguage } from '@/lib/mathtext-core'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,16 @@ export async function postQuestion(
     // Note: class_id is now optional for the global bubble room.
     // If challenge_id FK fails (bank challenge not in daily_challenges), retry without it.
 
+    /**
+     * Store what the author typed and nothing else. Translation happens when a
+     * reader in the other language actually opens the question, via
+     * /api/i18n/translate-post, which fills the *_en / *_zh columns then.
+     *
+     * Doing it here instead would put a translation API round trip in front of
+     * every post — including the majority nobody ever reads in the other
+     * language. detectLanguage is local and instant, so the source language is
+     * still recorded up front.
+     */
     const insertPayload = {
       class_id: classId ?? null,
       user_id: user.id,
@@ -69,6 +80,7 @@ export async function postQuestion(
       title: trimmedTitle,
       text: trimmed,
       image_url: imageUrl ?? null,
+      text_lang: detectLanguage(trimmed),
     }
 
     let { data, error } = await supabase
@@ -80,7 +92,12 @@ export async function postQuestion(
         user_id,
         challenge_id,
         title,
+        title_en,
+        title_zh,
         text,
+        text_en,
+        text_zh,
+        text_lang,
         image_url,
         created_at,
         updated_at,
@@ -94,7 +111,8 @@ export async function postQuestion(
         .from('bubble_room_questions')
         .insert({ ...insertPayload, challenge_id: null })
         .select(`
-          id, class_id, user_id, challenge_id, title, text, image_url, created_at, updated_at,
+          id, class_id, user_id, challenge_id, title, title_en, title_zh,
+          text, text_en, text_zh, text_lang, image_url, created_at, updated_at,
           profiles:user_id ( full_name, nickname )
         `)
         .single()
@@ -114,7 +132,12 @@ export async function postQuestion(
       user_id: row.user_id,
       challenge_id: row.challenge_id,
       title: row.title ?? null,
+      title_en: row.title_en ?? null,
+      title_zh: row.title_zh ?? null,
       text: row.text,
+      text_en: row.text_en ?? null,
+      text_zh: row.text_zh ?? null,
+      text_lang: row.text_lang ?? null,
       image_url: row.image_url ?? null,
       created_at: row.created_at,
       updated_at: row.updated_at,
@@ -159,6 +182,8 @@ export async function postResponse(
       return { error: 'You must be logged in to post a response.' }
     }
 
+    // Replies post immediately; a reader in the other language triggers the
+    // translation later. See postQuestion above for why.
     const { data, error } = await supabase
       .from('bubble_room_responses')
       .insert({
@@ -166,12 +191,16 @@ export async function postResponse(
         user_id: user.id,
         text: trimmed,
         image_url: imageUrl ?? null,
+        text_lang: detectLanguage(trimmed),
       })
       .select(`
         id,
         question_id,
         user_id,
         text,
+        text_en,
+        text_zh,
+        text_lang,
         image_url,
         created_at,
         profiles:user_id ( full_name, nickname )
@@ -201,6 +230,9 @@ export async function postResponse(
       question_id: row.question_id,
       user_id: row.user_id,
       text: row.text,
+      text_en: row.text_en ?? null,
+      text_zh: row.text_zh ?? null,
+      text_lang: row.text_lang ?? null,
       image_url: row.image_url ?? null,
       created_at: row.created_at,
       responder_display_name: displayName,
@@ -356,6 +388,9 @@ export async function getResponses(
       question_id: row.question_id,
       user_id: row.user_id,
       text: row.text,
+      text_en: row.text_en ?? null,
+      text_zh: row.text_zh ?? null,
+      text_lang: row.text_lang ?? null,
       image_url: row.image_url ?? null,
       created_at: row.created_at,
       responder_display_name:
@@ -392,7 +427,12 @@ export async function fetchInitialQuestions(): Promise<BubbleQuestion[]> {
         user_id,
         challenge_id,
         title,
+        title_en,
+        title_zh,
         text,
+        text_en,
+        text_zh,
+        text_lang,
         image_url,
         created_at,
         updated_at,
@@ -437,7 +477,12 @@ export async function fetchInitialQuestions(): Promise<BubbleQuestion[]> {
       user_id: row.user_id,
       challenge_id: row.challenge_id,
       title: row.title ?? null,
+      title_en: row.title_en ?? null,
+      title_zh: row.title_zh ?? null,
       text: row.text,
+      text_en: row.text_en ?? null,
+      text_zh: row.text_zh ?? null,
+      text_lang: row.text_lang ?? null,
       image_url: row.image_url ?? null,
       created_at: row.created_at,
       updated_at: row.updated_at,
@@ -524,7 +569,12 @@ export async function searchQuestions(
       user_id: row.user_id,
       challenge_id: row.challenge_id ?? null,
       title: row.title ?? null,
+      title_en: row.title_en ?? null,
+      title_zh: row.title_zh ?? null,
       text: row.text,
+      text_en: row.text_en ?? null,
+      text_zh: row.text_zh ?? null,
+      text_lang: row.text_lang ?? null,
       image_url: row.image_url ?? null,
       created_at: row.created_at,
       updated_at: row.updated_at,

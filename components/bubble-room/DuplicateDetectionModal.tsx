@@ -11,6 +11,9 @@
 
 import type { DuplicateMatch } from '@/lib/types/bubbleRoom'
 import { Button } from '@/components/ui/Button'
+import type { Language } from '@/lib/i18n/catalog'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { useOnDemandTranslation } from '@/lib/i18n/useOnDemandTranslation'
 
 export interface DuplicateDetectionModalProps {
   /** Up to 3 matches sorted by descending score */
@@ -30,6 +33,7 @@ export function DuplicateDetectionModal({
   onConfirm,
   onCancel,
 }: DuplicateDetectionModalProps) {
+  const { t, language } = useLanguage()
   return (
     /* Backdrop */
     <div
@@ -55,38 +59,38 @@ export function DuplicateDetectionModal({
               id="duplicate-modal-title"
               className="text-lg font-semibold text-gray-900"
             >
-              Similar question already exists
+              {t('bubble.duplicateTitle')}
             </h2>
             <p className="mt-1 text-sm text-gray-500">
-              Before posting, take a look at{' '}
-              {matches.length === 1 ? 'this similar question' : 'these similar questions'}.
-              They might already have the answer you need!
+              {matches.length === 1
+                ? t('bubble.duplicateIntroOne')
+                : t('bubble.duplicateIntroMany')}
             </p>
           </div>
         </div>
 
         {/* Match list */}
-        <ul className="space-y-3" aria-label="Similar existing questions">
+        <ul className="space-y-3" aria-label={t('bubble.duplicateTitle')}>
           {matches.map((match) => (
             <li
               key={match.question.id}
               className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-1"
             >
-              <p className="text-sm text-gray-800 leading-snug">{match.question.text}</p>
+              <MatchText question={match.question} language={language} />
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">
-                  by {match.question.author_display_name}
+                  {t('bubble.byAuthor', { name: match.question.author_display_name })}
                 </span>
                 <span className="text-gray-200">·</span>
                 <span className="text-xs font-medium text-purple-600">
-                  {Math.round(match.score * 100)}% similar
+                  {t('bubble.percentSimilar', { percent: Math.round(match.score * 100) })}
                 </span>
                 {match.question.response_count > 0 && (
                   <>
                     <span className="text-gray-200">·</span>
                     <span className="text-xs text-gray-400">
                       {match.question.response_count}{' '}
-                      {match.question.response_count === 1 ? 'response' : 'responses'}
+                      {t(match.question.response_count === 1 ? 'bubble.response' : 'bubble.responses')}
                     </span>
                   </>
                 )}
@@ -103,7 +107,7 @@ export function DuplicateDetectionModal({
             onClick={onCancel}
             className="flex-1"
           >
-            No, go back
+            {t('bubble.goBack')}
           </Button>
           <Button
             variant="primary"
@@ -112,10 +116,29 @@ export function DuplicateDetectionModal({
             autoFocus
             className="flex-1"
           >
-            Yes, post anyway
+            {t('bubble.postAnyway')}
           </Button>
         </div>
       </div>
     </div>
   )
+}
+
+/**
+ * One candidate's text, in the reader's language.
+ *
+ * A separate component because the on-demand translation is a hook and this
+ * renders inside a .map(). Worth translating despite being a preview: the whole
+ * point of this modal is deciding "have I already asked this?", which a reader
+ * cannot judge from text in a language they do not read.
+ */
+function MatchText({
+  question,
+  language,
+}: {
+  question: DuplicateMatch['question']
+  language: Language
+}) {
+  const { text } = useOnDemandTranslation('question', question.id, question, language)
+  return <p className="text-sm text-gray-800 leading-snug">{text}</p>
 }

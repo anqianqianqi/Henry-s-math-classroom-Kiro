@@ -6,6 +6,8 @@
  */
 
 import { useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { useOnDemandTranslation } from '@/lib/i18n/useOnDemandTranslation'
 import { fetchMyAssignments } from '@/lib/actions/bubbleRoom'
 import type { BubbleQuestionAssignment, BubbleQuestion } from '@/lib/types/bubbleRoom'
 
@@ -16,6 +18,8 @@ export interface AssignedToMeTrayProps {
 }
 
 export function AssignedToMeTray({ currentUserId, onQuestionClick, onClose }: AssignedToMeTrayProps) {
+  // Only the chrome here; each row reads the language itself for its preview.
+  const { t, language } = useLanguage()
   const [pending, setPending] = useState<BubbleQuestionAssignment[]>([])
   const [responded, setResponded] = useState<BubbleQuestionAssignment[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,7 +41,7 @@ export function AssignedToMeTray({ currentUserId, onQuestionClick, onClose }: As
 
   function formatDate(iso: string) {
     try {
-      return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      return new Date(iso).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })
     } catch { return '' }
   }
 
@@ -67,10 +71,12 @@ export function AssignedToMeTray({ currentUserId, onQuestionClick, onClose }: As
           <div>
             <h2 id="assigned-modal-title" className="text-base font-semibold text-gray-900 flex items-center gap-2">
               <span aria-hidden="true">📬</span>
-              Assigned to You
+              {t('bubble.assignedTitle')}
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              {loading ? 'Loading…' : `${pendingCount} pending · ${responded.length} responded`}
+              {loading
+                ? t('status.loading')
+                : t('bubble.assignedCounts', { pending: pendingCount, responded: responded.length })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -79,9 +85,9 @@ export function AssignedToMeTray({ currentUserId, onQuestionClick, onClose }: As
               onClick={load}
               className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              ↻ Refresh
+              ↻ {t('bubble.refresh')}
             </button>
-            <button type="button" onClick={onClose} aria-label="Close"
+            <button type="button" onClick={onClose} aria-label={t('action.close')}
               className="text-gray-400 hover:text-gray-600 transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -100,14 +106,14 @@ export function AssignedToMeTray({ currentUserId, onQuestionClick, onClose }: As
           ) : pending.length === 0 && responded.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-2xl mb-2">✅</p>
-              <p className="text-sm text-gray-400">No questions assigned to you yet</p>
+              <p className="text-sm text-gray-400">{t('bubble.noneAssigned')}</p>
             </div>
           ) : (
             <>
               {/* Pending */}
               {pending.length === 0 && (
                 <p className="text-xs text-gray-400 text-center py-3">
-                  ✅ All caught up — no pending questions
+                  ✅ {t('bubble.allCaughtUp')}
                 </p>
               )}
 
@@ -131,8 +137,8 @@ export function AssignedToMeTray({ currentUserId, onQuestionClick, onClose }: As
                     onClick={() => setShowResponded(s => !s)}
                     className="w-full flex items-center justify-between px-2 py-2 text-xs font-medium text-gray-400 hover:text-gray-600 border-t border-gray-100 mt-2"
                   >
-                    <span>Responded ({responded.length})</span>
-                    <span>{showResponded ? '▲ hide' : '▼ show'}</span>
+                    <span>{t('bubble.respondedCount', { count: responded.length })}</span>
+                    <span>{showResponded ? `▲ ${t('bubble.hide')}` : `▼ ${t('bubble.show')}`}</span>
                   </button>
                   {showResponded && responded.map(assignment => (
                     <AssignmentRow
@@ -168,7 +174,12 @@ function AssignmentRow({
   onOpen: () => void
   formatDate: (iso: string) => string
 }) {
+  // Own hook rather than a prop: this row renders in a list and reads the
+  // language for its own preview text. Both hooks run before the early return
+  // below, so the hook order stays fixed whether or not the question loaded.
+  const { t, language } = useLanguage()
   const q = assignment.question
+  const local = useOnDemandTranslation('question', q?.id, q, language)
   if (!q) return null
 
   return (
@@ -187,19 +198,22 @@ function AssignmentRow({
     >
       <div className="flex items-start justify-between gap-2">
         <p className={`text-sm font-medium leading-snug ${isPending ? 'text-orange-900' : 'text-gray-600'}`}>
-          {q.title ?? q.text.slice(0, 80)}
+          {local.title ?? local.text.slice(0, 80)}
         </p>
         <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
           isPending ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'
         }`}>
-          {isPending ? 'Pending' : '✓ Done'}
+          {isPending ? t('bubble.pendingBadge') : `✓ ${t('bubble.doneBadge')}`}
         </span>
       </div>
       {q.title && (
-        <p className="text-xs text-gray-500 line-clamp-1">{q.text}</p>
+        <p className="text-xs text-gray-500 line-clamp-1">{local.text}</p>
       )}
       <p className="text-[11px] text-gray-400">
-        by {q.author_display_name} · {formatDate(assignment.created_at)}
+        {t('bubble.byAuthorOn', {
+          name: q.author_display_name,
+          date: formatDate(assignment.created_at),
+        })}
       </p>
     </button>
   )

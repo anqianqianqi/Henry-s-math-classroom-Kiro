@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { applyForBadge } from '@/lib/actions/badges'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 export interface TAApplicationModalProps {
   onClose: () => void
@@ -19,6 +20,7 @@ export interface TAApplicationModalProps {
 const MAX_NOTE = 500
 
 export function TAApplicationModal({ onClose, onSubmitted }: TAApplicationModalProps) {
+  const { t } = useLanguage()
   const [note, setNote] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -70,16 +72,16 @@ export function TAApplicationModal({ onClose, onSubmitted }: TAApplicationModalP
           <span className="text-3xl" aria-hidden="true">🎓</span>
           <div>
             <h2 id="ta-apply-title" className="text-lg font-semibold text-gray-900">
-              Apply to be a Bubble Room TA
+              {t('bubble.applyTaTitle')}
             </h2>
             <p className="text-sm text-gray-500 mt-0.5">
-              Bubble Room TAs help other students by answering questions. Your application will be reviewed by a teacher.
+              {t('bubble.taBlurb')}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('action.close')}
             className="ml-auto shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -99,7 +101,7 @@ export function TAApplicationModal({ onClose, onSubmitted }: TAApplicationModalP
             onChange={(e) => setNote(e.target.value)}
             maxLength={MAX_NOTE}
             rows={4}
-            placeholder="Tell the teacher a bit about yourself and why you'd make a good TA…"
+            placeholder={t('bubble.taPitchPlaceholder')}
             className="
               w-full px-3 py-2 rounded-xl border border-gray-200 bg-white
               text-sm text-gray-900 resize-none
@@ -120,7 +122,7 @@ export function TAApplicationModal({ onClose, onSubmitted }: TAApplicationModalP
 
         <div className="flex gap-3">
           <Button type="button" variant="ghost" size="sm" onClick={onClose} className="flex-1">
-            Cancel
+            {t('action.cancel')}
           </Button>
           <Button
             type="submit"
@@ -129,7 +131,7 @@ export function TAApplicationModal({ onClose, onSubmitted }: TAApplicationModalP
             disabled={isSubmitting}
             className="flex-1 bg-teal-500 hover:bg-teal-600 text-white"
           >
-            Submit Application
+            {t('bubble.taSubmitApplication')}
           </Button>
         </div>
       </form>

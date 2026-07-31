@@ -495,7 +495,12 @@ export default function BookSkinsAdminPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Skin Type</label>
                   <div className="flex gap-2">
-                    {(['cover', 'page'] as SkinType[]).map(t => (
+                    {/* Page skins are retired: students no longer choose an
+                        inner page, so every open book uses the existing default
+                        one. Uploading more would add to a collection nothing
+                        displays. Existing page rows and the default are intact
+                        — see add-bundle-default-and-retire-page-skins.sql. */}
+                    {(['cover'] as SkinType[]).map(t => (
                       <button
                         key={t}
                         onClick={() => repreviewForType(t)}
