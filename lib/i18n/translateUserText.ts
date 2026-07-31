@@ -56,6 +56,17 @@ export interface TranslatedText {
    * a key is configured. 'skipped' is safe to store; it is the true answer.
    */
   status: 'translated' | 'skipped' | 'unavailable'
+  /**
+   * Which engine was selected, or null when none was configured.
+   *
+   * Reported so a failure can be diagnosed from the response alone. "Nothing
+   * translated" has three very different causes — no key, the wrong key
+   * picked, or the chosen engine erroring — and they are indistinguishable
+   * from the outside without this.
+   */
+  engine: string | null
+  /** The engine's last error, when there was one. Status code and reason only. */
+  error?: string
 }
 
 /** 'zh' throughout this codebase means Simplified Chinese (zh-Hans). */
@@ -181,25 +192,25 @@ export async function translateUserText(original: string): Promise<TranslatedTex
   const text = (original ?? '').trim()
   const lang = detectLanguage(text)
 
-  if (!text) return { lang, en: '', zh: '', status: 'skipped' }
+  if (!text) return { lang, en: '', zh: '', status: 'skipped', engine: null }
 
   // 'other' covers two different things: prose in a third language, which does
   // need translating into both, and content that is only math and digits, which
   // has no words at all. Skip the call for the second — "$x = 2y$" reads the
   // same in every language.
   const wordless = maskMath(text).masked.replace(/⟦M\d+⟧/g, '').match(/\p{L}/u) === null
-  if (wordless) return { lang, en: text, zh: text, status: 'skipped' }
+  if (wordless) return { lang, en: text, zh: text, status: 'skipped', engine: null }
 
   const engine = selectEngine()
   if (!engine) {
     console.warn('[i18n] no translation key configured; returning the original unchanged')
-    return { lang, en: text, zh: text, status: 'unavailable' }
+    return { lang, en: text, zh: text, status: 'unavailable', engine: null }
   }
 
   const targets: Target[] = lang === 'en' ? ['zh'] : lang === 'zh' ? ['en'] : ['en', 'zh']
   const { masked, math } = maskMath(text)
 
-  const result: TranslatedText = { lang, en: text, zh: text, status: 'unavailable' }
+  const result: TranslatedText = { lang, en: text, zh: text, status: 'unavailable', engine: engine.name }
 
   await Promise.all(
     targets.map(async target => {
@@ -216,6 +227,10 @@ export async function translateUserText(original: string): Promise<TranslatedTex
         // Leave this target as the original. One direction failing should not
         // cost the other, and neither should cost the post.
         console.error(`[i18n] ${engine.name} -> ${target}:`, err)
+        // Kept for the caller to surface. Engine errors carry only a status
+        // code and reason — never the key — so they are safe to pass on, and
+        // "429 Too Many Requests" is the whole diagnosis in three words.
+        result.error = err instanceof Error ? err.message : String(err)
       }
     }),
   )

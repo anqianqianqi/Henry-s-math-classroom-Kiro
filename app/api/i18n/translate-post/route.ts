@@ -162,6 +162,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       cached: false,
       status: bodyT.status,
+      // Which engine ran and how it failed. "Nothing translated" has three very
+      // different causes — no key configured, the wrong key picked up, or the
+      // chosen engine erroring — and they cannot be told apart without this.
+      engine: bodyT.engine,
+      ...(bodyT.error ? { error: bodyT.error } : {}),
       lang: bodyT.lang,
       text: { en: bodyT.en, zh: bodyT.zh },
       ...(titleT ? { title: { en: titleT.en, zh: titleT.zh } } : {}),
