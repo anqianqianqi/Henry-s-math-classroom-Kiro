@@ -659,31 +659,31 @@ export function QuestionDetailModal({
             {challengeContext && (
               <div className="mb-3 rounded-2xl p-3 space-y-2"
                 style={{
-                  background: 'rgba(254,252,232,0.70)',
-                  border: '1.5px solid rgba(253,224,71,0.35)',
+                  background: 'rgba(237,233,254,0.70)',
+                  border: '1.5px solid rgba(167,139,250,0.40)',
                   backdropFilter: 'blur(8px)',
                 }}>
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm" aria-hidden="true">🎯</span>
-                  <span className="text-xs font-semibold text-yellow-700 uppercase tracking-wide flex-1">
+                  <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide flex-1">
                     Challenge
                   </span>
                   <a
                     href={`/challenges/${question.challenge_id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-yellow-700 hover:text-yellow-900 hover:underline shrink-0 font-medium"
+                    className="text-xs text-purple-600 hover:text-purple-800 hover:underline shrink-0 font-medium"
                     title="Open full challenge in new tab"
                     onClick={(e) => e.stopPropagation()}
                   >
                     View full challenge →
                   </a>
                 </div>
-                <p className="text-sm font-semibold text-yellow-900 leading-snug">
+                <p className="text-sm font-semibold text-purple-900 leading-snug">
                   {challengeContext.title}
                 </p>
                 {challengeContext.description && (
-                  <p className="text-xs text-yellow-800 leading-snug whitespace-pre-wrap">
+                  <p className="text-xs text-purple-700 leading-snug whitespace-pre-wrap">
                     {challengeContext.description}
                   </p>
                 )}
@@ -698,7 +698,7 @@ export function QuestionDetailModal({
                     <img
                       src={challengeContext.image_url}
                       alt="Challenge image"
-                      className="max-h-64 rounded-lg border border-yellow-200 object-contain bg-white w-full hover:opacity-90 transition-opacity"
+                      className="max-h-64 rounded-lg border border-purple-200 object-contain bg-white w-full hover:opacity-90 transition-opacity"
                     />
                   </a>
                 )}
