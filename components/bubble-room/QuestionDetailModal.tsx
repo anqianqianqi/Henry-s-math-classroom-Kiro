@@ -547,7 +547,7 @@ export function QuestionDetailModal({
       />
 
       {/* Panel + bubble overlay wrapper — overflow visible so bubbles escape */}
-      <div className="relative z-10 w-full sm:max-w-xl flex flex-col" style={{ maxHeight: '90vh' }}>
+      <div className="relative z-10 w-full sm:max-w-4xl flex flex-col" style={{ maxHeight: '90vh' }}>
 
         {/* Bubble overlay — anchored to actual panel edges via measured size */}
         {panelSize.w > 0 && (
@@ -652,166 +652,106 @@ export function QuestionDetailModal({
             zIndex: 0,
           }}
         />
-        {/* ── Header ──────────────────────────────────────────────────── */}
-        <div className="relative z-10 flex items-start justify-between p-5 border-b border-white/40">
-          <div className="flex-1 min-w-0 pr-4">
-            {/* Back button — shown when opened from assigned list */}
+        {/* ── Top bar: back + close ─────────────────────────────── */}
+        <div className="relative z-10 flex items-center justify-between px-5 pt-4 pb-2">
+          <div>
             {onBack && (
-              <button
-                type="button"
-                onClick={onBack}
-                className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 font-medium mb-2 transition-colors"
-              >
+              <button type="button" onClick={onBack}
+                className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 font-medium transition-colors">
                 ← Back to Assigned
               </button>
             )}
-            <p className="text-xs text-indigo-400/80 mb-0.5">
-              {question.author_display_name} · {formatDate(question.created_at)}
-            </p>
-
-            {/* Challenge context — always expanded, shows title, body, image + link */}
-            {challengeContext && (
-              <div className="mb-3 rounded-2xl p-3 space-y-2"
-                style={{
-                  background: 'rgba(237,233,254,0.70)',
-                  border: '1.5px solid rgba(167,139,250,0.40)',
-                  backdropFilter: 'blur(8px)',
-                }}>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm" aria-hidden="true">🎯</span>
-                  <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide flex-1">
-                    Challenge
-                  </span>
-                  <a
-                    href={`/challenges/${question.challenge_id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-purple-600 hover:text-purple-800 hover:underline shrink-0 font-medium"
-                    title={t('bubble.openChallenge')}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    View full challenge →
-                  </a>
-                </div>
-                <p className="text-sm font-semibold text-purple-900 leading-snug">
-                  {challengeContext.title}
-                </p>
-                {challengeContext.description && (
-                  <p className="text-xs text-purple-700 leading-snug whitespace-pre-wrap">
-                    {challengeContext.description}
-                  </p>
-                )}
-                {challengeContext.image_url && (
-                  <a
-                    href={challengeContext.image_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={challengeContext.image_url}
-                      alt="Challenge image"
-                      className="max-h-64 rounded-lg border border-purple-200 object-contain bg-white w-full hover:opacity-90 transition-opacity"
-                    />
-                  </a>
-                )}
-              </div>
-            )}
-
-            {question.title && (
-              <h2
-                id="question-detail-title"
-                className="text-base font-semibold text-gray-800 leading-snug mb-1"
-              >
-                {local.title}
-              </h2>
-            )}
-            <p
-              id={question.title ? undefined : 'question-detail-title'}
-              className={`leading-snug ${question.title ? 'text-sm text-gray-600' : 'text-base font-semibold text-gray-800'}`}
-            >
-              {local.text}
-            </p>
-            {/* Question image */}
-            {question.image_url && (
-              <a
-                href={question.image_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block mt-2"
-                aria-label={t('bubble.viewQuestionImage')}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={question.image_url}
-                  alt="Question attachment"
-                  className="max-h-64 rounded-xl border border-gray-200 object-contain bg-gray-50 hover:opacity-90 transition-opacity"
-                />
-              </a>
-            )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t('action.close')}
-            className="text-indigo-300 hover:text-indigo-600 transition-colors shrink-0"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
+          <button type="button" onClick={onClose} aria-label={t('action.close')}
+            className="text-indigo-300 hover:text-indigo-600 transition-colors shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* ── Delete question action (Req 6.1, 7.1) ───────────────────── */}
-        {canDelete(question.user_id) && (
-          <div className="relative z-10 px-5 pt-3 pb-1">
-            {deleteQuestionError && (
-              <p role="alert" className="text-sm text-gray-500 mb-2">
-                {deleteQuestionError}
+        {/* ── Two-column body ──────────────────────────────────── */}
+        <div className="relative z-10 flex flex-col sm:flex-row flex-1 min-h-0 overflow-hidden">
+
+          {/* LEFT: Question + delete */}
+          <div className="sm:w-5/12 flex flex-col overflow-y-auto px-5 py-4 border-b border-white/40 sm:border-b-0 sm:border-r sm:border-white/40 space-y-3">
+            <div>
+              <p className="text-xs text-indigo-400/80 mb-0.5">
+                {question.author_display_name} · {formatDate(question.created_at)}
               </p>
-            )}
-            {confirmDeleteQuestion ? (
-              <div className="flex gap-2 items-center">
-                <span className="text-sm text-gray-600 font-medium">{t('bubble.confirmDeleteQuestion')}</span>
-                <button
-                  type="button"
-                  onClick={handleDeleteQuestion}
-                  disabled={isDeletingQuestion}
-                  className="text-sm font-semibold text-gray-600 hover:text-gray-800 disabled:opacity-50"
-                >
-                  {isDeletingQuestion ? t('bubble.deleting') : t('bubble.yesDelete')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDeleteQuestion(false)}
-                  className="text-sm text-gray-500 hover:text-gray-700"
-                >
-                  {t('action.cancel')}
-                </button>
+              {challengeContext && (
+                <div className="mb-3 rounded-2xl p-3 space-y-2"
+                  style={{ background: 'rgba(237,233,254,0.70)', border: '1.5px solid rgba(167,139,250,0.40)', backdropFilter: 'blur(8px)' }}>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm" aria-hidden="true">🎯</span>
+                    <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide flex-1">Challenge</span>
+                    <a href={`/challenges/${question.challenge_id}`} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-purple-600 hover:text-purple-800 hover:underline shrink-0 font-medium"
+                      title={t('bubble.openChallenge')} onClick={(e) => e.stopPropagation()}>
+                      View full challenge →
+                    </a>
+                  </div>
+                  <p className="text-sm font-semibold text-purple-900 leading-snug">{challengeContext.title}</p>
+                  {challengeContext.description && (
+                    <p className="text-xs text-purple-700 leading-snug whitespace-pre-wrap">{challengeContext.description}</p>
+                  )}
+                  {challengeContext.image_url && (
+                    <a href={challengeContext.image_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={challengeContext.image_url} alt="Challenge image"
+                        className="max-h-48 rounded-lg border border-purple-200 object-contain bg-white w-full hover:opacity-90 transition-opacity" />
+                    </a>
+                  )}
+                </div>
+              )}
+              {question.title && (
+                <h2 id="question-detail-title" className="text-base font-semibold text-gray-800 leading-snug mb-1">
+                  {local.title}
+                </h2>
+              )}
+              <p id={question.title ? undefined : 'question-detail-title'}
+                className={`leading-snug ${question.title ? 'text-sm text-gray-600' : 'text-base font-semibold text-gray-800'}`}>
+                {local.text}
+              </p>
+              {question.image_url && (
+                <a href={question.image_url} target="_blank" rel="noopener noreferrer" className="block mt-2"
+                  aria-label={t('bubble.viewQuestionImage')}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={question.image_url} alt="Question attachment"
+                    className="max-h-48 rounded-xl border border-gray-200 object-contain bg-gray-50 hover:opacity-90 transition-opacity" />
+                </a>
+              )}
+            </div>
+            {canDelete(question.user_id) && (
+              <div>
+                {deleteQuestionError && <p role="alert" className="text-sm text-gray-500 mb-1">{deleteQuestionError}</p>}
+                {confirmDeleteQuestion ? (
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <span className="text-sm text-gray-600 font-medium">{t('bubble.confirmDeleteQuestion')}</span>
+                    <button type="button" onClick={handleDeleteQuestion} disabled={isDeletingQuestion}
+                      className="text-sm font-semibold text-gray-600 hover:text-gray-800 disabled:opacity-50">
+                      {isDeletingQuestion ? t('bubble.deleting') : t('bubble.yesDelete')}
+                    </button>
+                    <button type="button" onClick={() => setConfirmDeleteQuestion(false)} className="text-sm text-gray-500 hover:text-gray-700">
+                      {t('action.cancel')}
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={handleDeleteQuestion}
+                    className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label={t('bubble.deleteThisQuestion')}>
+                    🗑 {t('bubble.deleteQuestion')}
+                  </button>
+                )}
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handleDeleteQuestion}
-                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-                aria-label={t('bubble.deleteThisQuestion')}
-              >
-                🗑 {t('bubble.deleteQuestion')}
-              </button>
             )}
           </div>
-        )}
+
+          {/* RIGHT: Responses + reply form */}
+          <div className="sm:w-7/12 flex flex-col min-h-0 max-h-[45vh] sm:max-h-none">
 
         {/* ── Responses list (Req 3.1, 3.2) ───────────────────────────── */}
-        <div className="relative z-10 flex-1 overflow-y-auto px-5 py-3 space-y-3">
+        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-3">
           {loadingResponses ? (
             <div className="text-center py-6">
               <div className="inline-block w-6 h-6 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" aria-label={t('bubble.loadingResponses')} />
@@ -1007,6 +947,8 @@ export function QuestionDetailModal({
             </Button>
           </div>
         </form>
+          </div>{/* end RIGHT column */}
+        </div>{/* end two-column body */}
       </div>
       </div>
     </div>
