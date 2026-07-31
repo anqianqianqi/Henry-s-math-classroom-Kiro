@@ -10,6 +10,12 @@ export const pet = {
   'pet.balance': { en: 'Balance', zh: '余额' },
   'pet.goToShop': { en: 'Go to Shop', zh: '前往商店' },
   'pet.accessories': { en: 'Accessories', zh: '配饰' },
+  'pet.chooseYourPet': { en: 'Choose Your Pet', zh: '选择您的宠物' },
+  'pet.chooseHint': {
+    en: 'Pick a species to hatch from your egg',
+    zh: '选一个物种，让蛋孵化出来',
+  },
+  'pet.showNameTag': { en: 'Show name tag', zh: '显示名牌' },
   'pet.unnamed': { en: 'Unnamed Pet', zh: '未命名的宠物' },
   'pet.yourPet': { en: 'Your pet', zh: '您的宠物' },
   'pet.namePlaceholder': { en: 'Name your pet', zh: '给宠物起个名字' },

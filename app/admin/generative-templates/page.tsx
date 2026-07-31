@@ -708,7 +708,7 @@ function TemplateForm({
           {isEditing ? 'Edit Template' : 'Create Template'}
         </h1>
         <p className="text-gray-600">
-          Define a parameterized challenge pattern with variables
+          {t('genTpl.definitionHint')}
         </p>
       </div>
 

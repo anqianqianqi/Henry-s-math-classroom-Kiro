@@ -597,7 +597,7 @@ function PhysicalConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: (
           onClick={onClose}
           className="w-full bg-primary-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-primary-700 transition-colors"
         >
-          Got it!
+          {t('shop.gotIt')}
         </button>
       </div>
     </div>

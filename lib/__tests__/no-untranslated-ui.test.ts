@@ -126,9 +126,29 @@ function findUntranslated(file: string): Finding[] {
       }
     }
 
-    // A JSX text node: >Some English Words< on one line.
-    const text = line.match(/>([A-Z][a-z]+(?: [A-Za-z’']+){1,8})</)
-    if (text) findings.push({ file, line: i + 1, text: text[1] })
+    // A JSX text node written inline: >Some English Words<
+    const inline = line.match(/>([A-Z][a-z]+(?: [A-Za-z’']+){1,8})</)
+    if (inline) findings.push({ file, line: i + 1, text: inline[1] })
+
+    // A JSX text node on its own line, which is how Prettier formats anything
+    // long enough to matter:
+    //
+    //   <h1 className="…">
+    //     Welcome to your math learning platform      <- this line
+    //   </h1>
+    //
+    // Missing this was a real blind spot: the public landing page was fully
+    // untranslated and the check said nothing.
+    const bare = line.trim()
+    const isOwnLineText =
+      /^[A-Z][a-z]+(?:[ ,’'-][A-Za-z’'&;]+){1,10}[.!?]?$/.test(bare) &&
+      // Not markup, an expression, a prop, or a comment.
+      !/[<>{}=]/.test(bare) &&
+      !bare.startsWith('*') &&
+      !bare.startsWith('//') &&
+      // A line of Tailwind classes inside a multi-line className string.
+      !/^[a-z-]+:/.test(bare)
+    if (isOwnLineText && !inline) findings.push({ file, line: i + 1, text: bare })
   })
 
   return findings
