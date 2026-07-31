@@ -352,6 +352,25 @@ export function BubbleRoomPage({
             🫧 <span className="hidden sm:inline">My Bubbles</span>
           </button>
 
+          {/* Assigned-to-me button — visible for all students, teachers and TAs */}
+          {(currentUserRole === 'student' || currentUserRole === 'teacher' || isTA) && (
+            <button
+              type="button"
+              onClick={() => setShowAssignedModal(true)}
+              title={t('bubble.assignedTitleAttr')}
+              className="
+                shrink-0 flex items-center gap-1
+                px-3 py-2 rounded-xl
+                border border-orange-300 text-orange-700 text-xs font-semibold bg-orange-50
+                hover:bg-orange-100 transition-colors
+                focus:outline-none focus:ring-2 focus:ring-orange-400
+              "
+            >
+              📬 <span className="hidden sm:inline">{t('bubble.assigned')}</span>
+            </button>
+          )}
+
+          {/* TA badge / apply controls — always on the far right for students */}
           {currentUserRole === 'student' && !isTA && !taPending && (
             <button
               type="button"
@@ -405,24 +424,6 @@ export function BubbleRoomPage({
               "
             >
               🎓 <span className="hidden sm:inline">{t('bubble.taApps')}</span>
-            </button>
-          )}
-
-          {/* Assigned-to-me button — visible for teachers and TAs */}
-          {(currentUserRole === 'teacher' || isTA) && (
-            <button
-              type="button"
-              onClick={() => setShowAssignedModal(true)}
-              title={t('bubble.assignedTitleAttr')}
-              className="
-                shrink-0 flex items-center gap-1
-                px-3 py-2 rounded-xl
-                border border-orange-300 text-orange-700 text-xs font-semibold bg-orange-50
-                hover:bg-orange-100 transition-colors
-                focus:outline-none focus:ring-2 focus:ring-orange-400
-              "
-            >
-              📬 <span className="hidden sm:inline">{t('bubble.assigned')}</span>
             </button>
           )}
         </div>
