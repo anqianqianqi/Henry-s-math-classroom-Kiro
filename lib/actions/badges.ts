@@ -482,6 +482,12 @@ export async function getAllBadgeHolders(badgeSlug: string): Promise<ActionResul
   email: string
   grantedAt: string
 }>>> {
+  userBadgeId: string
+  userId: string
+  name: string
+  email: string
+  grantedAt: string
+}>>> {
   try {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -516,6 +522,55 @@ export async function getAllBadgeHolders(badgeSlug: string): Promise<ActionResul
   } catch (err) {
     console.error('[Badges] getAllBadgeHolders:', err)
     return { error: 'Failed to load badge holders.' }
+  }
+}
+
+// ── Admin: get revoked badge holders (removal history) ───────────────────
+
+export async function getRevokedBadgeHolders(badgeSlug: string): Promise<ActionResult<Array<{
+  userBadgeId: string
+  userId: string
+  name: string
+  email: string
+  grantedAt: string
+  revokedAt: string
+  reason?: string | null
+}>>> {
+  try {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
+    if (!(await isTeacherOrAdmin(supabase, user.id))) return { error: 'Unauthorized' }
+
+    const { data: badge } = await supabase
+      .from('badge_definitions')
+      .select('id')
+      .eq('slug', badgeSlug)
+      .single()
+    if (!badge) return { error: 'Badge not found.' }
+
+    const { data, error } = await supabase
+      .from('user_badges')
+      .select('id, user_id, granted_at, revoked_at, holder:profiles!user_badges_user_id_fkey(full_name, nickname, email)')
+      .eq('badge_id', badge.id)
+      .not('revoked_at', 'is', null)
+      .order('revoked_at', { ascending: false })
+
+    if (error) throw error
+
+    return {
+      data: (data ?? []).map((row: any) => ({
+        userBadgeId: row.id,
+        userId: row.user_id,
+        name: row.holder?.nickname ?? row.holder?.full_name ?? 'Unknown',
+        email: row.holder?.email ?? '',
+        grantedAt: row.granted_at,
+        revokedAt: row.revoked_at,
+      })),
+    }
+  } catch (err) {
+    console.error('[Badges] getRevokedBadgeHolders:', err)
+    return { error: 'Failed to load removed TAs.' }
   }
 }
 
