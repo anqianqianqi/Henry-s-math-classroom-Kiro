@@ -8,6 +8,7 @@
  * file, deliberately, so there is exactly one place to look.
  *
  *   messages/common.ts       actions, status, navigation
+ *   messages/auth.ts         sign in, sign up, password recovery
  *   messages/dashboard.ts    dashboard tiles and stats
  *   messages/challenges.ts   challenge list, detail, book/room reading
  *   messages/decorations.ts  decorations hub, skins, rooms, bundles
@@ -25,6 +26,7 @@
  */
 
 import { common } from './messages/common'
+import { auth } from './messages/auth'
 import { dashboard } from './messages/dashboard'
 import { challenges } from './messages/challenges'
 import { decorations } from './messages/decorations'
@@ -47,6 +49,7 @@ export const LANGUAGES: { code: Language; label: string; short: string }[] = [
 
 export const catalog = {
   ...common,
+  ...auth,
   ...dashboard,
   ...challenges,
   ...decorations,
@@ -63,7 +66,20 @@ export type TranslationKey = keyof typeof catalog
  * a partly-translated catalog reads as partly-English rather than showing raw
  * keys to a student.
  */
-export function translate(key: TranslationKey, language: Language): string {
+/**
+ * @param params values for `{name}` placeholders in the string.
+ *
+ * Interpolation rather than splitting a sentence across two keys and joining
+ * them in JSX: the join only works if both languages put the pieces in the same
+ * order with the same punctuation, and Chinese does neither — it ends sentences
+ * with 。and does not space around inserted values. One key per sentence keeps
+ * word order and punctuation the translator's to decide.
+ */
+export function translate(
+  key: TranslationKey,
+  language: Language,
+  params?: Record<string, string | number>,
+): string {
   const entry = catalog[key] as { en: string; zh: string } | undefined
   if (!entry) {
     if (process.env.NODE_ENV !== 'production') {
@@ -71,5 +87,13 @@ export function translate(key: TranslationKey, language: Language): string {
     }
     return key
   }
-  return entry[language] || entry.en
+
+  const text = entry[language] || entry.en
+  if (!params) return text
+
+  return text.replace(/\{(\w+)\}/g, (whole, name) =>
+    // An unsupplied placeholder is left as written rather than blanked, so the
+    // gap is visible in the UI instead of silently swallowing part of a sentence.
+    name in params ? String(params[name]) : whole,
+  )
 }
