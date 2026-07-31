@@ -482,12 +482,6 @@ export async function getAllBadgeHolders(badgeSlug: string): Promise<ActionResul
   email: string
   grantedAt: string
 }>>> {
-  userBadgeId: string
-  userId: string
-  name: string
-  email: string
-  grantedAt: string
-}>>> {
   try {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
