@@ -747,7 +747,7 @@ export default function DashboardPage() {
           >
             <Card.Body>
               <div className="text-5xl mb-3 hidden sm:block">💬</div>
-              <div className="text-2xl font-bold text-purple-600 mb-1">Bubble Room</div>
+              <div className="text-2xl font-bold text-gray-900 mb-1">Bubble Room</div>
               <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Q&amp;A</div>
             </Card.Body>
           </Card>

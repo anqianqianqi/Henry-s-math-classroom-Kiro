@@ -17,7 +17,7 @@
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 6.1, 6.2, 6.3, 6.4, 7.1, 7.2, 7.3, 7.4, 7.5
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   recordView,
@@ -69,10 +69,11 @@ export function QuestionDetailModal({
   const [loadingResponses, setLoadingResponses] = useState(true)
   const [confirmDeleteQuestion, setConfirmDeleteQuestion] = useState(false)
   const [confirmDeleteResponseId, setConfirmDeleteResponseId] = useState<string | null>(null)
-  // Challenge context: fetch the challenge title+description when challenge_id is set
+  // Challenge context: fetch the full challenge content when challenge_id is set
   const [challengeContext, setChallengeContext] = useState<{
     title: string
     description: string
+    image_url: string | null
   } | null>(null)
   const responseInputRef = useRef<HTMLTextAreaElement>(null)
   const responseFileInputRef = useRef<HTMLInputElement>(null)
@@ -90,30 +91,33 @@ export function QuestionDetailModal({
         // Try daily_challenges first, then challenge_bank as fallback
         let title = ''
         let description = ''
+        let imageUrl: string | null = null
 
         const { data: dc } = await supabaseClient
           .from('daily_challenges')
-          .select('title, description')
+          .select('title, description, image_url')
           .eq('id', question.challenge_id!)
           .maybeSingle()
 
         if (dc) {
           title = dc.title ?? ''
           description = dc.description ?? ''
+          imageUrl = (dc as any).image_url ?? null
         } else {
           const { data: cb } = await supabaseClient
             .from('challenge_bank')
-            .select('title, description')
+            .select('title, description, image_url')
             .eq('id', question.challenge_id!)
             .maybeSingle()
           if (cb) {
             title = cb.title ?? ''
             description = cb.description ?? ''
+            imageUrl = (cb as any).image_url ?? null
           }
         }
 
         if (title || description) {
-          setChallengeContext({ title, description })
+          setChallengeContext({ title, description, image_url: imageUrl })
         }
       })()
     }
@@ -422,6 +426,91 @@ export function QuestionDetailModal({
     }
   }
 
+  // ── Edge bubbles (bottom half only) ──────────────────────────────────────
+  // Seeded PRNG so bubbles are stable across re-renders but varied per question
+  const edgeBubbles = useMemo(() => {
+    const seed = question.id
+    let h = 0
+    for (let i = 0; i < seed.length; i++) h = Math.imul(31, h) + seed.charCodeAt(i) | 0
+    const rand = () => { h = Math.imul(h ^ (h >>> 16), 0x45d9f3b); h ^= h >>> 16; return (Math.abs(h) / 2147483648) }
+
+    const isChallenge = !!question.challenge_id
+    const colorsC = ['rgba(191,219,254,0.88)', 'rgba(243,232,255,0.82)', 'rgba(252,231,243,0.84)', 'rgba(216,180,254,0.75)']
+    const colorsR = ['rgba(254,240,138,0.88)', 'rgba(254,249,195,0.82)', 'rgba(254,252,232,0.78)', 'rgba(253,224,71,0.70)']
+    const glowC = 'rgba(139,92,246,0.35)'
+    const glowR = 'rgba(202,138,4,0.38)'
+
+    const bubbles: Array<{
+      id: number; size: number; edge: string; pos: number
+      delay: number; speed: number; wait: number; dx: number; dy: number
+      color: string; glow: string; travel: number
+    }> = []
+
+    // Bottom edge — densely packed, 20 bubbles
+    for (let i = 0; i < 20; i++) {
+      const size = 5 + Math.floor(rand() * 26)
+      const pos = 2 + rand() * 96
+      const dx = (rand() - 0.5) * 0.8
+      const dy = -(0.8 + rand() * 0.4)
+      // wait: 0–50% of total duration is "invisible hold" baked into keyframe
+      const wait = rand() * 0.50
+      bubbles.push({
+        id: i, size, edge: 'bottom', pos,
+        delay: 0, speed: 3.5 + rand() * 5, wait,
+        dx, dy,
+        color: (isChallenge ? colorsC : colorsR)[Math.floor(rand() * 4)],
+        glow: isChallenge ? glowC : glowR,
+        travel: 50 + size * 2.8 + rand() * 40,
+      })
+    }
+    // Lower-half of left edge — 10 bubbles
+    for (let i = 0; i < 10; i++) {
+      const size = 5 + Math.floor(rand() * 22)
+      const pos = 50 + rand() * 50
+      const dx = -(0.8 + rand() * 0.4)
+      const dy = -(rand() * 0.6)
+      const wait = rand() * 0.50
+      bubbles.push({
+        id: 20 + i, size, edge: 'left', pos,
+        delay: 0, speed: 3.5 + rand() * 5, wait,
+        dx, dy,
+        color: (isChallenge ? colorsC : colorsR)[Math.floor(rand() * 4)],
+        glow: isChallenge ? glowC : glowR,
+        travel: 45 + size * 2.5 + rand() * 35,
+      })
+    }
+    // Lower-half of right edge — 10 bubbles
+    for (let i = 0; i < 10; i++) {
+      const size = 5 + Math.floor(rand() * 22)
+      const pos = 50 + rand() * 50
+      const dx = 0.8 + rand() * 0.4
+      const dy = -(rand() * 0.6)
+      const wait = rand() * 0.50
+      bubbles.push({
+        id: 30 + i, size, edge: 'right', pos,
+        delay: 0, speed: 3.5 + rand() * 5, wait,
+        dx, dy,
+        color: (isChallenge ? colorsC : colorsR)[Math.floor(rand() * 4)],
+        glow: isChallenge ? glowC : glowR,
+        travel: 45 + size * 2.5 + rand() * 35,
+      })
+    }
+    return bubbles
+  }, [question.id, question.challenge_id])
+
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [panelSize, setPanelSize] = useState({ w: 0, h: 0 })
+
+  useEffect(() => {
+    const el = panelRef.current
+    if (!el) return
+    const measure = () => setPanelSize({ w: el.offsetWidth, h: el.offsetHeight })
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -431,26 +520,126 @@ export function QuestionDetailModal({
       aria-labelledby="question-detail-title"
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
     >
-      {/* Backdrop */}
+      {/* Backdrop — color matches bubble type */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 backdrop-blur-sm"
+        style={{
+          background: question.challenge_id
+            ? 'rgba(49, 46, 129, 0.22)'    // indigo tint for challenge (purple)
+            : 'rgba(113, 85, 0, 0.18)',     // warm yellow-brown tint for regular
+        }}
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Panel */}
+      {/* Panel + bubble overlay wrapper — overflow visible so bubbles escape */}
+      <div className="relative z-10 w-full sm:max-w-xl flex flex-col" style={{ maxHeight: '90vh' }}>
+
+        {/* Bubble overlay — anchored to actual panel edges via measured size */}
+        {panelSize.w > 0 && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+            style={{ zIndex: 12, overflow: 'visible' }}
+          >
+            {edgeBubbles.map((b) => {
+              let stylePos: React.CSSProperties = {}
+              if (b.edge === 'bottom') {
+                stylePos = {
+                  left: (b.pos / 100) * panelSize.w,
+                  bottom: 0,
+                  transform: 'translate(-50%, 50%)',
+                }
+              } else if (b.edge === 'left') {
+                stylePos = {
+                  left: 0,
+                  top: (b.pos / 100) * panelSize.h,
+                  transform: 'translate(-50%, -50%)',
+                }
+              } else {
+                stylePos = {
+                  right: 0,
+                  top: (b.pos / 100) * panelSize.h,
+                  transform: 'translate(50%, -50%)',
+                }
+              }
+              return (
+                <div
+                  key={b.id}
+                  className="modal-edge-bubble absolute rounded-full pointer-events-none"
+                  style={{
+                    width: b.size,
+                    height: b.size,
+                    ...stylePos,
+                    background: `radial-gradient(circle at 33% 28%, rgba(255,255,255,0.88) 0%, ${b.color} 55%, rgba(255,255,255,0.04) 100%)`,
+                    border: '1px solid rgba(255,255,255,0.65)',
+                    boxShadow: `0 0 ${Math.round(b.size * 0.65)}px ${b.glow}`,
+                    animationDelay: `${(b.wait * b.speed).toFixed(2)}s`,
+                    animationDuration: `${b.speed}s`,
+                    '--eb-tx': `${b.dx * b.travel}px`,
+                    '--eb-ty': `${b.dy * b.travel}px`,
+                  } as React.CSSProperties}
+                />
+              )
+            })}
+          </div>
+        )}
+
+      {/* Panel — bubble-glass aesthetic */}
       <div
+        ref={panelRef}
         className="
-          relative z-10 w-full sm:max-w-xl
-          rounded-t-2xl sm:rounded-2xl
-          bg-white shadow-2xl
+          bubble-modal-panel
+          relative w-full
+          rounded-t-3xl sm:rounded-3xl
           flex flex-col
           max-h-[90vh]
           overflow-hidden
         "
+        style={{
+          // Match exact bubble gradient stops:
+          // Regular:   blue-200 → purple-100 → pink-100  (#bfdbfe → #f3e8ff → #fce7f3)
+          // Challenge: blue-200 → purple-100 → pink-100 (purple palette)
+          // Regular:   yellow-100 → yellow-50 → white (lighter than bubble, dreamy)
+          background: question.challenge_id
+            ? 'linear-gradient(145deg, rgba(191,219,254,0.93) 0%, rgba(243,232,255,0.89) 45%, rgba(252,231,243,0.93) 100%)'
+            : 'linear-gradient(145deg, rgba(254,249,195,0.92) 0%, rgba(254,252,232,0.88) 45%, rgba(255,255,255,0.90) 100%)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: question.challenge_id
+            ? '1.5px solid rgba(167,139,250,0.40)'
+            : '1.5px solid rgba(254,240,138,0.60)',
+          boxShadow: question.challenge_id
+            ? '0 8px 48px rgba(100,60,200,0.20), 0 0 0 1px rgba(191,219,254,0.3), inset 0 1px 0 rgba(255,255,255,0.65), inset -2px -2px 8px rgba(100,60,200,0.10)'
+            : '0 8px 48px rgba(180,140,0,0.18), 0 0 0 1px rgba(254,240,138,0.4), inset 0 1px 0 rgba(255,255,255,0.70), inset -2px -2px 8px rgba(161,98,7,0.08)',
+        }}
       >
+        {/* Bubble highlight — large soft ellipse upper-right (mirrors QuestionBubble) */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute rounded-full"
+          style={{
+            width: '55%', height: '22%',
+            top: '4%', right: '3%',
+            background: 'radial-gradient(ellipse at 40% 40%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 100%)',
+            transform: 'rotate(-30deg)',
+            filter: 'blur(6px)',
+            zIndex: 0,
+          }}
+        />
+        {/* Bubble rim glow */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-t-3xl sm:rounded-3xl"
+          style={{
+            boxShadow: question.challenge_id
+              ? 'inset 0 0 0 1.5px rgba(191,219,254,0.5)'
+              : 'inset 0 0 0 1.5px rgba(254,249,195,0.55)',
+            zIndex: 0,
+          }}
+        />
         {/* ── Header ──────────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between p-5 border-b border-gray-100">
+        <div className="relative z-10 flex items-start justify-between p-5 border-b border-white/40">
           <div className="flex-1 min-w-0 pr-4">
             {/* Back button — shown when opened from assigned list */}
             {onBack && (
@@ -462,33 +651,56 @@ export function QuestionDetailModal({
                 ← Back to Assigned
               </button>
             )}
-            <p className="text-xs text-gray-400 mb-0.5">
+            <p className="text-xs text-indigo-400/80 mb-0.5">
               {question.author_display_name} · {formatDate(question.created_at)}
             </p>
 
-            {/* Challenge context banner — shows the math problem above the user's question */}
+            {/* Challenge context — always expanded, shows title, body, image + link */}
             {challengeContext && (
-              <div className="mb-3 rounded-xl bg-amber-50 border border-amber-200 p-3">
-                <div className="flex items-center gap-1.5 mb-1">
+              <div className="mb-3 rounded-2xl p-3 space-y-2"
+                style={{
+                  background: 'rgba(237,233,254,0.70)',
+                  border: '1.5px solid rgba(167,139,250,0.40)',
+                  backdropFilter: 'blur(8px)',
+                }}>
+                <div className="flex items-center gap-1.5">
                   <span className="text-sm" aria-hidden="true">🎯</span>
-                  <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">
+                  <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide flex-1">
                     Challenge
                   </span>
                   <a
                     href={`/challenges/${question.challenge_id}`}
-                    className="ml-auto text-xs text-primary-600 hover:text-primary-700 hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-purple-600 hover:text-purple-800 hover:underline shrink-0 font-medium"
+                    title="Open full challenge in new tab"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    View →
+                    View full challenge →
                   </a>
                 </div>
-                <p className="text-sm font-semibold text-amber-900 leading-snug">
+                <p className="text-sm font-semibold text-purple-900 leading-snug">
                   {challengeContext.title}
                 </p>
                 {challengeContext.description && (
-                  <p className="text-xs text-amber-800 leading-snug mt-1 whitespace-pre-wrap">
+                  <p className="text-xs text-purple-700 leading-snug whitespace-pre-wrap">
                     {challengeContext.description}
                   </p>
+                )}
+                {challengeContext.image_url && (
+                  <a
+                    href={challengeContext.image_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={challengeContext.image_url}
+                      alt="Challenge image"
+                      className="max-h-64 rounded-lg border border-purple-200 object-contain bg-white w-full hover:opacity-90 transition-opacity"
+                    />
+                  </a>
                 )}
               </div>
             )}
@@ -496,14 +708,14 @@ export function QuestionDetailModal({
             {question.title && (
               <h2
                 id="question-detail-title"
-                className="text-base font-semibold text-gray-900 leading-snug mb-1"
+                className="text-base font-semibold text-gray-800 leading-snug mb-1"
               >
                 {question.title}
               </h2>
             )}
             <p
               id={question.title ? undefined : 'question-detail-title'}
-              className={`leading-snug ${question.title ? 'text-sm text-gray-600' : 'text-base font-semibold text-gray-900'}`}
+              className={`leading-snug ${question.title ? 'text-sm text-gray-600' : 'text-base font-semibold text-gray-800'}`}
             >
               {question.text}
             </p>
@@ -529,7 +741,7 @@ export function QuestionDetailModal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+            className="text-indigo-300 hover:text-indigo-600 transition-colors shrink-0"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -546,20 +758,20 @@ export function QuestionDetailModal({
 
         {/* ── Delete question action (Req 6.1, 7.1) ───────────────────── */}
         {canDelete(question.user_id) && (
-          <div className="px-5 pt-3 pb-1">
+          <div className="relative z-10 px-5 pt-3 pb-1">
             {deleteQuestionError && (
-              <p role="alert" className="text-sm text-red-600 mb-2">
+              <p role="alert" className="text-sm text-gray-500 mb-2">
                 {deleteQuestionError}
               </p>
             )}
             {confirmDeleteQuestion ? (
               <div className="flex gap-2 items-center">
-                <span className="text-sm text-red-600 font-medium">Delete this question and all its responses?</span>
+                <span className="text-sm text-gray-600 font-medium">Delete this question and all its responses?</span>
                 <button
                   type="button"
                   onClick={handleDeleteQuestion}
                   disabled={isDeletingQuestion}
-                  className="text-sm font-semibold text-red-600 hover:text-red-800 disabled:opacity-50"
+                  className="text-sm font-semibold text-gray-600 hover:text-gray-800 disabled:opacity-50"
                 >
                   {isDeletingQuestion ? 'Deleting…' : 'Yes, delete'}
                 </button>
@@ -575,7 +787,7 @@ export function QuestionDetailModal({
               <button
                 type="button"
                 onClick={handleDeleteQuestion}
-                className="text-xs text-red-500 hover:text-red-700 transition-colors"
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                 aria-label="Delete this question"
               >
                 🗑 Delete Question
@@ -585,7 +797,7 @@ export function QuestionDetailModal({
         )}
 
         {/* ── Responses list (Req 3.1, 3.2) ───────────────────────────── */}
-        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-3">
+        <div className="relative z-10 flex-1 overflow-y-auto px-5 py-3 space-y-3">
           {loadingResponses ? (
             <div className="text-center py-6">
               <div className="inline-block w-6 h-6 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" aria-label="Loading responses" />
@@ -598,7 +810,14 @@ export function QuestionDetailModal({
             responses.map((response) => (
               <div
                 key={response.id}
-                className="group rounded-xl bg-gray-50 p-3 space-y-1"
+                className="group rounded-2xl p-3 space-y-1"
+                style={{
+                  background: 'rgba(255,255,255,0.45)',
+                  border: question.challenge_id
+                    ? '1px solid rgba(253,224,71,0.35)'
+                    : '1px solid rgba(191,219,254,0.5)',
+                  backdropFilter: 'blur(6px)',
+                }}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -628,7 +847,7 @@ export function QuestionDetailModal({
                             type="button"
                             onClick={() => handleDeleteResponse(response.id)}
                             disabled={deletingResponseId === response.id}
-                            className="text-xs font-semibold text-red-600 hover:text-red-800 disabled:opacity-50"
+                            className="text-xs font-semibold text-gray-600 hover:text-gray-800 disabled:opacity-50"
                           >
                             {deletingResponseId === response.id ? 'Deleting…' : 'Confirm'}
                           </button>
@@ -645,7 +864,7 @@ export function QuestionDetailModal({
                           type="button"
                           onClick={() => handleDeleteResponse(response.id)}
                           aria-label={`Delete response by ${response.responder_display_name}`}
-                          className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                          className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                         >
                           🗑
                         </button>
@@ -676,7 +895,7 @@ export function QuestionDetailModal({
           )}
 
           {deleteResponseError && (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-gray-500">
               {deleteResponseError}
             </p>
           )}
@@ -685,7 +904,12 @@ export function QuestionDetailModal({
         {/* ── Response form (Req 3.3, 3.4, 3.5, 3.6) ─────────────────── */}
         <form
           onSubmit={handleResponseSubmit}
-          className="p-4 border-t border-gray-100 bg-gray-50/50 space-y-2"
+          className="relative z-10 p-4 space-y-2"
+          style={{
+            borderTop: '1px solid rgba(200,180,255,0.3)',
+            background: 'rgba(255,255,255,0.25)',
+            backdropFilter: 'blur(8px)',
+          }}
           aria-label="Post a response"
         >
           <textarea
@@ -696,10 +920,10 @@ export function QuestionDetailModal({
             rows={2}
             placeholder="Write a response…"
             className={`
-              w-full px-3 py-2 rounded-xl border text-sm text-gray-900 resize-none
-              focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent
-              transition-colors
-              ${responseError ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'}
+              w-full px-3 py-2 rounded-xl border text-sm text-gray-800 resize-none
+              focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent
+              transition-colors placeholder:text-indigo-300
+              ${responseError ? 'border-red-400 bg-red-50' : 'border-white/60 bg-white/60'}
             `}
           />
 
@@ -769,6 +993,7 @@ export function QuestionDetailModal({
             </Button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   )

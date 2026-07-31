@@ -98,6 +98,130 @@ body {
   pointer-events: none;
 }
 
+/* ─── Bubble 3D wobble — idle rotation hint ──────────────────────────────── */
+/* Three variants with slightly different timing so not all bubbles sync up   */
+@keyframes bubble-wobble-a {
+  0%   { transform: scale(1) rotateY(0deg) rotateZ(0deg); }
+  30%  { transform: scale(1.03) rotateY(18deg) rotateZ(2deg); }
+  60%  { transform: scale(0.98) rotateY(-12deg) rotateZ(-1.5deg); }
+  85%  { transform: scale(1.01) rotateY(6deg) rotateZ(0.5deg); }
+  100% { transform: scale(1) rotateY(0deg) rotateZ(0deg); }
+}
+@keyframes bubble-wobble-b {
+  0%   { transform: scale(1) rotateY(0deg) rotateX(0deg); }
+  25%  { transform: scale(1.02) rotateY(-15deg) rotateX(5deg); }
+  55%  { transform: scale(0.97) rotateY(10deg) rotateX(-3deg); }
+  80%  { transform: scale(1.01) rotateY(-4deg) rotateX(1deg); }
+  100% { transform: scale(1) rotateY(0deg) rotateX(0deg); }
+}
+@keyframes bubble-wobble-c {
+  0%   { transform: scale(1) rotateZ(0deg) rotateY(0deg); }
+  35%  { transform: scale(1.04) rotateZ(-3deg) rotateY(14deg); }
+  65%  { transform: scale(0.99) rotateZ(2deg) rotateY(-10deg); }
+  90%  { transform: scale(1.01) rotateZ(-1deg) rotateY(4deg); }
+  100% { transform: scale(1) rotateZ(0deg) rotateY(0deg); }
+}
+
+/* ─── Bubble modal: decorative mini-bubble float ─────────────────────────── */
+@keyframes modal-minibubble {
+  0% {
+    transform: translateX(0) translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateX(var(--mb-drift, 5px)) translateY(-40%);
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateX(calc(var(--mb-drift, 5px) * 1.4)) translateY(-90%);
+    opacity: 0;
+  }
+}
+
+.modal-minibubble {
+  animation: modal-minibubble var(--speed, 6s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+  will-change: transform, opacity;
+}
+
+/* Edge bubbles — born ON the panel edge (scale 0), grow outward and drift away.
+ * Staggered by positive animation-delay with fill-mode:backwards (hold 0% = invisible)
+ * until each bubble's timer fires. 100% ends at same state as 0% for clean loop. */
+@keyframes modal-edge-bubble-rise {
+  0% {
+    transform: translate(0, 0) scale(0);
+    opacity: 0;
+  }
+  8% {
+    transform: translate(
+      calc(var(--eb-tx, 0px) * 0.06),
+      calc(var(--eb-ty, -10px) * 0.06)
+    ) scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: translate(
+      calc(var(--eb-tx, 0px) * 0.55),
+      calc(var(--eb-ty, -10px) * 0.55)
+    ) scale(0.90);
+    opacity: 0.70;
+  }
+  82% {
+    transform: translate(
+      calc(var(--eb-tx, 0px) * 0.88),
+      calc(var(--eb-ty, -10px) * 0.88)
+    ) scale(0.75);
+    opacity: 0.20;
+  }
+  100% {
+    /* Return to exact origin state so infinite loop restarts cleanly */
+    transform: translate(0, 0) scale(0);
+    opacity: 0;
+  }
+}
+
+.modal-edge-bubble {
+  animation: modal-edge-bubble-rise ease-out infinite;
+  animation-fill-mode: backwards;
+  will-change: transform, opacity;
+}
+
+/* ─── Bubble modal: spring scale-up entrance ─────────────────────────────── */
+@keyframes bubble-modal-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.55) translateY(12px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.04) translateY(-2px);
+  }
+  80% {
+    transform: scale(0.98) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.bubble-modal-panel {
+  animation: bubble-modal-enter 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: center bottom;
+}
+
+@media (min-width: 640px) {
+  .bubble-modal-panel {
+    transform-origin: center center;
+  }
+}
+
 /*
  * Henry worksheet header.
  *

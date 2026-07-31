@@ -34,13 +34,11 @@ const ANIMATION_BUFFER_MS = 500
 
 /**
  * Hard cap on simultaneous bubbles on screen.
- * When the pool has ≥ 15 unique questions, we show each one at most once
- * before cycling (no duplicates needed — the pool fills the screen).
- * When the pool has < 15 questions we allow up to 2 copies of each so the
- * screen doesn't look empty.
+ * When the pool has ≥ 15 unique questions, show each at most once (no duplicates).
+ * When the pool is smaller, allow up to 2 copies of the same question.
  */
 const MAX_ON_SCREEN = 15
-const MAX_PER_QUESTION_SMALL_POOL = 2  // only applies when pool < 15 questions
+const MAX_PER_QUESTION_SMALL_POOL = 2
 
 const X_MIN = 5
 const X_MAX = 95
@@ -233,7 +231,12 @@ export function BubbleAnimationEngine({
           key={instance.id}
           instance={instance}
           searchQuery={searchQuery}
-          onClick={() => onBubbleClick(instance.question)}
+          onClick={() => {
+            // Immediately remove this instance so the count drops and
+            // the keepalive effect spawns a replacement from the bottom
+            setVisible((prev) => prev.filter((b) => b.id !== instance.id))
+            onBubbleClick(instance.question)
+          }}
         />
       ))}
     </div>
