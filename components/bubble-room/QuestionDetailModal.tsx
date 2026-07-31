@@ -547,7 +547,7 @@ export function QuestionDetailModal({
       />
 
       {/* Panel + bubble overlay wrapper — overflow visible so bubbles escape */}
-      <div className="relative z-10 w-full sm:max-w-4xl flex flex-col" style={{ maxHeight: '90vh' }}>
+      <div className="relative z-10 w-full sm:max-w-5xl flex flex-col" style={{ maxHeight: '90vh' }}>
 
         {/* Bubble overlay — anchored to actual panel edges via measured size */}
         {panelSize.w > 0 && (
@@ -674,7 +674,7 @@ export function QuestionDetailModal({
         <div className="relative z-10 flex flex-col sm:flex-row flex-1 min-h-0 overflow-hidden">
 
           {/* LEFT: Question + delete */}
-          <div className="sm:w-5/12 flex flex-col overflow-y-auto px-5 py-4 border-b border-white/40 sm:border-b-0 sm:border-r sm:border-white/40 space-y-3">
+          <div className="sm:w-1/2 flex flex-col overflow-y-auto px-5 py-4 border-b border-white/40 sm:border-b-0 sm:border-r sm:border-white/40 space-y-3">
             <div>
               <p className="text-xs text-indigo-400/80 mb-0.5">
                 {question.author_display_name} · {formatDate(question.created_at)}
@@ -748,7 +748,7 @@ export function QuestionDetailModal({
           </div>
 
           {/* RIGHT: Responses + reply form */}
-          <div className="sm:w-7/12 flex flex-col min-h-0 max-h-[45vh] sm:max-h-none">
+          <div className="sm:w-1/2 flex flex-col min-h-0 max-h-[45vh] sm:max-h-none">
 
         {/* ── Responses list (Req 3.1, 3.2) ───────────────────────────── */}
         <div className="flex-1 overflow-y-auto px-5 py-3 space-y-3">
