@@ -13,6 +13,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { BubbleQuestion, BubbleResponse, BubbleQuestionAssignment } from '@/lib/types/bubbleRoom'
 import { evaluateRuleBadges } from '@/lib/actions/badges'
+import { translateUserText } from '@/lib/i18n/translateUserText'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,19 @@ export async function postQuestion(
     // Note: class_id is now optional for the global bubble room.
     // If challenge_id FK fails (bank challenge not in daily_challenges), retry without it.
 
+    /**
+     * Translate before insert so a question is readable in either language the
+     * moment it appears, rather than popping from original to translated a few
+     * seconds later while people are already reading it.
+     *
+     * Both fields go in one pair of calls, and translateUserText never throws —
+     * a failure stores the original in both slots, so the post still saves.
+     */
+    const [titleT, textT] = await Promise.all([
+      translateUserText(trimmedTitle),
+      translateUserText(trimmed),
+    ])
+
     const insertPayload = {
       class_id: classId ?? null,
       user_id: user.id,
@@ -69,6 +83,11 @@ export async function postQuestion(
       title: trimmedTitle,
       text: trimmed,
       image_url: imageUrl ?? null,
+      title_en: titleT.en,
+      title_zh: titleT.zh,
+      text_en: textT.en,
+      text_zh: textT.zh,
+      text_lang: textT.lang,
     }
 
     let { data, error } = await supabase
@@ -159,6 +178,10 @@ export async function postResponse(
       return { error: 'You must be logged in to post a response.' }
     }
 
+    // Non-fatal by construction: on failure this returns the original in both
+    // slots, so a reply always posts even if translation is unavailable.
+    const textT = await translateUserText(trimmed)
+
     const { data, error } = await supabase
       .from('bubble_room_responses')
       .insert({
@@ -166,6 +189,9 @@ export async function postResponse(
         user_id: user.id,
         text: trimmed,
         image_url: imageUrl ?? null,
+        text_en: textT.en,
+        text_zh: textT.zh,
+        text_lang: textT.lang,
       })
       .select(`
         id,
