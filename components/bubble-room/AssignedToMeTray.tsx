@@ -6,6 +6,8 @@
  */
 
 import { useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { localizeQuestion } from '@/lib/i18n/localize'
 import { fetchMyAssignments } from '@/lib/actions/bubbleRoom'
 import type { BubbleQuestionAssignment, BubbleQuestion } from '@/lib/types/bubbleRoom'
 
@@ -16,6 +18,7 @@ export interface AssignedToMeTrayProps {
 }
 
 export function AssignedToMeTray({ currentUserId, onQuestionClick, onClose }: AssignedToMeTrayProps) {
+  const { language } = useLanguage()
   const [pending, setPending] = useState<BubbleQuestionAssignment[]>([])
   const [responded, setResponded] = useState<BubbleQuestionAssignment[]>([])
   const [loading, setLoading] = useState(true)
@@ -168,6 +171,9 @@ function AssignmentRow({
   onOpen: () => void
   formatDate: (iso: string) => string
 }) {
+  // Own hook rather than a prop: this row renders in a list and reads the
+  // language for its own preview text.
+  const { language } = useLanguage()
   const q = assignment.question
   if (!q) return null
 
@@ -196,7 +202,7 @@ function AssignmentRow({
         </span>
       </div>
       {q.title && (
-        <p className="text-xs text-gray-500 line-clamp-1">{q.text}</p>
+        <p className="text-xs text-gray-500 line-clamp-1">{localizeQuestion(q, language).text}</p>
       )}
       <p className="text-[11px] text-gray-400">
         by {q.author_display_name} · {formatDate(assignment.created_at)}

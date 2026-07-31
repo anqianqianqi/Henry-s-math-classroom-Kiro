@@ -125,13 +125,5 @@ export async function translateUserText(original: string): Promise<TranslatedTex
   }
 }
 
-/** Pick the rendering matching the reader, falling back to the original. */
-export function pickTranslation(
-  original: string,
-  en: string | null | undefined,
-  zh: string | null | undefined,
-  language: 'en' | 'zh',
-): string {
-  const chosen = language === 'zh' ? zh : en
-  return chosen?.trim() ? chosen : original
-}
+// The reading side lives in lib/i18n/localize.ts — this module is server-only,
+// so a client component cannot import from it.

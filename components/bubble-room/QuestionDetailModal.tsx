@@ -27,6 +27,8 @@ import {
 } from '@/lib/actions/bubbleRoom'
 import type { BubbleQuestion, BubbleResponse } from '@/lib/types/bubbleRoom'
 import { Button } from '@/components/ui/Button'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { localizeQuestion, pickTranslation } from '@/lib/i18n/localize'
 import { BadgePill } from './BadgePill'
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
@@ -78,6 +80,8 @@ export function QuestionDetailModal({
   const responseInputRef = useRef<HTMLTextAreaElement>(null)
   const responseFileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
+  const { language } = useLanguage()
+  const local = localizeQuestion(question, language)
 
   // ── On mount: record view + fetch responses + open Realtime channel ──────
   useEffect(() => {
@@ -162,6 +166,9 @@ export function QuestionDetailModal({
             question_id: row.question_id,
             user_id: row.user_id,
             text: row.text,
+            text_en: row.text_en ?? null,
+            text_zh: row.text_zh ?? null,
+            text_lang: row.text_lang ?? null,
             image_url: row.image_url ?? null,
             created_at: row.created_at,
             responder_display_name: row.profiles?.nickname ?? row.profiles?.full_name ?? 'Unknown',
@@ -245,6 +252,9 @@ export function QuestionDetailModal({
                 question_id: row.question_id,
                 user_id: row.user_id,
                 text: row.text,
+            text_en: row.text_en ?? null,
+            text_zh: row.text_zh ?? null,
+            text_lang: row.text_lang ?? null,
                 image_url: row.image_url ?? null,
                 created_at: row.created_at,
                 responder_display_name: row.profiles?.nickname ?? row.profiles?.full_name ?? 'Unknown',
@@ -710,14 +720,14 @@ export function QuestionDetailModal({
                 id="question-detail-title"
                 className="text-base font-semibold text-gray-800 leading-snug mb-1"
               >
-                {question.title}
+                {local.title}
               </h2>
             )}
             <p
               id={question.title ? undefined : 'question-detail-title'}
               className={`leading-snug ${question.title ? 'text-sm text-gray-600' : 'text-base font-semibold text-gray-800'}`}
             >
-              {question.text}
+              {local.text}
             </p>
             {/* Question image */}
             {question.image_url && (
@@ -872,7 +882,7 @@ export function QuestionDetailModal({
                     </div>
                   )}
                 </div>
-                <p className="text-sm text-gray-800 leading-relaxed">{response.text}</p>
+                <p className="text-sm text-gray-800 leading-relaxed">{pickTranslation(response.text, response.text_en, response.text_zh, language)}</p>
                 {/* Response image */}
                 {response.image_url && (
                   <a

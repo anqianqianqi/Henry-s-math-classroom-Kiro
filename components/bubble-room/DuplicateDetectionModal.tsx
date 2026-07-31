@@ -11,6 +11,8 @@
 
 import type { DuplicateMatch } from '@/lib/types/bubbleRoom'
 import { Button } from '@/components/ui/Button'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { localizeQuestion } from '@/lib/i18n/localize'
 
 export interface DuplicateDetectionModalProps {
   /** Up to 3 matches sorted by descending score */
@@ -30,6 +32,7 @@ export function DuplicateDetectionModal({
   onConfirm,
   onCancel,
 }: DuplicateDetectionModalProps) {
+  const { language } = useLanguage()
   return (
     /* Backdrop */
     <div
@@ -72,7 +75,7 @@ export function DuplicateDetectionModal({
               key={match.question.id}
               className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-1"
             >
-              <p className="text-sm text-gray-800 leading-snug">{match.question.text}</p>
+              <p className="text-sm text-gray-800 leading-snug">{localizeQuestion(match.question, language).text}</p>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">
                   by {match.question.author_display_name}
