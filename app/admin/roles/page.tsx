@@ -384,7 +384,7 @@ export default function AdminRolesPage() {
                   {creating ? 'Creating…' : 'Create User'}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => setShowCreate(false)} fullWidth>
-                  Cancel
+                  {t('action.cancel')}
                 </Button>
               </div>
             </form>

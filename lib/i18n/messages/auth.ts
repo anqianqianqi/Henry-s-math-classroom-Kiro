@@ -15,6 +15,8 @@
 export const auth = {
   // ── Shared ───────────────────────────────────────────────
   'auth.appName': { en: "Henry's Math Classroom", zh: 'Henry 数学教室' },
+  /** Short form for narrow headers. */
+  'auth.appNameShort': { en: "Henry's Math", zh: 'Henry 数学' },
   'auth.email': { en: 'Email', zh: '邮箱' },
   'auth.password': { en: 'Password', zh: '密码' },
   'auth.passwordHint': { en: 'At least 6 characters', zh: '至少 6 个字符' },

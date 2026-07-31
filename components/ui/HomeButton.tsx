@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 /**
  * Brand home link for page headers — matches the PageHeader "Henry's Math" style.
@@ -9,13 +10,14 @@ import Link from 'next/link'
  * With noSlash: renders just "Henry's Math".
  */
 export function HomeButton({ noSlash = false }: { noSlash?: boolean }) {
+  const { t } = useLanguage()
   if (noSlash) {
     return (
       <Link
         href="/dashboard"
         className="text-sm font-semibold text-primary-600 hover:text-primary-700 transition-colors"
       >
-        Henry&apos;s Math
+        {t('auth.appNameShort')}
       </Link>
     )
   }
@@ -28,7 +30,7 @@ export function HomeButton({ noSlash = false }: { noSlash?: boolean }) {
         href="/dashboard"
         className="font-semibold text-primary-600 hover:text-primary-700 transition-colors"
       >
-        Henry&apos;s Math
+        {t('auth.appNameShort')}
       </Link>
     </span>
   )

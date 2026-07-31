@@ -522,7 +522,7 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 sm:gap-3">
-              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 hidden sm:block">Henry&apos;s Math Classroom</h1>
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 hidden sm:block">{t('auth.appName')}</h1>
               <h1 className="text-lg font-bold text-gray-900 sm:hidden">{t('dash.mathClass')}</h1>
             </div>
             <div className="flex items-center gap-1 sm:gap-4">
@@ -530,9 +530,9 @@ export default function DashboardPage() {
               <button
                 onClick={() => router.push('/settings')}
                 className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                aria-label="Settings"
+                aria-label={t('nav.settings')}
               >
-                Settings
+                {t('nav.settings')}
               </button>
               <span className="text-gray-600 font-medium hidden sm:inline">
                 {profile?.nickname || profile?.first_name || user?.email}
@@ -541,7 +541,7 @@ export default function DashboardPage() {
                 onClick={handleSignOut}
                 className="px-2 sm:px-4 py-2 text-sm text-gray-600 hover:text-gray-900 font-medium rounded-xl hover:bg-gray-100 transition-colors"
               >
-                Sign Out
+                {t('nav.signOut')}
               </button>
             </div>
           </div>

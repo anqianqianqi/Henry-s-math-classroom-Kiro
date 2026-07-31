@@ -568,7 +568,7 @@ function BlindBoxView({
             onClick={onClose}
             className="flex-1 bg-gray-100 text-gray-600 text-sm font-semibold py-3 rounded-2xl hover:bg-gray-200 transition-colors"
           >
-            Close
+            {t('action.close')}
           </button>
         </div>
       </div>
@@ -1321,7 +1321,7 @@ export default function ShopPage() {
                       <span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
                     </span>
                     <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-700 text-white group-hover:bg-amber-800 transition-colors">
-                      Browse
+                      {t('shop.browse')}
                     </span>
                   </div>
                 </div>
@@ -1361,7 +1361,7 @@ export default function ShopPage() {
                       <span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
                     </span>
                     <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary-600 text-white group-hover:bg-primary-700 transition-colors">
-                      Browse
+                      {t('shop.browse')}
                     </span>
                   </div>
                 </div>
@@ -1401,7 +1401,7 @@ export default function ShopPage() {
                       <span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
                     </span>
                     <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-600 text-white group-hover:bg-amber-700 transition-colors">
-                      Browse
+                      {t('shop.browse')}
                     </span>
                   </div>
                 </div>

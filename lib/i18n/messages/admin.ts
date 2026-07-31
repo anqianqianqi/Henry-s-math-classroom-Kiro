@@ -338,6 +338,10 @@ export const admin = {
     zh: '例如：1–9 的乘法题，或分数加法练习',
   },
   'genTpl.definition': { en: 'Template Definition', zh: '模板定义' },
+  'genTpl.previewHint': {
+    en: 'Click "Preview" to see sample challenges',
+    zh: '点击“预览”查看示例题目',
+  },
   'genTpl.definitionHint': {
     en: 'Define a parameterized challenge pattern with variables',
     zh: '用变量定义一个带参数的题目模板',

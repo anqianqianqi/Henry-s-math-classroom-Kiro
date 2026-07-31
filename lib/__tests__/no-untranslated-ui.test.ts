@@ -115,7 +115,39 @@ function findUntranslated(file: string): Finding[] {
   const findings: Finding[] = []
   const lines = readFileSync(file, 'utf8').split(/\r?\n/)
 
+  /**
+   * A line sandwiched between an opening tag and a closing tag is JSX text,
+   * whatever it says:
+   *
+   *   <button …>
+   *     Settings        <- this
+   *   </button>
+   *
+   * That bracketing is what makes a single word safe to flag. Without it,
+   * "Settings" alone could be an object key, an enum member or a type name, and
+   * a check that guessed would be too noisy to keep — which is why single-word
+   * labels were invisible until the dashboard header turned one up.
+   */
+  const isBracketedByTags = (i: number) =>
+    /(^|>)\s*$/.test(lines[i - 1] ?? '') && /^\s*<\//.test(lines[i + 1] ?? '')
+
+  // A JSX comment spans lines and its continuations are bare prose:
+  //
+  //   {/* Dropped by container query when the strip
+  //       itself is narrow */}                        <- looks like UI text
+  //
+  // Tracked rather than pattern-matched, because only the first line carries
+  // the opening marker.
+  let inJsxComment = false
+
   lines.forEach((line, i) => {
+    const opensComment = line.includes('{/*') && !line.includes('*/')
+    const closesComment = inJsxComment && line.includes('*/')
+    const skipAsComment = inJsxComment
+    if (opensComment) inJsxComment = true
+    if (closesComment) inJsxComment = false
+    if (skipAsComment) return
+
     // An attribute holding a bare English string rather than {t(...)}.
     for (const attr of VISIBLE_ATTRS) {
       const m = line.match(new RegExp(`${attr}="([A-Z][^"]{2,})"`))
@@ -127,7 +159,9 @@ function findUntranslated(file: string): Finding[] {
     }
 
     // A JSX text node written inline: >Some English Words<
-    const inline = line.match(/>([A-Z][a-z]+(?: [A-Za-z’']+){1,8})</)
+    // `&apos;` and friends count as word characters — "Henry&apos;s Math
+    // Classroom" sat in the dashboard header unnoticed because they did not.
+    const inline = line.match(/>([A-Z][a-z&;]+(?: [A-Za-z’'&;]+){1,8})</)
     if (inline) findings.push({ file, line: i + 1, text: inline[1] })
 
     // A JSX text node on its own line, which is how Prettier formats anything
@@ -140,8 +174,13 @@ function findUntranslated(file: string): Finding[] {
     // Missing this was a real blind spot: the public landing page was fully
     // untranslated and the check said nothing.
     const bare = line.trim()
+    const multiWord = /^[A-Z][a-z&;]+(?:[ ,’'-][A-Za-z’'&;]+){1,10}[.!?]?$/.test(bare)
+    // A lone capitalised word only counts when tags bracket it, so "Settings"
+    // as a button label is caught while "Settings" as a type name is not.
+    const loneWord = /^[A-Z][a-z]{2,}$/.test(bare) && isBracketedByTags(i)
+
     const isOwnLineText =
-      /^[A-Z][a-z]+(?:[ ,’'-][A-Za-z’'&;]+){1,10}[.!?]?$/.test(bare) &&
+      (multiWord || loneWord) &&
       // Not markup, an expression, a prop, or a comment.
       !/[<>{}=]/.test(bare) &&
       !bare.startsWith('*') &&
