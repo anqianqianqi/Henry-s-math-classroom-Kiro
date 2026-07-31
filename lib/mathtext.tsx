@@ -11,26 +11,12 @@
 import katex from 'katex'
 import { Fragment, useMemo } from 'react'
 
-/** Bare commands the worksheet renderer treats as math without delimiters. */
-const BARE_COMMANDS = [
-  'bigcirc', 'circ', 'perp', 'parallel', 'angle', 'triangle', 'cong', 'sim',
-  'leq', 'geq', 'neq', 'approx', 'times', 'div', 'pm', 'cdot', 'infty',
-  'alpha', 'beta', 'gamma', 'theta', 'lambda', 'mu', 'pi', 'sigma', 'omega',
-].join('|')
+// The pattern and tokenizer live in mathtext-core so server-side translation
+// can mask math using exactly what this renders — see lib/mathtext-core.ts.
+import { tokenizeMathText, type Segment } from './mathtext-core'
 
-/** One brace group, tolerating a single level of nesting. */
-const BRACE_GROUP = '\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\}'
-
-const TOKEN_PATTERN = new RegExp(
-  [
-    '\\$([^$]+?)\\$',                              // $...$
-    '\\\\\\(([\\s\\S]+?)\\\\\\)',                  // \(...\)
-    `(\\\\frac${BRACE_GROUP}${BRACE_GROUP})`,      // bare \frac{a}{b}
-    `(\\\\sqrt${BRACE_GROUP})`,                    // bare \sqrt{x}
-    `(\\\\(?:${BARE_COMMANDS})\\b)`,               // bare \angle, \leq, ...
-  ].join('|'),
-  'g'
-)
+export { tokenizeMathText }
+export type { Segment }
 
 function renderExpression(expression: string): string {
   return katex.renderToString(expression, {
@@ -40,33 +26,6 @@ function renderExpression(expression: string): string {
     strict: false,
     output: 'html',
   })
-}
-
-interface Segment {
-  kind: 'text' | 'math'
-  value: string
-}
-
-export function tokenizeMathText(text: string): Segment[] {
-  const segments: Segment[] = []
-  let lastIndex = 0
-
-  TOKEN_PATTERN.lastIndex = 0
-  let match: RegExpExecArray | null
-  while ((match = TOKEN_PATTERN.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      segments.push({ kind: 'text', value: text.slice(lastIndex, match.index) })
-    }
-    // Exactly one capture group matches per token.
-    const expression = match.slice(1).find(group => group != null) ?? match[0]
-    segments.push({ kind: 'math', value: expression })
-    lastIndex = match.index + match[0].length
-  }
-
-  if (lastIndex < text.length) {
-    segments.push({ kind: 'text', value: text.slice(lastIndex) })
-  }
-  return segments
 }
 
 /** Plain text with line breaks preserved. */

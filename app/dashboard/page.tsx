@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import NotificationBell from '@/components/NotificationBell'
@@ -92,6 +93,7 @@ export default function DashboardPage() {
   const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null) // latest blindbox image this user owns
   const router = useRouter()
   const supabase = createClient()
+  const { t } = useLanguage()
 
   useEffect(() => {
     loadUser()
@@ -505,7 +507,7 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">📚</div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">{t('status.loading')}</p>
         </div>
       </div>
     )
@@ -521,7 +523,7 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 sm:gap-3">
               <h1 className="text-lg sm:text-2xl font-bold text-gray-900 hidden sm:block">Henry&apos;s Math Classroom</h1>
-              <h1 className="text-lg font-bold text-gray-900 sm:hidden">Math Class</h1>
+              <h1 className="text-lg font-bold text-gray-900 sm:hidden">{t('dash.mathClass')}</h1>
             </div>
             <div className="flex items-center gap-1 sm:gap-4">
               <NotificationBell />
@@ -683,7 +685,7 @@ export default function DashboardPage() {
             <Card.Body>
               <div className="text-5xl mb-3 hidden sm:block">📚</div>
               <div className="text-3xl font-bold text-gray-900 mb-1">{stats.classesCount}</div>
-              <div className="text-gray-600 font-medium">Classes</div>
+              <div className="text-gray-600 font-medium">{t('nav.classes')}</div>
             </Card.Body>
           </Card>
 
@@ -694,7 +696,7 @@ export default function DashboardPage() {
             <Card.Body>
               <div className="text-5xl mb-3 hidden sm:block">🎯</div>
               <div className="text-3xl font-bold text-gray-900 mb-1">{stats.challengesCount}</div>
-              <div className="text-gray-600 font-medium">Challenges</div>
+              <div className="text-gray-600 font-medium">{t('nav.challenges')}</div>
             </Card.Body>
           </Card>
 
@@ -703,7 +705,7 @@ export default function DashboardPage() {
               <Card.Body>
                 <div className="text-5xl mb-3 hidden sm:block">⭐</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">{stats.totalScore}</div>
-                <div className="text-gray-600 font-medium">Total Score</div>
+                <div className="text-gray-600 font-medium">{t('dash.totalScore')}</div>
               </Card.Body>
             </Card>
           )}
@@ -718,7 +720,7 @@ export default function DashboardPage() {
                 <div className="text-3xl font-bold text-primary-600 mb-1">
                   {stats.spendableBalance}
                 </div>
-                <div className="text-gray-600 font-medium">Shop Balance</div>
+                <div className="text-gray-600 font-medium">{t('dash.shopBalance')}</div>
               </Card.Body>
             </Card>
           )}
@@ -729,8 +731,8 @@ export default function DashboardPage() {
           >
             <Card.Body>
               <div className="text-5xl mb-3 hidden sm:block">🌍</div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">Explore</div>
-              <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Classes</div>
+              <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.explore')}</div>
+              <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('nav.classes')}</div>
             </Card.Body>
           </Card>
 
@@ -747,7 +749,7 @@ export default function DashboardPage() {
           >
             <Card.Body>
               <div className="text-5xl mb-3 hidden sm:block">💬</div>
-              <div className="text-2xl font-bold text-gray-900 mb-1">Bubble Room</div>
+              <div className="text-2xl font-bold text-gray-900 mb-1">{t('nav.bubbleRoom')}</div>
               <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Q&amp;A</div>
             </Card.Body>
           </Card>
@@ -759,7 +761,7 @@ export default function DashboardPage() {
           >
             <Card.Body>
               <div className="text-5xl mb-3 hidden sm:block">🎨</div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">Decorations</div>
+              <div className="text-3xl font-bold text-gray-900 mb-1">{t('nav.decorations')}</div>
               <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Book &amp; Room</div>
             </Card.Body>
           </Card>
@@ -770,8 +772,8 @@ export default function DashboardPage() {
             >
               <Card.Body>
                 <div className="text-5xl mb-3 hidden sm:block">🛍️</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">Shop</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Manage</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('nav.shop')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
               </Card.Body>
             </Card>
           )}
@@ -785,8 +787,8 @@ export default function DashboardPage() {
             >
               <Card.Body>
                 <div className="text-5xl mb-3 hidden sm:block">👥</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">User Roles</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Manage</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.userRoles')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
               </Card.Body>
             </Card>
           )}
@@ -798,8 +800,8 @@ export default function DashboardPage() {
             >
               <Card.Body>
                 <div className="text-5xl mb-3 hidden sm:block">🏷️</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">Tags</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Manage</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.tags')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
               </Card.Body>
             </Card>
           )}
@@ -811,8 +813,8 @@ export default function DashboardPage() {
             >
               <Card.Body>
                 <div className="text-5xl mb-3 hidden sm:block">📅</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">Scheduler</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Manage</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.scheduler')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
               </Card.Body>
             </Card>
           )}
@@ -824,8 +826,8 @@ export default function DashboardPage() {
             >
               <Card.Body>
                 <div className="text-5xl mb-3 hidden sm:block">🏦</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">Challenge Bank</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Manage</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.challengeBank')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
               </Card.Body>
             </Card>
           )}
@@ -837,8 +839,8 @@ export default function DashboardPage() {
             >
               <Card.Body>
                 <div className="text-5xl mb-3 hidden sm:block">📊</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">Students</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">History</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.students')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.history')}</div>
               </Card.Body>
             </Card>
           )}
@@ -850,8 +852,8 @@ export default function DashboardPage() {
             >
               <Card.Body>
                 <div className="text-5xl mb-3 hidden sm:block">📝</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">Grade</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Homework</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.grade')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.homework')}</div>
                 {ungradedCount > 0 && (
                   <span className="absolute top-3 right-3 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                     {ungradedCount}

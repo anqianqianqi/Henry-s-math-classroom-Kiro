@@ -1,7 +1,7 @@
 /**
  * POST /api/ta/translate
  *
- * Translates TA grading output fields into Traditional Chinese (繁體中文).
+ * Translates TA grading output fields into Simplified Chinese (简体中文).
  * Used by the language toggle in the TA panel — no grading logic here,
  * just translation of existing text.
  *
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const inputJson = JSON.stringify(Object.fromEntries(entries), null, 2)
 
   const systemPrompt = `You are a professional translator specializing in math education content.
-Translate the given JSON fields from English into Traditional Chinese (繁體中文).
+Translate the given JSON fields from English into Simplified Chinese (简体中文).
 
 Rules:
 - Preserve the exact JSON keys unchanged
@@ -42,7 +42,7 @@ Rules:
 - Use natural, warm educational language appropriate for a middle/high school math classroom
 - Output ONLY valid JSON — no markdown, no extra text`
 
-  const userMessage = `Translate these TA grading fields to Traditional Chinese:\n\n${inputJson}`
+  const userMessage = `Translate these TA grading fields to Simplified Chinese:\n\n${inputJson}`
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',

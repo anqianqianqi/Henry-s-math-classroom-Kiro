@@ -7,11 +7,13 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 export default function DecorationsPage() {
   const router = useRouter()
   const supabase = createClient()
   const [isAdmin, setIsAdmin] = useState(false)
+  const { t } = useLanguage()
 
   useEffect(() => {
     async function checkRole() {
@@ -31,41 +33,41 @@ export default function DecorationsPage() {
   const decorations = [
     {
       icon: '📖',
-      title: 'Book Cover & Page',
-      subtitle: 'Customise your challenge book',
+      title: t('decor.bookCoverPage'),
+      subtitle: t('decor.bookCoverPageSub'),
       href: '/book-skins',
-      description: 'Choose cover skins and page styles for the book that appears on every challenge.',
+      description: t('decor.bookCoverPageDesc'),
     },
     {
       icon: '🏛️',
-      title: 'Challenge Room',
-      subtitle: 'Your 3D reading room',
+      title: t('decor.challengeRoom'),
+      subtitle: t('decor.challengeRoomSub'),
       href: '/challenge-rooms',
-      description: 'Swap the flat book for a 3D room with an animated book, and pick the cover / inner-page bundle that wraps it.',
+      description: t('decor.challengeRoomDesc'),
     },
     {
       icon: '🏠',
-      title: 'Pet Room',
-      subtitle: "Your pet's home background",
+      title: t('decor.petRoom'),
+      subtitle: t('decor.petRoomSub'),
       href: '/decorations/pet-room',
-      description: 'Browse and select room backgrounds for your pet area on the dashboard.',
+      description: t('decor.petRoomDesc'),
     },
   ]
 
   const adminItems = [
     {
       icon: '🏛️',
-      title: 'ChallengeRoom',
-      subtitle: 'Admin: 3D room designer',
+      title: t('admin.roomDesigner'),
+      subtitle: t('admin.roomDesignerSub'),
       href: '/admin/challenge-rooms',
-      description: 'Generate a challenge room background with AI, then position the animated book on the table and save it.',
+      description: t('admin.roomDesignerDesc'),
     },
     {
       icon: '📚',
-      title: 'Upload BookSkinBundle',
-      subtitle: 'Admin: ChallengeRoom textures',
+      title: t('admin.bundleDesigner'),
+      subtitle: t('admin.bundleDesignerSub'),
       href: '/admin/book-bundles',
-      description: 'Design a matched cover + inner-page pair that wraps the 3D book. Only used by the ChallengeRoom — for the flat book, use Upload Book Skins.',
+      description: t('admin.bundleDesignerDesc'),
     },
     {
       icon: '🖼️',
@@ -95,7 +97,7 @@ export default function DecorationsPage() {
       <PageHeader breadcrumbs={[{ label: 'Decorations' }]} />
 
       <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <p className="text-gray-500 mb-8">Personalise your classroom experience.</p>
+        <p className="text-gray-500 mb-8">{t('decor.intro')}</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {decorations.map(d => (
@@ -114,7 +116,7 @@ export default function DecorationsPage() {
         {isAdmin && (
           <>
             <h2 className="text-lg font-bold text-gray-700 mt-10 mb-4 flex items-center gap-2">
-              <span>🔧</span> Admin Tools
+              <span>🔧</span> {t('decor.adminTools')}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {adminItems.map(d => (

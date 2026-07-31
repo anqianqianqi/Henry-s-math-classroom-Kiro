@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "autoPort": true,
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "autoPort": true,
+      "port": 3100
+    },
+    {
+      "name": "room-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Users/shinn/AppData/Local/Temp/claude/C--Users-shinn-OneDrive-Documents-GitHub-Henry-s-math-classroom-Kiro/18d64272-d61a-4040-a041-e19ad8e787f6/scratchpad/roompreview/server.mjs"
+      ],
+      "port": 4321
+    }
+  ]
+}

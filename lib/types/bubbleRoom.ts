@@ -14,6 +14,14 @@ export interface BubbleQuestion {
   user_id: string
   challenge_id: string | null
   title: string | null          // optional short title (≤120 chars)
+  /** Stored translations — see supabase/add-user-text-translations.sql.
+   *  Read with localizeQuestion(); the originals above stay authoritative for
+   *  search and duplicate detection. */
+  title_en?: string | null
+  title_zh?: string | null
+  text_en?: string | null
+  text_zh?: string | null
+  text_lang?: 'en' | 'zh' | 'other' | null
   text: string
   image_url: string | null      // optional attached image
   created_at: string            // ISO 8601
@@ -31,6 +39,10 @@ export interface BubbleResponse {
   question_id: string
   user_id: string
   text: string
+  /** Stored translations — read with pickTranslation(). */
+  text_en?: string | null
+  text_zh?: string | null
+  text_lang?: 'en' | 'zh' | 'other' | null
   image_url: string | null      // optional attached image
   created_at: string
   responder_display_name: string  // joined from profiles
