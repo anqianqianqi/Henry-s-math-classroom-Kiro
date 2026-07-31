@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -66,6 +67,7 @@ function RoomBrowseAdminModal({
   onReactivate: (id: string) => void
   onDelete: (id: string) => void
 }) {
+  const { t } = useLanguage()
   const [previewBg, setPreviewBg] = useState<typeof roomBgs[0] | null>(null)
 
   return (
@@ -93,7 +95,7 @@ function RoomBrowseAdminModal({
                       <span className="bg-black/60 text-white text-xs font-semibold px-2.5 py-1 rounded-full">▶ Preview</span>
                     </div>
                     {shopItem && !shopItem.is_active && (
-                      <div className="absolute top-1.5 right-1.5 bg-gray-700/80 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">Inactive</div>
+                      <div className="absolute top-1.5 right-1.5 bg-gray-700/80 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{t('shopAdmin.inactive')}</div>
                     )}
                     {bg.animation_zones?.length > 0 && (
                       <div className="absolute top-1.5 left-1.5 bg-black/50 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">✨ Animated</div>
@@ -285,6 +287,7 @@ function BookBrowseAdminModal({
 }
 
 export default function AdminShopPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const supabase = createClient()
 
@@ -950,7 +953,7 @@ export default function AdminShopPage() {
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">🛍️</div>
-          <p className="text-gray-600">Loading shop admin...</p>
+          <p className="text-gray-600">{t('shopAdmin.loading')}</p>
         </div>
       </div>
     )
@@ -1007,7 +1010,7 @@ export default function AdminShopPage() {
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-3">
           <HomeButton noSlash />
-          <h1 className="text-xl font-bold text-gray-900">Shop Admin 🛍️</h1>
+          <h1 className="text-xl font-bold text-gray-900">{t('shopAdmin.pageTitle')}</h1>
           <div className="ml-auto">
             <Button
               variant="outline"
@@ -1030,7 +1033,7 @@ export default function AdminShopPage() {
         {/* ── Create / Edit Form ── */}
         <section>
           <h2 className="text-lg font-bold text-gray-900 mb-4">
-            {editingId ? '✏️ Edit Item' : 'Create New Item'}
+            {editingId ? t('shopAdmin.editItem') : t('shopAdmin.createItem')}
           </h2>
           {editingId && (
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
@@ -1042,7 +1045,7 @@ export default function AdminShopPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Title <span className="text-red-500">*</span>
+                    {t('shopAdmin.itemTitle')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -1050,7 +1053,7 @@ export default function AdminShopPage() {
                     onChange={(e) => handleFormChange('title', e.target.value)}
                     maxLength={100}
                     className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
-                    placeholder="e.g. Free Period"
+                    placeholder={t('shopAdmin.titlePlaceholder')}
                   />
                   {formErrors.title && (
                     <p className="text-red-500 text-xs mt-1">{formErrors.title}</p>
@@ -1067,7 +1070,7 @@ export default function AdminShopPage() {
                     maxLength={500}
                     rows={2}
                     className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
-                    placeholder="Optional short description"
+                    placeholder={t('shopAdmin.shortDescPlaceholder')}
                   />
                   {formErrors.description && (
                     <p className="text-red-500 text-xs mt-1">{formErrors.description}</p>
@@ -1083,13 +1086,13 @@ export default function AdminShopPage() {
                     onChange={(e) => handleFormChange('details', e.target.value)}
                     rows={3}
                     className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
-                    placeholder="What students can expect, terms, how to use, etc."
+                    placeholder={t('shopAdmin.detailsPlaceholder')}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Commodity Type
+                    {t('shopAdmin.commodityType')}
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     {(['standard', 'blindbox', 'physical', 'physical_blindbox', 'music_track'] as const).map((type) => (
@@ -1148,7 +1151,7 @@ export default function AdminShopPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Category
+                      {t('shopAdmin.category')}
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       {([
@@ -1178,7 +1181,7 @@ export default function AdminShopPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Cost (points) <span className="text-red-500">*</span>
+                      {t('shopAdmin.costPoints')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -1187,7 +1190,7 @@ export default function AdminShopPage() {
                       min={1}
                       max={10000}
                       className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
-                      placeholder="e.g. 50"
+                      placeholder={t('shopAdmin.costPlaceholder')}
                     />
                     {formErrors.cost && (
                       <p className="text-red-500 text-xs mt-1">{formErrors.cost}</p>
@@ -1213,7 +1216,7 @@ export default function AdminShopPage() {
                         min={1}
                         max={9999}
                         className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
-                        placeholder="Unlimited"
+                        placeholder={t('shopAdmin.unlimited')}
                       />
                     )}
                     {formErrors.quantity && (
@@ -1224,7 +1227,7 @@ export default function AdminShopPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Image (optional)
+                    {t('shopAdmin.imageOptional')}
                   </label>
                   {imagePreview ? (
                     <div className="flex items-start gap-3">
@@ -1236,16 +1239,16 @@ export default function AdminShopPage() {
                         />
                       </div>
                       <div className="flex flex-col gap-2">
-                        <p className="text-xs text-gray-500">Current image</p>
+                        <p className="text-xs text-gray-500">{t('shopAdmin.currentImage')}</p>
                         <button
                           type="button"
                           onClick={clearImage}
                           className="px-2 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 w-fit"
                         >
-                          Remove
+                          {t('shopAdmin.remove')}
                         </button>
                         <label htmlFor="shop-item-image" className="cursor-pointer px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-lg hover:bg-gray-200 w-fit">
-                          Replace
+                          {t('shopAdmin.replace')}
                           <input
                             type="file"
                             accept="image/*"
@@ -1267,7 +1270,7 @@ export default function AdminShopPage() {
                       />
                       <label htmlFor="shop-item-image" className="cursor-pointer">
                         <div className="text-3xl mb-1">📸</div>
-                        <div className="text-sm text-gray-600">Click to upload image (max 5MB)</div>
+                        <div className="text-sm text-gray-600">{t('shopAdmin.clickToUpload')}</div>
                       </label>
                     </div>
                   )}
@@ -1314,11 +1317,11 @@ export default function AdminShopPage() {
                               value={draft.name}
                               onChange={e => updateSetName(draft.tempId, e.target.value)}
                               className="flex-1 border border-purple-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
-                              placeholder="Set name (e.g. Rare Pack, Series A)"
+                              placeholder={t('shopAdmin.setNamePlaceholder')}
                             />
                             {form.commodity_type === 'physical_blindbox' && (
                               <div className="flex items-center gap-1 shrink-0">
-                                <label className="text-xs text-gray-500 whitespace-nowrap">Qty in stock:</label>
+                                <label className="text-xs text-gray-500 whitespace-nowrap">{t('shopAdmin.qtyInStock')}</label>
                                 <input
                                   type="number"
                                   value={draft.quantity}
@@ -1336,14 +1339,14 @@ export default function AdminShopPage() {
                               onClick={() => removeSet(draft.tempId)}
                               className="text-xs px-2 py-1 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 shrink-0"
                             >
-                              Remove set
+                              {t('shopAdmin.removeSet')}
                             </button>
                           </div>
 
                           {/* Existing images */}
                           {draft.existingImages.length > 0 && (
                             <div className="mb-2">
-                              <p className="text-xs text-gray-500 mb-1">Saved images:</p>
+                              <p className="text-xs text-gray-500 mb-1">{t('shopAdmin.savedImages')}</p>
                               <div className="grid grid-cols-5 gap-1.5">
                                 {draft.existingImages.map(img => {
                                   const removed = draft.removedImageIds.includes(img.id)
@@ -1377,7 +1380,7 @@ export default function AdminShopPage() {
                           {/* New image previews */}
                           {draft.newPreviews.length > 0 && (
                             <div className="mb-2">
-                              <p className="text-xs text-gray-500 mb-1">New images to upload:</p>
+                              <p className="text-xs text-gray-500 mb-1">{t('shopAdmin.newImages')}</p>
                               <div className="grid grid-cols-5 gap-1.5">
                                 {draft.newPreviews.map((url, i) => (
                                   <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-purple-300">
@@ -1401,7 +1404,7 @@ export default function AdminShopPage() {
                             className="cursor-pointer flex items-center gap-2 text-xs text-purple-600 hover:text-purple-800 mt-1"
                           >
                             <span className="text-base">🖼️</span>
-                            <span>Add images to this set</span>
+                            <span>{t('shopAdmin.addImagesToSet')}</span>
                             <input
                               type="file"
                               accept="image/*"
@@ -1431,7 +1434,7 @@ export default function AdminShopPage() {
 
                 <div className="flex gap-3">
                   <Button type="submit" disabled={submitting || uploadingImage || uploadingBlindbox}>
-                    {uploadingBlindbox ? 'Uploading images…' : uploadingImage ? 'Uploading image…' : submitting ? 'Saving…' : editingId ? 'Save Changes' : 'Create Item'}
+                    {uploadingBlindbox ? t('shopAdmin.uploadingImages') : uploadingImage ? t('shopAdmin.uploadingImage') : submitting ? t('status.saving') : editingId ? t('shopAdmin.saveChanges') : t('shopAdmin.createItemBtn')}
                   </Button>
                   {editingId && (
                     <Button
@@ -1439,7 +1442,7 @@ export default function AdminShopPage() {
                       variant="ghost"
                       onClick={() => { setEditingId(null); setForm(EMPTY_FORM); setImageFile(null); setImagePreview(null); setSetDrafts([]) }}
                     >
-                      Cancel
+                      {t('action.cancel')}
                     </Button>
                   )}
                 </div>
@@ -1450,11 +1453,11 @@ export default function AdminShopPage() {
 
         {/* ── Item List ── */}
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Shop Items</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">{t('shopAdmin.items')}</h2>
           {items.length === 0 ? (
             <Card>
               <Card.Body>
-                <p className="text-center text-gray-500 py-6">No items yet. Create one above.</p>
+                <p className="text-center text-gray-500 py-6">{t('shopAdmin.noItems')}</p>
               </Card.Body>
             </Card>
           ) : (
@@ -1472,7 +1475,7 @@ export default function AdminShopPage() {
                     </div>
                     <div className="absolute top-1.5 left-1.5 bg-white/90 text-primary-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">🏠 {roomBgs.length}</div>
                   </div>
-                  <div className="p-2"><p className="font-semibold text-xs">Room Backgrounds</p><p className="text-gray-400 text-[10px]">Click to browse</p></div>
+                  <div className="p-2"><p className="font-semibold text-xs">{t('shop.roomBackgrounds')}</p><p className="text-gray-400 text-[10px]">{t('shopAdmin.clickToBrowse')}</p></div>
                 </div>
               )}
               {/* ── Book Covers cluster card ── */}
@@ -1488,7 +1491,7 @@ export default function AdminShopPage() {
                     </div>
                     <div className="absolute top-1.5 left-1.5 bg-white/90 text-amber-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">📖 {bookSkins.length}</div>
                   </div>
-                  <div className="p-2"><p className="font-semibold text-xs">Book Covers</p><p className="text-gray-400 text-[10px]">Click to browse</p></div>
+                  <div className="p-2"><p className="font-semibold text-xs">{t('shop.bookCovers')}</p><p className="text-gray-400 text-[10px]">{t('shopAdmin.clickToBrowse')}</p></div>
                 </div>
               )}
               {items.filter(item => {
@@ -1526,7 +1529,7 @@ export default function AdminShopPage() {
                           ) : (
                             <>
                               <span className="text-4xl mb-1">📦</span>
-                              <span className="text-xs font-semibold text-amber-600">Physical Prize</span>
+                              <span className="text-xs font-semibold text-amber-600">{t('shop.catPhysicalPrize')}</span>
                             </>
                           )}
                         </div>
@@ -1539,7 +1542,7 @@ export default function AdminShopPage() {
                       )}
                       {!item.is_active && (
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                          <span className="bg-white text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">Inactive</span>
+                          <span className="bg-white text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">{t('shopAdmin.inactive')}</span>
                         </div>
                       )}
                     </div>
@@ -1625,21 +1628,21 @@ export default function AdminShopPage() {
 
         {/* ── Redemption Log ── */}
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-4">All Redemptions</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">{t('shopAdmin.redemptions')}</h2>
           <Card>
             <Card.Body>
               {redemptions.length === 0 ? (
-                <p className="text-center text-gray-500 py-6">No redemptions yet.</p>
+                <p className="text-center text-gray-500 py-6">{t('shopAdmin.noRedemptions')}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-gray-500 border-b border-gray-100">
                         <th className="pb-2 pr-4 font-medium">Student</th>
-                        <th className="pb-2 pr-4 font-medium">Item</th>
-                        <th className="pb-2 pr-4 font-medium">Prize</th>
-                        <th className="pb-2 pr-4 font-medium">Points</th>
-                        <th className="pb-2 pr-4 font-medium">Date</th>
+                        <th className="pb-2 pr-4 font-medium">{t('shopAdmin.colItem')}</th>
+                        <th className="pb-2 pr-4 font-medium">{t('shopAdmin.colPrize')}</th>
+                        <th className="pb-2 pr-4 font-medium">{t('shopAdmin.colPoints')}</th>
+                        <th className="pb-2 pr-4 font-medium">{t('shopAdmin.colDate')}</th>
                         <th className="pb-2 font-medium"></th>
                       </tr>
                     </thead>
@@ -1653,7 +1656,7 @@ export default function AdminShopPage() {
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className={r.refunded_at ? 'line-through text-gray-400' : ''}>{r.item_title}</span>
                               {r.refunded_at && (
-                                <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">Refunded</span>
+                                <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{t('shop.refunded')}</span>
                               )}
                               {!r.refunded_at && r.item_commodity_type === 'blindbox' && (
                                 <span className="text-[10px] font-semibold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">🎁 Blind Box</span>
@@ -1716,23 +1719,23 @@ export default function AdminShopPage() {
 
         {/* ── Student Balances ── */}
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-2">Student Balances</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-2">{t('shopAdmin.balances')}</h2>
           <p className="text-sm text-gray-500 mb-4">
             Spendable balance = total earned (never reduced) − total spent on redemptions
           </p>
           <Card>
             <Card.Body>
               {studentBalances.length === 0 ? (
-                <p className="text-center text-gray-500 py-6">No students found.</p>
+                <p className="text-center text-gray-500 py-6">{t('shopAdmin.noStudents')}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-gray-500 border-b border-gray-100">
                         <th className="pb-2 pr-4 font-medium">Student</th>
-                        <th className="pb-2 pr-4 font-medium">Total Earned</th>
-                        <th className="pb-2 pr-4 font-medium">Total Spent</th>
-                        <th className="pb-2 font-medium">Spendable Balance</th>
+                        <th className="pb-2 pr-4 font-medium">{t('shopAdmin.totalEarned')}</th>
+                        <th className="pb-2 pr-4 font-medium">{t('shopAdmin.totalSpent')}</th>
+                        <th className="pb-2 font-medium">{t('shopAdmin.spendable')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">

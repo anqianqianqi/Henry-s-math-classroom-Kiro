@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -64,6 +65,7 @@ function Notification({ message, type, onClose }: { message: string; type: 'succ
 // --- Main Page Component ---
 
 export default function GenerativeTemplatesPage() {
+  const { t } = useLanguage()
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [templates, setTemplates] = useState<TemplateListItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -199,7 +201,7 @@ export default function GenerativeTemplatesPage() {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-6xl mx-auto">
-          <div className="animate-pulse">Loading...</div>
+          <div className="animate-pulse">{t('status.loading')}</div>
         </div>
       </div>
     )
@@ -254,6 +256,7 @@ function TemplateListView({
   onDelete: (id: string) => void
   onGenerate: (t: TemplateListItem) => void
 }) {
+  const { t } = useLanguage()
   return (
     <>
       <div className="mb-8">
@@ -270,10 +273,10 @@ function TemplateListView({
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-              Generative Templates
+              {t('genTpl.pageTitle')}
             </h1>
             <p className="text-gray-600">
-              Create parameterized challenge patterns that produce randomized math problems
+              {t('genTpl.intro')}
             </p>
           </div>
           <Button onClick={onCreate}>+ Create Template</Button>
@@ -319,6 +322,7 @@ function TemplateCard({
   onDelete: (id: string) => void
   onGenerate: (t: TemplateListItem) => void
 }) {
+  const { t } = useLanguage()
   const [expanded, setExpanded] = useState(false)
   const [challenges, setChallenges] = useState<Array<{ id: string; title: string; expected_answer: string; challenge_date: string }>>([])
   const [loadingChallenges, setLoadingChallenges] = useState(false)
@@ -370,24 +374,24 @@ function TemplateCard({
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
             <Button size="sm" variant="outline" onClick={() => onGenerate(template)}>
-              Generate
+              {t('genTpl.generate')}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => onEdit(template)}>
               Edit
             </Button>
             <Button size="sm" variant="danger" onClick={() => onDelete(template.id)}>
-              Delete
+              {t('action.delete')}
             </Button>
           </div>
         </div>
 
         {expanded && (
           <div className="mt-4 border-t pt-4">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Generated Challenges</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">{t('genTpl.generated')}</h4>
             {loadingChallenges ? (
-              <p className="text-sm text-gray-400">Loading...</p>
+              <p className="text-sm text-gray-400">{t('status.loading')}</p>
             ) : challenges.length === 0 ? (
-              <p className="text-sm text-gray-400">No challenges generated yet.</p>
+              <p className="text-sm text-gray-400">{t('genTpl.noneGenerated')}</p>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {challenges.map(c => (
@@ -426,6 +430,7 @@ function TemplateForm({
   onClose: () => void
   onNotify: (n: { message: string; type: 'success' | 'error' }) => void
 }) {
+  const { t } = useLanguage()
   const supabase = createClient()
   const isEditing = !!template
 
@@ -714,19 +719,19 @@ function TemplateForm({
           <Card>
             <Card.Header>
               <Card.Title className="flex items-center gap-2">
-                <span>🤖</span> Generate with AI
+                <span>🤖</span> {t('genTpl.generateWithAi')}
               </Card.Title>
             </Card.Header>
             <Card.Body>
               <p className="text-sm text-gray-600 mb-3">
-                Describe what kind of challenge template you want in plain language.
+                {t('genTpl.aiIntro')}
               </p>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={aiPrompt}
                   onChange={e => setAiPrompt(e.target.value)}
-                  placeholder="e.g. multiplication problems for numbers 1-9, or 分数加法练习"
+                  placeholder={t('genTpl.aiPlaceholder')}
                   className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-colors"
                   onKeyDown={e => { if (e.key === 'Enter') handleAiGenerate() }}
                 />
@@ -742,14 +747,14 @@ function TemplateForm({
 
           <Card>
             <Card.Header>
-              <Card.Title>Template Definition</Card.Title>
+              <Card.Title>{t('genTpl.definition')}</Card.Title>
             </Card.Header>
             <Card.Body>
               <div className="space-y-4">
                 {/* Title Template */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Title Template
+                    {t('genTpl.titleTemplate')}
                   </label>
                   <input
                     type="text"
@@ -766,7 +771,7 @@ function TemplateForm({
                 {/* Description Template */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description Template
+                    {t('genTpl.descriptionTemplate')}
                   </label>
                   <textarea
                     value={descriptionTemplate}
@@ -780,7 +785,7 @@ function TemplateForm({
                 {/* Answer Formula */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Answer Formula
+                    {t('genTpl.answerFormula')}
                   </label>
                   <input
                     type="text"
@@ -797,7 +802,7 @@ function TemplateForm({
                 {/* Max Points */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Max Points
+                    {t('genTpl.maxPoints')}
                   </label>
                   <input
                     type="number"
@@ -817,7 +822,7 @@ function TemplateForm({
                     selectedTagIds={tagIds}
                     onChange={setTagIds}
                     availableTags={availableTags}
-                    placeholder="Search tags..."
+                    placeholder={t('admin.searchTags')}
                     tagGroups={tagGroups}
                   />
                 </div>
@@ -829,7 +834,7 @@ function TemplateForm({
           <Card>
             <Card.Header>
               <div className="flex items-center justify-between">
-                <Card.Title>Variables</Card.Title>
+                <Card.Title>{t('genTpl.variables')}</Card.Title>
                 <Button size="sm" variant="outline" onClick={addVariable}>
                   + Add Variable
                 </Button>
@@ -859,7 +864,7 @@ function TemplateForm({
           {/* Validation Errors */}
           {errors.length > 0 && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-              <h4 className="font-medium text-red-800 mb-2">Validation Errors</h4>
+              <h4 className="font-medium text-red-800 mb-2">{t('genTpl.validationErrors')}</h4>
               <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
                 {errors.map((err, i) => (
                   <li key={i}>{err}</li>
@@ -878,7 +883,7 @@ function TemplateForm({
             </Button>
             {isEditing && (
               <Button variant="ghost" onClick={handleGenerateNow}>
-                Generate Now
+                {t('genTpl.generateNow')}
               </Button>
             )}
           </div>
@@ -889,7 +894,7 @@ function TemplateForm({
           {showPreview && previews.length > 0 && (
             <Card>
               <Card.Header>
-                <Card.Title>Preview (3 Samples)</Card.Title>
+                <Card.Title>{t('genTpl.preview')}</Card.Title>
               </Card.Header>
               <Card.Body>
                 <div className="space-y-4">
@@ -901,13 +906,13 @@ function TemplateForm({
                       <h4 className="font-semibold text-gray-900">{preview.title}</h4>
                       <p className="text-sm text-gray-700">{preview.description}</p>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-600">Answer:</span>
+                        <span className="text-sm font-medium text-gray-600">{t('genTpl.answer')}</span>
                         <code className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-sm font-mono">
                           {preview.expected_answer || '(empty)'}
                         </code>
                       </div>
                       <div className="text-xs text-gray-500">
-                        <span className="font-medium">Values:</span>{' '}
+                        <span className="font-medium">{t('genTpl.values')}</span>{' '}
                         {Object.entries(preview.values).map(([k, v]) => (
                           <span key={k} className="inline-block mr-2">
                             <code className="bg-gray-200 px-1 rounded">{k}={String(v)}</code>
@@ -952,13 +957,14 @@ function VariableEditor({
   onChange: (index: number, field: keyof VariableFormEntry, value: string) => void
   onRemove: (index: number) => void
 }) {
+  const { t } = useLanguage()
   return (
     <div className="p-4 bg-gray-50 rounded-xl space-y-3 relative">
       <button
         type="button"
         onClick={() => onRemove(index)}
         className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-lg leading-none"
-        aria-label="Remove variable"
+        aria-label={t('genTpl.removeVariable')}
       >
         ×
       </button>
@@ -966,27 +972,27 @@ function VariableEditor({
       <div className="grid grid-cols-2 gap-3">
         {/* Variable Name */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t('genTpl.varName')}</label>
           <input
             type="text"
             value={variable.name}
             onChange={e => onChange(index, 'name', e.target.value)}
-            placeholder="e.g. a, b, fruit"
+            placeholder={t('genTpl.varNamePlaceholder')}
             className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-200"
           />
         </div>
 
         {/* Variable Type */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t('genTpl.varType')}</label>
           <select
             value={variable.type}
             onChange={e => onChange(index, 'type', e.target.value)}
             className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-200"
           >
-            <option value="random_int">Random Integer</option>
-            <option value="random_float">Random Float</option>
-            <option value="random_choice">Random Choice</option>
+            <option value="random_int">{t('genTpl.randomInt')}</option>
+            <option value="random_float">{t('genTpl.randomFloat')}</option>
+            <option value="random_choice">{t('genTpl.randomChoice')}</option>
           </select>
         </div>
       </div>
@@ -995,7 +1001,7 @@ function VariableEditor({
       {(variable.type === 'random_int' || variable.type === 'random_float') && (
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Min</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('genTpl.min')}</label>
             <input
               type="number"
               value={variable.min}
@@ -1004,7 +1010,7 @@ function VariableEditor({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Max</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('genTpl.max')}</label>
             <input
               type="number"
               value={variable.max}
@@ -1014,7 +1020,7 @@ function VariableEditor({
           </div>
           {variable.type === 'random_float' && (
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Decimals</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">{t('genTpl.decimals')}</label>
               <input
                 type="number"
                 value={variable.decimals}
@@ -1037,7 +1043,7 @@ function VariableEditor({
             type="text"
             value={variable.options}
             onChange={e => onChange(index, 'options', e.target.value)}
-            placeholder="e.g. apple, banana, orange"
+            placeholder={t('genTpl.choicesPlaceholder')}
             className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-200"
           />
         </div>

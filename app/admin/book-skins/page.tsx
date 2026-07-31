@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import React, { useEffect, useState, useRef } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -87,6 +88,7 @@ async function resizeImageToBlob(
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 export default function BookSkinsAdminPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const supabase = createClient()
 
@@ -459,8 +461,8 @@ export default function BookSkinsAdminPage() {
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
           <HomeButton />
           <span className="text-gray-400">/</span>
-          <h1 className="font-bold text-gray-900">Book Skins</h1>
-          <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">Admin only</span>
+          <h1 className="font-bold text-gray-900">{t('skinAdmin.pageTitle')}</h1>
+          <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">{t('skinAdmin.adminOnly')}</span>
         </div>
       </header>
 
@@ -493,7 +495,7 @@ export default function BookSkinsAdminPage() {
               <div className="space-y-4">
                 {/* Type picker */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Skin Type</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('skinAdmin.skinType')}</label>
                   <div className="flex gap-2">
                     {/* Page skins are retired: students no longer choose an
                         inner page, so every open book uses the existing default
@@ -524,7 +526,7 @@ export default function BookSkinsAdminPage() {
 
                 {/* Name */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('skinAdmin.nameReq')}</label>
                   <input
                     type="text"
                     value={skinName}
@@ -536,11 +538,11 @@ export default function BookSkinsAdminPage() {
 
                 {/* Description */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('design.descriptionOptional')}</label>
                   <textarea
                     value={skinDesc}
                     onChange={e => setSkinDesc(e.target.value)}
-                    placeholder="Shown in the shop when selling this skin..."
+                    placeholder={t('skinAdmin.descPlaceholder')}
                     rows={2}
                     className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-colors resize-none"
                   />
@@ -548,7 +550,7 @@ export default function BookSkinsAdminPage() {
 
                 {/* File picker */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Image *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('skinAdmin.imageReq')}</label>
                   <div
                     className="border-2 border-dashed border-amber-300 rounded-xl p-4 text-center bg-amber-50 cursor-pointer hover:bg-amber-100 transition-colors"
                     onClick={() => fileInputRef.current?.click()}
@@ -565,7 +567,7 @@ export default function BookSkinsAdminPage() {
                     ) : (
                       <>
                         <p className="text-2xl mb-1">📸</p>
-                        <p className="text-sm text-amber-700 font-medium">Click to choose image</p>
+                        <p className="text-sm text-amber-700 font-medium">{t('skinAdmin.clickToChoose')}</p>
                         <p className="text-xs text-gray-500">
                           {uploadType === 'cover'
                             ? 'Recommended: 800×1200px (2:3 portrait) · Max 20 MB'
@@ -578,7 +580,7 @@ export default function BookSkinsAdminPage() {
 
                 {/* Visibility */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('design.visibility')}</label>
                   <div className="flex gap-2">
                     {(['admin_only', 'public'] as const).map(v => (
                       <button
@@ -640,7 +642,7 @@ export default function BookSkinsAdminPage() {
                         onChange={handleFramesPick}
                       />
                       <p className="text-2xl mb-1">🎞️</p>
-                      <p className="text-sm text-amber-700 font-medium">Click to add frames</p>
+                      <p className="text-sm text-amber-700 font-medium">{t('skinAdmin.clickToAddFrames')}</p>
                       <p className="text-xs text-gray-500">Select multiple images — drag to reorder below</p>
                     </div>
                     {framePreviews.length > 0 && (
@@ -671,7 +673,7 @@ export default function BookSkinsAdminPage() {
                   isLoading={uploading}
                   className="w-full"
                 >
-                  {uploading ? 'Uploading & resizing…' : isAnimated ? `⬆️ Upload ${frameFiles.length} Frames` : '⬆️ Upload Skin'}
+                  {uploading ? t('skinAdmin.uploading') : isAnimated ? t('skinAdmin.uploadFrames', { count: frameFiles.length }) : t('skinAdmin.uploadSkin')}
                 </Button>
 
                 {/* Layout editor — cover only, shown after image is selected */}
@@ -713,7 +715,7 @@ export default function BookSkinsAdminPage() {
                   )}
                   {!preview && (
                     <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                      No image selected
+                      {t('skinAdmin.noImageSelected')}
                     </div>
                   )}
                 </div>
@@ -753,7 +755,7 @@ export default function BookSkinsAdminPage() {
 
         {/* ── Existing skins ── */}
         {loading ? (
-          <div className="text-center py-12 text-gray-500">Loading skins…</div>
+          <div className="text-center py-12 text-gray-500">{t('skinAdmin.loadingSkins')}</div>
         ) : (
           <>
             <SkinGrid
@@ -789,11 +791,11 @@ export default function BookSkinsAdminPage() {
         {/* ── How to sell in shop ── */}
         <Card className="bg-blue-50 border-blue-200">
           <Card.Body>
-            <h3 className="font-semibold text-blue-800 mb-2">💡 How to sell a skin in the shop</h3>
+            <h3 className="font-semibold text-blue-800 mb-2">{t('skinAdmin.howToSell')}</h3>
             <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-              <li>Upload the skin here and note its name.</li>
+              <li>{t('skinAdmin.sellStep1')}</li>
               <li>Go to <strong>Admin → Shop</strong> and create a new shop item (commodity type: <em>standard</em>).</li>
-              <li>In the shop item description, note which skin it unlocks.</li>
+              <li>{t('skinAdmin.sellStep3')}</li>
               <li>When a student redeems it, update their profile with the <code>book_skin_id</code>
               (future: automated via redemption webhook).</li>
             </ol>
@@ -806,7 +808,7 @@ export default function BookSkinsAdminPage() {
       {sellingSkin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
-            <h2 className="text-lg font-bold text-gray-900">🛍️ Sell in Shop</h2>
+            <h2 className="text-lg font-bold text-gray-900">{t('skinAdmin.sellInShop')}</h2>
             <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: '2/3' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={sellingSkin.image_url} alt={sellingSkin.name}
@@ -842,7 +844,7 @@ export default function BookSkinsAdminPage() {
                 onClick={() => { setSellingSkin(null); setSellPrice('') }}
                 className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
               >
-                Cancel
+                {t('action.cancel')}
               </button>
             </div>
           </div>
@@ -894,6 +896,7 @@ function SkinGrid({
   previewW: number
   previewH: number
 }) {
+  const { t } = useLanguage()
   return (
     <Card>
       <Card.Header>
@@ -902,7 +905,7 @@ function SkinGrid({
       </Card.Header>
       <Card.Body>
         {skins.length === 0 ? (
-          <p className="text-gray-500 text-sm italic text-center py-6">No skins uploaded yet.</p>
+          <p className="text-gray-500 text-sm italic text-center py-6">{t('skinAdmin.noSkins')}</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {skins.map(skin => (
@@ -954,7 +957,7 @@ function SkinGrid({
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          Title
+                          {t('skinAdmin.title')}
                         </span>
                       </div>
                       <div
@@ -977,19 +980,19 @@ function SkinGrid({
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          Open the Book
+                          {t('skinAdmin.openTheBook')}
                         </span>
                       </div>
                     </>
                   )}
                   {skin.is_default && (
                     <div className="absolute top-1 right-1 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full font-semibold">
-                      Default
+                      {t('skins.isDefaultTag')}
                     </div>
                   )}
                   {!skin.is_active && (
                     <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center">
-                      <span className="text-white text-xs font-semibold bg-gray-800/80 px-2 py-1 rounded">Inactive</span>
+                      <span className="text-white text-xs font-semibold bg-gray-800/80 px-2 py-1 rounded">{t('skinAdmin.inactive')}</span>
                     </div>
                   )}
                 </div>
@@ -1015,7 +1018,7 @@ function SkinGrid({
                         onClick={() => onSetDefault(skin)}
                         className="text-xs px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
                       >
-                        Set default
+                        {t('skins.setDefault')}
                       </button>
                     )}
                     <button
@@ -1058,7 +1061,7 @@ function SkinGrid({
                       onClick={() => onDelete(skin)}
                       className="text-xs px-2 py-1 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
                     >
-                      Delete
+                      {t('action.delete')}
                     </button>
                     {/* Overlay animation editor — cover skins with has_overlays */}
                     {skin.skin_type === 'cover' && (skin as any).has_overlays && onEditOverlays && (
@@ -1147,6 +1150,7 @@ function OverlayEditorModal({
   onSave: (overlay: OverlayObject, config: OverlayConfig) => void
   onClose: () => void
 }) {
+  const { t } = useLanguage()
   const [selected, setSelected] = useState<string | null>(overlays[0]?.id ?? null)
   const [configs, setConfigs] = useState<Record<string, OverlayConfig>>(() => {
     const init: Record<string, OverlayConfig> = {}
@@ -1230,12 +1234,12 @@ function OverlayEditorModal({
         </div>
 
         {loading ? (
-          <div className="flex-1 flex items-center justify-center text-gray-400 py-16">Loading overlays…</div>
+          <div className="flex-1 flex items-center justify-center text-gray-400 py-16">{t('skinAdmin.loadingOverlays')}</div>
         ) : overlays.length === 0 ? (
           <div className="flex-1 flex items-center justify-center text-gray-400 py-16 px-6 text-center">
             <div>
               <div className="text-4xl mb-3">😶</div>
-              <p className="text-sm">No overlay objects found for this skin.</p>
+              <p className="text-sm">{t('skinAdmin.noOverlays')}</p>
               <p className="text-xs text-gray-400 mt-1">
                 Overlay objects are created when saving an AI-generated cover with &quot;Extract corner objects&quot; enabled.
               </p>
@@ -1245,7 +1249,7 @@ function OverlayEditorModal({
           <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
             {/* Left — cover preview with draggable overlays */}
             <div className="md:w-[280px] shrink-0 p-4 flex flex-col items-center gap-3 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-200">
-              <p className="text-xs font-semibold text-gray-500 self-start">Drag to position</p>
+              <p className="text-xs font-semibold text-gray-500 self-start">{t('skinAdmin.dragToPosition')}</p>
               <div
                 ref={previewRef}
                 className="relative rounded-xl overflow-hidden border-2 border-amber-200 shadow"
@@ -1291,7 +1295,7 @@ function OverlayEditorModal({
                   )
                 })}
               </div>
-              <p className="text-[10px] text-gray-400 text-center">Purple outline = selected object</p>
+              <p className="text-[10px] text-gray-400 text-center">{t('skinAdmin.selectedHint')}</p>
             </div>
 
             {/* Right — controls */}
@@ -1340,7 +1344,7 @@ function OverlayEditorModal({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-2">Animation</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-2">{t('skinAdmin.animation')}</label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {ANIMATION_OPTIONS.map(opt => (
                         <button key={opt.value} onClick={() => updateCfg(selectedOverlay.id, { animation: opt.value })}
