@@ -435,10 +435,10 @@ export function QuestionDetailModal({
     const rand = () => { h = Math.imul(h ^ (h >>> 16), 0x45d9f3b); h ^= h >>> 16; return (Math.abs(h) / 2147483648) }
 
     const isChallenge = !!question.challenge_id
-    const colorsC = ['rgba(254,240,138,0.88)', 'rgba(254,249,195,0.82)', 'rgba(254,252,232,0.78)', 'rgba(253,224,71,0.70)']
-    const colorsR = ['rgba(191,219,254,0.88)', 'rgba(243,232,255,0.82)', 'rgba(252,231,243,0.84)', 'rgba(216,180,254,0.75)']
-    const glowC = 'rgba(202,138,4,0.38)'
-    const glowR = 'rgba(139,92,246,0.35)'
+    const colorsC = ['rgba(191,219,254,0.88)', 'rgba(243,232,255,0.82)', 'rgba(252,231,243,0.84)', 'rgba(216,180,254,0.75)']
+    const colorsR = ['rgba(254,240,138,0.88)', 'rgba(254,249,195,0.82)', 'rgba(254,252,232,0.78)', 'rgba(253,224,71,0.70)']
+    const glowC = 'rgba(139,92,246,0.35)'
+    const glowR = 'rgba(202,138,4,0.38)'
 
     const bubbles: Array<{
       id: number; size: number; edge: string; pos: number
@@ -525,8 +525,8 @@ export function QuestionDetailModal({
         className="absolute inset-0 backdrop-blur-sm"
         style={{
           background: question.challenge_id
-            ? 'rgba(113, 85, 0, 0.18)'    // warm yellow-brown tint for challenge
-            : 'rgba(49, 46, 129, 0.25)',   // indigo-900 tint for regular
+            ? 'rgba(49, 46, 129, 0.22)'    // indigo tint for challenge (purple)
+            : 'rgba(113, 85, 0, 0.18)',     // warm yellow-brown tint for regular
         }}
         onClick={onClose}
         aria-hidden="true"
@@ -599,18 +599,19 @@ export function QuestionDetailModal({
         style={{
           // Match exact bubble gradient stops:
           // Regular:   blue-200 → purple-100 → pink-100  (#bfdbfe → #f3e8ff → #fce7f3)
-          // Challenge: yellow-200 → yellow-100 → yellow-50 (exact bubble colors: #fef08a → #fef9c3 → #fefce8)
+          // Challenge: blue-200 → purple-100 → pink-100 (purple palette)
+          // Regular:   yellow-200 → yellow-100 → yellow-50 (yellow palette)
           background: question.challenge_id
-            ? 'linear-gradient(145deg, rgba(254,240,138,0.93) 0%, rgba(254,249,195,0.89) 45%, rgba(254,252,232,0.93) 100%)'
-            : 'linear-gradient(145deg, rgba(191,219,254,0.93) 0%, rgba(243,232,255,0.89) 45%, rgba(252,231,243,0.93) 100%)',
+            ? 'linear-gradient(145deg, rgba(191,219,254,0.93) 0%, rgba(243,232,255,0.89) 45%, rgba(252,231,243,0.93) 100%)'
+            : 'linear-gradient(145deg, rgba(254,240,138,0.93) 0%, rgba(254,249,195,0.89) 45%, rgba(254,252,232,0.93) 100%)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: question.challenge_id
-            ? '1.5px solid rgba(254,240,138,0.60)'
-            : '1.5px solid rgba(167,139,250,0.40)',
+            ? '1.5px solid rgba(167,139,250,0.40)'
+            : '1.5px solid rgba(254,240,138,0.60)',
           boxShadow: question.challenge_id
-            ? '0 8px 48px rgba(180,140,0,0.18), 0 0 0 1px rgba(254,240,138,0.4), inset 0 1px 0 rgba(255,255,255,0.70), inset -2px -2px 8px rgba(161,98,7,0.08)'
-            : '0 8px 48px rgba(100,60,200,0.20), 0 0 0 1px rgba(191,219,254,0.3), inset 0 1px 0 rgba(255,255,255,0.65), inset -2px -2px 8px rgba(100,60,200,0.10)',
+            ? '0 8px 48px rgba(100,60,200,0.20), 0 0 0 1px rgba(191,219,254,0.3), inset 0 1px 0 rgba(255,255,255,0.65), inset -2px -2px 8px rgba(100,60,200,0.10)'
+            : '0 8px 48px rgba(180,140,0,0.18), 0 0 0 1px rgba(254,240,138,0.4), inset 0 1px 0 rgba(255,255,255,0.70), inset -2px -2px 8px rgba(161,98,7,0.08)',
         }}
       >
         {/* Bubble highlight — large soft ellipse upper-right (mirrors QuestionBubble) */}
@@ -632,8 +633,8 @@ export function QuestionDetailModal({
           className="pointer-events-none absolute inset-0 rounded-t-3xl sm:rounded-3xl"
           style={{
             boxShadow: question.challenge_id
-              ? 'inset 0 0 0 1.5px rgba(254,249,195,0.55)'
-              : 'inset 0 0 0 1.5px rgba(191,219,254,0.5)',
+              ? 'inset 0 0 0 1.5px rgba(191,219,254,0.5)'
+              : 'inset 0 0 0 1.5px rgba(254,249,195,0.55)',
             zIndex: 0,
           }}
         />

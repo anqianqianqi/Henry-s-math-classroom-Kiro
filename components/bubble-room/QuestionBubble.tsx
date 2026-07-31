@@ -202,8 +202,8 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           backdrop-blur-sm
           origin-center
           ${question.challenge_id
-            ? 'bg-gradient-to-br from-yellow-200 via-yellow-100 to-yellow-50 shadow-yellow-200/50'
-            : 'bg-gradient-to-br from-blue-200 via-purple-100 to-pink-100 shadow-purple-200/50'
+            ? 'bg-gradient-to-br from-blue-200 via-purple-100 to-pink-100 shadow-purple-200/50'
+            : 'bg-gradient-to-br from-yellow-200 via-yellow-100 to-yellow-50 shadow-yellow-200/50'
           }
         `}
         style={{
@@ -251,8 +251,8 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           className={`
             absolute inset-0 rounded-full pointer-events-none
             ${question.challenge_id
-              ? 'shadow-[inset_0_0_0_1.5px_rgba(253,224,71,0.50),inset_0_0_0_3.5px_rgba(253,224,71,0.20),inset_-3px_-3px_6px_rgba(180,130,0,0.18)]'
-              : 'shadow-[inset_0_0_0_1.5px_rgba(180,140,255,0.45),inset_-3px_-3px_6px_rgba(100,80,200,0.25)]'
+              ? 'shadow-[inset_0_0_0_1.5px_rgba(180,140,255,0.45),inset_-3px_-3px_6px_rgba(100,80,200,0.25)]'
+              : 'shadow-[inset_0_0_0_1.5px_rgba(253,224,71,0.50),inset_0_0_0_3.5px_rgba(253,224,71,0.20),inset_-3px_-3px_6px_rgba(180,130,0,0.18)]'
             }
           `}
           aria-hidden="true"
@@ -264,8 +264,8 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           style={{
             height: '30%',
             background: question.challenge_id
-              ? 'linear-gradient(to bottom, transparent, rgba(161,98,7,0.18))'
-              : 'linear-gradient(to bottom, transparent, rgba(80,40,160,0.15))',
+              ? 'linear-gradient(to bottom, transparent, rgba(80,40,160,0.15))'
+              : 'linear-gradient(to bottom, transparent, rgba(161,98,7,0.18))',
           }}
           aria-hidden="true"
         />
