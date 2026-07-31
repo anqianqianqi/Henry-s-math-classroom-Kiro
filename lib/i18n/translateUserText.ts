@@ -36,7 +36,7 @@ import 'server-only'
  */
 
 import { detectLanguage, maskMath, unmaskMath } from '@/lib/mathtext-core'
-import { stripIgnoreTags, wrapForIgnore } from './placeholderTags'
+import { escapeXml, stripIgnoreTags, unescapeXml, wrapForIgnore } from './placeholderTags'
 
 export interface TranslatedText {
   /** 'en' | 'zh' | 'other' — the detected language of the original. */
@@ -77,6 +77,11 @@ export type Target = 'en' | 'zh'
 /**
  * DeepL. Placeholders are wrapped in <x> and declared ignorable, so the engine
  * treats each as one opaque unit rather than something to translate or reflow.
+ *
+ * tag_handling=xml means DeepL parses the text as XML, so the prose must be
+ * escaped first or a single ampersand rejects the whole request — and students
+ * write "Q&A" constantly. Escaping happens before the tags go on, then both are
+ * undone on the way back.
  */
 async function translateDeepL(text: string, target: Target): Promise<string> {
   const key = process.env.DEEPL_API_KEY!
@@ -84,8 +89,10 @@ async function translateDeepL(text: string, target: Target): Promise<string> {
   const host = key.endsWith(':fx') ? 'api-free.deepl.com' : 'api.deepl.com'
 
   const params = new URLSearchParams({
-    text: wrapForIgnore(text),
-    target_lang: target === 'zh' ? 'ZH-HANS' : 'EN-GB',
+    text: wrapForIgnore(escapeXml(text)),
+    // Plain ZH is Simplified and is accepted by every version of the API;
+    // ZH-HANS is newer and not universally available.
+    target_lang: target === 'zh' ? 'ZH' : 'EN-GB',
     tag_handling: 'xml',
     ignore_tags: 'x',
     preserve_formatting: '1',
@@ -99,12 +106,28 @@ async function translateDeepL(text: string, target: Target): Promise<string> {
     },
     body: params,
   })
-  if (!res.ok) throw new Error(`DeepL ${res.status} ${res.statusText}`)
+  if (!res.ok) throw new Error(`DeepL ${res.status} ${res.statusText}: ${await readError(res)}`)
 
   const data = await res.json()
   const out = data.translations?.[0]?.text
   if (typeof out !== 'string') throw new Error('DeepL returned no text')
-  return stripIgnoreTags(out)
+  return unescapeXml(stripIgnoreTags(out))
+}
+
+/**
+ * The engine's own explanation of a failure.
+ *
+ * Worth the extra read: DeepL answers a 400 with a message naming the offending
+ * parameter, and discarding it cost a long round of guesswork. Truncated
+ * because it ends up in a log line, and guarded because a body that cannot be
+ * read must not replace the status code we already have.
+ */
+async function readError(res: Response): Promise<string> {
+  try {
+    return (await res.text()).slice(0, 200)
+  } catch {
+    return '(no body)'
+  }
 }
 
 /** Google Cloud Translation v2. */
@@ -122,7 +145,9 @@ async function translateGoogle(text: string, target: Target): Promise<string> {
       }),
     },
   )
-  if (!res.ok) throw new Error(`Google Translate ${res.status} ${res.statusText}`)
+  if (!res.ok) {
+    throw new Error(`Google Translate ${res.status} ${res.statusText}: ${await readError(res)}`)
+  }
 
   const data = await res.json()
   const out = data.data?.translations?.[0]?.translatedText
@@ -163,7 +188,7 @@ async function translateOpenAI(text: string, target: Target): Promise<string> {
       temperature: 0,
     }),
   })
-  if (!res.ok) throw new Error(`OpenAI ${res.status} ${res.statusText}`)
+  if (!res.ok) throw new Error(`OpenAI ${res.status} ${res.statusText}: ${await readError(res)}`)
 
   const data = await res.json()
   const out = data.choices?.[0]?.message?.content

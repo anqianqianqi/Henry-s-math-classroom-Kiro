@@ -12,6 +12,42 @@
  * digits localised.
  */
 
+/**
+ * Escape the five XML metacharacters.
+ *
+ * Required whenever tag_handling=xml is in play: the engine parses the text as
+ * XML, so a bare `&` or `<` makes the whole request malformed and it is
+ * rejected outright. Students write ampersands all the time — "Q&A", "Alice &
+ * Bob" — so this is the common case, not an exotic one.
+ *
+ * Must run BEFORE wrapForIgnore, or the ignore tags themselves get escaped and
+ * stop being tags.
+ */
+export function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+/**
+ * Undo escapeXml on the way back.
+ *
+ * `&amp;` is unescaped last, so "&amp;lt;" — a literal "&lt;" the author
+ * actually typed — does not decode twice into "<".
+ */
+export function unescapeXml(text: string): string {
+  return text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+}
+
 /** Wrap every ⟦Mn⟧ placeholder in an ignore tag. */
 export function wrapForIgnore(text: string, tag = 'x'): string {
   return text.replace(/⟦M(\d+)⟧/g, `<${tag}>⟦M$1⟧</${tag}>`)

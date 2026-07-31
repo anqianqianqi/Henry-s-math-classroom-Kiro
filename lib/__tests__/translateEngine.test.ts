@@ -45,7 +45,7 @@ describe('engine selection', () => {
     // Free keys must not go to the paid host, or every call 403s.
     expect(url).toContain('api-free.deepl.com')
     const body = (init.body as URLSearchParams).toString()
-    expect(decodeURIComponent(body)).toContain('target_lang=ZH-HANS')
+    expect(decodeURIComponent(body)).toContain('target_lang=ZH')
     expect(decodeURIComponent(body)).toContain('ignore_tags=x')
     expect(decodeURIComponent(body)).toContain('<x>⟦M0⟧</x>')
 
@@ -166,5 +166,77 @@ describe('status — what may be cached', () => {
     const out = await translateUserText('Hello there')
     expect(out.status).toBe('translated')
     expect(out.zh).toBe('你好')
+  })
+})
+
+describe('DeepL request validity', () => {
+  /** The exact reply that failed in production with DeepL 400 Bad Request. */
+  const claire =
+    'You can navigate to this page by clicking the "Bubble Room Q&A" button ' +
+    'under the "Total Score".'
+
+  it('sends well-formed XML for text containing an ampersand', async () => {
+    process.env.DEEPL_API_KEY = 'test'
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ translations: [{ text: '你可以点击“泡泡屋问答”按钮。' }] }),
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { translateUserText } = await load()
+    await translateUserText(claire)
+
+    const body = ((fetchMock.mock.calls[0] as any)[1].body as URLSearchParams)
+    const sent = body.get('text')!
+
+    // tag_handling=xml means DeepL parses this. A bare & is a 400 for the whole
+    // request, which is precisely how this text failed.
+    expect(sent).not.toMatch(/&(?!amp;|quot;|apos;|lt;|gt;)/)
+    expect(sent).toContain('Q&amp;A')
+  })
+
+  it('asks for a Chinese variant the API actually accepts', async () => {
+    process.env.DEEPL_API_KEY = 'test'
+    const fetchMock = vi.fn(async () => ({
+      ok: true, json: async () => ({ translations: [{ text: '你好' }] }),
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { translateUserText } = await load()
+    await translateUserText('Hello there')
+
+    const body = (fetchMock.mock.calls[0] as any)[1].body as URLSearchParams
+    expect(body.get('target_lang')).toBe('ZH')
+  })
+
+  it('restores the author’s ampersand in the translation', async () => {
+    process.env.DEEPL_API_KEY = 'test'
+    // A real engine echoes the escaped form back.
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ translations: [{ text: '点击“Q&amp;A”按钮' }] }),
+    })))
+
+    const { translateUserText } = await load()
+    const out = await translateUserText(claire)
+
+    expect(out.zh).toBe('点击“Q&A”按钮')
+    expect(out.status).toBe('translated')
+  })
+
+  it('carries the engine’s explanation into the error', async () => {
+    process.env.DEEPL_API_KEY = 'test'
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false, status: 400, statusText: 'Bad Request',
+      text: async () => '{"message":"Invalid XML in text"}',
+    })))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const { translateUserText } = await load()
+    const out = await translateUserText('Hello there')
+
+    // Discarding this body is what turned a one-line bug into a long hunt.
+    expect(out.error).toContain('Invalid XML in text')
+    expect(out.engine).toBe('deepl')
   })
 })
