@@ -2,24 +2,33 @@
 
 /**
  * TAPendingPanel — teacher/admin review queue for Bubble Room TA applications.
- * Shows both pending queue and application history (approved/denied).
+ * Shows three tabs: pending queue, application history, and active TAs (with revoke).
  */
 
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
-import { getPendingApplications, getAllApplications, reviewBadgeApplication } from '@/lib/actions/badges'
+import { getPendingApplications, getAllApplications, reviewBadgeApplication, getAllBadgeHolders, revokeBadge } from '@/lib/actions/badges'
 import type { BadgeApplication } from '@/lib/types/badges'
 
 export interface TAPendingPanelProps {
   onClose: () => void
 }
 
-type Tab = 'pending' | 'history'
+type Tab = 'pending' | 'active' | 'history'
+
+interface ActiveTA {
+  userBadgeId: string
+  userId: string
+  name: string
+  email: string
+  grantedAt: string
+}
 
 export function TAPendingPanel({ onClose }: TAPendingPanelProps) {
   const [tab, setTab] = useState<Tab>('pending')
   const [applications, setApplications] = useState<BadgeApplication[]>([])
   const [history, setHistory] = useState<BadgeApplication[]>([])
+  const [activeTAs, setActiveTAs] = useState<ActiveTA[]>([])
   const [loading, setLoading] = useState(true)
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [reviewComment, setReviewComment] = useState('')
@@ -27,21 +36,28 @@ export function TAPendingPanel({ onClose }: TAPendingPanelProps) {
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Revoke TA state
+  const [revokingId, setRevokingId] = useState<string | null>(null)
+  const [revokeReason, setRevokeReason] = useState('')
+  const [revokeError, setRevokeError] = useState<string | null>(null)
+  const [revokeProcessing, setRevokeProcessing] = useState(false)
+
   useEffect(() => {
     loadAll()
   }, [])
 
   async function loadAll() {
     setLoading(true)
-    const [pendingResult, historyResult] = await Promise.all([
+    const [pendingResult, historyResult, holdersResult] = await Promise.all([
       getPendingApplications('bubble_room_ta'),
       getAllApplications('bubble_room_ta'),
+      getAllBadgeHolders('bubble_room_ta'),
     ])
     if (!pendingResult.error) setApplications(pendingResult.data ?? [])
     if (!historyResult.error) {
-      // History = non-pending
       setHistory((historyResult.data ?? []).filter(a => a.status !== 'pending'))
     }
+    if (!holdersResult.error) setActiveTAs(holdersResult.data ?? [])
     setLoading(false)
   }
 
@@ -69,11 +85,15 @@ export function TAPendingPanel({ onClose }: TAPendingPanelProps) {
         setError(result.error)
         return
       }
-      // Move from pending to history
       const reviewed = applications.find(a => a.id === reviewingId)
       if (reviewed) {
         setApplications(prev => prev.filter(a => a.id !== reviewingId))
         setHistory(prev => [{ ...reviewed, status: pendingDecision }, ...prev])
+        // If approved, reload active TAs
+        if (pendingDecision === 'approved') {
+          const holdersResult = await getAllBadgeHolders('bubble_room_ta')
+          if (!holdersResult.error) setActiveTAs(holdersResult.data ?? [])
+        }
       }
       cancelReview()
     } catch {
@@ -83,13 +103,42 @@ export function TAPendingPanel({ onClose }: TAPendingPanelProps) {
     }
   }
 
+  function startRevoke(userBadgeId: string) {
+    setRevokingId(userBadgeId)
+    setRevokeReason('')
+    setRevokeError(null)
+  }
+
+  function cancelRevoke() {
+    setRevokingId(null)
+    setRevokeReason('')
+    setRevokeError(null)
+  }
+
+  async function submitRevoke() {
+    if (!revokingId) return
+    setRevokeProcessing(true)
+    setRevokeError(null)
+    try {
+      const result = await revokeBadge(revokingId, revokeReason || undefined)
+      if (result.error) {
+        setRevokeError(result.error)
+        return
+      }
+      setActiveTAs(prev => prev.filter(t => t.userBadgeId !== revokingId))
+      cancelRevoke()
+    } catch {
+      setRevokeError('Failed to remove TA. Please try again.')
+    } finally {
+      setRevokeProcessing(false)
+    }
+  }
+
   function formatDate(iso: string) {
     try {
       return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
     } catch { return iso }
   }
-
-  const displayed = tab === 'pending' ? applications : history
 
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="ta-panel-title"
@@ -101,9 +150,9 @@ export function TAPendingPanel({ onClose }: TAPendingPanelProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <div>
-            <h2 id="ta-panel-title" className="text-base font-semibold text-gray-900">🎓 TA Applications</h2>
+            <h2 id="ta-panel-title" className="text-base font-semibold text-gray-900">🎓 TA Management</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              {loading ? 'Loading…' : `${applications.length} pending · ${history.length} reviewed`}
+              {loading ? 'Loading…' : `${activeTAs.length} active · ${applications.length} pending`}
             </p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close"
@@ -117,18 +166,22 @@ export function TAPendingPanel({ onClose }: TAPendingPanelProps) {
 
         {/* Tabs */}
         <div className="flex border-b border-gray-100">
-          {(['pending', 'history'] as Tab[]).map(t => (
+          {([
+            { key: 'active' as Tab, label: `Active (${activeTAs.length})` },
+            { key: 'pending' as Tab, label: `Pending (${applications.length})` },
+            { key: 'history' as Tab, label: `History (${history.length})` },
+          ]).map(({ key, label }) => (
             <button
-              key={t}
+              key={key}
               type="button"
-              onClick={() => setTab(t)}
+              onClick={() => setTab(key)}
               className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                tab === t
+                tab === key
                   ? 'text-green-700 border-b-2 border-green-500'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              {t === 'pending' ? `Pending (${applications.length})` : `History (${history.length})`}
+              {label}
             </button>
           ))}
         </div>
@@ -139,90 +192,164 @@ export function TAPendingPanel({ onClose }: TAPendingPanelProps) {
             <div className="flex justify-center py-8">
               <div className="w-6 h-6 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
             </div>
-          ) : displayed.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">
-              {tab === 'pending' ? 'No pending applications' : 'No reviewed applications yet'}
-            </p>
-          ) : (
-            displayed.map((app) => (
-              <div key={app.id} className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{app.applicant_name}</p>
-                    <p className="text-xs text-gray-400">{app.applicant_email} · {formatDate(app.created_at)}</p>
+          ) : tab === 'active' ? (
+            activeTAs.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">No active TAs</p>
+            ) : (
+              activeTAs.map((ta) => (
+                <div key={ta.userBadgeId} className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+                        🎓 {ta.name}
+                      </p>
+                      <p className="text-xs text-gray-400">{ta.email} · Since {formatDate(ta.grantedAt)}</p>
+                    </div>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 shrink-0">
+                      Active TA
+                    </span>
                   </div>
-                  {/* Status badge for history */}
-                  {tab === 'history' && (
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                      app.status === 'approved'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
+
+                  {revokeError && revokingId === ta.userBadgeId && (
+                    <p className="text-sm text-red-600">{revokeError}</p>
+                  )}
+
+                  {revokingId === ta.userBadgeId ? (
+                    <div className="space-y-2 pt-1">
+                      <textarea
+                        value={revokeReason}
+                        onChange={(e) => setRevokeReason(e.target.value)}
+                        rows={2}
+                        maxLength={300}
+                        placeholder="Reason for removing TA status (optional, sent to student)…"
+                        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={submitRevoke}
+                          isLoading={revokeProcessing}
+                          disabled={revokeProcessing}
+                          className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                        >
+                          Confirm Remove
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={cancelRevoke} disabled={revokeProcessing} className="flex-1">
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="pt-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => startRevoke(ta.userBadgeId)}
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                      >
+                        Remove TA
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )
+          ) : tab === 'pending' ? (
+            applications.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">No pending applications</p>
+            ) : (
+              applications.map((app) => (
+                <div key={app.id} className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{app.applicant_name}</p>
+                      <p className="text-xs text-gray-400">{app.applicant_email} · {formatDate(app.created_at)}</p>
+                    </div>
+                  </div>
+
+                  {app.note ? (
+                    <p className="text-sm text-gray-700 leading-relaxed bg-white rounded-lg p-2.5 border border-gray-100">
+                      "{app.note}"
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">No pitch provided</p>
+                  )}
+
+                  {error && reviewingId === app.id && (
+                    <p className="text-sm text-red-600">{error}</p>
+                  )}
+
+                  {reviewingId === app.id ? (
+                    <div className="space-y-2 pt-1">
+                      <textarea
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        rows={2}
+                        maxLength={300}
+                        placeholder={pendingDecision === 'approved' ? 'Optional message to the student…' : 'Feedback for the student (optional)…'}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-green-400"
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={submitReview} isLoading={processing} disabled={processing}
+                          className={`flex-1 text-white ${pendingDecision === 'approved' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
+                        >
+                          {pendingDecision === 'approved' ? 'Confirm Approve' : 'Confirm Deny'}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={cancelReview} disabled={processing} className="flex-1">
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" onClick={() => startReview(app.id, 'approved')}
+                        className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                      >
+                        ✓ Approve
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => startReview(app.id, 'denied')}
+                        className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+                      >
+                        ✕ Deny
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )
+          ) : (
+            // History tab
+            history.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">No reviewed applications yet</p>
+            ) : (
+              history.map((app) => (
+                <div key={app.id} className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{app.applicant_name}</p>
+                      <p className="text-xs text-gray-400">{app.applicant_email} · {formatDate(app.created_at)}</p>
+                    </div>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                      app.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                     }`}>
                       {app.status === 'approved' ? '✓ Approved' : '✕ Denied'}
                     </span>
+                  </div>
+                  {app.note ? (
+                    <p className="text-sm text-gray-700 leading-relaxed bg-white rounded-lg p-2.5 border border-gray-100">
+                      "{app.note}"
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">No pitch provided</p>
+                  )}
+                  {app.reviewer_comment && (
+                    <p className="text-xs text-gray-500 italic">
+                      Reviewer note: "{app.reviewer_comment}"
+                    </p>
                   )}
                 </div>
-
-                {app.note ? (
-                  <p className="text-sm text-gray-700 leading-relaxed bg-white rounded-lg p-2.5 border border-gray-100">
-                    "{app.note}"
-                  </p>
-                ) : (
-                  <p className="text-xs text-gray-400 italic">No pitch provided</p>
-                )}
-
-                {/* Reviewer comment in history */}
-                {tab === 'history' && app.reviewer_comment && (
-                  <p className="text-xs text-gray-500 italic">
-                    Reviewer note: "{app.reviewer_comment}"
-                  </p>
-                )}
-
-                {error && reviewingId === app.id && (
-                  <p className="text-sm text-red-600">{error}</p>
-                )}
-
-                {/* Review comment box */}
-                {tab === 'pending' && reviewingId === app.id && (
-                  <div className="space-y-2 pt-1">
-                    <textarea
-                      value={reviewComment}
-                      onChange={(e) => setReviewComment(e.target.value)}
-                      rows={2}
-                      maxLength={300}
-                      placeholder={pendingDecision === 'approved' ? 'Optional message to the student…' : 'Feedback for the student (optional)…'}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-green-400"
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={submitReview} isLoading={processing} disabled={processing}
-                        className={`flex-1 text-white ${pendingDecision === 'approved' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
-                      >
-                        {pendingDecision === 'approved' ? 'Confirm Approve' : 'Confirm Deny'}
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={cancelReview} disabled={processing} className="flex-1">
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Action buttons — pending tab only */}
-                {tab === 'pending' && reviewingId !== app.id && (
-                  <div className="flex gap-2 pt-1">
-                    <Button size="sm" onClick={() => startReview(app.id, 'approved')}
-                      className="flex-1 bg-green-500 hover:bg-green-600 text-white"
-                    >
-                      ✓ Approve
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => startReview(app.id, 'denied')}
-                      className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
-                    >
-                      ✕ Deny
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))
+              ))
+            )
           )}
         </div>
       </div>
