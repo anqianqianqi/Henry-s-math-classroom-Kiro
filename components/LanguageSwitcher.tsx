@@ -34,10 +34,10 @@ export function LanguageSwitcher() {
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-label={language === 'zh' ? '切换语言' : 'Change language'}
-          className="flex items-center gap-1 rounded-full border border-gray-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm backdrop-blur-sm transition-colors hover:bg-white"
+          className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white/90 px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-md backdrop-blur-sm transition-colors hover:bg-white"
         >
           {current.short}
-          <span aria-hidden="true" className="text-[9px] opacity-60">▼</span>
+          <span aria-hidden="true" className="text-[11px] opacity-60">▼</span>
         </button>
 
         {open && (
@@ -46,7 +46,7 @@ export function LanguageSwitcher() {
             <div className="fixed inset-0 -z-10" onClick={() => setOpen(false)} />
             <ul
               role="listbox"
-              className="absolute right-0 mt-1 w-32 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg"
+              className="absolute right-0 mt-1.5 w-44 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg"
             >
               {LANGUAGES.map(option => (
                 <li key={option.code}>
@@ -55,11 +55,11 @@ export function LanguageSwitcher() {
                     role="option"
                     aria-selected={option.code === language}
                     onClick={() => { setLanguage(option.code); setOpen(false) }}
-                    className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 ${
+                    className={`flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-base transition-colors hover:bg-gray-50 ${
                       option.code === language ? 'font-semibold text-primary-600' : 'text-gray-700'
                     }`}
                   >
-                    {option.label}
+                    {option.short}
                     {option.code === language && <span aria-hidden="true">✓</span>}
                   </button>
                 </li>

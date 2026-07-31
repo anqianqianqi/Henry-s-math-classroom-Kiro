@@ -35,9 +35,14 @@ import { admin } from './messages/admin'
 
 export type Language = 'en' | 'zh'
 
+/**
+ * `short` pairs the code with the language's name in Chinese, so the control
+ * reads the same to a student who cannot yet read the other side's label — the
+ * two-letter code alone means nothing if you do not already know which is which.
+ */
 export const LANGUAGES: { code: Language; label: string; short: string }[] = [
-  { code: 'en', label: 'English', short: 'EN' },
-  { code: 'zh', label: '简体中文', short: 'CN' },
+  { code: 'en', label: 'English', short: 'EN | 英文' },
+  { code: 'zh', label: '简体中文', short: 'CN | 简体中文' },
 ]
 
 export const catalog = {
