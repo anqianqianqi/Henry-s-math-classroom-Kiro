@@ -7,14 +7,14 @@
 
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
-import { getPendingApplications, getAllApplications, reviewBadgeApplication, getAllBadgeHolders, revokeBadge } from '@/lib/actions/badges'
+import { getPendingApplications, getAllApplications, reviewBadgeApplication, getAllBadgeHolders, revokeBadge, getRevokedBadgeHolders } from '@/lib/actions/badges'
 import type { BadgeApplication } from '@/lib/types/badges'
 
 export interface TAPendingPanelProps {
   onClose: () => void
 }
 
-type Tab = 'pending' | 'active' | 'history'
+type Tab = 'pending' | 'active' | 'history' | 'removed'
 
 interface ActiveTA {
   userBadgeId: string
@@ -24,11 +24,21 @@ interface ActiveTA {
   grantedAt: string
 }
 
+interface RemovedTA {
+  userBadgeId: string
+  userId: string
+  name: string
+  email: string
+  grantedAt: string
+  revokedAt: string
+}
+
 export function TAPendingPanel({ onClose }: TAPendingPanelProps) {
   const [tab, setTab] = useState<Tab>('pending')
   const [applications, setApplications] = useState<BadgeApplication[]>([])
   const [history, setHistory] = useState<BadgeApplication[]>([])
   const [activeTAs, setActiveTAs] = useState<ActiveTA[]>([])
+  const [removedTAs, setRemovedTAs] = useState<RemovedTA[]>([])
   const [loading, setLoading] = useState(true)
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [reviewComment, setReviewComment] = useState('')
@@ -48,16 +58,18 @@ export function TAPendingPanel({ onClose }: TAPendingPanelProps) {
 
   async function loadAll() {
     setLoading(true)
-    const [pendingResult, historyResult, holdersResult] = await Promise.all([
+    const [pendingResult, historyResult, holdersResult, removedResult] = await Promise.all([
       getPendingApplications('bubble_room_ta'),
       getAllApplications('bubble_room_ta'),
       getAllBadgeHolders('bubble_room_ta'),
+      getRevokedBadgeHolders('bubble_room_ta'),
     ])
     if (!pendingResult.error) setApplications(pendingResult.data ?? [])
     if (!historyResult.error) {
       setHistory((historyResult.data ?? []).filter(a => a.status !== 'pending'))
     }
     if (!holdersResult.error) setActiveTAs(holdersResult.data ?? [])
+    if (!removedResult.error) setRemovedTAs(removedResult.data ?? [])
     setLoading(false)
   }
 
@@ -125,7 +137,15 @@ export function TAPendingPanel({ onClose }: TAPendingPanelProps) {
         setRevokeError(result.error)
         return
       }
+      // Move from active to removed list
+      const removed = activeTAs.find(t => t.userBadgeId === revokingId)
       setActiveTAs(prev => prev.filter(t => t.userBadgeId !== revokingId))
+      if (removed) {
+        setRemovedTAs(prev => [{
+          ...removed,
+          revokedAt: new Date().toISOString(),
+        }, ...prev])
+      }
       cancelRevoke()
     } catch {
       setRevokeError('Failed to remove TA. Please try again.')
@@ -170,6 +190,7 @@ export function TAPendingPanel({ onClose }: TAPendingPanelProps) {
             { key: 'active' as Tab, label: `Active (${activeTAs.length})` },
             { key: 'pending' as Tab, label: `Pending (${applications.length})` },
             { key: 'history' as Tab, label: `History (${history.length})` },
+            { key: 'removed' as Tab, label: `Removed (${removedTAs.length})` },
           ]).map(({ key, label }) => (
             <button
               key={key}
@@ -314,6 +335,28 @@ export function TAPendingPanel({ onClose }: TAPendingPanelProps) {
                       </Button>
                     </div>
                   )}
+                </div>
+              ))
+            )
+          ) : tab === 'removed' ? (
+            // Removed TAs history tab
+            removedTAs.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">No removed TAs</p>
+            ) : (
+              removedTAs.map((ta) => (
+                <div key={ta.userBadgeId} className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{ta.name}</p>
+                      <p className="text-xs text-gray-400">{ta.email}</p>
+                    </div>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 shrink-0">
+                      Removed
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    TA from {formatDate(ta.grantedAt)} · Removed {formatDate(ta.revokedAt)}
+                  </p>
                 </div>
               ))
             )
