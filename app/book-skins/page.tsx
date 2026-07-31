@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import React, { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { BundleCollection } from '@/components/challenge-room/BundleCollection'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { HomeButton } from '@/components/ui/HomeButton'
@@ -29,6 +30,13 @@ interface BookSkin {
 interface UserPrefs {
   cover_skin_id: string | null
   page_skin_id: string | null
+  /**
+   * Challenge room selection. Read here so the bundle picker knows whether a
+   * room is set — ubsp_package_requires_room rejects a bundle without one.
+   * There is no room picker on this page yet, so this is effectively read-only.
+   */
+  challenge_room_id: string | null
+  texture_package_id: string | null
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,7 +52,7 @@ export default function BookSkinsUserPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [allSkins, setAllSkins] = useState<BookSkin[]>([])
-  const [prefs, setPrefs] = useState<UserPrefs>({ cover_skin_id: null, page_skin_id: null })
+  const [prefs, setPrefs] = useState<UserPrefs>({ cover_skin_id: null, page_skin_id: null, challenge_room_id: null, texture_package_id: null })
   const [userId, setUserId] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -160,10 +168,15 @@ export default function BookSkinsUserPage() {
 
       const { data: prefRow } = await supabase
         .from('user_book_skin_preferences')
-        .select('cover_skin_id, page_skin_id')
+        .select('cover_skin_id, page_skin_id, challenge_room_id, texture_package_id')
         .eq('user_id', user.id)
         .maybeSingle()
-      if (prefRow) setPrefs({ cover_skin_id: prefRow.cover_skin_id, page_skin_id: prefRow.page_skin_id })
+      if (prefRow) setPrefs({
+        cover_skin_id: prefRow.cover_skin_id,
+        page_skin_id: prefRow.page_skin_id,
+        challenge_room_id: (prefRow as any).challenge_room_id ?? null,
+        texture_package_id: (prefRow as any).texture_package_id ?? null,
+      })
 
       setLoading(false)
     }
@@ -222,6 +235,8 @@ export default function BookSkinsUserPage() {
         user_id: userId,
         cover_skin_id: toSave.cover_skin_id,
         page_skin_id: toSave.page_skin_id,
+        challenge_room_id: toSave.challenge_room_id,
+        texture_package_id: toSave.texture_package_id,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })
 
@@ -300,21 +315,21 @@ export default function BookSkinsUserPage() {
               onManage={(skin) => { setActionSkin(skin); setActionError(null); setShowSellInput(false); setSellPrice('') }}
             />
 
-            {/* ── Page skin picker ── */}
-            <SkinPicker
-              title="📄 Inner Page"
-              description="The background of the open book pages."
-              skins={pageSkins}
-              selectedId={effectivePage}
+            {/* Inner-page skins are no longer a collection. Every open book
+                uses the default page skin, so there is nothing to choose. The
+                rows and the default are untouched in the database — see
+                supabase/add-bundle-default-and-retire-page-skins.sql. */}
+
+            {/* ── Challenge Room bundle picker ── */}
+            <BundleCollection
+              isAdmin={isAdmin}
+              selectedId={prefs.texture_package_id ?? null}
+              hasRoom={!!prefs.challenge_room_id}
               onSelect={(id) => {
-                const newPrefs = { ...prefs, page_skin_id: id }
+                const newPrefs = { ...prefs, texture_package_id: id }
                 setPrefs(newPrefs)
                 savePrefs(newPrefs)
               }}
-              previewAspect={400 / 620}
-              skinType="page"
-              isAdmin={isAdmin}
-              onManage={(skin) => { setActionSkin(skin); setActionError(null); setShowSellInput(false); setSellPrice('') }}
             />
 
             {/* Auto-save indicator */}

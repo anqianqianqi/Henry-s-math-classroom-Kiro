@@ -55,6 +55,9 @@ export interface BookTexturePackage {
   recipe: BookSpec | null
   visibility: 'admin_only' | 'public'
   is_active: boolean
+  /** At most one, enforced by idx_btp_single_default. Used when the student
+   *  has a room but has not chosen a bundle. */
+  is_default: boolean
   shop_item_id: string | null
   created_by: string
   created_at: string
