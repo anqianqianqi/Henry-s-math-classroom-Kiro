@@ -5,8 +5,6 @@ export const dynamic = 'force-dynamic'
 import React, { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { BundleCollection } from '@/components/challenge-room/BundleCollection'
-import { RoomCollection } from '@/components/challenge-room/RoomCollection'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { HomeButton } from '@/components/ui/HomeButton'
@@ -236,8 +234,9 @@ export default function BookSkinsUserPage() {
         user_id: userId,
         cover_skin_id: toSave.cover_skin_id,
         page_skin_id: toSave.page_skin_id,
-        challenge_room_id: toSave.challenge_room_id,
-        texture_package_id: toSave.texture_package_id,
+        // Deliberately NOT writing challenge_room_id / texture_package_id.
+        // /challenge-rooms owns those; writing the copy loaded at mount here
+        // would clobber a room chosen there after this page was opened.
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })
 
@@ -321,34 +320,23 @@ export default function BookSkinsUserPage() {
                 rows and the default are untouched in the database — see
                 supabase/add-bundle-default-and-retire-page-skins.sql. */}
 
-            {/* ── Challenge Room picker ── */}
-            <RoomCollection
-              isAdmin={isAdmin}
-              selectedId={prefs.challenge_room_id ?? null}
-              onSelect={(id) => {
-                // Clearing the room must clear the bundle with it —
-                // ubsp_package_requires_room rejects a bundle without a room.
-                const newPrefs = {
-                  ...prefs,
-                  challenge_room_id: id,
-                  texture_package_id: id ? prefs.texture_package_id : null,
-                }
-                setPrefs(newPrefs)
-                savePrefs(newPrefs)
-              }}
-            />
-
-            {/* ── Challenge Room bundle picker ── */}
-            <BundleCollection
-              isAdmin={isAdmin}
-              selectedId={prefs.texture_package_id ?? null}
-              hasRoom={!!prefs.challenge_room_id}
-              onSelect={(id) => {
-                const newPrefs = { ...prefs, texture_package_id: id }
-                setPrefs(newPrefs)
-                savePrefs(newPrefs)
-              }}
-            />
+            {/* The Challenge Room and its book bundle live on their own page —
+                they are a matched pair (a bundle needs a room, enforced by
+                ubsp_package_requires_room), so managing them together avoids
+                picking one half and being refused on save. */}
+            <div className="rounded-2xl border border-gray-100 bg-white p-5">
+              <h2 className="text-lg font-bold text-gray-900">🏛️ Challenge Room</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Swap the flat book for a 3D room with an animated book, and choose the
+                cover / inner-page bundle that wraps it.
+              </p>
+              <a
+                href="/challenge-rooms"
+                className="mt-3 inline-block rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-600"
+              >
+                Open Challenge Room collection →
+              </a>
+            </div>
 
             {/* Auto-save indicator */}
             {saving && (

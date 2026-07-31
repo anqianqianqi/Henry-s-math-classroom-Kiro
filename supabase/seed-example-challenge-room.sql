@@ -12,13 +12,19 @@
 -- (Storage -> book-skins). The dashboard uses the service role, so it is not
 -- subject to the `${uid}/...` path rule that the app's uploads must follow:
 --
---   seed-assets/room.png                          -> examples/room.png
---   seed-assets/front-cover.png                   -> examples/front-cover.png
---   seed-assets/other-pages.png                   -> examples/other-pages.png
---   seed-assets/pageflix-web-smooth-203-notex.glb -> models/pageflix-web-smooth-203-notex.glb
+--   seed-assets/room.png        -> book-skins bucket, examples/room.png
+--   seed-assets/front-cover.png -> book-skins bucket, examples/front-cover.png
+--   seed-assets/other-pages.png -> book-skins bucket, examples/other-pages.png
 --
--- Storage paths are CASE-SENSITIVE. The local GLB was renamed to all-lowercase
--- so a straight drag-and-drop produces exactly the path used below.
+-- The GLB is NOT referenced here — it is named only by the env var
+-- NEXT_PUBLIC_CHALLENGE_ROOM_MODEL_URL, and now lives in its own public
+-- `models` bucket because book-skins rejects non-image MIME types.
+-- model_key below is just a text label recording which bake was tuned against.
+--
+-- Storage paths are CASE-SENSITIVE.
+--
+-- Requires add-bundle-default-and-retire-page-skins.sql to have been run first
+-- (this seeds is_default, which that migration adds).
 --
 -- (seed-assets/ is in the ChallengeRoomGeneration folder.)
 --
@@ -44,7 +50,7 @@ WITH owner AS (
 
 -- ── The book texture package (cover + inner page pair) ──────
 INSERT INTO book_texture_packages
-  (name, description, cover_url, inner_url, recipe, visibility, is_active, created_by)
+  (name, description, cover_url, inner_url, recipe, visibility, is_active, is_default, created_by)
 SELECT
   'Little Celestial Herbarium',
   'Example package imported from storyframe — watercolour cover with matching blank inner page.',
@@ -67,6 +73,8 @@ SELECT
   -- admin_only so students cannot select it until you have looked at it
   'admin_only',
   true,
+  -- The one instance, so anyone in a room gets this book art without choosing.
+  true,
   owner.user_id
 FROM owner;
 
@@ -82,7 +90,7 @@ WITH owner AS (
 )
 INSERT INTO challenge_rooms
   (name, description, room_url, recipe, placement, animation, model_key,
-   visibility, is_active, created_by)
+   visibility, is_active, is_default, created_by)
 SELECT
   'Moonlit Tide Observatory',
   'Example room imported from storyframe — dark-wood observatory with an underwater kelp view.',
@@ -123,7 +131,11 @@ SELECT
     "sourceFps": 24
   }'::jsonb,
   'pageflix-web-smooth-203',
+  -- admin_only while you evaluate. NOTE: is_default below only takes effect for
+  -- students once this is 'public' and active, so seeding it default here does
+  -- not switch the 3D room on for the class.
   'admin_only',
+  true,
   true,
   owner.user_id
 FROM owner;

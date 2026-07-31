@@ -37,6 +37,13 @@ export default function DecorationsPage() {
       description: 'Choose cover skins and page styles for the book that appears on every challenge.',
     },
     {
+      icon: '🏛️',
+      title: 'Challenge Room',
+      subtitle: 'Your 3D reading room',
+      href: '/challenge-rooms',
+      description: 'Swap the flat book for a 3D room with an animated book, and pick the cover / inner-page bundle that wraps it.',
+    },
+    {
       icon: '🏠',
       title: 'Pet Room',
       subtitle: "Your pet's home background",
