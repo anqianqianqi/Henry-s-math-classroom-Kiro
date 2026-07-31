@@ -29,6 +29,7 @@ import { TAApplicationModal } from './TAApplicationModal'
 import { TAPendingPanel } from './TAPendingPanel'
 import { TAStatusModal } from './TAStatusModal'
 import { AssignedToMeTray } from './AssignedToMeTray'
+import { MyBubblesPanel } from './MyBubblesPanel'
 
 export interface BubbleRoomPageProps {
   initialQuestions: BubbleQuestion[]
@@ -102,6 +103,7 @@ export function BubbleRoomPage({
   const [isWithdrawing, setIsWithdrawing] = useState(false)
   const [showTAPanel, setShowTAPanel] = useState(false)
   const [showAssignedModal, setShowAssignedModal] = useState(false)
+  const [showMyBubbles, setShowMyBubbles] = useState(false)
   // Track if the currently open question was opened from the assigned list
   const [questionFromAssigned, setQuestionFromAssigned] = useState(false)
 
@@ -334,7 +336,22 @@ export function BubbleRoomPage({
             <span className="hidden sm:inline">Ask</span>
           </button>
 
-          {/* TA badge controls */}
+          {/* My Bubbles management button */}
+          <button
+            type="button"
+            onClick={() => setShowMyBubbles(true)}
+            title={currentUserRole === 'teacher' ? 'All Bubbles' : 'My Bubbles'}
+            className="
+              shrink-0 flex items-center gap-1
+              px-3 py-2 rounded-xl
+              border border-purple-200 text-purple-700 text-xs font-semibold bg-purple-50
+              hover:bg-purple-100 transition-colors
+              focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2
+            "
+          >
+            🫧 <span className="hidden sm:inline">{currentUserRole === 'teacher' ? 'Bubbles' : 'Mine'}</span>
+          </button>
+
           {currentUserRole === 'student' && !isTA && !taPending && (
             <button
               type="button"
@@ -601,6 +618,22 @@ export function BubbleRoomPage({
             setQuestionFromAssigned(true)
           }}
           onClose={() => setShowAssignedModal(false)}
+        />
+      )}
+
+      {/* My Bubbles management panel */}
+      {showMyBubbles && (
+        <MyBubblesPanel
+          currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
+          onClose={() => setShowMyBubbles(false)}
+          onQuestionClick={(id) => {
+            const q = questions.find((q) => q.id === id)
+            if (q) {
+              setSelectedQuestion(q)
+              setShowMyBubbles(false)
+            }
+          }}
         />
       )}
     </div>
