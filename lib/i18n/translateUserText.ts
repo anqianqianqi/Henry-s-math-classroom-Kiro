@@ -43,6 +43,19 @@ export interface TranslatedText {
   lang: 'en' | 'zh' | 'other'
   en: string
   zh: string
+  /**
+   * Whether `en` and `zh` are a real answer or just the original standing in.
+   *
+   *   'translated'  — an engine produced at least one direction
+   *   'skipped'     — nothing to translate; pure math reads the same either way
+   *   'unavailable' — no engine configured, or every call failed
+   *
+   * Callers that persist the result MUST NOT store 'unavailable': the original
+   * in both slots is indistinguishable from a finished translation, so writing
+   * it marks the row done forever and it will never be retried — not even once
+   * a key is configured. 'skipped' is safe to store; it is the true answer.
+   */
+  status: 'translated' | 'skipped' | 'unavailable'
 }
 
 /** 'zh' throughout this codebase means Simplified Chinese (zh-Hans). */
@@ -168,32 +181,37 @@ export async function translateUserText(original: string): Promise<TranslatedTex
   const text = (original ?? '').trim()
   const lang = detectLanguage(text)
 
-  if (!text) return { lang, en: '', zh: '' }
+  if (!text) return { lang, en: '', zh: '', status: 'skipped' }
 
   // 'other' covers two different things: prose in a third language, which does
   // need translating into both, and content that is only math and digits, which
   // has no words at all. Skip the call for the second — "$x = 2y$" reads the
   // same in every language.
   const wordless = maskMath(text).masked.replace(/⟦M\d+⟧/g, '').match(/\p{L}/u) === null
-  if (wordless) return { lang, en: text, zh: text }
+  if (wordless) return { lang, en: text, zh: text, status: 'skipped' }
 
   const engine = selectEngine()
   if (!engine) {
-    console.warn('[i18n] no translation key configured; storing original for both languages')
-    return { lang, en: text, zh: text }
+    console.warn('[i18n] no translation key configured; returning the original unchanged')
+    return { lang, en: text, zh: text, status: 'unavailable' }
   }
 
   const targets: Target[] = lang === 'en' ? ['zh'] : lang === 'zh' ? ['en'] : ['en', 'zh']
   const { masked, math } = maskMath(text)
 
-  const result: TranslatedText = { lang, en: text, zh: text }
+  const result: TranslatedText = { lang, en: text, zh: text, status: 'unavailable' }
 
   await Promise.all(
     targets.map(async target => {
       try {
         const translated = await engine.run(masked, target)
         const restored = unmaskMath(translated, math)
-        if (restored.trim()) result[target] = restored
+        if (restored.trim()) {
+          result[target] = restored
+          // One direction succeeding is enough to be worth keeping. The other
+          // slot still holds the original, which is what a reader should see.
+          result.status = 'translated'
+        }
       } catch (err) {
         // Leave this target as the original. One direction failing should not
         // cost the other, and neither should cost the post.

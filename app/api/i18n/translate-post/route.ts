@@ -108,37 +108,51 @@ export async function POST(request: NextRequest) {
       : null
 
     /**
-     * Write back with the service role. The reader is usually not the author,
-     * and RLS rightly stops one student editing another's post — but filling a
-     * cache is not editing, and only the translation columns are touched.
+     * Only cache a real answer.
+     *
+     * When no engine is reachable translateUserText hands back the original in
+     * both slots, which is right for the reader but must never be written: it
+     * is indistinguishable from a finished translation, so storing it marks the
+     * row done forever and no later reader — or later API key — can undo that.
+     * 'skipped' is safe; pure math genuinely is the same in both languages.
      */
-    const update: Record<string, string> = {
-      [`${spec.body}_en`]: bodyT.en,
-      [`${spec.body}_zh`]: bodyT.zh,
-      [`${spec.body}_lang`]: bodyT.lang,
-    }
-    if (spec.title && titleT) {
-      update[`${spec.title}_en`] = titleT.en
-      update[`${spec.title}_zh`] = titleT.zh
-    }
+    const worthCaching = bodyT.status !== 'unavailable'
 
-    const service = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    )
-    const { error: writeError } = await service
-      .from(spec.table)
-      .update(update)
-      .eq('id', id)
+    if (worthCaching) {
+      /**
+       * Write back with the service role. The reader is usually not the author,
+       * and RLS rightly stops one student editing another's post — but filling
+       * a cache is not editing, and only the translation columns are touched.
+       */
+      const update: Record<string, string> = {
+        [`${spec.body}_en`]: bodyT.en,
+        [`${spec.body}_zh`]: bodyT.zh,
+        [`${spec.body}_lang`]: bodyT.lang,
+      }
+      if (spec.title && titleT && titleT.status !== 'unavailable') {
+        update[`${spec.title}_en`] = titleT.en
+        update[`${spec.title}_zh`] = titleT.zh
+      }
 
-    // A failed write costs the next reader another translation; it does not
-    // cost this one their result, so it is logged rather than returned.
-    if (writeError) {
-      console.error('[i18n] cache write failed', spec.table, id, writeError)
+      const service = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      )
+      const { error: writeError } = await service
+        .from(spec.table)
+        .update(update)
+        .eq('id', id)
+
+      // A failed write costs the next reader another translation; it does not
+      // cost this one their result, so it is logged rather than returned.
+      if (writeError) {
+        console.error('[i18n] cache write failed', spec.table, id, writeError)
+      }
     }
 
     return NextResponse.json({
       cached: false,
+      status: bodyT.status,
       lang: bodyT.lang,
       text: { en: bodyT.en, zh: bodyT.zh },
       ...(titleT ? { title: { en: titleT.en, zh: titleT.zh } } : {}),

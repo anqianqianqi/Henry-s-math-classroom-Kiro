@@ -126,3 +126,45 @@ describe('failure handling', () => {
     expect(out.zh).toBe('Hello there')
   })
 })
+
+describe('status — what may be cached', () => {
+  it('reports unavailable when no key is configured, so nothing is stored', async () => {
+    vi.stubGlobal('fetch', vi.fn())
+    const { translateUserText } = await load()
+    const out = await translateUserText('Hello there')
+
+    // The original in both slots is indistinguishable from a finished
+    // translation. Storing it would mark the row done forever — this is the
+    // flag that stops the route writing it.
+    expect(out.status).toBe('unavailable')
+    expect(out.en).toBe(out.zh)
+  })
+
+  it('reports unavailable when the engine errors', async () => {
+    process.env.DEEPL_API_KEY = 'test'
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 429, statusText: 'Too Many' })))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const { translateUserText } = await load()
+    expect((await translateUserText('Hello there')).status).toBe('unavailable')
+  })
+
+  it('reports skipped for wordless math — that answer is true and cacheable', async () => {
+    process.env.DEEPL_API_KEY = 'test'
+    vi.stubGlobal('fetch', vi.fn())
+    const { translateUserText } = await load()
+    expect((await translateUserText('$x = 2y$')).status).toBe('skipped')
+  })
+
+  it('reports translated when a direction came back', async () => {
+    process.env.DEEPL_API_KEY = 'test'
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ translations: [{ text: '你好' }] }),
+    })))
+    const { translateUserText } = await load()
+    const out = await translateUserText('Hello there')
+    expect(out.status).toBe('translated')
+    expect(out.zh).toBe('你好')
+  })
+})

@@ -75,6 +75,12 @@ async function requestTranslation(kind: PostKind, id: string): Promise<Fields | 
       if (!res.ok) return null
 
       const data = await res.json()
+
+      // No engine was reachable, so the server handed back the original in both
+      // slots. Don't remember that — the reader already sees the original, and
+      // caching it would stop the next attempt in this session from happening.
+      if (data.status === 'unavailable') return null
+
       const fields: Fields = {
         text_en: data.text?.en ?? null,
         text_zh: data.text?.zh ?? null,
