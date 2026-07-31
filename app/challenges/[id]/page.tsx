@@ -1555,8 +1555,8 @@ export default function ChallengePage() {
             ) : (
               // Show submission form
               <Card className={onBookPage ? 'mb-4 !bg-transparent !shadow-none !border-0 hover:!shadow-none hover:!translate-y-0' : 'mb-4'}>
-                <Card.Header className={onBookPage ? '!border-b-0 !px-0' : ''}>
-                  <Card.Title className="flex items-center gap-2">
+                <Card.Header className={onBookPage ? '!border-b-0 !px-0 !py-0' : ''}>
+                  <Card.Title className={`flex items-center gap-2 ${onBookPage ? 'justify-center' : ''}`}>
                     <span>✍️</span>
                     {hasSubmitted ? 'Edit Your Solution' : 'Your Solution'}
                   </Card.Title>
@@ -1663,6 +1663,16 @@ export default function ChallengePage() {
               // zoom layer inside it just adds a dead affordance.
               theme={onBookPage ? pageNativeHenryTheme : undefined}
               zoomable={!onBookPage}
+              subheader={onBookPage ? (
+                <p
+                  className="text-center text-sm italic"
+                  style={{ color: 'rgba(100,60,10,0.6)', fontFamily: 'Georgia, serif' }}
+                >
+                  — ✦ — {new Date(challenge.challenge_date + 'T12:00:00').toLocaleDateString('en-US', {
+                    month: 'long', day: 'numeric', year: 'numeric',
+                  })} — ✦ —
+                </p>
+              ) : undefined}
               className="mb-1"
             />
           ) : (

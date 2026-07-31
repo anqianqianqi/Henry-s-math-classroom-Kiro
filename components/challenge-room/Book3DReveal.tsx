@@ -64,6 +64,16 @@ type Phase = 'closed' | 'opening' | 'open' | 'zoomed'
 /** How long the tilt-to-flat + blur transition runs. */
 const ZOOM_MS = 700
 
+/**
+ * Top padding on the right page, so "Your Solution" sits level with the Title
+ * row on the left instead of level with the banner above it.
+ *
+ * Left page from the top: page padding 1.75rem, banner 3.7em, date line ~1.9em.
+ * The worksheet renders at 1rem, so em and rem agree here. Tune this one
+ * constant if the banner height in pageNativeHenryTheme changes.
+ */
+const SOLUTION_TOP_OFFSET = '7.3rem'
+
 const easeInOut = (t: number) =>
   t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
 
@@ -371,14 +381,9 @@ export function Book3DReveal({
                       lineHeight: 1.8,
                     }}
                   >
-                    <div className="mb-5 text-center">
-                      <span
-                        className="text-sm italic"
-                        style={{ color: 'rgba(100,60,10,0.6)', fontFamily: 'Georgia, serif' }}
-                      >
-                        — ✦ — {date} — ✦ —
-                      </span>
-                    </div>
+                    {/* The date is not rendered here: the worksheet places it
+                        under its banner via `subheader`, so the header block
+                        reads banner, date, title, rule. */}
                     {children}
                   </div>
                 </div>
@@ -393,9 +398,17 @@ export function Book3DReveal({
                   }}
                 />
 
-                {/* RIGHT page — solution */}
+                {/* RIGHT page — solution.
+                    Offset down so "Your Solution" lands level with the Title
+                    row opposite, rather than at the top of a page whose left
+                    neighbour opens with a banner. The 3D path is gated on
+                    .henryproblem, so the left page is always the worksheet and
+                    this offset is the banner (3.7em) plus its date line. */}
                 <div className="relative flex-1" style={pageStyle}>
-                  <div className="relative z-10 px-8 py-7 lg:px-14">
+                  <div
+                    className="relative z-10 px-8 lg:px-14"
+                    style={{ paddingTop: SOLUTION_TOP_OFFSET, paddingBottom: '1.75rem' }}
+                  >
                     {solutionSlot ?? (
                       <p className="text-sm italic" style={{ color: 'rgba(100,60,10,0.55)' }}>
                         Nothing to answer here yet.

@@ -105,6 +105,15 @@ export interface HenryHeaderTheme {
 export interface HenrySheetTheme {
   palette: HenryPalette
   header: HenryHeaderTheme
+  /**
+   * Rule drawn under the Title/Score row.
+   *
+   * The default theme rules under the banner instead (header.rule) and leaves
+   * this unset. Setting it — and clearing header.rule — moves the divider below
+   * title and score, so the header block reads as banner, date, title, then
+   * the line that opens the problem.
+   */
+  titleRule?: { color: keyof HenryPalette; thickness: string }
 }
 
 export const henryPalette: HenryPalette = {
@@ -200,7 +209,15 @@ export const pageNativeHenryTheme: HenrySheetTheme = {
     ...defaultHenryTheme.header,
     // The header strip is the one surface that keeps a fill: it is the
     // worksheet's identity and reads as a printed banner, not a floating card.
+    // Larger here because it now sits at the very top of the page rather than
+    // partway down a card, so it carries the page.
+    height: '3.7em',
+    radius: '1em',
+    logo: { src: '/henry-math-logo.png', size: '3.3em', overlap: '1.1em' },
+    // Cleared so the divider can sit below title/score instead — see titleRule.
+    rule: null,
   },
+  titleRule: { color: 'green', thickness: '0.12em' },
 }
 
 /** Resolve a palette key plus optional opacity to a CSS colour. */

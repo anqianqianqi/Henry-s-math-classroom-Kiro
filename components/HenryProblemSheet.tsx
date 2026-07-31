@@ -64,6 +64,7 @@ function Sheet({
   fontSize,
   maxGraphHeight,
   theme,
+  subheader,
 }: {
   problem: HenryProblemFields
   graphUrl?: string | null
@@ -71,6 +72,7 @@ function Sheet({
   fontSize: string
   maxGraphHeight: string
   theme: HenrySheetTheme
+  subheader?: React.ReactNode
 }) {
   const palette = theme.palette
   const score = formatScore(problem.score)
@@ -86,13 +88,19 @@ function Sheet({
       <div style={{ padding: '0.85em 1em' }}>
         <HenrySheetHeader theme={theme} />
 
-        {/* Title / Score row — the green rule above stands in for a top border */}
+        {subheader && <div style={{ paddingTop: '0.5em' }}>{subheader}</div>}
+
+        {/* Title / Score row. The divider sits above it by default (the header
+            rule); themes that clear header.rule and set titleRule move it here,
+            so the row is enclosed by the banner rather than by the problem. */}
         <div
           className="flex flex-wrap items-baseline"
           style={{
             gap: '0.25em 1.5em',
             padding: '0.5em 0',
-            borderBottom: `1px solid ${palette.border}`,
+            borderBottom: theme.titleRule
+              ? `${theme.titleRule.thickness} solid ${palette[theme.titleRule.color]}`
+              : `1px solid ${palette.border}`,
           }}
         >
           <div className="flex items-baseline min-w-0 flex-1" style={{ gap: '0.5em' }}>
@@ -178,6 +186,11 @@ export interface HenryProblemSheetProps {
   /** Show a tap-to-enlarge affordance that opens the sheet full-screen. */
   zoomable?: boolean
   /**
+   * Rendered between the banner and the Title/Score row. The challenge room
+   * puts the date here so the header block reads banner, date, title, rule.
+   */
+  subheader?: React.ReactNode
+  /**
    * Palette and header decorations. Defaults to defaultHenryTheme — pass
    * plainHenryTheme, or your own, to restyle without touching this component.
    */
@@ -195,6 +208,7 @@ export function HenryProblemSheet({
   zoomable,
   theme = defaultHenryTheme,
   className,
+  subheader,
 }: HenryProblemSheetProps) {
   const [zoomed, setZoomed] = useState(false)
   const [stepIndex, setStepIndex] = useState(0)
@@ -235,6 +249,7 @@ export function HenryProblemSheet({
       fontSize="1rem"
       maxGraphHeight="20rem"
       theme={theme}
+      subheader={subheader}
     />
   )
 
