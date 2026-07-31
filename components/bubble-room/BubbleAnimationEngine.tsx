@@ -85,13 +85,28 @@ export function BubbleAnimationEngine({
   }, [visible])
 
   // ── Remove visible instances for questions that no longer exist ─────────────
+  // Mark them as dying (invisible) first, then remove after fade-out
   useEffect(() => {
     const validIds = new Set(questions.map((q) => q.id))
     setVisible((prev) => {
-      const next = prev.filter((b) => validIds.has(b.question.id))
-      return next.length === prev.length ? prev : next
+      const hasInvalid = prev.some((b) => !validIds.has(b.question.id))
+      if (!hasInvalid) return prev
+      // Mark invalid instances as dying — they fade out via CSS, then get removed
+      return prev.map((b) =>
+        validIds.has(b.question.id) ? b : { ...b, dying: true },
+      )
     })
   }, [questions])
+
+  // Clean up dying instances after fade completes (300 ms)
+  useEffect(() => {
+    const dying = visible.filter((b) => (b as any).dying)
+    if (dying.length === 0) return
+    const timer = setTimeout(() => {
+      setVisible((prev) => prev.filter((b) => !(b as any).dying))
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [visible])
 
   // ── Spawn one bubble ───────────────────────────────────────────────────────
   const spawnBubble = useCallback(() => {
@@ -241,6 +256,7 @@ export function BubbleAnimationEngine({
         <QuestionBubble
           key={instance.id}
           instance={instance}
+          dying={(instance as any).dying === true}
           searchQuery={searchQuery}
           onClick={() => {
             // Immediately remove this instance so the count drops and

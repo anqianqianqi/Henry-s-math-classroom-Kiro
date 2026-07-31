@@ -17,6 +17,8 @@ export interface QuestionBubbleProps {
   instance: BubbleInstance
   onClick: () => void
   searchQuery?: string
+  /** When true, fade the bubble out before removal */
+  dying?: boolean
 }
 
 const PREVIEW_MAX_LENGTH = 55
@@ -56,7 +58,7 @@ function highlightInBubble(text: string, keyword: string): React.ReactNode {
 
 type BurstPhase = 'idle' | 'expand' | 'pop'
 
-export function QuestionBubble({ instance, onClick, searchQuery = '' }: QuestionBubbleProps) {
+export function QuestionBubble({ instance, onClick, searchQuery = '', dying = false }: QuestionBubbleProps) {
   const { question, id, x, drift, speed } = instance
   const { language } = useLanguage()
   // Show the reader's language; the original stays on the record for search.
@@ -140,6 +142,11 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           animationDuration: `${speed}s`,
           animationTimingFunction: 'ease-out',
           animationFillMode: 'forwards',
+          // Fade out when dying — keeps the bubble at its current position
+          // while transitioning opacity to 0, so users don't see it snap back
+          opacity: dying ? 0 : 1,
+          transition: dying ? 'opacity 0.3s ease-out' : undefined,
+          pointerEvents: dying ? 'none' : undefined,
         } as React.CSSProperties
       }
     >
