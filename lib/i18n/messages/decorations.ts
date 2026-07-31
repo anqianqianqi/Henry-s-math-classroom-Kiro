@@ -128,4 +128,17 @@ export const decorations = {
   'skins.noneYet': { en: ' (none yet)', zh: '（暂无）' },
   'skins.pricePoints': { en: 'Price (points)', zh: '价格（积分）' },
   'skins.list': { en: 'List', zh: '上架' },
+
+  // ── Pet room picker ──────────────────────────────────────
+  'petRoom.intro': {
+    en: 'Choose a room background for your pet on the dashboard.',
+    zh: '为主页上的宠物挑选一个房间背景。',
+  },
+  'petRoom.none': { en: 'No room backgrounds available yet.', zh: '暂时还没有可用的房间背景。' },
+  'petRoom.unavailable': { en: 'Unavailable', zh: '不可用' },
+  'petRoom.owned': { en: 'Owned', zh: '已拥有' },
+  'petRoom.active': { en: 'Active', zh: '使用中' },
+  'petRoom.default': { en: 'Default', zh: '默认' },
+  'petRoom.updatingPhoto': { en: 'Updating frame photo…', zh: '正在更新相框照片…' },
+  'petRoom.viewFullSize': { en: 'View full size', zh: '查看原图' },
 } as const
