@@ -29,6 +29,7 @@ import { TAApplicationModal } from './TAApplicationModal'
 import { TAPendingPanel } from './TAPendingPanel'
 import { TAStatusModal } from './TAStatusModal'
 import { AssignedToMeTray } from './AssignedToMeTray'
+import { MyBubblesPanel } from './MyBubblesPanel'
 
 export interface BubbleRoomPageProps {
   initialQuestions: BubbleQuestion[]
@@ -102,6 +103,7 @@ export function BubbleRoomPage({
   const [isWithdrawing, setIsWithdrawing] = useState(false)
   const [showTAPanel, setShowTAPanel] = useState(false)
   const [showAssignedModal, setShowAssignedModal] = useState(false)
+  const [showMyBubbles, setShowMyBubbles] = useState(false)
   // Track if the currently open question was opened from the assigned list
   const [questionFromAssigned, setQuestionFromAssigned] = useState(false)
 
@@ -141,6 +143,10 @@ export function BubbleRoomPage({
         },
         (payload) => {
           const newRow = payload.new as any
+
+          // Don't add expired bubbles to the room
+          if (newRow.expires_at && new Date(newRow.expires_at) <= new Date()) return
+
           const newQuestion: BubbleQuestion = {
             id: newRow.id,
             class_id: newRow.class_id,
@@ -151,6 +157,7 @@ export function BubbleRoomPage({
             image_url: newRow.image_url ?? null,
             created_at: newRow.created_at,
             updated_at: newRow.updated_at,
+            expires_at: newRow.expires_at ?? null,
             author_display_name: t('bubble.loadingAuthor'),
             response_count: 0,
             unique_view_count: 0,
@@ -172,6 +179,22 @@ export function BubbleRoomPage({
           const deletedId = (payload.old as any).id
           setQuestions((prev) => prev.filter((q) => q.id !== deletedId))
           setSelectedQuestion((prev) => (prev?.id === deletedId ? null : prev))
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'bubble_room_questions',
+        },
+        (payload) => {
+          const updated = payload.new as any
+          // Remove from the room if it has been manually expired
+          if (updated.expires_at && new Date(updated.expires_at) <= new Date()) {
+            setQuestions((prev) => prev.filter((q) => q.id !== updated.id))
+            setSelectedQuestion((prev) => (prev?.id === updated.id ? null : prev))
+          }
         },
       )
       .subscribe()
@@ -334,7 +357,41 @@ export function BubbleRoomPage({
             <span className="hidden sm:inline">Ask</span>
           </button>
 
-          {/* TA badge controls */}
+          {/* My Bubbles management button */}
+          <button
+            type="button"
+            onClick={() => setShowMyBubbles(true)}
+            title="My Bubbles"
+            className="
+              shrink-0 flex items-center gap-1
+              px-3 py-2 rounded-xl
+              border border-purple-200 text-purple-700 text-xs font-semibold bg-purple-50
+              hover:bg-purple-100 transition-colors
+              focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2
+            "
+          >
+            🫧 <span className="hidden sm:inline">My Bubbles</span>
+          </button>
+
+          {/* Assigned-to-me button — visible for all students, teachers and TAs */}
+          {(currentUserRole === 'student' || currentUserRole === 'teacher' || isTA) && (
+            <button
+              type="button"
+              onClick={() => setShowAssignedModal(true)}
+              title={t('bubble.assignedTitleAttr')}
+              className="
+                shrink-0 flex items-center gap-1
+                px-3 py-2 rounded-xl
+                border border-orange-300 text-orange-700 text-xs font-semibold bg-orange-50
+                hover:bg-orange-100 transition-colors
+                focus:outline-none focus:ring-2 focus:ring-orange-400
+              "
+            >
+              📬 <span className="hidden sm:inline">{t('bubble.assigned')}</span>
+            </button>
+          )}
+
+          {/* TA badge / apply controls — always on the far right for students */}
           {currentUserRole === 'student' && !isTA && !taPending && (
             <button
               type="button"
@@ -388,24 +445,6 @@ export function BubbleRoomPage({
               "
             >
               🎓 <span className="hidden sm:inline">{t('bubble.taApps')}</span>
-            </button>
-          )}
-
-          {/* Assigned-to-me button — visible for teachers and TAs */}
-          {(currentUserRole === 'teacher' || isTA) && (
-            <button
-              type="button"
-              onClick={() => setShowAssignedModal(true)}
-              title={t('bubble.assignedTitleAttr')}
-              className="
-                shrink-0 flex items-center gap-1
-                px-3 py-2 rounded-xl
-                border border-orange-300 text-orange-700 text-xs font-semibold bg-orange-50
-                hover:bg-orange-100 transition-colors
-                focus:outline-none focus:ring-2 focus:ring-orange-400
-              "
-            >
-              📬 <span className="hidden sm:inline">{t('bubble.assigned')}</span>
             </button>
           )}
         </div>
@@ -601,6 +640,22 @@ export function BubbleRoomPage({
             setQuestionFromAssigned(true)
           }}
           onClose={() => setShowAssignedModal(false)}
+        />
+      )}
+
+      {/* My Bubbles management panel */}
+      {showMyBubbles && (
+        <MyBubblesPanel
+          currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
+          onClose={() => setShowMyBubbles(false)}
+          onQuestionClick={(id) => {
+            const q = questions.find((q) => q.id === id)
+            if (q) {
+              setSelectedQuestion(q)
+              setShowMyBubbles(false)
+            }
+          }}
         />
       )}
     </div>
