@@ -532,7 +532,7 @@ export function QuestionDetailModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="question-detail-title"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-2"
     >
       {/* Backdrop — color matches bubble type */}
       <div
@@ -547,7 +547,7 @@ export function QuestionDetailModal({
       />
 
       {/* Panel + bubble overlay wrapper — overflow visible so bubbles escape */}
-      <div className="relative z-10 w-full sm:max-w-6xl flex flex-col" style={{ maxHeight: '90vh' }}>
+      <div className="relative z-10 w-full sm:max-w-6xl flex flex-col" style={{ maxHeight: '95vh' }}>
 
         {/* Bubble overlay — anchored to actual panel edges via measured size */}
         {panelSize.w > 0 && (
