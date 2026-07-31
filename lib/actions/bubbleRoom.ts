@@ -13,7 +13,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { BubbleQuestion, BubbleResponse, BubbleQuestionAssignment } from '@/lib/types/bubbleRoom'
 import { evaluateRuleBadges } from '@/lib/actions/badges'
-import { translateUserText } from '@/lib/i18n/translateUserText'
+import { detectLanguage } from '@/lib/mathtext-core'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,18 +64,15 @@ export async function postQuestion(
     // If challenge_id FK fails (bank challenge not in daily_challenges), retry without it.
 
     /**
-     * Translate before insert so a question is readable in either language the
-     * moment it appears, rather than popping from original to translated a few
-     * seconds later while people are already reading it.
+     * Store what the author typed and nothing else. Translation happens when a
+     * reader in the other language actually opens the question, via
+     * /api/i18n/translate-post, which fills the *_en / *_zh columns then.
      *
-     * Both fields go in one pair of calls, and translateUserText never throws —
-     * a failure stores the original in both slots, so the post still saves.
+     * Doing it here instead would put a translation API round trip in front of
+     * every post — including the majority nobody ever reads in the other
+     * language. detectLanguage is local and instant, so the source language is
+     * still recorded up front.
      */
-    const [titleT, textT] = await Promise.all([
-      translateUserText(trimmedTitle),
-      translateUserText(trimmed),
-    ])
-
     const insertPayload = {
       class_id: classId ?? null,
       user_id: user.id,
@@ -83,11 +80,7 @@ export async function postQuestion(
       title: trimmedTitle,
       text: trimmed,
       image_url: imageUrl ?? null,
-      title_en: titleT.en,
-      title_zh: titleT.zh,
-      text_en: textT.en,
-      text_zh: textT.zh,
-      text_lang: textT.lang,
+      text_lang: detectLanguage(trimmed),
     }
 
     let { data, error } = await supabase
@@ -189,10 +182,8 @@ export async function postResponse(
       return { error: 'You must be logged in to post a response.' }
     }
 
-    // Non-fatal by construction: on failure this returns the original in both
-    // slots, so a reply always posts even if translation is unavailable.
-    const textT = await translateUserText(trimmed)
-
+    // Replies post immediately; a reader in the other language triggers the
+    // translation later. See postQuestion above for why.
     const { data, error } = await supabase
       .from('bubble_room_responses')
       .insert({
@@ -200,9 +191,7 @@ export async function postResponse(
         user_id: user.id,
         text: trimmed,
         image_url: imageUrl ?? null,
-        text_en: textT.en,
-        text_zh: textT.zh,
-        text_lang: textT.lang,
+        text_lang: detectLanguage(trimmed),
       })
       .select(`
         id,

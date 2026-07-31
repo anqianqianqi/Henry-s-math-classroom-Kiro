@@ -28,7 +28,8 @@ import {
 import type { BubbleQuestion, BubbleResponse } from '@/lib/types/bubbleRoom'
 import { Button } from '@/components/ui/Button'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
-import { localizeQuestion, pickTranslation } from '@/lib/i18n/localize'
+import type { Language } from '@/lib/i18n/catalog'
+import { useOnDemandTranslation } from '@/lib/i18n/useOnDemandTranslation'
 import { BadgePill } from './BadgePill'
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
@@ -81,7 +82,7 @@ export function QuestionDetailModal({
   const responseFileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
   const { language } = useLanguage()
-  const local = localizeQuestion(question, language)
+  const local = useOnDemandTranslation('question', question.id, question, language)
 
   // ── On mount: record view + fetch responses + open Realtime channel ──────
   useEffect(() => {
@@ -136,6 +137,9 @@ export function QuestionDetailModal({
           question_id,
           user_id,
           text,
+          text_en,
+          text_zh,
+          text_lang,
           image_url,
           created_at,
           profiles:user_id ( full_name, nickname )
@@ -882,7 +886,7 @@ export function QuestionDetailModal({
                     </div>
                   )}
                 </div>
-                <p className="text-sm text-gray-800 leading-relaxed">{pickTranslation(response.text, response.text_en, response.text_zh, language)}</p>
+                <ResponseText response={response} language={language} />
                 {/* Response image */}
                 {response.image_url && (
                   <a
@@ -1007,4 +1011,26 @@ export function QuestionDetailModal({
       </div>
     </div>
   )
+}
+
+// ── Reply text ─────────────────────────────────────────────────────────────
+
+/**
+ * One reply's prose, in the reader's language.
+ *
+ * Separate from the list above only because the on-demand translation is a
+ * hook, and hooks cannot run inside a .map(). Each reply asks for its own
+ * translation the first time somebody reads the thread in a language it has
+ * not been rendered in yet; the result is stored server-side, so the rest of
+ * the class gets it immediately.
+ */
+function ResponseText({
+  response,
+  language,
+}: {
+  response: BubbleResponse
+  language: Language
+}) {
+  const { text } = useOnDemandTranslation('response', response.id, response, language)
+  return <p className="text-sm text-gray-800 leading-relaxed">{text}</p>
 }

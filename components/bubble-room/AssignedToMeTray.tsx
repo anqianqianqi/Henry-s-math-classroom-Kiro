@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
-import { localizeQuestion } from '@/lib/i18n/localize'
+import { useOnDemandTranslation } from '@/lib/i18n/useOnDemandTranslation'
 import { fetchMyAssignments } from '@/lib/actions/bubbleRoom'
 import type { BubbleQuestionAssignment, BubbleQuestion } from '@/lib/types/bubbleRoom'
 
@@ -18,7 +18,7 @@ export interface AssignedToMeTrayProps {
 }
 
 export function AssignedToMeTray({ currentUserId, onQuestionClick, onClose }: AssignedToMeTrayProps) {
-  const { language } = useLanguage()
+  // The language is read per row, not here — see AssignmentRow below.
   const [pending, setPending] = useState<BubbleQuestionAssignment[]>([])
   const [responded, setResponded] = useState<BubbleQuestionAssignment[]>([])
   const [loading, setLoading] = useState(true)
@@ -172,9 +172,11 @@ function AssignmentRow({
   formatDate: (iso: string) => string
 }) {
   // Own hook rather than a prop: this row renders in a list and reads the
-  // language for its own preview text.
+  // language for its own preview text. Both hooks run before the early return
+  // below, so the hook order stays fixed whether or not the question loaded.
   const { language } = useLanguage()
   const q = assignment.question
+  const local = useOnDemandTranslation('question', q?.id, q, language)
   if (!q) return null
 
   return (
@@ -193,7 +195,7 @@ function AssignmentRow({
     >
       <div className="flex items-start justify-between gap-2">
         <p className={`text-sm font-medium leading-snug ${isPending ? 'text-orange-900' : 'text-gray-600'}`}>
-          {q.title ?? q.text.slice(0, 80)}
+          {local.title ?? local.text.slice(0, 80)}
         </p>
         <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
           isPending ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'
@@ -202,7 +204,7 @@ function AssignmentRow({
         </span>
       </div>
       {q.title && (
-        <p className="text-xs text-gray-500 line-clamp-1">{localizeQuestion(q, language).text}</p>
+        <p className="text-xs text-gray-500 line-clamp-1">{local.text}</p>
       )}
       <p className="text-[11px] text-gray-400">
         by {q.author_display_name} · {formatDate(assignment.created_at)}
