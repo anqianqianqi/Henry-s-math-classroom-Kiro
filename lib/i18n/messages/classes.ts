@@ -27,9 +27,9 @@ export const classes = {
   'class.new': { en: '+ New', zh: '+ 新建' },
   'class.notEnrolled': {
     en: 'You are not enrolled in any classes yet',
-    zh: '你还没有加入任何班级',
+    zh: '您还没有加入任何班级',
   },
-  'class.createFirst': { en: 'Create Your First Class', zh: '创建你的第一个班级' },
+  'class.createFirst': { en: 'Create Your First Class', zh: '创建您的第一个班级' },
   'class.noDescription': { en: 'No description', zh: '暂无简介' },
   'class.schedule': { en: 'Schedule:', zh: '上课时间：' },
   'class.starts': { en: 'Starts:', zh: '开课日期：' },

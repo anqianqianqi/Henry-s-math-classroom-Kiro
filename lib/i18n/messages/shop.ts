@@ -26,7 +26,7 @@ export const shop = {
   // ── Page chrome ──────────────────────────────────────────
   'shop.pageTitle': { en: 'Points Shop', zh: '积分商店' },
   'shop.loading': { en: 'Loading shop…', zh: '正在加载商店…' },
-  'shop.spendableBalance': { en: 'Your Spendable Balance', zh: '你的可用积分' },
+  'shop.spendableBalance': { en: 'Your Spendable Balance', zh: '您的可用积分' },
   'shop.availableRewards': { en: 'Available Rewards', zh: '可兑换的奖励' },
   'shop.noRewards': { en: 'No rewards available yet.', zh: '暂时还没有奖励。' },
   'shop.checkBack': { en: 'Check back soon!', zh: '过阵子再来看看吧！' },
@@ -52,7 +52,7 @@ export const shop = {
   'shop.browseRooms': { en: 'Browse Rooms', zh: '浏览房间' },
   'shop.roomsBlurb': {
     en: 'Unlock a themed room for your pet. Tap to browse all styles.',
-    zh: '为你的宠物解锁主题房间，点击浏览全部风格。',
+    zh: '为您的宠物解锁主题房间，点击浏览全部风格。',
   },
   'shop.bookCovers': { en: 'Book Covers', zh: '书封面' },
   'shop.browseCovers': { en: 'Browse Covers', zh: '浏览封面' },
@@ -74,7 +74,7 @@ export const shop = {
 
   // ── Redemption ───────────────────────────────────────────
   'shop.redeemed': { en: 'Redeemed!', zh: '兑换成功！' },
-  'shop.redeemedBody': { en: "You've successfully redeemed {item}.", zh: '你已成功兑换 {item}。' },
+  'shop.redeemedBody': { en: "You've successfully redeemed {item}.", zh: '您已成功兑换 {item}。' },
   'shop.physicalNote': {
     en: "This is a physical item — there's nothing to download. Please ping Henry to arrange pickup or delivery of your prize!",
     zh: '这是实物奖品，没有可下载的内容。请联系 Henry 安排领取或寄送！',
@@ -85,8 +85,8 @@ export const shop = {
   },
   'shop.gotIt': { en: 'Got it!', zh: '知道了！' },
   'shop.foodQueued': { en: 'Added to food queue!', zh: '已加入喂食队列！' },
-  'shop.historyTitle': { en: 'Your Redemption History', zh: '你的兑换记录' },
-  'shop.noHistory': { en: "You haven't redeemed anything yet.", zh: '你还没有兑换过任何东西。' },
+  'shop.historyTitle': { en: 'Your Redemption History', zh: '您的兑换记录' },
+  'shop.noHistory': { en: "You haven't redeemed anything yet.", zh: '您还没有兑换过任何东西。' },
   'shop.refunded': { en: 'Refunded', zh: '已退款' },
   'shop.viewPrize': { en: 'View Prize', zh: '查看奖品' },
 
@@ -97,7 +97,7 @@ export const shop = {
   'shop.download': { en: 'Download', zh: '下载' },
   'shop.shaking': { en: 'Shaking the box…', zh: '正在摇盲盒…' },
   'shop.opening': { en: 'Opening…', zh: '正在打开…' },
-  'shop.yourPrizes': { en: 'Your {count} prizes', zh: '你的 {count} 件奖品' },
-  'shop.yourPrize': { en: 'Your prize', zh: '你的奖品' },
+  'shop.yourPrizes': { en: 'Your {count} prizes', zh: '您的 {count} 件奖品' },
+  'shop.yourPrize': { en: 'Your prize', zh: '您的奖品' },
   'shop.tooCostly': { en: 'Too costly', zh: '积分不够' },
 } as const

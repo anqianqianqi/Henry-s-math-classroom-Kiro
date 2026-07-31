@@ -99,7 +99,7 @@ const T: Record<string, Translations> = {
     showAll: (total: number, hidden: number) => `▼ 展开全部 ${total} 个主题（+${hidden} 个）`,
     showLess: '▲ 收起',
     noStatsTitle: '暂无数据',
-    noStatsDesc: '完成一些挑战题后，这里会显示你的学习曲线。',
+    noStatsDesc: '完成一些挑战题后，这里会显示您的学习曲线。',
     recTitle: '📈 个性化建议',
     recFocus: (name: string, pct: number) => `🎯 重点练习「${name}」— 当前平均分 ${pct}%，加油！`,
     recStrong: (name: string, pct: number) => `⭐ 继续保持「${name}」— 得分 ${pct}%，很棒！`,

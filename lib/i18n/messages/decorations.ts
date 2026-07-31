@@ -7,19 +7,19 @@ export const decorations = {
   // ── Hub ──────────────────────────────────────────────────
   'decor.intro': {
     en: 'Personalise your classroom experience.',
-    zh: '个性化你的课堂体验。',
+    zh: '个性化您的课堂体验。',
   },
   'decor.adminTools': { en: 'Admin Tools', zh: '管理工具' },
 
   'decor.bookCoverPage': { en: 'Book Cover & Page', zh: '书封面与内页' },
-  'decor.bookCoverPageSub': { en: 'Customise your challenge book', zh: '自定义你的挑战书' },
+  'decor.bookCoverPageSub': { en: 'Customise your challenge book', zh: '自定义您的挑战书' },
   'decor.bookCoverPageDesc': {
     en: 'Choose cover skins and page styles for the book that appears on every challenge.',
     zh: '为每道挑战题中出现的书本选择封面与内页样式。',
   },
 
   'decor.challengeRoom': { en: 'Challenge Room', zh: '挑战房间' },
-  'decor.challengeRoomSub': { en: 'Your 3D reading room', zh: '你的 3D 阅读房间' },
+  'decor.challengeRoomSub': { en: 'Your 3D reading room', zh: '您的 3D 阅读房间' },
   'decor.challengeRoomDesc': {
     en: 'Swap the flat book for a 3D room with an animated book, and pick the cover / inner-page bundle that wraps it.',
     zh: '把平面书本换成带动画书本的 3D 房间，并选择包裹它的封面与内页组合。',
@@ -59,7 +59,7 @@ export const decorations = {
   'decor.roomsLoading': { en: 'Loading rooms…', zh: '房间加载中…' },
   'decor.optOutNotice': {
     en: 'Challenge rooms are off for you — challenges show the flat book. Turn NoChallengeRoom off, or pick a room below, to switch back.',
-    zh: '你已关闭挑战房间，挑战题将显示平面书本。关闭“不使用挑战房间”或在下方选择一个房间即可恢复。',
+    zh: '您已关闭挑战房间，挑战题将显示平面书本。关闭“不使用挑战房间”或在下方选择一个房间即可恢复。',
   },
   'decor.defaultWarning': {
     en: 'Setting this as default turns the 3D room on for every student who has not chosen one — a launch switch, not just a label.',
@@ -92,12 +92,12 @@ export const decorations = {
 
   // ── Book & Cover collection ──────────────────────────────
   'skins.pageTitle': { en: 'Book & Cover', zh: '书本与封面' },
-  'skins.personalise': { en: 'Personalise Your Book', zh: '个性化你的书本' },
-  'skins.loadingCollection': { en: 'Loading your collection…', zh: '正在加载你的收藏…' },
+  'skins.personalise': { en: 'Personalise Your Book', zh: '个性化您的书本' },
+  'skins.loadingCollection': { en: 'Loading your collection…', zh: '正在加载您的收藏…' },
   'skins.bookCover': { en: 'Book Cover', zh: '书本封面' },
   'skins.moreInShopNote': {
     en: 'More cover and page designs will be available in the Shop to unlock with your points.',
-    zh: '更多封面和内页设计将在商店上架，可以用你的积分解锁。',
+    zh: '更多封面和内页设计将在商店上架，可以用您的积分解锁。',
   },
   'skins.moreInShop': { en: 'More in Shop', zh: '更多在商店' },
   'skins.openRoomCollection': { en: 'Open Challenge Room collection →', zh: '打开挑战房间收藏 →' },

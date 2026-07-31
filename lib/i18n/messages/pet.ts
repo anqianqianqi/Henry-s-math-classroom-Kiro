@@ -11,7 +11,7 @@ export const pet = {
   'pet.goToShop': { en: 'Go to Shop', zh: '前往商店' },
   'pet.accessories': { en: 'Accessories', zh: '配饰' },
   'pet.unnamed': { en: 'Unnamed Pet', zh: '未命名的宠物' },
-  'pet.yourPet': { en: 'Your pet', zh: '你的宠物' },
+  'pet.yourPet': { en: 'Your pet', zh: '您的宠物' },
   'pet.namePlaceholder': { en: 'Name your pet', zh: '给宠物起个名字' },
   'pet.clickToRename': { en: 'Click to rename', zh: '点击重命名' },
 
@@ -40,7 +40,7 @@ export const pet = {
   'pet.startOverTitle': { en: 'Start Over?', zh: '要重新开始吗？' },
   'pet.startOverBody': {
     en: 'This will reset your pet back to an egg. Your XP, species, and equipped accessories will be cleared. This cannot be undone.',
-    zh: '这会把你的宠物变回一颗蛋。经验值、种族和已装备的配饰都会清空，且无法撤销。',
+    zh: '这会把您的宠物变回一颗蛋。经验值、种族和已装备的配饰都会清空，且无法撤销。',
   },
   'pet.resetting': { en: 'Resetting…', zh: '正在重置…' },
   'pet.yesStartOver': { en: 'Yes, Start Over', zh: '确定重新开始' },

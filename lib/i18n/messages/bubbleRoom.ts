@@ -13,13 +13,13 @@ export const bubbleRoom = {
   'bubble.noQuestions': { en: 'No questions yet!', zh: '还没有问题！' },
   'bubble.beFirst': {
     en: 'Be the first to ask a question. Your bubble will float up for everyone to see.',
-    zh: '来提出第一个问题吧，你的泡泡会飘起来让大家看到。',
+    zh: '来提出第一个问题吧，您的泡泡会飘起来让大家看到。',
   },
   'bubble.askFirst': { en: 'Ask the First Question', zh: '提出第一个问题' },
   'bubble.reply': { en: 'Reply', zh: '回复' },
   'bubble.responses': { en: 'responses', zh: '条回复' },
   'bubble.response': { en: 'response', zh: '条回复' },
-  'bubble.writeResponse': { en: 'Write a response…', zh: '写下你的回复……' },
+  'bubble.writeResponse': { en: 'Write a response…', zh: '写下您的回复……' },
   'bubble.noResponses': {
     en: 'No responses yet. Be the first to reply!',
     zh: '还没有回复，来做第一个回复的人吧！',
@@ -27,12 +27,12 @@ export const bubbleRoom = {
   'bubble.titleLabel': { en: 'Title', zh: '标题' },
   'bubble.titlePlaceholder': {
     en: 'Give your question a short title…',
-    zh: '给你的问题起一个简短的标题……',
+    zh: '给您的问题起一个简短的标题……',
   },
   'bubble.details': { en: 'Details', zh: '详细说明' },
   'bubble.detailsPlaceholder': {
     en: 'Describe your question in detail…',
-    zh: '详细描述你的问题……',
+    zh: '详细描述您的问题……',
   },
   'bubble.postQuestion': { en: 'Post Question', zh: '发布问题' },
   'bubble.deleteQuestion': { en: 'Delete Question', zh: '删除问题' },
@@ -47,7 +47,7 @@ export const bubbleRoom = {
   },
   'bubble.postAnyway': { en: 'Yes, post anyway', zh: '仍然发布' },
   'bubble.goBack': { en: 'No, go back', zh: '返回修改' },
-  'bubble.posting': { en: 'Posting your question…', zh: '正在发布你的问题…' },
+  'bubble.posting': { en: 'Posting your question…', zh: '正在发布您的问题…' },
   'bubble.similar': { en: 'similar', zh: '相似' },
   'bubble.noResults': { en: 'No questions found for', zh: '没有找到相关问题：' },
   'bubble.challenge': { en: 'Challenge', zh: '挑战题' },
@@ -66,7 +66,7 @@ export const bubbleRoom = {
   'bubble.percentSimilar': { en: '{percent}% similar', zh: '相似度 {percent}%' },
 
   // ── Assigned tray ────────────────────────────────────────
-  'bubble.assignedTitle': { en: 'Assigned to You', zh: '指派给你的问题' },
+  'bubble.assignedTitle': { en: 'Assigned to You', zh: '指派给您的问题' },
   'bubble.assignedCounts': {
     en: '{pending} pending · {responded} responded',
     zh: '{pending} 个待回复 · {responded} 个已回复',
@@ -74,7 +74,7 @@ export const bubbleRoom = {
   'bubble.refresh': { en: 'Refresh', zh: '刷新' },
   'bubble.noneAssigned': {
     en: 'No questions assigned to you yet',
-    zh: '还没有指派给你的问题',
+    zh: '还没有指派给您的问题',
   },
   'bubble.allCaughtUp': {
     en: 'All caught up — no pending questions',
@@ -90,11 +90,11 @@ export const bubbleRoom = {
   // ── Room top bar and TA badge ────────────────────────────
   'bubble.applyTaTitle': { en: 'Apply to be a Bubble Room TA', zh: '申请成为泡泡问答室助教' },
   'bubble.applyTa': { en: 'Apply TA', zh: '申请助教' },
-  'bubble.taStatusTitle': { en: 'View your TA application status', zh: '查看你的助教申请状态' },
+  'bubble.taStatusTitle': { en: 'View your TA application status', zh: '查看您的助教申请状态' },
   'bubble.taPending': { en: 'Pending…', zh: '审核中…' },
   'bubble.reviewTaTitle': { en: 'Review TA Applications', zh: '审核助教申请' },
   'bubble.taApps': { en: 'TA Apps', zh: '助教申请' },
-  'bubble.assignedTitleAttr': { en: 'Questions assigned to you', zh: '指派给你的问题' },
+  'bubble.assignedTitleAttr': { en: 'Questions assigned to you', zh: '指派给您的问题' },
   'bubble.assigned': { en: 'Assigned', zh: '指派' },
   'bubble.loadingAuthor': { en: 'Loading…', zh: '加载中…' },
 
@@ -116,11 +116,11 @@ export const bubbleRoom = {
   'bubble.errImageSize': { en: 'Image must be 10 MB or smaller.', zh: '图片不能超过 10 MB。' },
   'bubble.errNoTitle': {
     en: 'Please enter a title for your question.',
-    zh: '请为你的问题填写标题。',
+    zh: '请为您的问题填写标题。',
   },
   'bubble.errNoText': {
     en: 'Please enter your question before submitting.',
-    zh: '请先写下你的问题再提交。',
+    zh: '请先写下您的问题再提交。',
   },
   'bubble.errTextTooLong': {
     en: 'Question must be {max} characters or fewer.',
@@ -156,18 +156,18 @@ export const bubbleRoom = {
   // ── TA application ───────────────────────────────────────
   'bubble.taBlurb': {
     en: 'Bubble Room TAs help other students by answering questions. Your application will be reviewed by a teacher.',
-    zh: '泡泡问答室助教通过回答问题来帮助其他同学。你的申请将由老师审核。',
+    zh: '泡泡问答室助教通过回答问题来帮助其他同学。您的申请将由老师审核。',
   },
   'bubble.taPitchPlaceholder': {
     en: "Tell the teacher a bit about yourself and why you'd make a good TA…",
-    zh: '简单介绍一下你自己，以及你为什么适合当助教……',
+    zh: '简单介绍一下您自己，以及您为什么适合当助教……',
   },
   'bubble.taSubmitApplication': { en: 'Submit Application', zh: '提交申请' },
   'bubble.taWaiting': {
     en: 'Waiting for a teacher to review your application.',
-    zh: '正在等待老师审核你的申请。',
+    zh: '正在等待老师审核您的申请。',
   },
-  'bubble.taYourPitch': { en: 'Your pitch', zh: '你的自荐' },
+  'bubble.taYourPitch': { en: 'Your pitch', zh: '您的自荐' },
   'bubble.taNoPitch': { en: 'No pitch submitted.', zh: '没有提交自荐内容。' },
   'bubble.animationArea': { en: 'Bubble animation area', zh: '泡泡动画区域' },
 } as const
