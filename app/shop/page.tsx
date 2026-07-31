@@ -21,10 +21,12 @@ const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/Anim
 // Image in normal flow sets height; overlays + title absolute on top.
 import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct } from '@/lib/overlayAnimations'
 import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 const SHOP_ZP_KEYFRAMES = buildKeyframesCSS('szp') + `
 @keyframes szp-pulse-glow { 0%,100%{opacity:1} 50%{opacity:0.7} }
 `
 function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
+  const { t } = useLanguage()
   const [overlays, setOverlays] = useState<any[]>([])
   const tl = (skin as any).cover_layout?.title
   const pl = (skin as any).cover_layout?.prompt
@@ -85,7 +87,7 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
         })}
         <div className="absolute text-center px-4 w-full" style={{ left: `${tl?.x ?? 50}%`, top: `${tl?.y ?? 22}%`, transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
           <h2 className="font-bold leading-snug" style={{ fontSize: tl?.fontSize ?? 20, color: tl?.color ?? '#2d1a00', fontFamily: '"Georgia","Times New Roman",serif', textShadow: (tl?.shadow ?? true) ? '0 1px 8px rgba(255,255,255,0.6),0 0 16px rgba(0,0,0,0.4)' : undefined, letterSpacing: '0.04em' }}>
-            Challenge Title Preview
+            {t('shop.challengeTitlePreview')}
           </h2>
         </div>
         <div className="absolute flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap"
@@ -93,7 +95,7 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
             fontSize: pl?.fontSize ?? 14, color: pl?.color ?? 'rgba(240,215,140,0.97)',
             textShadow: '0 1px 4px rgba(0,0,0,0.8)', background: 'rgba(40,25,5,0.72)', border: '1px solid rgba(200,160,60,0.55)',
             backdropFilter: 'blur(6px)', pointerEvents: 'none' }}>
-          <span>📜</span><span style={{ letterSpacing: '0.06em' }}>Open the Book</span>
+          <span>📜</span><span style={{ letterSpacing: '0.06em' }}>{t('shop.openTheBook')}</span>
         </div>
       </div>
     </>
@@ -151,6 +153,7 @@ function BookCoverBrowseModal({
   onRedeem: (item: any) => void
   onClose: () => void
 }) {
+  const { t } = useLanguage()
   const [previewSkin, setPreviewSkin] = useState<BookSkinItem | null>(null)
 
   return (
@@ -160,7 +163,7 @@ function BookCoverBrowseModal({
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
             <div>
               <div className="font-bold text-gray-900 text-lg">📖 Book Covers</div>
-              <div className="text-xs text-gray-400 mt-0.5">Click an image to zoom preview · Buy to unlock</div>
+              <div className="text-xs text-gray-400 mt-0.5">{t('shop.zoomHint')}</div>
             </div>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
           </div>
@@ -184,7 +187,7 @@ function BookCoverBrowseModal({
                       </div>
                       {isOwned && (
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                          <span className="bg-green-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">✓ Owned</span>
+                          <span className="bg-green-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">✓ {t('shop.ownedBadge')}</span>
                         </div>
                       )}
                     </div>
@@ -201,7 +204,7 @@ function BookCoverBrowseModal({
                               : 'bg-amber-600 text-white hover:bg-amber-700'
                           }`}
                         >
-                          {redeeming === si.id ? '…' : isOwned ? '✓' : !canAfford ? '×' : 'Buy'}
+                          {redeeming === si.id ? '…' : isOwned ? '✓' : !canAfford ? '×' : t('shop.buy')}
                         </button>
                       </div>
                       {redeemErrors[si.id] && <p className="text-red-500 text-[10px] mt-0.5">{redeemErrors[si.id]}</p>}
@@ -235,6 +238,7 @@ function BookCoverBrowseModal({
 
 // ── Animated Room Preview Modal ───────────────────────────────────────────────
 function RoomPreviewModal({ bg, onClose }: { bg: PetRoomBg; onClose: () => void }) {
+  const { t } = useLanguage()
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4" onClick={onClose}>
       <div className="relative w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -245,7 +249,7 @@ function RoomPreviewModal({ bg, onClose }: { bg: PetRoomBg; onClose: () => void 
         )}
         <button onClick={onClose}
           className="absolute top-3 right-3 z-10 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
-          ✕ Close
+          ✕ {t('action.close')}
         </button>
         <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-xl text-sm font-semibold">
           {bg.name}
@@ -275,6 +279,7 @@ function RoomBrowseModal({
   onRedeem: (item: any) => void
   onClose: () => void
 }) {
+  const { t } = useLanguage()
   const [previewBg, setPreviewBg] = useState<PetRoomBg | null>(null)
 
   return (
@@ -285,7 +290,7 @@ function RoomBrowseModal({
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
             <div>
               <div className="font-bold text-gray-900 text-lg">🏠 Room Backgrounds</div>
-              <div className="text-xs text-gray-400 mt-0.5">Click an image to preview with animations · Buy to unlock</div>
+              <div className="text-xs text-gray-400 mt-0.5">{t('shop.animateHint')}</div>
             </div>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
           </div>
@@ -309,7 +314,7 @@ function RoomBrowseModal({
                       </div>
                       {isOwned && (
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                          <span className="bg-green-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">✓ Owned</span>
+                          <span className="bg-green-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">✓ {t('shop.ownedBadge')}</span>
                         </div>
                       )}
                       {bg.animation_zones?.length > 0 && (
@@ -330,7 +335,7 @@ function RoomBrowseModal({
                               : 'bg-primary-600 text-white hover:bg-primary-700'
                           }`}
                         >
-                          {redeeming === si.id ? '…' : isOwned ? '✓ Owned' : !canAfford ? 'Too costly' : 'Buy'}
+                          {redeeming === si.id ? '…' : isOwned ? `✓ ${t('shop.ownedBadge')}` : !canAfford ? t('shop.tooCostly') : t('shop.buy')}
                         </button>
                       </div>
                       {redeemErrors[si.id] && <p className="text-red-500 text-xs mt-1">{redeemErrors[si.id]}</p>}
@@ -354,7 +359,7 @@ function RoomBrowseModal({
             )}
             <button onClick={() => setPreviewBg(null)}
               className="absolute top-3 right-3 z-10 bg-black/50 hover:bg-black/70 text-white text-sm font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
-              ✕ Close preview
+              ✕ {t('shop.closePreview')}
             </button>
             <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-xl text-sm font-semibold">
               {previewBg.name}
@@ -378,6 +383,7 @@ function BlindBoxReveal({
   onClose: () => void
   isPhysical?: boolean
 }) {
+  const { t } = useLanguage()
   const [phase, setPhase] = useState<'shake' | 'open' | 'reveal'>('shake')
   const multiple = imageUrls.length > 1
 
@@ -413,7 +419,7 @@ function BlindBoxReveal({
         {phase === 'reveal' ? (
           <>
             <p className="text-xl font-bold text-gray-900 mb-1">
-              {multiple ? `${imageUrls.length} prizes unlocked! 🎉` : 'You got it! 🎉'}
+              {multiple ? t('shop.prizesUnlocked', { count: imageUrls.length }) : t('shop.gotItPrize')}
             </p>
             {isPhysical ? (
               <>
@@ -421,7 +427,7 @@ function BlindBoxReveal({
                 <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5 text-left">
                   <p className="text-amber-800 text-sm font-semibold mb-1">📬 How to pick up your item</p>
                   <p className="text-amber-700 text-xs leading-relaxed">
-                    This is a physical item — please <strong>ping Henry</strong> to arrange pickup or delivery!
+                    {t('shop.physicalNoteShort')}
                   </p>
                 </div>
               </>
@@ -457,20 +463,20 @@ function BlindBoxReveal({
                   }}
                   className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white text-sm font-semibold py-3 rounded-2xl hover:from-primary-600 hover:to-primary-700 transition-all shadow-sm"
                 >
-                  ↓ {multiple ? `Download All (${imageUrls.length})` : 'Download'}
+                  ↓ {multiple ? t('shop.downloadAll', { count: imageUrls.length }) : t('shop.download')}
                 </a>
               )}
               <button
                 onClick={onClose}
                 className="flex-1 bg-gray-100 text-gray-600 text-sm font-semibold py-3 rounded-2xl hover:bg-gray-200 transition-colors"
               >
-                {isPhysical ? 'Got it!' : 'Close'}
+                {isPhysical ? t('shop.gotIt') : t('action.close')}
               </button>
             </div>
           </>
         ) : (
           <p className="text-gray-500 text-sm animate-pulse">
-            {phase === 'shake' ? 'Shaking the box…' : 'Opening…'}
+            {phase === 'shake' ? t('shop.shaking') : t('shop.opening')}
           </p>
         )}
       </div>
@@ -506,6 +512,7 @@ function BlindBoxView({
   onClose: () => void
   isPhysical?: boolean
 }) {
+  const { t } = useLanguage()
   const multiple = imageUrls.length > 1
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -514,7 +521,7 @@ function BlindBoxView({
           {isPhysical ? '📦' : '🎁'} {itemTitle}
         </p>
         <p className="text-lg font-bold text-gray-900 mb-1">
-          {multiple ? `Your ${imageUrls.length} prizes` : 'Your prize'}
+          {multiple ? t('shop.yourPrizes', { count: imageUrls.length }) : t('shop.yourPrize')}
         </p>
 
         {/* Modern image gallery */}
@@ -571,11 +578,12 @@ function BlindBoxView({
 
 
 function PhysicalConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: () => void }) {
+  const { t } = useLanguage()
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center">
         <div className="text-6xl mb-4">📦</div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Redeemed!</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">{t('shop.redeemed')}</h3>
         <p className="text-gray-600 text-sm mb-3">
           You&apos;ve successfully redeemed <strong>{itemTitle}</strong>.
         </p>
@@ -598,6 +606,7 @@ function PhysicalConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: (
 
 // ── Food queued confirmation ──────────────────────────────────────────────────
 function FoodConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: () => void }) {
+  const { t } = useLanguage()
   // Extract the leading emoji from the item title for the modal icon
   const emojiMatch = itemTitle.match(/^\p{Emoji}/u)
   const icon = emojiMatch ? emojiMatch[0] : '🍖'
@@ -606,7 +615,7 @@ function FoodConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: () =>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center">
         <div className="text-6xl mb-4">{icon}</div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Added to food queue!</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">{t('shop.foodQueued')}</h3>
         <p className="text-gray-600 text-sm mb-6">
           <strong>{itemTitle}</strong> is waiting for your pet. Head to your pet page to feed it and earn XP!
         </p>
@@ -614,7 +623,7 @@ function FoodConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: () =>
           onClick={onClose}
           className="w-full bg-orange-500 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-orange-600 transition-colors"
         >
-          Got it! 🐾
+          {t('shop.gotIt')} 🐾
         </button>
       </div>
     </div>
@@ -623,6 +632,7 @@ function FoodConfirm({ itemTitle, onClose }: { itemTitle: string; onClose: () =>
 
 // ── Collapsible Details ───────────────────────────────────────────────────────
 function ItemDetails({ details }: { details: string }) {
+  const { t } = useLanguage()
   const [open, setOpen] = useState(false)
   return (
     <div className="mt-2 border-t border-gray-100 pt-2">
@@ -631,7 +641,7 @@ function ItemDetails({ details }: { details: string }) {
         className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 w-full text-left"
       >
         <span className={`transition-transform ${open ? 'rotate-90' : ''}`}>▶</span>
-        Details
+        {t('shop.details')}
       </button>
       {open && (
         <p className="mt-1.5 text-xs text-gray-600 leading-relaxed whitespace-pre-line">
@@ -644,19 +654,20 @@ function ItemDetails({ details }: { details: string }) {
 
 // ── Category badge ────────────────────────────────────────────────────────────
 function CategoryBadge({ category }: { category: string }) {
+  const { t } = useLanguage()
   if (category === 'food') return (
     <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-orange-100 text-amber-700 px-1.5 py-0.5 rounded-full">
-      🍖 Food
+      🍖 {t('shop.catFood')}
     </span>
   )
   if (category === 'accessory') return (
     <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">
-      🎩 Accessory
+      🎩 {t('shop.catAccessory')}
     </span>
   )
   if (category === 'pet') return (
     <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
-      🐾 New Pet
+      🐾 {t('shop.catNewPet')}
     </span>
   )
   return null
@@ -664,9 +675,10 @@ function CategoryBadge({ category }: { category: string }) {
 
 // ── Commodity type badge ──────────────────────────────────────────────────────
 function CommodityBadge({ type }: { type: string }) {
+  const { t } = useLanguage()
   if (type === 'blindbox') return (
     <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">
-      🎁 Blind Box
+      🎁 {t('shop.catBlindBox')}
     </span>
   )
   if (type === 'physical') return (
@@ -676,7 +688,7 @@ function CommodityBadge({ type }: { type: string }) {
   )
   if (type === 'physical_blindbox') return (
     <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-gradient-to-r from-purple-100 to-amber-100 text-purple-700 px-1.5 py-0.5 rounded-full">
-      🎁📦 Physical Blind Box
+      🎁📦 {t('shop.catPhysicalBlindBox')}
     </span>
   )
   return null
@@ -704,13 +716,14 @@ function MusicBrowseModal({
   onRedeem: (item: any) => void
   onClose: () => void
 }) {
+  const { t } = useLanguage()
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <div>
             <div className="font-bold text-gray-900 text-lg">🎵 Music Tracks</div>
-            <div className="text-xs text-gray-400 mt-0.5">Preview a track · Buy to unlock it in your music player</div>
+            <div className="text-xs text-gray-400 mt-0.5">{t('shop.musicHint')}</div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
         </div>
@@ -754,7 +767,7 @@ function MusicBrowseModal({
                       : 'bg-amber-700 text-white hover:bg-amber-800'
                     }`}
                   >
-                    {redeeming === item.id ? '…' : isOwned ? '✓ Owned' : !canAfford ? 'Too costly' : 'Buy'}
+                    {redeeming === item.id ? '…' : isOwned ? `✓ ${t('shop.ownedBadge')}` : !canAfford ? t('shop.tooCostly') : t('shop.buy')}
                   </button>
                   {redeemErrors[item.id] && <p className="text-red-500 text-[10px]">{redeemErrors[item.id]}</p>}
                 </div>
@@ -769,6 +782,7 @@ function MusicBrowseModal({
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ShopPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const supabase = createClient()
 
@@ -1127,7 +1141,7 @@ export default function ShopPage() {
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">🛍️</div>
-          <p className="text-gray-600">Loading shop...</p>
+          <p className="text-gray-600">{t('shop.loading')}</p>
         </div>
       </div>
     )
@@ -1206,7 +1220,7 @@ export default function ShopPage() {
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-3">
           <HomeButton noSlash />
-          <h1 className="text-xl font-bold text-gray-900">Points Shop</h1>
+          <h1 className="text-xl font-bold text-gray-900">{t('shop.pageTitle')}</h1>
         </div>
       </header>
 
@@ -1217,13 +1231,13 @@ export default function ShopPage() {
 
         {/* Balance */}
         <div className="mb-8 bg-gradient-to-br from-primary-500 to-accent-blue rounded-3xl px-6 py-6 text-white shadow-lg">
-          <p className="text-white/80 text-sm font-medium uppercase tracking-wide mb-1">Your Spendable Balance</p>
+          <p className="text-white/80 text-sm font-medium uppercase tracking-wide mb-1">{t('shop.spendableBalance')}</p>
           <p className="text-5xl font-bold">{balance}</p>
           <p className="text-white/70 text-sm mt-1">points available to spend</p>
         </div>
 
         {/* Items Grid */}
-        <h2 className="text-xl font-bold text-gray-900 mb-3">Available Rewards</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-3">{t('shop.availableRewards')}</h2>
 
         {/* Category tabs — pet categories hidden until pet feature launches on main */}
         <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
@@ -1250,8 +1264,8 @@ export default function ShopPage() {
         {items.length === 0 ? (
           <div className="mb-8 text-center py-16 text-gray-400">
             <div className="text-5xl mb-3">🛍️</div>
-            <p className="text-lg font-medium text-gray-500">No rewards available yet.</p>
-            <p className="text-sm mt-1">Check back soon!</p>
+            <p className="text-lg font-medium text-gray-500">{t('shop.noRewards')}</p>
+            <p className="text-sm mt-1">{t('shop.checkBack')}</p>
           </div>
         ) : (() => {
           const roomBgItemIds = new Set(roomBgs.map(bg => bg.shop_item_id))
@@ -1269,7 +1283,7 @@ export default function ShopPage() {
           return filteredItems.length === 0 ? (
             <div className="mb-8 text-center py-12 text-gray-400">
               <div className="text-4xl mb-2">🎁</div>
-              <p className="text-sm font-medium text-gray-500">No items in this category yet.</p>
+              <p className="text-sm font-medium text-gray-500">{t('shop.noItemsInCategory')}</p>
             </div>
           ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 mb-10">
@@ -1294,12 +1308,12 @@ export default function ShopPage() {
                     🎵 {musicTracks.length} tracks
                   </div>
                   <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-white text-sm font-bold">Browse Music</span>
+                    <span className="text-white text-sm font-bold">{t('shop.browseMusic')}</span>
                     <span className="text-white/80 text-xs mt-0.5">{musicTracks.length} available</span>
                   </div>
                 </div>
                 <div className="p-3 flex flex-col flex-1">
-                  <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Music Tracks</h3>
+                  <h3 className="font-semibold text-gray-900 text-sm mb-0.5">{t('shop.musicTracks')}</h3>
                   <p className="text-gray-500 text-xs line-clamp-2 mb-auto">Unlock premium study music for your player. Preview before buying.</p>
                   <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
                     <span className="text-amber-700 font-bold text-sm">
@@ -1331,7 +1345,7 @@ export default function ShopPage() {
                     ))}
                   </div>
                   <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-white text-sm font-bold">Browse Rooms</span>
+                    <span className="text-white text-sm font-bold">{t('shop.browseRooms')}</span>
                     <span className="text-white/80 text-xs mt-0.5">{roomBgs.length} available</span>
                   </div>
                   <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-primary-700 text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm">
@@ -1339,8 +1353,8 @@ export default function ShopPage() {
                   </div>
                 </div>
                 <div className="p-3 flex flex-col flex-1">
-                  <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Room Backgrounds</h3>
-                  <p className="text-gray-500 text-xs line-clamp-2 mb-auto">Unlock a themed room for your pet. Tap to browse all styles.</p>
+                  <h3 className="font-semibold text-gray-900 text-sm mb-0.5">{t('shop.roomBackgrounds')}</h3>
+                  <p className="text-gray-500 text-xs line-clamp-2 mb-auto">{t('shop.roomsBlurb')}</p>
                   <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
                     <span className="text-primary-600 font-bold text-sm">
                       from {Math.min(...roomBgs.map(bg => bg.shopItem?.cost ?? 999))}
@@ -1371,7 +1385,7 @@ export default function ShopPage() {
                     ))}
                   </div>
                   <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-white text-sm font-bold">Browse Covers</span>
+                    <span className="text-white text-sm font-bold">{t('shop.browseCovers')}</span>
                     <span className="text-white/80 text-xs mt-0.5">{bookSkins.length} available</span>
                   </div>
                   <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm">
@@ -1379,7 +1393,7 @@ export default function ShopPage() {
                   </div>
                 </div>
                 <div className="p-3 flex flex-col flex-1">
-                  <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Book Covers</h3>
+                  <h3 className="font-semibold text-gray-900 text-sm mb-0.5">{t('shop.bookCovers')}</h3>
                   <p className="text-gray-500 text-xs line-clamp-2 mb-auto">Personalise your challenge book cover. Tap to browse all designs.</p>
                   <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
                     <span className="text-amber-600 font-bold text-sm">
@@ -1442,7 +1456,7 @@ export default function ShopPage() {
                         ) : (
                           <>
                             <span className="text-5xl mb-1">📦</span>
-                            <span className="text-xs font-semibold text-amber-600">Physical Prize</span>
+                            <span className="text-xs font-semibold text-amber-600">{t('shop.catPhysicalPrize')}</span>
                           </>
                         )}
                       </div>
@@ -1457,7 +1471,7 @@ export default function ShopPage() {
                     {/* Sold out / Owned overlay */}
                     {outOfStock && (
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <span className="bg-white text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">Sold Out</span>
+                        <span className="bg-white text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">{t('shop.soldOutBadge')}</span>
                       </div>
                     )}
                     {isOwned && !outOfStock && (
@@ -1558,11 +1572,11 @@ export default function ShopPage() {
         })()}
 
         {/* Redemption History */}
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Your Redemption History</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">{t('shop.historyTitle')}</h2>
         {sortedRedemptions.length === 0 ? (
           <Card>
             <Card.Body>
-              <p className="text-center text-gray-500 py-6">You haven&apos;t redeemed anything yet.</p>
+              <p className="text-center text-gray-500 py-6">{t('shop.noHistory')}</p>
             </Card.Body>
           </Card>
         ) : (
@@ -1575,7 +1589,7 @@ export default function ShopPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className={`font-medium text-gray-900 ${r.refunded_at ? 'line-through text-gray-400' : ''}`}>{r.item_title}</p>
                         {r.refunded_at && (
-                          <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">Refunded</span>
+                          <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{t('shop.refunded')}</span>
                         )}
                         {!r.refunded_at && r.item_commodity_type === 'blindbox' && (
                           <span className="text-[10px] font-semibold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">🎁 Blind Box</span>
@@ -1600,7 +1614,7 @@ export default function ShopPage() {
                           onClick={() => setBlindboxView({ imageUrls: r.blindbox_image_urls?.length ? r.blindbox_image_urls : [r.blindbox_image_url!], itemTitle: r.item_title, isPhysical: r.item_commodity_type === 'physical_blindbox' })}
                           className="text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg transition-colors"
                         >
-                          View Prize
+                          {t('shop.viewPrize')}
                         </button>
                       )}
                       <span className={`font-bold ${r.refunded_at ? 'text-gray-400 line-through' : 'text-primary-600'}`}>-{r.points_spent} pts</span>
