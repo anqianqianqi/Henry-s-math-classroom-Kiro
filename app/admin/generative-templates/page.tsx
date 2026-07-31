@@ -377,7 +377,7 @@ function TemplateCard({
               {t('genTpl.generate')}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => onEdit(template)}>
-              Edit
+              {t('action.edit')}
             </Button>
             <Button size="sm" variant="danger" onClick={() => onDelete(template.id)}>
               {t('action.delete')}
@@ -708,7 +708,7 @@ function TemplateForm({
           {isEditing ? 'Edit Template' : 'Create Template'}
         </h1>
         <p className="text-gray-600">
-          Define a parameterized challenge pattern with variables
+          {t('genTpl.definitionHint')}
         </p>
       </div>
 
@@ -816,7 +816,7 @@ function TemplateForm({
                 {/* Tags */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tags
+                    {t('admin.tags')}
                   </label>
                   <TagInput
                     selectedTagIds={tagIds}
@@ -931,7 +931,7 @@ function TemplateForm({
               <Card.Body>
                 <div className="text-center py-12 text-gray-400">
                   <p className="text-4xl mb-3">🎲</p>
-                  <p className="font-medium">Click &quot;Preview&quot; to see sample challenges</p>
+                  <p className="font-medium">{t('genTpl.previewHint')}</p>
                   <p className="text-sm mt-1">3 random samples will be generated without saving</p>
                 </div>
               </Card.Body>

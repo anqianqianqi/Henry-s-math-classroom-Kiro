@@ -6,6 +6,7 @@
 // No drag, no fixed positioning — scrolls naturally with the page.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import DidiSvg, { type DidiStage } from './DidiSvg'
 
 interface PetStatus {
@@ -63,6 +64,7 @@ function poseMs(pose: Pose): number {
 }
 
 export default function InlinePet() {
+  const { t } = useLanguage()
   const [status, setStatus] = useState<PetStatus | null>(null)
   const [pose, setPose] = useState<Pose>('sleeping')
   const [speech, setSpeech] = useState<string | null>(null)
@@ -213,7 +215,7 @@ export default function InlinePet() {
             {/* Name toggle */}
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, cursor: 'pointer', fontSize: 12, color: '#5c3d2e', userSelect: 'none' }}>
               <input type="checkbox" checked={showName} onChange={e => { setShowName(e.target.checked); try { localStorage.setItem('didi-show-name', String(e.target.checked)) } catch {} }} style={{ accentColor: '#a07060' }} />
-              Show name tag
+              {t('pet.showNameTag')}
             </label>
 
             {/* Streak */}

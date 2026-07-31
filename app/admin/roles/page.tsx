@@ -230,7 +230,7 @@ export default function AdminRolesPage() {
                         size="sm"
                         onClick={() => assignRole(user.id, 'teacher')}
                       >
-                        Make Teacher
+                        {t('admin.makeTeacher')}
                       </Button>
                     ) : (
                       <Button
@@ -238,7 +238,7 @@ export default function AdminRolesPage() {
                         variant="secondary"
                         onClick={() => removeRole(user.id, 'teacher')}
                       >
-                        Remove Teacher
+                        {t('admin.removeTeacher')}
                       </Button>
                     )}
                     {!user.roles.includes('student') ? (
@@ -247,7 +247,7 @@ export default function AdminRolesPage() {
                         variant="outline"
                         onClick={() => assignRole(user.id, 'student')}
                       >
-                        Make Student
+                        {t('admin.makeStudent')}
                       </Button>
                     ) : (
                       <Button
@@ -255,7 +255,7 @@ export default function AdminRolesPage() {
                         variant="secondary"
                         onClick={() => removeRole(user.id, 'student')}
                       >
-                        Remove Student
+                        {t('admin.removeStudent')}
                       </Button>
                     )}
                   </div>
@@ -384,7 +384,7 @@ export default function AdminRolesPage() {
                   {creating ? 'Creating…' : 'Create User'}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => setShowCreate(false)} fullWidth>
-                  Cancel
+                  {t('action.cancel')}
                 </Button>
               </div>
             </form>

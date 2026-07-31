@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { ReactNode } from 'react'
 
 interface BreadcrumbItem {
@@ -34,6 +35,7 @@ interface PageHeaderProps {
  *   />
  */
 export function PageHeader({ breadcrumbs, actions, maxWidth = 'max-w-7xl' }: PageHeaderProps) {
+  const { t } = useLanguage()
   return (
     <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
       <div className={`${maxWidth} mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4`}>
@@ -44,7 +46,7 @@ export function PageHeader({ breadcrumbs, actions, maxWidth = 'max-w-7xl' }: Pag
             href="/dashboard"
             className="text-sm font-semibold text-primary-600 hover:text-primary-700 transition-colors shrink-0"
           >
-            Henry&apos;s Math
+            {t('auth.appNameShort')}
           </Link>
 
           {/* Breadcrumb items */}

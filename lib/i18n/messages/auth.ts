@@ -15,6 +15,8 @@
 export const auth = {
   // ── Shared ───────────────────────────────────────────────
   'auth.appName': { en: "Henry's Math Classroom", zh: 'Henry 数学教室' },
+  /** Short form for narrow headers. */
+  'auth.appNameShort': { en: "Henry's Math", zh: 'Henry 数学' },
   'auth.email': { en: 'Email', zh: '邮箱' },
   'auth.password': { en: 'Password', zh: '密码' },
   'auth.passwordHint': { en: 'At least 6 characters', zh: '至少 6 个字符' },
@@ -78,6 +80,14 @@ export const auth = {
   'auth.newPassword': { en: 'New Password', zh: '新密码' },
   'auth.confirmNewPassword': { en: 'Confirm New Password', zh: '确认新密码' },
   'auth.updatePassword': { en: 'Update Password', zh: '更新密码' },
+  // ── Public landing page ──────────────────────────────────
+  'auth.landingTagline': {
+    en: 'Welcome to your math learning platform',
+    zh: '欢迎来到您的数学学习平台',
+  },
+  'auth.login': { en: 'Login', zh: '登录' },
+  'auth.signUp': { en: 'Sign Up', zh: '注册' },
+
   'auth.signingIn': { en: 'Signing in…', zh: '正在登录…' },
   'auth.signingOut': { en: 'Signing out…', zh: '正在退出…' },
 } as const

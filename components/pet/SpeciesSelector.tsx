@@ -4,6 +4,7 @@
 // controls that condition, but this component is fully self-contained.
 
 import type { Species } from '@/lib/types/pet'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 interface SpeciesSelectorProps {
   onSelect: (species: Species) => void
@@ -173,13 +174,14 @@ const SPECIES_OPTIONS: SpeciesOption[] = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SpeciesSelector({ onSelect, className }: SpeciesSelectorProps) {
+  const { t } = useLanguage()
   return (
     <div className={className}>
       <h2 className="text-center text-xl font-semibold text-gray-800 mb-2">
-        Choose Your Pet
+        {t('pet.chooseYourPet')}
       </h2>
       <p className="text-center text-sm text-gray-500 mb-6">
-        Pick a species to hatch from your egg
+        {t('pet.chooseHint')}
       </p>
 
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
