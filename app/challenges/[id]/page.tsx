@@ -1629,8 +1629,10 @@ export default function ChallengePage() {
             )}</>
           }
         >
-          {/* Tags */}
-          {challenge.tag_ids && challenge.tag_ids.length > 0 && (
+          {/* Tags — suppressed on the book page, where the worksheet prints its
+              own Tags row from the .henryproblem snapshot and this would be a
+              near-duplicate of it directly above. */}
+          {!onBookPage && challenge.tag_ids && challenge.tag_ids.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-5">
               {challenge.tag_ids.map((tagId: string) => {
                 const name = tagNames[tagId]?.[tagLang] || tagNames[tagId]?.['en'] || tagNames[tagId]?.['zh'] || tagId.slice(0, 8)
@@ -1656,7 +1658,11 @@ export default function ChallengePage() {
             <HenryProblemSheet
               problem={henrySheet.problem}
               graphUrl={challenge.image_url}
-              zoomable
+              // On the book page the worksheet must not paint a sheet of its
+              // own, and the spread is already the enlarged view — a second
+              // zoom layer inside it just adds a dead affordance.
+              theme={onBookPage ? pageNativeHenryTheme : undefined}
+              zoomable={!onBookPage}
               className="mb-1"
             />
           ) : (

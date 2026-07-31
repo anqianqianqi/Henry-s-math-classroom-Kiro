@@ -186,9 +186,15 @@ export const plainHenryTheme: HenrySheetTheme = {
 export const pageNativeHenryTheme: HenrySheetTheme = {
   palette: {
     ...henryPalette,
+    // The sheet root, the wording panels and the graph box all paint
+    // `card`/`paper` and outline themselves with `border`. Transparent fills
+    // alone still leave three nested rounded outlines, which read as a page
+    // inside a page just as much as the fills did — so the border goes too.
+    // What is left is title, score, tags, graph and wording sitting on the
+    // book's own paper with nothing drawn under or around them.
     paper: 'transparent',
     card: 'transparent',
-    border: 'rgba(100,60,10,0.22)',
+    border: 'transparent',
   },
   header: {
     ...defaultHenryTheme.header,
