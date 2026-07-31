@@ -291,7 +291,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
 
         {/* Challenge link */}
         {question.challenge_id && (
-          <div className="mt-0.5 text-[9px] font-semibold text-yellow-600 flex items-center gap-0.5 relative z-10">
+          <div className="mt-0.5 text-[9px] font-semibold text-purple-600 flex items-center gap-0.5 relative z-10">
             <span aria-hidden="true">🎯</span>
             <span>Challenge</span>
           </div>
