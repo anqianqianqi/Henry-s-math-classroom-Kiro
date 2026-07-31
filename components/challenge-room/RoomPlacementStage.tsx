@@ -46,12 +46,32 @@ export interface RoomPlacementStageProps {
   hideRoom?: boolean
   /** Preview text printed into the two visible page textures at the spread. */
   pagePreview?: { left?: PageContent; right?: PageContent }
+  /**
+   * Where the book actually is on screen, in percent of the stage.
+   *
+   * Needed because the group origin is NOT the book's centre: the page geometry
+   * spans local X 0..2, so a page's origin sits at its spine edge, and when the
+   * book is closed the whole thing is offset from that origin. Anything
+   * anchoring to the book (labels, hints) has to use this instead.
+   */
+  onBookRect?: (rect: { xPct: number; yPct: number; wPct: number; hPct: number }) => void
 }
 
 const deg = (value: number) => THREE.MathUtils.degToRad(value)
 
 /** Normalised longest-side length, so any re-bake lands at the same size. */
 const MODEL_TARGET_SIZE = 2.35
+
+/**
+ * A page's own corners, from the baked mesh bounds: X 0..2, Z -1.333..1.333,
+ * flat in Y. Note X starts at 0 — the origin is the spine edge, not the middle.
+ */
+const PAGE_CORNERS = [
+  new THREE.Vector3(0, 0, -1.3335),
+  new THREE.Vector3(2, 0, -1.3335),
+  new THREE.Vector3(2, 0, 1.3335),
+  new THREE.Vector3(0, 0, 1.3335),
+]
 
 export function RoomPlacementStage({
   roomUrl,
@@ -69,6 +89,7 @@ export function RoomPlacementStage({
   onCanvasClick,
   hideRoom = false,
   pagePreview,
+  onBookRect,
 }: RoomPlacementStageProps) {
   const stageRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -86,6 +107,10 @@ export function RoomPlacementStage({
   const playingRef = useRef(playing)
   const rafRef = useRef(0)
   const lastReportRef = useRef(0)
+  const pageNodesRef = useRef<THREE.Object3D[]>([])
+  const onBookRectRef = useRef(onBookRect)
+  const lastRectRef = useRef(0)
+  const prevRectRef = useRef<{ xPct: number; yPct: number; wPct: number; hPct: number } | null>(null)
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -95,6 +120,7 @@ export function RoomPlacementStage({
   useEffect(() => { animationRef.current = animation }, [animation])
   useEffect(() => { playingRef.current = playing }, [playing])
   useEffect(() => { frameRef.current = frame }, [frame])
+  useEffect(() => { onBookRectRef.current = onBookRect }, [onBookRect])
 
   // ── Scene setup (once) ────────────────────────────────────────────────────
   useEffect(() => {
@@ -193,6 +219,45 @@ export function RoomPlacementStage({
       }
 
       renderer.render(scene, camera)
+
+      // Report where the book landed, so callers can anchor labels to it.
+      // Projecting the page quads is the only reliable way — the group origin
+      // is the spine edge, not the book's centre. Throttled and change-gated so
+      // it does not re-render the parent every frame.
+      if (onBookRectRef.current && pageNodesRef.current.length > 0
+          && time - lastRectRef.current > 120) {
+        lastRectRef.current = time
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+        const point = new THREE.Vector3()
+        for (const node of pageNodesRef.current) {
+          for (const corner of PAGE_CORNERS) {
+            point.copy(corner).applyMatrix4(node.matrixWorld).project(camera)
+            const x = (point.x * 0.5 + 0.5) * 100
+            const y = (-point.y * 0.5 + 0.5) * 100
+            if (x < minX) minX = x
+            if (x > maxX) maxX = x
+            if (y < minY) minY = y
+            if (y > maxY) maxY = y
+          }
+        }
+        const rect = {
+          xPct: (minX + maxX) / 2,
+          yPct: (minY + maxY) / 2,
+          wPct: maxX - minX,
+          hPct: maxY - minY,
+        }
+        const prev = prevRectRef.current
+        if (
+          !prev ||
+          Math.abs(prev.xPct - rect.xPct) > 0.4 ||
+          Math.abs(prev.yPct - rect.yPct) > 0.4 ||
+          Math.abs(prev.wPct - rect.wPct) > 0.4
+        ) {
+          prevRectRef.current = rect
+          onBookRectRef.current(rect)
+        }
+      }
+
       rafRef.current = window.requestAnimationFrame(render)
     }
     rafRef.current = window.requestAnimationFrame(render)
@@ -238,6 +303,12 @@ export function RoomPlacementStage({
         group.add(model)
         sceneRef.current.add(group)
         groupRef.current = group
+
+        pageNodesRef.current = []
+        model.traverse(object => {
+          if (object.name.startsWith('Page-')) pageNodesRef.current.push(object)
+        })
+        prevRectRef.current = null
 
         const materials = new Map<string, THREE.Material>()
         model.traverse(object => {
@@ -295,6 +366,7 @@ export function RoomPlacementStage({
       mixerRef.current = null
       actionRef.current = null
       materialsRef.current = new Map()
+      pageNodesRef.current = []
       setModelReady(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

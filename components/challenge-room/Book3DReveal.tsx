@@ -87,6 +87,7 @@ export function Book3DReveal({
   // Placement is animated during the zoom, so the stage reads this rather than
   // the prop. The saved room placement stays untouched.
   const [livePlacement, setLivePlacement] = useState<Placement>(placement)
+  const [bookRect, setBookRect] = useState<{ xPct: number; yPct: number; wPct: number; hPct: number } | null>(null)
   const zoomRafRef = useRef(0)
 
   useEffect(() => {
@@ -176,16 +177,14 @@ export function Book3DReveal({
   const zoomed = phase === 'zoomed'
 
   /**
-   * Where the book sits on the stage, in percent.
-   *
-   * The camera is orthographic and the model is centred on its group's origin,
-   * so world -> screen is a plain linear map and the group's own x/y IS the
-   * book's centre. No raycasting or projection needed: the frustum is
-   * viewHeight 4 by viewWidth 6 (the stage is locked to 3:2).
+   * Where the book actually is, reported by the stage from the projected page
+   * quads. Do NOT derive this from placement.x/y — the page geometry spans
+   * local X 0..2, so the group origin is the spine edge, and a closed book sits
+   * well off it. Falls back to stage centre until the first report arrives.
    */
   const bookCentre = {
-    left: `${50 + (placement.x / 6) * 100}%`,
-    top: `${50 - (placement.y / 4) * 100}%`,
+    left: `${bookRect?.xPct ?? 50}%`,
+    top: `${bookRect?.yPct ?? 50}%`,
   }
 
   /**
@@ -283,6 +282,7 @@ export function Book3DReveal({
             // Only print once the flip has settled — mid-turn the left page is
             // airborne and the text would tumble through the air with it.
             pagePreview={phase === 'open' || zoomed ? pagePreview : undefined}
+            onBookRect={setBookRect}
           />
         </div>
 
@@ -307,7 +307,7 @@ export function Book3DReveal({
           <button
             type="button"
             onClick={zoomIn}
-            style={{ left: bookCentre.left, top: `calc(${bookCentre.top} + 22%)`, transform: 'translate(-50%, -50%)' }}
+            style={{ left: bookCentre.left, top: `${(bookRect?.yPct ?? 50) + (bookRect?.hPct ?? 0) / 2 + 4}%`, transform: 'translate(-50%, -50%)' }}
             className="absolute w-fit rounded-full bg-black/35 px-3.5 py-1.5 text-xs font-medium text-white/90 backdrop-blur-sm transition-colors hover:bg-black/60 hover:text-white"
           >
             Click to read and answer
