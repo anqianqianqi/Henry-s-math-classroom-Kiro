@@ -96,6 +96,25 @@ export const catalog = {
   'decor.active': { en: 'Active', zh: '使用中' },
   'decor.priceInPoints': { en: 'Price in points', zh: '价格（积分）' },
 
+  // ── Dashboard ────────────────────────────────────────────
+  'dash.mathClass': { en: 'Math Class', zh: '数学课堂' },
+  'dash.totalScore': { en: 'Total Score', zh: '总积分' },
+  'dash.shopBalance': { en: 'Shop Balance', zh: '商店余额' },
+  'dash.explore': { en: 'Explore', zh: '浏览' },
+  'dash.manage': { en: 'Manage', zh: '管理' },
+  'dash.userRoles': { en: 'User Roles', zh: '用户角色' },
+  'dash.tags': { en: 'Tags', zh: '标签' },
+  'dash.scheduler': { en: 'Scheduler', zh: '排课' },
+  'dash.challengeBank': { en: 'Challenge Bank', zh: '题库' },
+  'dash.students': { en: 'Students', zh: '学生' },
+  'dash.history': { en: 'History', zh: '记录' },
+  'dash.grade': { en: 'Grade', zh: '批改' },
+  'dash.homework': { en: 'Homework', zh: '作业' },
+  'dash.joinRequests': {
+    en: 'Students are waiting to join your classes',
+    zh: '有学生正在等待加入你的班级',
+  },
+
   // ── Bubble room ──────────────────────────────────────────
   'bubble.askQuestion': { en: 'Ask a Question', zh: '提问' },
   'bubble.ask': { en: 'Ask', zh: '提问' },

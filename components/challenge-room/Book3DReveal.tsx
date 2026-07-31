@@ -420,12 +420,15 @@ export function Book3DReveal({
             </div>
           </div>
 
-          {/* Fixed so it stays reachable however far down the page you scroll. */}
+          {/* Fixed so it stays reachable however far down the page you scroll.
+              Top-LEFT because the global language switcher occupies top-right
+              on every page — a page's own chrome should move around the shared
+              control, not the other way round. */}
           <button
             type="button"
             onClick={zoomOut}
             aria-label="Back to the room"
-            className="fixed right-5 top-5 z-[60] rounded-full bg-black/60 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/80"
+            className="fixed left-5 top-5 z-[60] rounded-full bg-black/60 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/80"
           >
             ✕ Back to the room
           </button>
