@@ -170,4 +170,15 @@ export const bubbleRoom = {
   'bubble.taYourPitch': { en: 'Your pitch', zh: '您的自荐' },
   'bubble.taNoPitch': { en: 'No pitch submitted.', zh: '没有提交自荐内容。' },
   'bubble.animationArea': { en: 'Bubble animation area', zh: '泡泡动画区域' },
+
+  // ── My Bubbles panel ─────────────────────────────────────
+  'myBubbles.mine': { en: 'My Bubbles', zh: '我的泡泡' },
+  'myBubbles.all': { en: 'All Bubbles', zh: '全部泡泡' },
+  'myBubbles.tabActive': { en: 'Active ({count})', zh: '进行中（{count}）' },
+  'myBubbles.tabExpired': { en: 'Expired ({count})', zh: '已过期（{count}）' },
+  'myBubbles.noneActive': { en: 'No active bubbles.', zh: '没有进行中的泡泡。' },
+  'myBubbles.noneExpired': { en: 'No expired bubbles.', zh: '没有已过期的泡泡。' },
+  'myBubbles.expiresIn': { en: 'Expires in {days}d', zh: '{days} 天后过期' },
+  'myBubbles.expire': { en: 'Expire', zh: '结束' },
+  'myBubbles.revive': { en: 'Revive', zh: '重新开启' },
 } as const

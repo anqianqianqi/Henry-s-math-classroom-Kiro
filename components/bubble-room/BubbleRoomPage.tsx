@@ -340,7 +340,7 @@ export function BubbleRoomPage({
           <button
             type="button"
             onClick={() => setShowMyBubbles(true)}
-            title={currentUserRole === 'teacher' ? 'All Bubbles' : 'My Bubbles'}
+            title={currentUserRole === 'teacher' ? t('myBubbles.all') : t('myBubbles.mine')}
             className="
               shrink-0 flex items-center gap-1
               px-3 py-2 rounded-xl
