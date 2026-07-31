@@ -132,6 +132,20 @@ export function MyBubblesPanel({
     setActionId(null)
   }
 
+  async function handleDelete(id: string) {
+    if (!confirm('Delete this bubble permanently? This cannot be undone.')) return
+    setActionId(id)
+    const { error } = await supabase
+      .from('bubble_room_questions')
+      .delete()
+      .eq('id', id)
+
+    if (!error) {
+      setBubbles((prev) => prev.filter((b) => b.id !== id))
+    }
+    setActionId(null)
+  }
+
   async function handleRevive(id: string) {
     setActionId(id)
     const newExpiry = new Date(
@@ -182,7 +196,7 @@ export function MyBubblesPanel({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-900">
-            🫧 {currentUserRole === 'teacher' ? t('myBubbles.all') : t('myBubbles.mine')}
+            🫧 {t('myBubbles.mine')}
           </h2>
           <button
             type="button"
@@ -274,38 +288,55 @@ export function MyBubblesPanel({
                     </div>
                   </div>
 
-                  {/* Action button */}
-                  {isActive ? (
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isActive ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleExpireNow(b.id)}
+                        className="
+                          text-xs font-medium
+                          px-3 py-1.5 rounded-lg
+                          border border-red-200 text-red-600 bg-red-50
+                          hover:bg-red-100 disabled:opacity-50
+                          transition-colors
+                        "
+                      >
+                        {busy ? '…' : t('myBubbles.expire')}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleRevive(b.id)}
+                        className="
+                          text-xs font-medium
+                          px-3 py-1.5 rounded-lg
+                          border border-emerald-300 text-emerald-700 bg-emerald-50
+                          hover:bg-emerald-100 disabled:opacity-50
+                          transition-colors
+                        "
+                      >
+                        {busy ? '…' : `↻ ${t('myBubbles.revive')}`}
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => handleExpireNow(b.id)}
+                      onClick={() => handleDelete(b.id)}
+                      title={t('myBubbles.deletePermanently')}
                       className="
-                        shrink-0 text-xs font-medium
-                        px-3 py-1.5 rounded-lg
-                        border border-red-200 text-red-600 bg-red-50
-                        hover:bg-red-100 disabled:opacity-50
-                        transition-colors
+                        text-xs font-medium
+                        px-2.5 py-1.5 rounded-lg
+                        border border-gray-200 text-gray-500 bg-gray-50
+                        hover:bg-red-50 hover:border-red-200 hover:text-red-600
+                        disabled:opacity-50 transition-colors
                       "
                     >
-                      {busy ? '…' : t('myBubbles.expire')}
+                      🗑
                     </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => handleRevive(b.id)}
-                      className="
-                        shrink-0 text-xs font-medium
-                        px-3 py-1.5 rounded-lg
-                        border border-emerald-300 text-emerald-700 bg-emerald-50
-                        hover:bg-emerald-100 disabled:opacity-50
-                        transition-colors
-                      "
-                    >
-                      {busy ? '…' : `↻ ${t('myBubbles.revive')}`}
-                    </button>
-                  )}
+                  </div>
                 </div>
               )
             })

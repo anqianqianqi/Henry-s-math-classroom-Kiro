@@ -173,7 +173,6 @@ export const bubbleRoom = {
 
   // ── My Bubbles panel ─────────────────────────────────────
   'myBubbles.mine': { en: 'My Bubbles', zh: '我的泡泡' },
-  'myBubbles.all': { en: 'All Bubbles', zh: '全部泡泡' },
   'myBubbles.tabActive': { en: 'Active ({count})', zh: '进行中（{count}）' },
   'myBubbles.tabExpired': { en: 'Expired ({count})', zh: '已过期（{count}）' },
   'myBubbles.noneActive': { en: 'No active bubbles.', zh: '没有进行中的泡泡。' },
@@ -181,4 +180,5 @@ export const bubbleRoom = {
   'myBubbles.expiresIn': { en: 'Expires in {days}d', zh: '{days} 天后过期' },
   'myBubbles.expire': { en: 'Expire', zh: '结束' },
   'myBubbles.revive': { en: 'Revive', zh: '重新开启' },
+  'myBubbles.deletePermanently': { en: 'Delete permanently', zh: '永久删除' },
 } as const

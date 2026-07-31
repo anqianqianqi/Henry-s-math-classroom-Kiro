@@ -56,3 +56,33 @@ CREATE POLICY "brq_update"
         AND r.name IN ('teacher', 'administrator')
     )
   );
+
+-- 6. Enforce expiry at the RLS layer — expired bubbles are invisible to ALL users
+--    This replaces the brq_select policy from make-bubble-room-global.sql.
+--    Even if someone queries directly, they cannot see expired rows.
+DROP POLICY IF EXISTS "brq_select" ON bubble_room_questions;
+CREATE POLICY "brq_select"
+  ON bubble_room_questions FOR SELECT
+  USING (
+    auth.uid() IS NOT NULL
+    AND (expires_at IS NULL OR expires_at > now())
+  );
+
+-- Exception: authors and teachers/admins can still see their own expired bubbles
+-- (needed for My Bubbles management panel).
+-- We achieve this by adding a separate policy for owners/admins:
+CREATE POLICY "brq_select_own_expired"
+  ON bubble_room_questions FOR SELECT
+  USING (
+    auth.uid() IS NOT NULL
+    AND (
+      user_id = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM user_roles ur
+        JOIN roles r ON r.id = ur.role_id
+        WHERE ur.user_id = auth.uid()
+          AND ur.class_id IS NULL
+          AND r.name IN ('teacher', 'administrator')
+      )
+    )
+  );

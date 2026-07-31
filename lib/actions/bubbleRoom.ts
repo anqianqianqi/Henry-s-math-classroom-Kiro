@@ -436,9 +436,11 @@ export async function fetchInitialQuestions(): Promise<BubbleQuestion[]> {
         image_url,
         created_at,
         updated_at,
+        expires_at,
         profiles:user_id ( full_name, nickname )
       `)
-      .gte('created_at', new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString())
+      .or(`expires_at.gt.${new Date().toISOString()},expires_at.is.null`)
+      .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -486,6 +488,7 @@ export async function fetchInitialQuestions(): Promise<BubbleQuestion[]> {
       image_url: row.image_url ?? null,
       created_at: row.created_at,
       updated_at: row.updated_at,
+      expires_at: row.expires_at ?? null,
       author_display_name:
         (row.profiles as any)?.nickname ??
         (row.profiles as any)?.full_name ??
@@ -526,6 +529,7 @@ export async function searchQuestions(
         `id, class_id, user_id, challenge_id, title, text, image_url, created_at, updated_at,
          profiles:user_id ( full_name, nickname )`,
       )
+      .or(`expires_at.gt.${new Date().toISOString()},expires_at.is.null`)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit) // fetch one extra to detect hasMore
 

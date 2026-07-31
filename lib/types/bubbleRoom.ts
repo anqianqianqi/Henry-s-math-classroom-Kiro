@@ -26,6 +26,7 @@ export interface BubbleQuestion {
   image_url: string | null      // optional attached image
   created_at: string            // ISO 8601
   updated_at: string
+  expires_at?: string | null    // null = legacy row (no expiry set yet)
   author_display_name: string   // joined from profiles
   response_count: number        // COUNT from bubble_room_responses
   unique_view_count: number     // COUNT from bubble_room_question_views
