@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState, useRef } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
@@ -65,6 +66,7 @@ interface TemplateItem {
 }
 
 export default function ChallengeBankPage() {
+  const { t, language } = useLanguage()
   const router = useRouter()
   const supabase = createClient()
 
@@ -87,7 +89,8 @@ export default function ChallengeBankPage() {
   const [allStudents, setAllStudents] = useState<StudentInfo[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false)
-  const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
+  // Follows the site-wide switcher; there is no second language control.
+  const tagLang = language
   const [allTagData, setAllTagData] = useState<any[]>([])
   // Map: bank challenge id → list of { date, classNames }
   const [publishHistory, setPublishHistory] = useState<Record<string, Array<{ date: string; classNames: string[]; challengeId: string }>>>({})
@@ -428,14 +431,6 @@ export default function ChallengeBankPage() {
         breadcrumbs={[{ label: 'Admin' }, { label: 'Challenge Bank' }]}
         actions={
           <div className="flex items-center gap-2">
-            <select
-              value={tagLang}
-              onChange={e => setTagLang(e.target.value as 'en' | 'zh')}
-              className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white"
-            >
-              <option value="en">EN</option>
-              <option value="zh">CN</option>
-            </select>
             {activeTab === 'challenges' ? (
               <>
                 <Button
