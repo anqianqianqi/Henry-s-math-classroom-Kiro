@@ -13,7 +13,7 @@ export default function DecorationsPage() {
   const router = useRouter()
   const supabase = createClient()
   const [isAdmin, setIsAdmin] = useState(false)
-  const { t, pick } = useLanguage()
+  const { t } = useLanguage()
 
   useEffect(() => {
     async function checkRole() {
@@ -34,49 +34,40 @@ export default function DecorationsPage() {
     {
       icon: '📖',
       title: t('decor.bookCoverPage'),
-      subtitle: pick('Customise your challenge book', '自定义你的挑战书'),
+      subtitle: t('decor.bookCoverPageSub'),
       href: '/book-skins',
-      description: pick(
-        'Choose cover skins and page styles for the book that appears on every challenge.',
-        '为每道挑战题中出现的书本选择封面与内页样式。',
-      ),
+      description: t('decor.bookCoverPageDesc'),
     },
     {
       icon: '🏛️',
       title: t('decor.challengeRoom'),
-      subtitle: pick('Your 3D reading room', '你的 3D 阅读房间'),
+      subtitle: t('decor.challengeRoomSub'),
       href: '/challenge-rooms',
-      description: pick(
-        'Swap the flat book for a 3D room with an animated book, and pick the cover / inner-page bundle that wraps it.',
-        '把平面书本换成带动画书本的 3D 房间，并选择包裹它的封面与内页组合。',
-      ),
+      description: t('decor.challengeRoomDesc'),
     },
     {
       icon: '🏠',
       title: t('decor.petRoom'),
-      subtitle: pick("Your pet's home background", '宠物的家园背景'),
+      subtitle: t('decor.petRoomSub'),
       href: '/decorations/pet-room',
-      description: pick(
-        'Browse and select room backgrounds for your pet area on the dashboard.',
-        '浏览并选择主页宠物区域的房间背景。',
-      ),
+      description: t('decor.petRoomDesc'),
     },
   ]
 
   const adminItems = [
     {
       icon: '🏛️',
-      title: 'ChallengeRoom',
-      subtitle: 'Admin: 3D room designer',
+      title: t('admin.roomDesigner'),
+      subtitle: t('admin.roomDesignerSub'),
       href: '/admin/challenge-rooms',
-      description: 'Generate a challenge room background with AI, then position the animated book on the table and save it.',
+      description: t('admin.roomDesignerDesc'),
     },
     {
       icon: '📚',
-      title: 'Upload BookSkinBundle',
-      subtitle: 'Admin: ChallengeRoom textures',
+      title: t('admin.bundleDesigner'),
+      subtitle: t('admin.bundleDesignerSub'),
       href: '/admin/book-bundles',
-      description: 'Design a matched cover + inner-page pair that wraps the 3D book. Only used by the ChallengeRoom — for the flat book, use Upload Book Skins.',
+      description: t('admin.bundleDesignerDesc'),
     },
     {
       icon: '🖼️',
@@ -106,7 +97,7 @@ export default function DecorationsPage() {
       <PageHeader breadcrumbs={[{ label: 'Decorations' }]} />
 
       <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <p className="text-gray-500 mb-8">{pick('Personalise your classroom experience.', '个性化你的课堂体验。')}</p>
+        <p className="text-gray-500 mb-8">{t('decor.intro')}</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {decorations.map(d => (
