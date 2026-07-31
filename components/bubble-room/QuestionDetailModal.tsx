@@ -760,18 +760,18 @@ export function QuestionDetailModal({
         {canDelete(question.user_id) && (
           <div className="relative z-10 px-5 pt-3 pb-1">
             {deleteQuestionError && (
-              <p role="alert" className="text-sm text-red-600 mb-2">
+              <p role="alert" className="text-sm text-gray-500 mb-2">
                 {deleteQuestionError}
               </p>
             )}
             {confirmDeleteQuestion ? (
               <div className="flex gap-2 items-center">
-                <span className="text-sm text-red-600 font-medium">Delete this question and all its responses?</span>
+                <span className="text-sm text-gray-600 font-medium">Delete this question and all its responses?</span>
                 <button
                   type="button"
                   onClick={handleDeleteQuestion}
                   disabled={isDeletingQuestion}
-                  className="text-sm font-semibold text-red-600 hover:text-red-800 disabled:opacity-50"
+                  className="text-sm font-semibold text-gray-600 hover:text-gray-800 disabled:opacity-50"
                 >
                   {isDeletingQuestion ? 'Deleting…' : 'Yes, delete'}
                 </button>
@@ -787,7 +787,7 @@ export function QuestionDetailModal({
               <button
                 type="button"
                 onClick={handleDeleteQuestion}
-                className="text-xs text-red-500 hover:text-red-700 transition-colors"
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                 aria-label="Delete this question"
               >
                 🗑 Delete Question
@@ -847,7 +847,7 @@ export function QuestionDetailModal({
                             type="button"
                             onClick={() => handleDeleteResponse(response.id)}
                             disabled={deletingResponseId === response.id}
-                            className="text-xs font-semibold text-red-600 hover:text-red-800 disabled:opacity-50"
+                            className="text-xs font-semibold text-gray-600 hover:text-gray-800 disabled:opacity-50"
                           >
                             {deletingResponseId === response.id ? 'Deleting…' : 'Confirm'}
                           </button>
@@ -864,7 +864,7 @@ export function QuestionDetailModal({
                           type="button"
                           onClick={() => handleDeleteResponse(response.id)}
                           aria-label={`Delete response by ${response.responder_display_name}`}
-                          className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                          className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                         >
                           🗑
                         </button>
@@ -895,7 +895,7 @@ export function QuestionDetailModal({
           )}
 
           {deleteResponseError && (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-gray-500">
               {deleteResponseError}
             </p>
           )}
