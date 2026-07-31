@@ -547,7 +547,7 @@ export function QuestionDetailModal({
       />
 
       {/* Panel + bubble overlay wrapper — overflow visible so bubbles escape */}
-      <div className="relative z-10 w-full sm:max-w-5xl flex flex-col" style={{ maxHeight: '90vh' }}>
+      <div className="relative z-10 w-full sm:max-w-6xl flex flex-col" style={{ maxHeight: '90vh' }}>
 
         {/* Bubble overlay — anchored to actual panel edges via measured size */}
         {panelSize.w > 0 && (
