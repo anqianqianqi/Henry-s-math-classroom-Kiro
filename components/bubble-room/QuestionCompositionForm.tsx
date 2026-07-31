@@ -20,6 +20,7 @@ import { postQuestion } from '@/lib/actions/bubbleRoom'
 import { assignQuestion, fetchAssignableUsers } from '@/lib/actions/bubbleRoom'
 import { findDuplicates } from '@/lib/utils/bubbleRoom'
 import type { BubbleQuestion, DuplicateMatch } from '@/lib/types/bubbleRoom'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 export interface QuestionCompositionFormProps {
   /** Class the question will be posted to (null for global bubble room) */
@@ -54,6 +55,7 @@ export function QuestionCompositionForm({
   onClose,
   onDuplicatesFound,
 }: QuestionCompositionFormProps) {
+  const { t } = useLanguage()
   const [title, setTitle] = useState('')
   const [text, setText] = useState(initialText)
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -77,11 +79,11 @@ export function QuestionCompositionForm({
     const file = e.target.files?.[0]
     if (!file) return
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      setError('Only JPEG, PNG, GIF, or WebP images are allowed.')
+      setError(t('bubble.errImageType'))
       return
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setError('Image must be 10 MB or smaller.')
+      setError(t('bubble.errImageSize'))
       return
     }
     setError(null)
@@ -103,20 +105,20 @@ export function QuestionCompositionForm({
     const trimmed = text.trim()
 
     if (!trimmedTitle) {
-      setError('Please enter a title for your question.')
+      setError(t('bubble.errNoTitle'))
       return
     }
     if (!trimmed) {
-      setError('Please enter your question before submitting.')
+      setError(t('bubble.errNoText'))
       textareaRef.current?.focus()
       return
     }
     if (trimmed.length > MAX_LENGTH) {
-      setError(`Question must be ${MAX_LENGTH} characters or fewer.`)
+      setError(t('bubble.errTextTooLong', { max: MAX_LENGTH }))
       return
     }
     if (trimmedTitle.length > 120) {
-      setError('Title must be 120 characters or fewer.')
+      setError(t('bubble.errTitleTooLong'))
       return
     }
 
@@ -201,17 +203,17 @@ export function QuestionCompositionForm({
           p-6 space-y-4
           max-h-[90vh] overflow-y-auto
         "
-        aria-label="Post a question"
+        aria-label={t('bubble.postAQuestion')}
       >
         {/* Header */}
         <div className="flex items-center justify-between">
           <h2 id="compose-form-title" className="text-lg font-semibold text-gray-900">
-            💬 Ask a Question
+            💬 {t('bubble.askQuestion')}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('action.close')}
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -224,7 +226,7 @@ export function QuestionCompositionForm({
         {challengeId && (
           <p className="text-xs text-purple-500 flex items-center gap-1">
             <span aria-hidden="true">🎯</span>
-            Linked to current challenge
+            {t('bubble.linkedToChallenge')}
           </p>
         )}
 
@@ -239,7 +241,7 @@ export function QuestionCompositionForm({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={120}
-            placeholder="Give your question a short title…"
+            placeholder={t('bubble.titlePlaceholder')}
             className="
               w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white
               text-sm text-gray-900
@@ -266,7 +268,7 @@ export function QuestionCompositionForm({
             onChange={(e) => setText(e.target.value)}
             maxLength={MAX_LENGTH}
             rows={4}
-            placeholder="Describe your question in detail…"
+            placeholder={t('bubble.detailsPlaceholder')}
             autoFocus={!initialText}
             className={`
               w-full px-4 py-3 rounded-xl border text-sm text-gray-900 resize-none
@@ -304,7 +306,7 @@ export function QuestionCompositionForm({
               <button
                 type="button"
                 onClick={handleRemoveImage}
-                aria-label="Remove image"
+                aria-label={t('bubble.removeImage')}
                 className="
                   absolute -top-2 -right-2
                   w-6 h-6 rounded-full bg-gray-700 text-white
@@ -328,7 +330,7 @@ export function QuestionCompositionForm({
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              Attach image
+              {t('bubble.attachImage')}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -383,7 +385,7 @@ export function QuestionCompositionForm({
         {/* Action buttons */}
         <div className="flex gap-3">
           <Button type="button" variant="ghost" size="sm" onClick={onClose} className="flex-1">
-            Cancel
+            {t('action.cancel')}
           </Button>
           <Button
             type="submit"
@@ -393,7 +395,7 @@ export function QuestionCompositionForm({
             disabled={isSubmitting || text.trim().length === 0 || title.trim().length === 0}
             className="flex-1"
           >
-            Post Question
+            {t('bubble.postQuestion')}
           </Button>
         </div>
       </form>
