@@ -31,6 +31,7 @@ import {
   type AnimationConfig,
   type Placement,
 } from '@/lib/types/challengeRoom'
+import { DreamEdge } from './DreamEdge'
 
 const RoomPlacementStage = dynamicImport(
   () => import('./RoomPlacementStage').then(m => m.RoomPlacementStage),
@@ -252,6 +253,9 @@ export function Book3DReveal({
           marginLeft: 'calc(50% - 48vw)',
         }}
       >
+        {/* Wraps only the room block. Must not enclose the zoomed reader below
+            — see the note on that element, and on DreamEdge itself. */}
+        <DreamEdge>
         <div
           className="relative mx-auto overflow-hidden bg-gray-950"
           style={{ width: 'min(100%, 132vh)' }}
@@ -325,6 +329,7 @@ export function Book3DReveal({
         )}
 
         </div>
+        </DreamEdge>
       </div>
 
       {/*
