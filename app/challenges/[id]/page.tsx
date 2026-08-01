@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { CommentThread } from '@/components/CommentThread'
 import { TranslatedContent } from '@/components/TranslatedContent'
-import { localDateString, localDateOffset } from '@/lib/utils/date'
+import { schoolDateString, schoolDateOffset } from '@/lib/utils/timezone'
 import { HomeButton } from '@/components/ui/HomeButton'
 import { ChallengeBookShell, type ChallengeScene } from '@/components/challenge-room/ChallengeBookShell'
 import { HenryProblemSheet } from '@/components/HenryProblemSheet'
@@ -340,7 +340,7 @@ export default function ChallengePage() {
 
     // Block students from viewing future challenges
     if (!teacherRole && challengeData && challengeData.challenge_date) {
-      const today = localDateString()
+      const today = schoolDateString()
       if (challengeData.challenge_date > today) {
         router.push('/challenges')
         return
@@ -1898,7 +1898,7 @@ export default function ChallengePage() {
         </ChallengeBookShell>
 
         {/* Ask About This Challenge button — shown when challenge is assigned to at least one class (Req 1.2, 1.3) */}
-        {assignedClassIds.length > 0 && (!challenge.challenge_date || challenge.challenge_date <= localDateString()) && (
+        {assignedClassIds.length > 0 && (!challenge.challenge_date || challenge.challenge_date <= schoolDateString()) && (
           <div className="mb-6 flex justify-center">
             <a
               href={`/bubble-room?challengeId=${challenge.id}`}

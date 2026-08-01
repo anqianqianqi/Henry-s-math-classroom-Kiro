@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { localDateString } from '@/lib/utils/date'
+import { schoolDateString } from '@/lib/utils/timezone'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { HenryProblemSheet } from '@/components/HenryProblemSheet'
 import { readStoredHenryProblem } from '@/lib/henryproblem'
@@ -245,7 +245,7 @@ export default function ChallengeBankPage() {
   }
 
   function openPublish(challenge: PoolChallenge) {
-    const today = localDateString()
+    const today = schoolDateString()
     setPublishModal({ challenge, date: today, classIds: [], studentIds: [], studentSearch: '' })
     // Load students lazily — only when publish modal opens (not at page load)
     if (allStudents.length === 0) {

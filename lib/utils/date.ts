@@ -1,27 +1,20 @@
 /**
- * Date utilities — backend stores UTC, display in user's local timezone.
+ * Date utilities — backend stores UTC, display in the reader's own timezone.
+ *
+ * ── WHAT BELONGS HERE, AND WHAT DOES NOT ────────────────────
+ * These format INSTANTS: the moment something happened. A submission, a
+ * comment, a redemption. Those belong in the reader's own zone — "you
+ * submitted at 3:42pm" has to mean 3:42pm where they are — and that is what
+ * toLocaleString with an undefined locale gives.
+ *
+ * School CALENDAR dates are a different thing and live in utils/timezone.ts.
+ * `challenge_date` is a day with no time and no zone; asking the browser what
+ * day it is gets that wrong for everyone outside New York. localDateString and
+ * localDateOffset used to live here and were used for exactly that, so they
+ * have been removed rather than deprecated — leaving them would let the same
+ * mistake back in, and the compiler catching every call site is what made the
+ * migration safe.
  */
-
-/**
- * Get today's date as YYYY-MM-DD in the user's LOCAL timezone.
- * Use this instead of new Date().toISOString().split('T')[0] which gives UTC date.
- */
-export function localDateString(date: Date = new Date()): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
-/**
- * Get a date offset from today as YYYY-MM-DD in the user's LOCAL timezone.
- * e.g. localDateOffset(7) = 7 days from now, localDateOffset(-1) = yesterday
- */
-export function localDateOffset(days: number): string {
-  const date = new Date()
-  date.setDate(date.getDate() + days)
-  return localDateString(date)
-}
 
 /**
  * Format a date-only string (YYYY-MM-DD) for display in the user's local timezone.

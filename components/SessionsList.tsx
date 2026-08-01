@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatOccurrenceDisplay, generateOccurrences } from '@/lib/utils/occurrences'
-import { localDateString } from '@/lib/utils/date'
+import { schoolDateString } from '@/lib/utils/timezone'
 
 interface Occurrence {
   id: string
@@ -54,7 +54,7 @@ export default function SessionsList({ classId, onSelectSession }: SessionsListP
       let allOccurrences = data || []
 
       // Auto-generate if fewer than 5 upcoming sessions
-      const today = localDateString()
+      const today = schoolDateString()
       const upcoming = allOccurrences.filter(
         o => o.occurrence_date >= today && o.status !== 'cancelled'
       )
@@ -94,7 +94,7 @@ export default function SessionsList({ classId, onSelectSession }: SessionsListP
       if (!cls?.schedule || !Array.isArray(cls.schedule) || cls.schedule.length === 0) return false
       // If no start_date, use today as the starting point
       if (!cls.start_date) {
-        cls.start_date = localDateString()
+        cls.start_date = schoolDateString()
       }
       // Don't generate past end_date
       if (cls.end_date && new Date(cls.end_date) < new Date()) return false
@@ -139,7 +139,7 @@ export default function SessionsList({ classId, onSelectSession }: SessionsListP
     }
   }
 
-  const today = localDateString()
+  const today = schoolDateString()
   
   const upcomingOccurrences = occurrences.filter(
     occ => occ.occurrence_date >= today && occ.status !== 'cancelled'
