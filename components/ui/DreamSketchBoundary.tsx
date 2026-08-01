@@ -203,15 +203,30 @@ function buildStrokes(
       : edge === 2 ? h - off
       : off
 
+    /*
+      A pencil line deviates SMOOTHLY. Offsetting each point by its own random
+      amount is white noise, and white noise draws a sawtooth — which is what
+      those stray zigzags along the edge were. So the deviation is a continuous
+      function of position instead: one gentle bow along the whole stroke, plus
+      at most a cycle or so of undulation on top.
+    */
+    const wobble = g.band * (0.5 + irregularity)
+    const bow = (rand() * 2 - 1) * wobble * 0.30
+    const amplitude = wobble * 0.14 * (0.4 + rand())
+    const phase = rand() * Math.PI * 2
+    const cycles = 0.5 + rand() * 1.1
+
     const pts: Array<[number, number]> = []
-    const SEGMENTS = 7
-    const wobble = g.band * 0.22 * (0.5 + irregularity)
+    const SEGMENTS = 14
     for (let k = 0; k <= SEGMENTS; k++) {
       const t = k / SEGMENTS
       const p = a + (b - a) * t
-      // Taper so the ends settle rather than flick outward.
+      // Taper so the ends settle onto the line rather than flicking outward.
       const taper = Math.sin(t * Math.PI) * 0.75 + 0.25
-      const o = (rand() * 2 - 1) * wobble * taper
+      const o = taper * (
+        bow * Math.sin(t * Math.PI) +
+        amplitude * Math.sin(phase + t * Math.PI * 2 * cycles)
+      )
       pts.push(horizontal ? [p, fixed + o] : [fixed + o, p])
     }
 
@@ -260,6 +275,16 @@ function buildStrokes(
       mark(edge, start + (rand() * 0.03 - 0.015), length * (0.6 + rand() * 0.5),
            off + (rand() * 2 - 1) * g.inset * 0.3,
            opacity * 0.65, width * 0.8, dash)
+    }
+
+    // Dry brush: thinner, fainter, broken into short dashes. These carry the
+    // texture of the perimeter without darkening it — the weight comes from
+    // the marks above, the sketchiness from these.
+    if (rand() < 0.7) {
+      mark(edge, start + (rand() * 0.06 - 0.03), length * (0.5 + rand() * 0.8),
+           off + (rand() * 2 - 1) * g.inset * 0.55,
+           opacity * 0.45, width * 0.55,
+           `${(1.5 + rand() * 5).toFixed(1)} ${(2 + rand() * 6).toFixed(1)}`)
     }
   }
   return strokes

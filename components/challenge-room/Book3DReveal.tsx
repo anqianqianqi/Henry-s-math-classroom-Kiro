@@ -265,7 +265,7 @@ export function Book3DReveal({
              centred here — the component stays layout-neutral rather than
              imposing a margin its consumers might not want. */
           className="mx-auto"
-          lineDensity={18}
+          lineDensity={26}
           inkStrength={1.7}
           style={{
             width: 'min(100%, 132vh)',
