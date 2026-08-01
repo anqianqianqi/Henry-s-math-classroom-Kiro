@@ -37,6 +37,10 @@ const KINDS = {
   response: { table: 'bubble_room_responses', body: 'text', title: null },
   submission: { table: 'challenge_submissions', body: 'content', title: null },
   comment: { table: 'submission_comments', body: 'content', title: null },
+  // Written by an admin rather than a student, but translated the same way —
+  // the row is append-only, so a new announcement always starts with empty
+  // body_en/body_zh and there is no stale cache to clear.
+  announcement: { table: 'announcements', body: 'body', title: null },
 } as const
 
 type Kind = keyof typeof KINDS

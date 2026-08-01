@@ -243,3 +243,42 @@ body {
     display: inline;
   }
 }
+
+/**
+ * Announcement button — the rainbow shine.
+ *
+ * A moving gradient behind the label rather than a border animation, so the
+ * button's own size never changes and it cannot nudge the header layout as it
+ * animates. The gradient is 300% wide and slid across; animating
+ * background-position is compositor-friendly, where animating a border colour
+ * would repaint on every frame on every page.
+ *
+ * Anyone who has asked their system to reduce motion gets the colour and none
+ * of the movement. A permanently animating element in a sticky header is
+ * exactly the case that setting exists for — and this one runs on every page
+ * for three days.
+ */
+@keyframes announcement-rainbow {
+  0%   { background-position:   0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+.announcement-shine {
+  background-image: linear-gradient(
+    90deg,
+    #f87171, #fbbf24, #34d399, #60a5fa, #a78bfa, #f472b6, #f87171
+  );
+  background-size: 300% 100%;
+  animation: announcement-rainbow 4s linear infinite;
+  color: #fff;
+  border-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announcement-shine {
+    animation: none;
+    /* Still visibly different from the resting state — the point is to draw
+       the eye, and that must not depend on movement. */
+    background-position: 50% 50%;
+  }
+}
