@@ -157,6 +157,25 @@ interface Stroke {
 }
 
 /**
+ * Where a distance round the outside lands: which edge, and how far along it.
+ *
+ * Edges are numbered clockwise from the top. Working in perimeter distance
+ * rather than per-edge keeps the marks evenly spread on any aspect ratio — on
+ * a 21:9 box the long sides get proportionally more of them, which is what a
+ * hand tracing the shape would actually do.
+ */
+function perimeterPoint(s: number, w: number, h: number): { edge: number; t: number } {
+  let d = s * 2 * (w + h)
+  if (d < w) return { edge: 0, t: d / w }
+  d -= w
+  if (d < h) return { edge: 1, t: d / h }
+  d -= h
+  if (d < w) return { edge: 2, t: d / w }
+  d -= w
+  return { edge: 3, t: d / h }
+}
+
+/**
  * Sparse, broken strokes around the perimeter.
  *
  * Each covers only a fraction of one edge and each edge is chosen at random,
@@ -206,17 +225,24 @@ function buildStrokes(
   }
 
   for (let i = 0; i < density; i++) {
-    const edge = Math.floor(rand() * 4)
-    // Where the line sits across the band — some inside the picture, some out
-    // in the fading part, so the marks are not one traced outline.
-    const off = g.inset * (0.4 + rand() * 1.5)
-    const start = rand() * 0.72
+    // Walk the perimeter at even intervals with a little jitter, rather than
+    // picking an edge at random. Random picking clusters marks on one or two
+    // sides and leaves whole edges bare, which reads as scattered debris
+    // instead of a hand tracing round the outside.
+    const s = ((i + 0.5 + (rand() - 0.5) * 0.7) / density + 1) % 1
+    const { edge, t } = perimeterPoint(s, w, h)
+    const along = edge === 0 || edge === 2 ? w : h
 
-    // Length is biased short: a few long sweeps among many brief ticks reads
-    // as a hand feeling out an edge. Uniform lengths read as a frame.
-    const length = 0.04 + Math.pow(rand(), 1.6) * 0.32
-    // A quarter run past their corner, the way a hand does.
-    const over = rand() < 0.25 ? 0.04 : 0
+    // Length set in pixels, then converted, so a mark is the same physical
+    // length on the short sides as on the long ones.
+    const lengthPx = (0.03 + Math.pow(rand(), 1.5) * 0.12) * Math.min(w, h) * 1.6
+    const length = Math.min(0.9, lengthPx / along)
+
+    // Kept close to the boundary: this is a traced outline, not confetti. The
+    // spread is about half the band, enough that the marks are not one clean
+    // line but not so much that they drift into the picture.
+    const off = g.inset * (0.7 + rand() * 0.7)
+    const start = Math.max(-0.03, Math.min(t, 1 - length * 0.35))
 
     const opacity = (0.08 + rand() * 0.14) * strength * inkStrength
     const width = 0.8 + rand() * 0.8
@@ -226,13 +252,13 @@ function buildStrokes(
       ? `${(5 + rand() * 16).toFixed(1)} ${(3 + rand() * 10).toFixed(1)}`
       : undefined
 
-    mark(edge, start - over, length + over * 2, off, opacity, width, dash)
+    mark(edge, start, length, off, opacity, width, dash)
 
     // Pencil doubles back. A second, fainter pass a hair off the first is the
     // single clearest tell of graphite rather than a vector stroke.
     if (rand() < 0.4) {
-      mark(edge, start + (rand() * 0.04 - 0.02), length * (0.6 + rand() * 0.5),
-           off + (rand() * 2 - 1) * g.inset * 0.35,
+      mark(edge, start + (rand() * 0.03 - 0.015), length * (0.6 + rand() * 0.5),
+           off + (rand() * 2 - 1) * g.inset * 0.3,
            opacity * 0.65, width * 0.8, dash)
     }
   }
