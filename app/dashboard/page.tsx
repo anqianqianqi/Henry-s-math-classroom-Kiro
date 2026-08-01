@@ -85,6 +85,8 @@ export default function DashboardPage() {
     pendingRequests: 0,
     totalScore: 0,
     spendableBalance: 0,
+    taScore: 0,
+    taBalance: 0,
   })
   const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean; submissionId?: string; hasNewTeacherComment?: boolean }>>([])
   const [petRoomBgUrl, setPetRoomBgUrl] = useState<string | null>(null)
@@ -248,6 +250,8 @@ export default function DashboardPage() {
           pendingRequests: pendingRequests || 0,
           totalScore: 0,
           spendableBalance: 0,
+          taScore: 0,
+          taBalance: 0,
         }
         setStats(newStats)
         return
@@ -261,7 +265,7 @@ export default function DashboardPage() {
       ] = await Promise.all([
         supabase.from('class_members').select('class_id').eq('user_id', userId),
         supabase.from('challenge_submissions').select('submitted_at').eq('user_id', userId).order('submitted_at', { ascending: false }),
-        Promise.resolve(supabase.from('student_wallets').select('total_earned, spendable_balance').eq('user_id', userId).single()).catch(() => ({ data: null })),
+        Promise.resolve(supabase.from('student_wallets').select('total_earned, spendable_balance, ta_earned, ta_balance').eq('user_id', userId).single()).catch(() => ({ data: null })),
       ])
 
       const memberCount = userClassMemberships?.length ?? 0
@@ -326,11 +330,17 @@ export default function DashboardPage() {
       // Read total score and spendable balance — already fetched in parallel above
       let totalScore = 0
       let spendableBalance = 0
+      // Default 0 rather than undefined: before the migration runs these columns
+      // do not exist, and the card should read 0 rather than blank.
+      let taScore = 0
+      let taBalance = 0
       try {
         const walletData = (walletResult as any)?.data
         if (walletData) {
           totalScore = walletData.total_earned ?? 0
           spendableBalance = walletData.spendable_balance ?? 0
+          taScore = walletData.ta_earned ?? 0
+          taBalance = walletData.ta_balance ?? 0
         } else {
           // Fallback: wallet not yet created, compute on the fly
           const { data: gradedSubmissions } = await supabase
@@ -359,6 +369,8 @@ export default function DashboardPage() {
         pendingRequests: 0,
         totalScore,
         spendableBalance,
+        taScore,
+        taBalance,
       }
 
       setStats(newStats)
@@ -707,8 +719,14 @@ export default function DashboardPage() {
             <Card className="text-center hover:shadow-lg transition-shadow">
               <Card.Body>
                 <div className="text-5xl mb-3 hidden sm:block">⭐</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{stats.totalScore}</div>
-                <div className="text-gray-600 font-medium">{t('dash.totalScore')}</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">
+                  {stats.totalScore} <span className="text-gray-300">/</span>{' '}
+                  <span className="text-green-600">{stats.taScore}</span>
+                </div>
+                <div className="text-gray-600 font-medium">
+                  {t('dash.totalScore')} <span className="text-gray-300">/</span>{' '}
+                  {t('settings.taScore')}
+                </div>
               </Card.Body>
             </Card>
           )}
@@ -721,9 +739,12 @@ export default function DashboardPage() {
               <Card.Body>
                 <div className="text-5xl mb-3 hidden sm:block">🛍️</div>
                 <div className="text-3xl font-bold text-primary-600 mb-1">
-                  {stats.spendableBalance}
+                  {stats.spendableBalance} <span className="text-gray-300">/</span>{' '}
+                  <span className="text-green-600">{stats.taBalance}</span>
                 </div>
-                <div className="text-gray-600 font-medium">{t('dash.shopBalance')}</div>
+                <div className="text-gray-600 font-medium">
+                  {t('dash.shopBalance')} <span className="text-gray-300">/</span> {t('shop.taPoints')}
+                </div>
               </Card.Body>
             </Card>
           )}

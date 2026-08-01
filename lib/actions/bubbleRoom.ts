@@ -440,6 +440,9 @@ export async function fetchInitialQuestions(): Promise<BubbleQuestion[]> {
         profiles:user_id ( full_name, nickname )
       `)
       .or(`expires_at.gt.${new Date().toISOString()},expires_at.is.null`)
+      // A thanked question has served its purpose and stops floating; it lives
+      // on under Completed in My Bubbles.
+      .is('resolved_at', null)
       .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
       .order('created_at', { ascending: false })
 
@@ -530,6 +533,9 @@ export async function searchQuestions(
          profiles:user_id ( full_name, nickname )`,
       )
       .or(`expires_at.gt.${new Date().toISOString()},expires_at.is.null`)
+      // A thanked question has served its purpose and stops floating; it lives
+      // on under Completed in My Bubbles.
+      .is('resolved_at', null)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit) // fetch one extra to detect hasMore
 

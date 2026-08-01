@@ -21,6 +21,7 @@ export const settings = {
   'settings.saved': { en: 'Saved!', zh: '已保存！' },
   'settings.saveFailed': { en: 'Failed to save', zh: '保存失败' },
 
+  'settings.taScore': { en: 'TA Score', zh: '助教积分' },
   'settings.myScore': { en: 'My Score', zh: '我的成绩' },
   'settings.totalPoints': { en: 'Total Points', zh: '总分' },
   'settings.graded': { en: 'Graded', zh: '已批改' },

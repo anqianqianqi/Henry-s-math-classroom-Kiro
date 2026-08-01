@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     // Look up commodity_type to route to the right RPC
     const { data: item, error: itemError } = await supabase
       .from('shop_items')
-      .select('commodity_type')
+      .select('commodity_type, currency')
       .eq('id', body.item_id)
       .eq('is_active', true)
       .single()
@@ -48,6 +48,31 @@ export async function POST(request: Request) {
     }
 
     const commodityType = item.commodity_type ?? 'standard'
+
+    /**
+     * TA-priced goods go to their own function, which spends the TA wallet.
+     * Branching here, before any of the existing paths, is deliberate: the four
+     * challenge-points functions run byte-identical instructions to yesterday.
+     *
+     * Defaults to 'challenge' on a database that predates the migration, so
+     * this branch simply never fires there.
+     */
+    if (((item as any).currency ?? 'challenge') === 'ta') {
+      const { data, error } = await supabase.rpc('redeem_ta_item', {
+        p_item_id: body.item_id,
+      })
+      if (error) {
+        const mapped = mapRpcError(error.message ?? '')
+        if (mapped) return NextResponse.json({ error: mapped.error }, { status: mapped.status })
+        console.error('[shop/redeem] TA RPC error:', error)
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      }
+      return NextResponse.json({
+        success: true,
+        currency: 'ta',
+        redemption_id: (data as any)?.redemption_id ?? null,
+      }, { status: 200 })
+    }
 
     // ── Blind box ──────────────────────────────────────────────────────────
     if (commodityType === 'blindbox') {

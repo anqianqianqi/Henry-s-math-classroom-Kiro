@@ -181,4 +181,21 @@ export const bubbleRoom = {
   'myBubbles.expire': { en: 'Expire', zh: '结束' },
   'myBubbles.revive': { en: 'Revive', zh: '重新开启' },
   'myBubbles.deletePermanently': { en: 'Delete permanently', zh: '永久删除' },
+  'myBubbles.tabCompleted': { en: 'Completed ({count})', zh: '已解决（{count}）' },
+  'myBubbles.noneCompleted': { en: 'No completed bubbles.', zh: '还没有已解决的泡泡。' },
+
+  // ── Resolving a question ─────────────────────────────────
+  //
+  // One key, not a label plus a dropdown glued together: Chinese puts the
+  // thanks before the name with no space, English needs 'to ' and a gap.
+  'thanks.button': {
+    en: 'I understand now! I want to give thanks to ….',
+    zh: '我懂了! 我想感谢 ….',
+  },
+  'thanks.pickSomeone': { en: 'Choose someone', zh: '选择一位' },
+  'thanks.staffNote': { en: '(teacher — no TA point)', zh: '（老师——不计助教积分）' },
+  'thanks.resolved': { en: 'Resolved', zh: '已解决' },
+  'thanks.thanking': { en: 'Thanking…', zh: '正在感谢…' },
+  'thanks.errFailed': { en: 'Could not do that. Please try again.', zh: '操作失败，请重试。' },
+  'thanks.errAlready': { en: 'This question is already resolved.', zh: '这个问题已经解决了。' },
 } as const
