@@ -105,6 +105,20 @@ export interface DreamSketchBoundaryProps {
    */
   edgeTexture?: string
 
+  /**
+   * How far the texture is drawn past the box, as a fraction of its size.
+   *
+   * A drawn frame sits inside its own canvas — measured on ours, the ink has a
+   * median inset of about 5% with nothing in the outer 1%. Mapped 1:1 onto the
+   * box that reads as a frame floating inside the picture rather than one
+   * finishing it. Bleeding the texture outward moves the marks onto the edge.
+   *
+   * Nothing clips it: this layer sits outside the content's overflow:hidden
+   * box, so strokes that fall beyond the boundary simply carry on, which is
+   * what a hand overshooting looks like.
+   */
+  edgeTextureBleed?: number
+
   /** Change for a different drawing at identical settings. Generated mode only. */
   seed?: number
 
@@ -321,6 +335,7 @@ export function DreamSketchBoundary({
   strength = 1,
   inkStrength = 1,
   edgeTexture,
+  edgeTextureBleed = 0.045,
   seed = 20260801,
   className,
   style,
@@ -378,8 +393,10 @@ export function DreamSketchBoundary({
         // can be re-tinted or dimmed without regenerating the artwork.
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
+          className="pointer-events-none absolute"
           style={{
+            // Negative inset bleeds the drawing outward onto the boundary.
+            inset: `${-edgeTextureBleed * 100}%`,
             background: lineColor,
             opacity: Math.max(0, Math.min(1, inkStrength)),
             maskImage: `url(${edgeTexture})`,
