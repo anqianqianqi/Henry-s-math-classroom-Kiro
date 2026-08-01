@@ -12,7 +12,6 @@ import { equipAccessory, unequipAccessory, computeEvolutionStage } from '@/lib/u
 import EggSvg from '@/components/pet/EggSvg'
 import PetSvg from '@/components/pet/PetSvg'
 import BackgroundScene from '@/components/pet/BackgroundScene'
-import { DreamSketchBoundary } from '@/components/ui/DreamSketchBoundary'
 import XpBar from '@/components/pet/XpBar'
 import AccessoryInventory from '@/components/pet/AccessoryInventory'
 import SpeciesSelector from '@/components/pet/SpeciesSelector'
@@ -530,27 +529,15 @@ export default function PetPage() {
         ) : (
           /* ── Non-egg stage: BackgroundScene + PetSvg overlay + XpBar + Accessories ── */
           <>
-            {/* Pet scene. No rounded corners, shadow or overflow clip any more:
-                a mask clips box-shadow, and keeping the shadow outside the mask
-                just redraws the rectangle the fade is there to remove. */}
-            <div className="mb-4">
+            {/* Pet scene card */}
+            <div className="rounded-2xl overflow-hidden shadow-lg mb-4">
               {/* Background + pet overlay container */}
               <div className="relative w-full" style={{ height: '300px' }}>
-                {/* Only the scene is softened — the pet on top stays crisp. */}
-                {/* Positioning on this div, not the boundary's className — see
-                    the note on the dashboard pet area. */}
-                <div className="absolute inset-0">
-                  <DreamSketchBoundary
-                    lineDensity={0}
-                    className="h-full w-full"
-                    contentClassName="absolute inset-0"
-                  >
-                    <BackgroundScene
-                      stage={pet?.evolution_stage ?? 'baby'}
-                      className="absolute inset-0 w-full h-full"
-                    />
-                  </DreamSketchBoundary>
-                </div>
+                {/* Background fills the container */}
+                <BackgroundScene
+                  stage={pet?.evolution_stage ?? 'baby'}
+                  className="absolute inset-0 w-full h-full"
+                />
 
                 {/* PetSvg centered on top of the background */}
                 <div className="absolute inset-0 flex items-center justify-center">
