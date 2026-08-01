@@ -9,6 +9,7 @@ import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import NotificationBell from '@/components/NotificationBell'
+import { AnnouncementButton } from '@/components/AnnouncementButton'
 import { localDateString } from '@/lib/utils/date'
 import dynamicImport from 'next/dynamic'
 import StudentStudyCurve from '@/components/StudentStudyCurve'
@@ -524,6 +525,8 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2 sm:gap-3">
               <h1 className="text-lg sm:text-2xl font-bold text-gray-900 hidden sm:block">{t('auth.appName')}</h1>
               <h1 className="text-lg font-bold text-gray-900 sm:hidden">{t('dash.mathClass')}</h1>
+              {/* Renders nothing unless there is a live announcement. */}
+              <AnnouncementButton />
             </div>
             <div className="flex items-center gap-1 sm:gap-4">
               <NotificationBell />

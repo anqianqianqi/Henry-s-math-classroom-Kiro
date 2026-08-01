@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { AnnouncementButton } from '@/components/AnnouncementButton'
 import { ReactNode } from 'react'
 
 interface BreadcrumbItem {
@@ -39,7 +40,10 @@ export function PageHeader({ breadcrumbs, actions, maxWidth = 'max-w-7xl' }: Pag
   return (
     <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
       <div className={`${maxWidth} mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4`}>
-        {/* Left: brand + breadcrumbs */}
+        {/* Left: brand + breadcrumbs, then the announcement button.
+            Wrapped together so justify-between keeps the pair beside the title
+            instead of pushing the button into the middle of the bar. */}
+        <div className="flex items-center gap-3 min-w-0">
         <nav className="flex items-center gap-1.5 min-w-0" aria-label="Breadcrumb">
           {/* Brand — always links home */}
           <Link
@@ -88,6 +92,12 @@ export function PageHeader({ breadcrumbs, actions, maxWidth = 'max-w-7xl' }: Pag
             </span>
           ))}
         </nav>
+
+        {/* Sibling of the nav, not inside it: a dialog trigger does not belong
+            in a navigation landmark. Renders nothing when there is no
+            announcement, so the header is unchanged the rest of the time. */}
+        <AnnouncementButton />
+        </div>
 
         {/* Right: action buttons */}
         {actions && (

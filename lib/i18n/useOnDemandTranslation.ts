@@ -20,7 +20,7 @@ import { useEffect, useState } from 'react'
 import type { Language } from './catalog'
 import { localizeQuestion, looksUntranslated, type TranslatableText } from './localize'
 
-export type PostKind = 'question' | 'response' | 'submission' | 'comment'
+export type PostKind = 'question' | 'response' | 'submission' | 'comment' | 'announcement'
 
 interface Fields {
   text_en?: string | null

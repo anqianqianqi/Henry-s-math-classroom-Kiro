@@ -11,6 +11,7 @@
  *   messages/auth.ts         sign in, sign up, password recovery
  *   messages/settings.ts     account settings and score summary
  *   messages/pet.ts          the virtual pet
+ *   messages/announcement.ts the "New Feature" button and panel
  *   messages/dashboard.ts    dashboard tiles and stats
  *   messages/challenges.ts   challenge list, detail, book/room reading
  *   messages/decorations.ts  decorations hub, skins, rooms, bundles
@@ -31,6 +32,7 @@ import { common } from './messages/common'
 import { auth } from './messages/auth'
 import { settings } from './messages/settings'
 import { pet } from './messages/pet'
+import { announcement } from './messages/announcement'
 import { dashboard } from './messages/dashboard'
 import { challenges } from './messages/challenges'
 import { decorations } from './messages/decorations'
@@ -56,6 +58,7 @@ export const catalog = {
   ...auth,
   ...settings,
   ...pet,
+  ...announcement,
   ...dashboard,
   ...challenges,
   ...decorations,
