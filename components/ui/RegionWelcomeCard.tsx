@@ -77,12 +77,13 @@ export function RegionWelcomeCard() {
 
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
+    const supabase = createClient()
+
+    async function check() {
       try {
-        const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
-          console.info('[welcome] signed out — card not shown')
+          console.info('[welcome] signed out — waiting for sign-in')
           return
         }
 
@@ -119,8 +120,27 @@ export function RegionWelcomeCard() {
         // the detected zone and can set it in Settings. But say so.
         console.error('[welcome] unexpected failure:', err)
       }
-    })()
-    return () => { cancelled = true }
+    }
+
+    /*
+      Checked again on sign-in, not only on mount.
+
+      This lives in the root layout, and Next does NOT remount that on a
+      client-side navigation. So the only run used to happen on whatever page
+      the tab first opened — usually /login, while still signed out — and
+      logging in navigated to the dashboard without ever asking again. The card
+      appeared only after a hard reload, which is exactly nobody's first visit.
+    */
+    check()
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (cancelled) return
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') check()
+    })
+
+    return () => {
+      cancelled = true
+      sub.subscription.unsubscribe()
+    }
   }, [])
 
   // Changing country invalidates the city, so fall back to its first.
