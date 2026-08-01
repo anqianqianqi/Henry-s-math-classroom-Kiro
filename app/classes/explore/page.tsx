@@ -4,6 +4,9 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { ClassSchedule } from '@/components/ui/ClassSchedule'
+import { useViewerZone } from '@/components/ui/useViewerZone'
+import { SCHOOL_TIMEZONE } from '@/lib/utils/timezone'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
@@ -21,6 +24,7 @@ interface ClassData {
   max_students: number | null
   current_students: number
   schedule: Array<{ day: string; startTime: string; endTime: string }> | null
+  timezone: string | null
   created_by: string
   teacher_name: string
   target_audience: string | null
@@ -28,6 +32,7 @@ interface ClassData {
 
 export default function ExploreClassesPage() {
   const { t } = useLanguage()
+  const { timezone: viewerTimezone } = useViewerZone()
   const [classes, setClasses] = useState<ClassData[]>([])
   const [filteredClasses, setFilteredClasses] = useState<ClassData[]>([])
   const [loading, setLoading] = useState(true)
@@ -105,17 +110,6 @@ export default function ExploreClassesPage() {
     }
 
     setFilteredClasses(filtered)
-  }
-
-  function formatSchedule(schedule: any) {
-    if (!schedule || !Array.isArray(schedule) || schedule.length === 0) {
-      return t('class.scheduleTba')
-    }
-    const first = schedule[0]
-    if (schedule.length === 1) {
-      return `${first.day}s ${first.startTime}`
-    }
-    return `${schedule.length} sessions/week`
   }
 
   function getSpotsAvailable(cls: ClassData) {
@@ -427,7 +421,12 @@ export default function ExploreClassesPage() {
                       
                       <div className="flex items-center gap-2.5 text-sm text-gray-600">
                         <span className="text-base">📅</span>
-                        <span className="font-medium">{formatSchedule(cls.schedule)}</span>
+                        <ClassSchedule
+                          slots={cls.schedule}
+                          classTimezone={cls.timezone ?? SCHOOL_TIMEZONE}
+                          viewerTimezone={viewerTimezone}
+                          className="font-medium"
+                        />
                       </div>
 
                       {cls.location && (

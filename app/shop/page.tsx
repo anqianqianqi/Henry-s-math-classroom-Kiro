@@ -22,6 +22,8 @@ const AnimatedRoomLayer = dynamicImport(() => import('@/components/pet-room/Anim
 import { buildKeyframesCSS, buildAnimCSS, getTransformOrigin, overlayWidthPct } from '@/lib/overlayAnimations'
 import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { visibleInRegion, hiddenCount } from '@/lib/utils/shopRegion'
+import { useViewerZone } from '@/components/ui/useViewerZone'
 const SHOP_ZP_KEYFRAMES = buildKeyframesCSS('szp') + `
 @keyframes szp-pulse-glow { 0%,100%{opacity:1} 50%{opacity:0.7} }
 `
@@ -783,6 +785,7 @@ function MusicBrowseModal({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ShopPage() {
   const { t } = useLanguage()
+  const { region: viewerRegion } = useViewerZone()
   const router = useRouter()
   const supabase = createClient()
 
@@ -793,6 +796,7 @@ export default function ShopPage() {
   const [redemptions, setRedemptions] = useState<RedemptionWithTitle[]>([])
   const [redeeming, setRedeeming] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [regionHidden, setRegionHidden] = useState(0)
   const [redeemErrors, setRedeemErrors] = useState<Record<string, string>>({})
   const [activeTab, setActiveTab] = useState<'all' | 'rewards'>('rewards')
   // Set of shop_item IDs the user already owns (book skins + pet rooms) — disables re-purchase
@@ -976,8 +980,19 @@ export default function ShopPage() {
       }
     }
 
+    /*
+      Hide what this student could never receive. Only shipped goods carry a
+      region, so this removes nothing digital.
+
+      A courtesy, not the rule: anything filtered here a crafted request can
+      still ask for, which is why the redemptions trigger refuses it in the
+      database regardless of which redeem function is called.
+    */
+    const inRegion = visibleInRegion((shopItems ?? []) as any[], viewerRegion)
+    setRegionHidden(hiddenCount((shopItems ?? []) as any[], viewerRegion))
+
     setItems(
-      (shopItems ?? []).map((item: ShopItem) => ({
+      inRegion.map((item: ShopItem) => ({
         ...item,
         redemption_count: countMap[item.id] ?? 0,
         // For blindbox items: use remaining from map, default to 999 if not set (shows as available)
@@ -1041,7 +1056,10 @@ export default function ShopPage() {
       const redemptionsData = await redemptionsRes.json()
       setRedemptions(redemptionsData.redemptions ?? [])
     }
-  }, [supabase])
+  // viewerRegion included on purpose: it resolves asynchronously, and without
+  // it here loadData keeps the null captured on first render and the region
+  // filter never applies until a manual refresh.
+  }, [supabase, viewerRegion])
 
   useEffect(() => {
     async function init() {

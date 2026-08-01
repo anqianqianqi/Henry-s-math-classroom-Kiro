@@ -13,6 +13,23 @@ export const settings = {
   'settings.lastNamePlaceholder': { en: 'Last name', zh: '姓' },
   'settings.email': { en: 'Email', zh: '邮箱' },
   'settings.nickname': { en: 'Nickname (shown to classmates)', zh: '昵称（同学看到的名字）' },
+// Timezone and region. Detection covers almost everyone; these exist so the
+  // people it gets wrong can say so.
+  'settings.timezone': { en: 'Timezone', zh: '时区' },
+  'settings.timezoneHint': {
+    en: 'Times across the site are shown in this timezone.',
+    zh: '网站上的时间将按此时区显示。',
+  },
+  'settings.region': { en: 'Region', zh: '所在地区' },
+  'settings.regionHint': {
+    en: 'Used only for items that need posting, so nothing is bought that cannot reach you.',
+    zh: '仅用于需要邮寄的商品，以免购买无法寄达的物品。',
+  },
+  'settings.regionUnset': { en: 'Not set', zh: '未设置' },
+  'settings.region_us': { en: 'United States', zh: '美国' },
+  'settings.region_cn': { en: 'China', zh: '中国' },
+  'settings.region_other': { en: 'Elsewhere', zh: '其他地区' },
+
   'settings.nicknameHint': {
     en: 'Optional — displayed instead of your full name to other students',
     zh: '可选——其他同学会看到昵称而不是您的全名',

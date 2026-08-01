@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/Card'
 import NotificationPreferences from '@/components/NotificationPreferences'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { REGIONS, SCHOOL_TIMEZONE, detectTimeZone, isValidTimeZone, zoneLabel } from '@/lib/utils/timezone'
 
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null)
@@ -21,6 +22,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
   const [loading, setLoading] = useState(true)
+  const [timezone, setTimezone] = useState(SCHOOL_TIMEZONE)
+  const [region, setRegion] = useState<string>('')
   const [isTeacher, setIsTeacher] = useState(false)
   const [scoreStats, setScoreStats] = useState<{
     totalScore: number
@@ -48,7 +51,7 @@ export default function SettingsPage() {
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, full_name, first_name, last_name, email, avatar_url')
+      .select('id, full_name, first_name, last_name, email, avatar_url, timezone, region')
       .eq('id', user.id)
       .single()
 
@@ -62,6 +65,12 @@ export default function SettingsPage() {
         .eq('id', user.id)
         .single()
       setNickname((nicknameData as any)?.nickname || '')
+      // A stored zone is what the person said; detection is only a guess, so
+      // it fills the field solely when nothing has been stored — or when what
+      // was stored is a name this browser no longer recognises.
+      const stored = (profile as any).timezone as string | null
+      setTimezone(isValidTimeZone(stored) ? (stored as string) : detectTimeZone())
+      setRegion((profile as any).region ?? '')
     }
 
     // Check role
@@ -117,6 +126,11 @@ export default function SettingsPage() {
     const { error } = await supabase
       .from('profiles')
       .update({
+        timezone,
+        // Empty select means 'not said'. Stored as NULL so the shop and the
+        // redemptions trigger both read it as unknown and allow everything,
+        // rather than as a region that matches nothing.
+        region: region || null,
         first_name: firstName.trim() || '',
         last_name: lastName.trim() || '',
         nickname: nickname.trim() || null
@@ -177,6 +191,55 @@ export default function SettingsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-700">{t('settings.email')}</p>
                 <p className="text-gray-900">{profile?.email}</p>
+              </div>
+
+              {/* Detection is right for almost everyone and wrong for anyone
+                  travelling, behind a VPN, or on a borrowed machine. These
+                  exist so that being wrong is fixable rather than permanent. */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="tz" className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('settings.timezone')}
+                  </label>
+                  <select
+                    id="tz"
+                    value={timezone}
+                    onChange={e => setTimezone(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white"
+                  >
+                    {/* The detected zone is always offered, even if it is not in
+                        the short list — otherwise anyone outside these few
+                        places silently has their real zone replaced on save. */}
+                    {Array.from(new Set([
+                      detectTimeZone(), timezone, SCHOOL_TIMEZONE,
+                      'Asia/Shanghai', 'Asia/Taipei', 'Asia/Hong_Kong',
+                      'America/Los_Angeles', 'America/Chicago', 'Europe/London',
+                    ])).filter(isValidTimeZone).map(zone => (
+                      <option key={zone} value={zone}>
+                        {zone.replace(/_/g, ' ')} · {zoneLabel(zone)}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">{t('settings.timezoneHint')}</p>
+                </div>
+
+                <div>
+                  <label htmlFor="region" className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('settings.region')}
+                  </label>
+                  <select
+                    id="region"
+                    value={region}
+                    onChange={e => setRegion(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white"
+                  >
+                    <option value="">{t('settings.regionUnset')}</option>
+                    {REGIONS.map(r => (
+                      <option key={r} value={r}>{t(`settings.region_${r}` as any)}</option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">{t('settings.regionHint')}</p>
+                </div>
               </div>
               <FormField
                 label={t('settings.nickname')}
