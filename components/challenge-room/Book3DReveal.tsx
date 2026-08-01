@@ -32,6 +32,7 @@ import {
   type Placement,
 } from '@/lib/types/challengeRoom'
 import { DreamSketchBoundary } from '@/components/ui/DreamSketchBoundary'
+import { useAdaptiveInk } from '@/components/ui/useAdaptiveInk'
 
 const RoomPlacementStage = dynamicImport(
   () => import('./RoomPlacementStage').then(m => m.RoomPlacementStage),
@@ -94,6 +95,9 @@ export function Book3DReveal({
   const [phase, setPhase] = useState<Phase>('closed')
   const [frame, setFrame] = useState(animation.startFrame)
   const [playing, setPlaying] = useState(false)
+
+  /** Sketch-boundary ink, read off this room's own edges. */
+  const ink = useAdaptiveInk(roomUrl)
 
   // Placement is animated during the zoom, so the stage reads this rather than
   // the prop. The saved room placement stays untouched.
@@ -272,12 +276,11 @@ export function Book3DReveal({
              outside it against the page. */
           edgeTextureBleed={0.025}
           inkStrength={0.5}
-          style={{
-            width: 'min(100%, 132vh)',
-            // Warm graphite against this room's cream. The component reads
-            // --dream-ink, so a different surface can set its own.
-            '--dream-ink': '#44403c',
-          } as React.CSSProperties}
+          /* Read off this room's own edges rather than fixed: students choose
+             their room, and one graphite cannot suit both a cream room and a
+             near-black one. See lib/ui/adaptiveInk.ts. */
+          lineColor={ink}
+          style={{ width: 'min(100%, 132vh)' }}
         >
         <div className="relative w-full overflow-hidden bg-gray-950">
         <div
