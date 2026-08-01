@@ -81,22 +81,43 @@ export function RegionWelcomeCard() {
       try {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-        const { data } = await supabase
+        if (!user) {
+          console.info('[welcome] signed out — card not shown')
+          return
+        }
+
+        const { data, error } = await supabase
           .from('profiles')
           .select('region_onboarded_at, preferred_language')
           .eq('id', user.id)
           .maybeSingle()
-        if (cancelled || !data) return
-        if ((data as any).region_onboarded_at) return
+
+        // Loud on purpose. A missing column returns an error here and nothing
+        // else — the card simply never appears, with no clue why. That is the
+        // one failure mode worth a console line.
+        if (error) {
+          console.error('[welcome] could not read profile:', error.message,
+            '— has supabase/add-timezones-and-regions.sql been run?')
+          return
+        }
+        if (cancelled || !data) {
+          console.warn('[welcome] no profile row for this user')
+          return
+        }
+        if ((data as any).region_onboarded_at) {
+          console.info('[welcome] already answered at',
+            (data as any).region_onboarded_at, '— clear it to see the card again')
+          return
+        }
 
         setUserId(user.id)
         const existing = (data as any).preferred_language
         if (existing === 'en' || existing === 'zh') setChosenLanguage(existing)
         setShow(true)
-      } catch {
-        // Never block the site on this. Someone who does not see the card keeps
-        // the detected zone and can set it in Settings.
+      } catch (err) {
+        // Never block the site on this: someone who does not see the card keeps
+        // the detected zone and can set it in Settings. But say so.
+        console.error('[welcome] unexpected failure:', err)
       }
     })()
     return () => { cancelled = true }

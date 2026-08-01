@@ -43,11 +43,21 @@ export function useViewerZone(): ViewerZone {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) { if (!cancelled) setLoading(false); return }
 
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('timezone, region')
           .eq('id', user.id)
           .maybeSingle()
+
+        // Same reasoning as the welcome card: a missing column here degrades to
+        // the school's zone silently, which looks like the feature doing
+        // nothing rather than a migration not having run.
+        if (error) {
+          console.error('[viewerZone] could not read profile:', error.message,
+            '— has supabase/add-timezones-and-regions.sql been run?')
+          if (!cancelled) setLoading(false)
+          return
+        }
 
         const stored = (profile as any)?.timezone as string | null | undefined
         if (isValidTimeZone(stored)) {
