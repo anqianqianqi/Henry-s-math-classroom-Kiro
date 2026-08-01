@@ -13,7 +13,31 @@ export const settings = {
   'settings.lastNamePlaceholder': { en: 'Last name', zh: '姓' },
   'settings.email': { en: 'Email', zh: '邮箱' },
   'settings.nickname': { en: 'Nickname (shown to classmates)', zh: '昵称（同学看到的名字）' },
-// Timezone and region. Detection covers almost everyone; these exist so the
+  // ── The one-time welcome card ─────────────────────────────────────────────
+  // Shown once, before anyone has chosen a language, so the card renders BOTH
+  // languages at once instead of switching. The wording still lives here rather
+  // than in the component — the catalog is where wording belongs — and showing
+  // both is done by asking translate() for each language explicitly.
+  'welcome.title': {
+    en: 'Hello Students, website region/timezone logic is now online!',
+    zh: '各位同学，网站的地区与时区功能现已上线！',
+  },
+  'welcome.choose': {
+    en: 'Please choose where you are from and your preferred language display',
+    zh: '请选择您所在的地区及首选的显示语言。',
+  },
+  'welcome.later': {
+    en: 'In the future, you can change your region in the setting and your preferred language on the top right of the website',
+    zh: '今后，您可以在“设置”中更改地区，并通过网站右上角切换首选语言。',
+  },
+  'welcome.country': { en: 'Country / region', zh: '国家或地区' },
+  'welcome.city': { en: 'City', zh: '城市' },
+  'welcome.detectedZone': { en: 'Your timezone', zh: '您的时区' },
+  'welcome.language': { en: 'Display language', zh: '显示语言' },
+  'welcome.confirm': { en: 'Save and continue', zh: '保存并继续' },
+  'welcome.saving': { en: 'Saving…', zh: '正在保存……' },
+
+  // Timezone and region. Detection covers almost everyone; these exist so the
   // people it gets wrong can say so.
   'settings.timezone': { en: 'Timezone', zh: '时区' },
   'settings.timezoneHint': {

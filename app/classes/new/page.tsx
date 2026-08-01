@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { generateOccurrences } from '@/lib/utils/occurrences'
+import { useViewerZone } from '@/components/ui/useViewerZone'
 
 /** Weekday values as stored, paired with their catalog key. */
 const DAY_KEYS = [
@@ -31,6 +32,9 @@ interface ScheduleSlot {
 
 export default function NewClassPage() {
   const { t } = useLanguage()
+  // The teacher's saved zone. Virtual classes run on the teacher's clock, and
+  // the schedule below is typed while looking at it.
+  const { timezone: teacherTimezone } = useViewerZone()
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -211,6 +215,16 @@ export default function NewClassPage() {
           name: formData.name,
           description: formData.description || null,
           schedule: validSlots.length > 0 ? validSlots : null,
+          /*
+            Classes are virtual, so "where the class runs" is the teacher's own
+            clock: the times above were typed while looking at it. Students
+            elsewhere see them converted.
+
+            Taken from the teacher's saved zone rather than the browser's, so a
+            teacher setting up a class from a hotel abroad does not silently
+            move every session for the whole class.
+          */
+          timezone: teacherTimezone,
           start_date: formData.start_date,
           end_date: formData.end_date || null,
           created_by: user.id,

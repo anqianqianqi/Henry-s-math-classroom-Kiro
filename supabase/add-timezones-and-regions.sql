@@ -38,7 +38,11 @@
 
 ALTER TABLE profiles
   ADD COLUMN IF NOT EXISTS timezone TEXT,
-  ADD COLUMN IF NOT EXISTS region   TEXT;
+  ADD COLUMN IF NOT EXISTS region   TEXT,
+  -- Set when someone has answered the welcome card. A separate column rather
+  -- than inferring from region being non-null: "not set" is a legitimate answer
+  -- somebody may return to in Settings, and it must not summon the card again.
+  ADD COLUMN IF NOT EXISTS region_onboarded_at TIMESTAMPTZ;
 
 DO $$ BEGIN
   ALTER TABLE profiles ADD CONSTRAINT profiles_region_check
@@ -53,17 +57,22 @@ COMMENT ON COLUMN profiles.region IS
   'digital; that is a property of an item, and is expressed by having no region.';
 
 -- ── Classes ─────────────────────────────────────────────────
--- NOT NULL with a default, so every existing class is backfilled to the school
--- in one statement. Correct as long as all current classes actually run in New
--- York — the check query at the bottom lists them so that can be confirmed
--- rather than assumed.
+-- Classes are virtual, so "where the class runs" means the teacher's own clock:
+-- new classes take the creating teacher's timezone, set by the class form.
+--
+-- The column default only covers existing rows, which predate anybody having a
+-- timezone at all and so cannot be backfilled from their teacher. They become
+-- the school's zone, which is right for classes Henry runs and wrong for any
+-- run from elsewhere — the check query at the bottom lists them all so that can
+-- be confirmed rather than assumed.
 
 ALTER TABLE classes
   ADD COLUMN IF NOT EXISTS timezone TEXT NOT NULL DEFAULT 'America/New_York';
 
 COMMENT ON COLUMN classes.timezone IS
-  'IANA zone the class actually runs in. The schedule JSONB holds wall-clock '
-  'times with no zone of their own, so this is what makes them convertible.';
+  'IANA zone this class is taught in — for virtual classes, the teacher''s own. '
+  'The schedule JSONB holds wall-clock times with no zone of their own, so this '
+  'is what makes them convertible for everyone else.';
 
 -- ── Shop regions ────────────────────────────────────────────
 
