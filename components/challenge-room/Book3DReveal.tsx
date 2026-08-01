@@ -31,6 +31,8 @@ import {
   type AnimationConfig,
   type Placement,
 } from '@/lib/types/challengeRoom'
+import { DreamSketchBoundary } from '@/components/ui/DreamSketchBoundary'
+import { useAdaptiveInk } from '@/components/ui/useAdaptiveInk'
 
 const RoomPlacementStage = dynamicImport(
   () => import('./RoomPlacementStage').then(m => m.RoomPlacementStage),
@@ -93,6 +95,9 @@ export function Book3DReveal({
   const [phase, setPhase] = useState<Phase>('closed')
   const [frame, setFrame] = useState(animation.startFrame)
   const [playing, setPlaying] = useState(false)
+
+  /** Sketch-boundary ink, read off this room's own edges. */
+  const ink = useAdaptiveInk(roomUrl)
 
   // Placement is animated during the zoom, so the stage reads this rather than
   // the prop. The saved room placement stays untouched.
@@ -252,10 +257,32 @@ export function Book3DReveal({
           marginLeft: 'calc(50% - 48vw)',
         }}
       >
-        <div
-          className="relative mx-auto overflow-hidden bg-gray-950"
+        {/* Wraps only the room block. Must not enclose the zoomed reader below
+            — see the note on that element, and on DreamSketchBoundary itself.
+
+            The letterbox width lives HERE rather than on the box below, so the
+            boundary and the picture are sized by the same declaration. When
+            they each had their own, the effect was drawn around the 96vw
+            breakout while the room sat centred and narrower inside it. */}
+        <DreamSketchBoundary
+          /* The wrapper is narrower than this breakout div, so it has to be
+             centred here — the component stays layout-neutral rather than
+             imposing a margin its consumers might not want. */
+          className="mx-auto"
+          /* A drawn frame rather than generated strokes — see the note on the
+             prop. It is 3:2, which is what this box always is. */
+          edgeTexture="/sketch-frame.png"
+          /* Pulled back so the marks lie ON the room rather than hovering
+             outside it against the page. */
+          edgeTextureBleed={0.025}
+          inkStrength={0.7}
+          /* Read off this room's own edges rather than fixed: students choose
+             their room, and one graphite cannot suit both a cream room and a
+             near-black one. See lib/ui/adaptiveInk.ts. */
+          lineColor={ink}
           style={{ width: 'min(100%, 132vh)' }}
         >
+        <div className="relative w-full overflow-hidden bg-gray-950">
         <div
           aria-hidden="true"
           className="absolute inset-0 scale-110 blur-2xl"
@@ -325,6 +352,7 @@ export function Book3DReveal({
         )}
 
         </div>
+        </DreamSketchBoundary>
       </div>
 
       {/*
