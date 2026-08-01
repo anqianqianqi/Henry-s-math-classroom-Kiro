@@ -275,7 +275,7 @@ export function Book3DReveal({
           /* Pulled back so the marks lie ON the room rather than hovering
              outside it against the page. */
           edgeTextureBleed={0.025}
-          inkStrength={0.5}
+          inkStrength={0.7}
           /* Read off this room's own edges rather than fixed: students choose
              their room, and one graphite cannot suit both a cream room and a
              near-black one. See lib/ui/adaptiveInk.ts. */
