@@ -1251,6 +1251,22 @@ export default function ShopPage() {
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{error}</div>
         )}
 
+        {/* Say that something was hidden, and why. A student who has heard about
+            an item from a classmate and cannot find it should learn it cannot
+            reach them, rather than conclude the shop is broken. */}
+        {regionHidden > 0 && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            {t('shop.regionHidden', { count: regionHidden })}
+            <button
+              type="button"
+              onClick={() => router.push('/settings')}
+              className="ml-2 font-semibold underline hover:no-underline"
+            >
+              {t('shop.regionChange')}
+            </button>
+          </div>
+        )}
+
         {/* Balance */}
         <div className="mb-8 grid grid-cols-2 gap-px overflow-hidden rounded-3xl bg-white/20 shadow-lg">
           <div className="bg-gradient-to-br from-primary-500 to-accent-blue px-6 py-6 text-white">

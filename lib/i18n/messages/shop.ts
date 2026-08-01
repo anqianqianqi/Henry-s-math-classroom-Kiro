@@ -6,6 +6,16 @@
 
 export const shop = {
   'shop.title': { en: 'Shop', zh: '商店' },
+
+  // Shown when region filtering removed something. One key with a placeholder
+  // rather than joined fragments: the count sits mid-sentence in English and
+  // before a measure word in Chinese, and no amount of joining in JSX produces
+  // both word orders.
+  'shop.regionHidden': {
+    en: '{count} item(s) are hidden because they cannot be posted to your region.',
+    zh: '有 {count} 件商品无法寄送至您所在的地区，已隐藏。',
+  },
+  'shop.regionChange': { en: 'Change region', zh: '更改地区' },
   'shop.balance': { en: 'Balance', zh: '余额' },
   'shop.points': { en: 'points', zh: '积分' },
   'shop.buy': { en: 'Buy', zh: '购买' },

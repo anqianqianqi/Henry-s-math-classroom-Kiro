@@ -65,7 +65,7 @@ export function ClassSchedule({
           return (
             <span key={i}>
               {i > 0 && ', '}
-              {dayName(dayKey, slot.day)} {slot.startTime}
+              {dayName(dayKey, slot.day)} {slot.endTime ? `${slot.startTime}–${slot.endTime}` : slot.startTime}
               <span className="text-gray-400"> {zoneLabel(classTimezone)}</span>
             </span>
           )
@@ -77,7 +77,7 @@ export function ClassSchedule({
           return (
             <span key={i}>
               {i > 0 && ', '}
-              {dayName(dayKey, slot.day)} {slot.startTime}
+              {dayName(dayKey, slot.day)} {slot.endTime ? `${slot.startTime}–${slot.endTime}` : slot.startTime}
               <span className="text-gray-400"> {zoneLabel(classTimezone)}</span>
             </span>
           )
@@ -93,10 +93,17 @@ export function ClassSchedule({
           Zone labels are taken AT the session, not at page load: those differ
           across a clock change, and the reader is planning for the session.
         */
+        const endConverted = slot.endTime
+          ? convertSession(slot.day, slot.endTime, classTimezone, viewerTimezone)
+          : null
+        const range = (from: string, to: string | null | undefined) =>
+          to ? `${from}–${to}` : from
+
         return (
           <span key={i} className="inline-block">
             {i > 0 && <span className="text-gray-400">, </span>}
-            {dayName(DAY_KEYS[converted.day], converted.day)} {converted.time}
+            {dayName(DAY_KEYS[converted.day], converted.day)}{' '}
+            {range(converted.time, endConverted?.time)}
             <span className="text-gray-400">
               {' '}{zoneLabel(viewerTimezone, converted.at)} · {t('class.yourTime')}
               {converted.dayShift !== 0 && (
@@ -105,7 +112,7 @@ export function ClassSchedule({
                 <> {converted.dayShift > 0 ? t('class.nextDay') : t('class.prevDay')}</>
               )}
               {' · '}
-              {dayName(dayKey, slot.day)} {slot.startTime}{' '}
+              {dayName(dayKey, slot.day)} {range(slot.startTime, slot.endTime)}{' '}
               {zoneLabel(classTimezone, converted.at)} · {t('class.classTime')}
             </span>
           </span>

@@ -9,12 +9,16 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { ClassSchedule } from '@/components/ui/ClassSchedule'
+import { useViewerZone } from '@/components/ui/useViewerZone'
+import { SCHOOL_TIMEZONE } from '@/lib/utils/timezone'
 
 interface Class {
   id: string
   name: string
   description: string | null
   schedule: Array<{ day: string; startTime: string; endTime: string }> | null
+  timezone: string | null
   start_date: string
   end_date: string | null
   created_at: string
@@ -33,6 +37,7 @@ export default function ClassesPage() {
   const router = useRouter()
   const supabase = createClient()
   const { t, language } = useLanguage()
+  const { timezone: viewerTimezone } = useViewerZone()
 
   useEffect(() => {
     loadClasses()
@@ -163,12 +168,12 @@ export default function ClassesPage() {
                     {cls.schedule && cls.schedule.length > 0 && (
                       <div className="text-gray-500">
                         <span className="font-medium">{t('class.schedule')}</span>
-                        <div className="mt-1 space-y-1">
-                          {cls.schedule.map((slot, index) => (
-                            <div key={index} className="text-xs">
-                              {slot.day}s {slot.startTime} - {slot.endTime}
-                            </div>
-                          ))}
+                        <div className="mt-1 text-xs">
+                          <ClassSchedule
+                            slots={cls.schedule}
+                            classTimezone={cls.timezone ?? SCHOOL_TIMEZONE}
+                            viewerTimezone={viewerTimezone}
+                          />
                         </div>
                       </div>
                     )}
