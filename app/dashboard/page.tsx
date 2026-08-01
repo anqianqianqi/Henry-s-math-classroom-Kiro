@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { DreamSketchBoundary } from '@/components/ui/DreamSketchBoundary'
 import NotificationBell from '@/components/NotificationBell'
 import { AnnouncementButton } from '@/components/AnnouncementButton'
 import { localDateString } from '@/lib/utils/date'
@@ -650,14 +651,34 @@ export default function DashboardPage() {
           {/* Right half: pet area — room+frame baked into background, user photo in frame_slot */}
           <div
             id="pet-area"
-            className="flex-1 min-w-0 self-start rounded-3xl overflow-hidden relative"
-            style={{
-              minHeight: '400px',
-              backgroundImage: petRoomBgUrl ? `url(${petRoomBgUrl})` : undefined,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center bottom',
-            }}
+            className="flex-1 min-w-0 self-start relative"
+            style={{ minHeight: '400px' }}
           >
+            {/*
+              Only the ROOM ART is softened. The pet, the animated layer and the
+              wall photo sit above it untouched — the default frame slot starts
+              at y 6%, which is inside the fade band, so masking the whole box
+              would eat the top of the student's own picture.
+
+              No pencil on this one: lineDensity 0 is the fade alone.
+            */}
+            <DreamSketchBoundary
+              lineDensity={0}
+              className="absolute inset-0"
+              contentClassName="absolute inset-0"
+            >
+              {/* The art goes INSIDE the masked layer. On the wrapper it would
+                  paint above the mask and never fade. */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: petRoomBgUrl ? `url(${petRoomBgUrl})` : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center bottom',
+                }}
+              />
+            </DreamSketchBoundary>
+
             {/* User's blindbox photo — clipped to the frame_slot area, rotated to match frame perspective */}
             {userPhotoUrl && petRoomFrameSlot && (
               // eslint-disable-next-line @next/next/no-img-element

@@ -67,8 +67,23 @@ export interface DreamSketchBoundaryProps {
    */
   irregularity?: number
 
-  /** Roughly how many strokes are drawn. Sparse on purpose — see buildStrokes. */
+  /**
+   * Roughly how many strokes are drawn. Sparse on purpose — see buildStrokes.
+   *
+   * Zero, with no `edgeTexture`, means no ink at all: the fade alone. Worth
+   * having as a real case rather than "draw nothing, expensively" — the pet
+   * room wants the softened edge without a pencil on it.
+   */
   lineDensity?: number
+
+  /**
+   * Classes for the masked layer itself, not the wrapper.
+   *
+   * Needed when the caller sizes the wrapper and the content has to fill it:
+   * a mask applies to the element's own box, so a content layer left at auto
+   * height gets masked to nothing. `absolute inset-0` is the usual answer.
+   */
+  contentClassName?: string
 
   /** Any CSS colour. A var() works because this layer is inline SVG. */
   lineColor?: string
@@ -338,6 +353,7 @@ export function DreamSketchBoundary({
   edgeTextureBleed = 0.045,
   seed = 20260801,
   className,
+  contentClassName,
   style,
 }: DreamSketchBoundaryProps) {
   const ref = useRef<HTMLDivElement>(null)
@@ -372,6 +388,7 @@ export function DreamSketchBoundary({
   return (
     <div ref={ref} className={`relative ${className ?? ''}`} style={style}>
       <div
+        className={contentClassName}
         style={{
           maskImage: mask,
           WebkitMaskImage: mask,
@@ -388,7 +405,7 @@ export function DreamSketchBoundary({
           erase the very marks meant to sit in it, and pointer-events-none so
           neither can eat a click meant for the content. */}
 
-      {edgeTexture ? (
+      {!edgeTexture && lineDensity === 0 ? null : edgeTexture ? (
         // The drawing is the mask; the colour comes from CSS. That way the ink
         // can be re-tinted or dimmed without regenerating the artwork.
         <div
