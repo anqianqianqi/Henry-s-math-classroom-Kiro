@@ -268,7 +268,10 @@ export function Book3DReveal({
           /* A drawn frame rather than generated strokes — see the note on the
              prop. It is 3:2, which is what this box always is. */
           edgeTexture="/sketch-frame.png"
-          inkStrength={0.75}
+          /* Pulled back so the marks lie ON the room rather than hovering
+             outside it against the page. */
+          edgeTextureBleed={0.025}
+          inkStrength={0.5}
           style={{
             width: 'min(100%, 132vh)',
             // Warm graphite against this room's cream. The component reads
