@@ -2,6 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
+import { ART_STYLES } from '@/lib/art-styles'
 import React, { useEffect, useRef, useState } from 'react'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
@@ -795,61 +796,9 @@ function SkinOption({
 // AdminUploadBanner — shown only to admins/teachers; lets them upload new skins
 // with visibility control and sell-in-shop option, inline on this page.
 // ─────────────────────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────────────────────
-// Art style presets — applied to both cover and object generation
-// ─────────────────────────────────────────────────────────────────────────────
-const ART_STYLES: {
-  id: string
-  label: string
-  emoji: string
-  // Appended to the cover prompt
-  coverSuffix: string
-  // Included in the enrich-cluster-items system prompt as a style rule
-  objectStyle: string
-}[] = [
-  {
-    id: 'realistic',
-    label: 'Realistic',
-    emoji: '📸',
-    coverSuffix: 'rendered in a photorealistic style — rich textures, accurate materials, lifelike lighting as if photographed',
-    objectStyle: 'photorealistic — accurate materials, lifelike lighting, physical depth, as if photographed in a studio',
-  },
-  {
-    id: 'ghibli',
-    label: 'Ghibli',
-    emoji: '🌿',
-    coverSuffix: 'in the style of Studio Ghibli — soft watercolour washes, hand-painted detail, warm nostalgic palette, painterly brushwork, gentle rounded forms',
-    objectStyle: 'Studio Ghibli illustration style — soft watercolour texture, hand-painted feel, warm nostalgic colours, rounded friendly forms, painterly brushwork',
-  },
-  {
-    id: 'futuristic',
-    label: 'Futuristic',
-    emoji: '🚀',
-    coverSuffix: 'in a sleek futuristic sci-fi style — glowing neon accents, holographic surfaces, carbon fibre and chrome materials, crisp hard-edge design',
-    objectStyle: 'futuristic sci-fi style — glowing neon edges, holographic sheen, chrome and carbon materials, crisp angular forms, cyberpunk atmosphere',
-  },
-  {
-    id: 'minimalist',
-    label: 'Minimalist',
-    emoji: '◻️',
-    coverSuffix: 'in a clean minimalist style — flat bold shapes, limited colour palette of 2-3 colours, strong negative space, geometric precision, no fine detail',
-    objectStyle: 'minimalist flat design — bold simplified silhouette, 2-3 colour palette, geometric clean shapes, strong negative space, no fine ornament',
-  },
-  {
-    id: 'vintage',
-    label: 'Vintage',
-    emoji: '🕰️',
-    coverSuffix: 'in a vintage illustration style — aged paper texture, muted sepia and ochre tones, classic engraving hatching detail, antique lithograph feel',
-    objectStyle: 'vintage engraving illustration style — aged paper tone, sepia and ochre palette, classic cross-hatching linework, antique woodcut feel',
-  },
-  {
-    id: 'watercolour',
-    label: 'Watercolour',
-    emoji: '🎨',
-    coverSuffix: 'in a loose expressive watercolour style — translucent overlapping washes, soft bleeding edges, visible brushstrokes, delicate wet-on-wet blending',
-    objectStyle: 'loose watercolour illustration — translucent colour washes, soft bleeding edges, visible brushstroke texture, delicate wet-on-wet blending',
-  },
-]
+// Art style presets — applied to both cover and object generation.
+// Moved to lib/art-styles.ts so the challenge-room and book-bundle prompt
+// compilers, which run in route handlers, can reach them too.
 
 const COVER_W = 400
 const COVER_H = 620
