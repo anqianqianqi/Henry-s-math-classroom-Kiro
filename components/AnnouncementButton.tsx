@@ -8,10 +8,14 @@
  * gives every student a fresh three days — see lib/actions/announcements.ts.
  *
  * ── FAILS CLOSED ────────────────────────────────────────────
- * Renders nothing at all when there is no announcement, when the reader is
+ * For a student it renders nothing at all when there is no announcement, when
  * signed out, or when anything at all goes wrong. This sits in the header of
  * ~17 pages: a broken announcement must look like today's app, never like a
  * broken header. There is deliberately no error state.
+ *
+ * Staff are the exception — they see the button even with no announcement,
+ * because the panel is the only place one can be written and hiding it would
+ * leave no way to post the first.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -92,9 +96,10 @@ export function AnnouncementButton() {
     language,
   )
 
-  // Nothing to announce — and nothing to show. Admins get no button either;
-  // posting the first announcement is not something you reach for from a header.
-  if (!announcement) return null
+  // Students see nothing when there is nothing to announce. Staff always see
+  // the button, because otherwise there would be no way to write the FIRST
+  // announcement — the panel is the only place it can be composed.
+  if (!announcement && !canEdit) return null
 
   async function handleSave() {
     setNotice(null)
@@ -159,7 +164,7 @@ export function AnnouncementButton() {
         className={`
           rounded-full border px-3 py-1 text-xs font-semibold whitespace-nowrap
           transition-colors
-          ${announcement.shining
+          ${announcement?.shining
             ? 'announcement-shine'
             : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}
         `}
@@ -206,7 +211,8 @@ export function AnnouncementButton() {
                 >
                   {t('action.cancel')}
                 </button>
-                <button
+                {/* Nothing to delete until one exists. */}
+                {announcement && <button
                   type="button"
                   onClick={handleDelete}
                   disabled={busy !== null}
@@ -217,7 +223,7 @@ export function AnnouncementButton() {
                     : confirmingDelete
                       ? t('announce.confirmDelete')
                       : t('action.delete')}
-                </button>
+                </button>}
               </div>
             </>
           ) : (
