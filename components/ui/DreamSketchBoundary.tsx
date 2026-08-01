@@ -76,6 +76,16 @@ export interface DreamSketchBoundaryProps {
   /** Scales fade depth and ink opacity together. 0 disables the effect. */
   strength?: number
 
+  /**
+   * Scales the ink alone, leaving the fade where it is.
+   *
+   * Separate from `strength` because the two are tuned against different
+   * things: the fade against how much picture you can spare, the ink against
+   * how busy the artwork underneath is. Wanting a firmer pencil is not a
+   * reason to deepen the fade.
+   */
+  inkStrength?: number
+
   /** Change for a different drawing at identical settings. */
   seed?: number
 
@@ -156,29 +166,19 @@ interface Stroke {
  */
 function buildStrokes(
   w: number, h: number, fadeWidth: number, irregularity: number,
-  strength: number, density: number, seed: number,
+  strength: number, inkStrength: number, density: number, seed: number,
 ): Stroke[] {
   const g = geometry(w, h, fadeWidth, irregularity, strength)
   const rand = makeRandom(seed)
   const strokes: Stroke[] = []
 
-  for (let i = 0; i < density; i++) {
-    const edge = Math.floor(rand() * 4)
+  /** One mark. Pulled out so a stroke can be drawn twice, slightly apart. */
+  function mark(edge: number, start: number, length: number, off: number,
+                opacity: number, width: number, dash?: string) {
     const horizontal = edge === 0 || edge === 2
     const along = horizontal ? w : h
-    // Where the line sits across the band — some inside the picture, some out
-    // in the fading part, so the bundle is not a single traced outline.
-    const off = g.inset * (0.4 + rand() * 1.5)
-
-    const start = rand() * 0.68
-    const length = 0.08 + rand() * 0.3
-    // A quarter of the strokes run past their corner, the way a hand does.
-    const over = rand() < 0.25 ? 0.04 : 0
-    const t0 = start - over
-    const t1 = Math.min(1.02, start + length + over)
-
-    const a = t0 * along
-    const b = t1 * along
+    const a = start * along
+    const b = Math.min(1.04, start + length) * along
     const fixed = edge === 0 ? off
       : edge === 1 ? w - off
       : edge === 2 ? h - off
@@ -199,14 +199,42 @@ function buildStrokes(
     strokes.push({
       d: pts.map(([x, y], k) =>
         `${k === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' '),
-      opacity: (0.08 + rand() * 0.14) * strength,
-      width: 0.8 + rand() * 0.8,
-      // Dry brush on roughly half of them: the line skips rather than holding
-      // an even weight, which is most of what separates pencil from a border.
-      dash: rand() < 0.45
-        ? `${(5 + rand() * 16).toFixed(1)} ${(3 + rand() * 10).toFixed(1)}`
-        : undefined,
+      opacity,
+      width,
+      dash,
     })
+  }
+
+  for (let i = 0; i < density; i++) {
+    const edge = Math.floor(rand() * 4)
+    // Where the line sits across the band — some inside the picture, some out
+    // in the fading part, so the marks are not one traced outline.
+    const off = g.inset * (0.4 + rand() * 1.5)
+    const start = rand() * 0.72
+
+    // Length is biased short: a few long sweeps among many brief ticks reads
+    // as a hand feeling out an edge. Uniform lengths read as a frame.
+    const length = 0.04 + Math.pow(rand(), 1.6) * 0.32
+    // A quarter run past their corner, the way a hand does.
+    const over = rand() < 0.25 ? 0.04 : 0
+
+    const opacity = (0.08 + rand() * 0.14) * strength * inkStrength
+    const width = 0.8 + rand() * 0.8
+    // Dry brush on roughly half: the line skips rather than holding an even
+    // weight, which is most of what separates pencil from a drawn border.
+    const dash = rand() < 0.45
+      ? `${(5 + rand() * 16).toFixed(1)} ${(3 + rand() * 10).toFixed(1)}`
+      : undefined
+
+    mark(edge, start - over, length + over * 2, off, opacity, width, dash)
+
+    // Pencil doubles back. A second, fainter pass a hair off the first is the
+    // single clearest tell of graphite rather than a vector stroke.
+    if (rand() < 0.4) {
+      mark(edge, start + (rand() * 0.04 - 0.02), length * (0.6 + rand() * 0.5),
+           off + (rand() * 2 - 1) * g.inset * 0.35,
+           opacity * 0.65, width * 0.8, dash)
+    }
   }
   return strokes
 }
@@ -221,6 +249,7 @@ export function DreamSketchBoundary({
   lineDensity = 10,
   lineColor = 'var(--dream-ink, currentColor)',
   strength = 1,
+  inkStrength = 1,
   seed = 20260801,
   className,
   style,
@@ -250,8 +279,8 @@ export function DreamSketchBoundary({
     [w, h, fadeWidth, irregularity, strength, seed],
   )
   const strokes = useMemo(
-    () => buildStrokes(w, h, fadeWidth, irregularity, strength, lineDensity, seed),
-    [w, h, fadeWidth, irregularity, strength, lineDensity, seed],
+    () => buildStrokes(w, h, fadeWidth, irregularity, strength, inkStrength, lineDensity, seed),
+    [w, h, fadeWidth, irregularity, strength, inkStrength, lineDensity, seed],
   )
 
   return (

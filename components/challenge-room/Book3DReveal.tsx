@@ -261,6 +261,12 @@ export function Book3DReveal({
             they each had their own, the effect was drawn around the 96vw
             breakout while the room sat centred and narrower inside it. */}
         <DreamSketchBoundary
+          /* The wrapper is narrower than this breakout div, so it has to be
+             centred here — the component stays layout-neutral rather than
+             imposing a margin its consumers might not want. */
+          className="mx-auto"
+          lineDensity={18}
+          inkStrength={1.7}
           style={{
             width: 'min(100%, 132vh)',
             // Warm graphite against this room's cream. The component reads
