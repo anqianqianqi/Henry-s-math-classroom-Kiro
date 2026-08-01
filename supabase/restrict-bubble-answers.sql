@@ -83,13 +83,30 @@ CREATE POLICY "brr_insert"
   );
 
 -- ── Check ───────────────────────────────────────────────────
--- Run as yourself. Expect can_answer = true for a teacher or TA on any
--- question, and true for anyone on a question they wrote.
+-- NOT can_answer_bubble() directly: the SQL editor has no signed-in user, so
+-- auth.uid() is NULL there and the function returns false for everything —
+-- which looks identical to a broken policy. These ask the same questions of a
+-- named user instead.
+
+-- 1. Is the policy the new one? Expect can_answer_bubble in the WITH CHECK.
+SELECT pg_get_expr(polwithcheck, polrelid) AS insert_rule
+FROM pg_policy
+WHERE polrelid = 'bubble_room_responses'::regclass
+  AND polname = 'brr_insert';
+
+-- 2. Who may now answer other people's questions? Expect every teacher and
+--    every TA to show true, and ordinary students to show false on both.
 SELECT
-  q.id,
-  LEFT(COALESCE(q.title, q.text), 40) AS question,
-  q.user_id = auth.uid()              AS is_mine,
-  can_answer_bubble(q.id)             AS can_answer
-FROM bubble_room_questions q
-ORDER BY q.created_at DESC
-LIMIT 5;
+  COALESCE(p.nickname, p.full_name) AS name,
+  EXISTS (
+    SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
+     WHERE ur.user_id = p.id AND ur.class_id IS NULL
+       AND r.name IN ('teacher', 'administrator')
+  ) AS is_staff,
+  EXISTS (
+    SELECT 1 FROM user_badges ub JOIN badge_definitions bd ON bd.id = ub.badge_id
+     WHERE ub.user_id = p.id AND bd.slug = 'bubble_room_ta'
+       AND ub.revoked_at IS NULL
+  ) AS is_ta
+FROM profiles p
+ORDER BY is_staff DESC, is_ta DESC, name;
