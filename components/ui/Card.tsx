@@ -17,15 +17,46 @@
  */
 
 import { HTMLAttributes, ReactNode } from 'react'
+import { paperCardStyle } from '@/lib/ui/paperCard'
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
 }
 
-export function Card({ children, className = '', ...props }: CardProps) {
+interface RootCardProps extends CardProps {
+  /**
+   * Render the old flat white card with a border and a drop shadow.
+   *
+   * For dense, tabular screens where painted paper costs more than it gives —
+   * the treatment reads as warmth on a dashboard and as noise on an admin list
+   * of forty rows.
+   */
+  plain?: boolean
+}
+
+export function Card({ children, className = '', plain = false, ...props }: RootCardProps) {
+  if (plain) {
+    return (
+      <div
+        className={`bg-white rounded-2xl shadow-md border border-gray-100 transition-all hover:shadow-lg hover:-translate-y-0.5 ${className}`}
+        {...props}
+      >
+        {children}
+      </div>
+    )
+  }
+
+  /*
+    No border and no drop shadow: a mask clips box-shadow outright, and a 1px
+    border traces the exact rectangle the soft edge is there to remove. What
+    separates the card from the page is now the warm wash and the pooling at
+    its rim. Lift on hover is kept — a transform still works — and the pooling
+    deepens to replace the shadow that used to do that job.
+  */
   return (
     <div
-      className={`bg-white rounded-2xl shadow-md border border-gray-100 transition-all hover:shadow-lg hover:-translate-y-0.5 ${className}`}
+      className={`paper-card transition-all hover:-translate-y-0.5 ${className}`}
+      style={paperCardStyle}
       {...props}
     >
       {children}

@@ -282,3 +282,14 @@ body {
     background-position: 50% 50%;
   }
 }
+
+/* ── Painted-paper cards ────────────────────────────────────────────────────
+   The wash, grain, mask and resting pool are set inline from lib/ui/paperCard
+   so they can be shared with anything else that wants the treatment. Only the
+   hover state needs to live here, because an inline style cannot express one.
+
+   A masked card cannot lift with a drop shadow — a mask clips box-shadow — so
+   the rim darkens instead, as though more pigment had settled there. */
+.paper-card:hover {
+  box-shadow: inset 0 0 30px 8px rgba(176, 138, 88, 0.30);
+}

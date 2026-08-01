@@ -1,0 +1,166 @@
+<!doctype html>
+<!--
+  Card boundary treatments — the options, and which one was chosen.
+
+  Open this file directly in a browser; it needs no server and no assets.
+
+  ── DECISION ────────────────────────────────────────────────
+  B (warm wash + paper grain + pigment pooling) was chosen, 2026-08-01.
+  Nothing is wired into components/ui/Card.tsx yet — this is a record of the
+  options so the rejected ones do not have to be re-derived.
+
+  ── WHY A TINT IS NEEDED AT ALL ─────────────────────────────
+  A mask can only remove pixels, so a boundary treatment needs something to
+  reveal. Today's card is white on a near-white page and is defined entirely by
+  its 1px border and shadow — both of which a mask breaks (a mask clips
+  box-shadow outright, and the border traces the exact rectangle being
+  softened). Masked and left white, a card becomes an ambiguous shape. The tint
+  is what gives the fade something to show.
+
+  ── WHAT MAKES THE GHIBLI VARIANTS DIFFERENT FROM A FLAT TINT ─
+  A wash rather than a fill, so light appears to fall across the paper; visible
+  paper grain, because real paint sits on a surface with tooth; and pigment
+  pooling — watercolour dries darker where the wash stopped, done as an INSET
+  shadow so it survives the mask and fades along the same irregular contour.
+
+  ── BEFORE THIS SHIPS ───────────────────────────────────────
+  The dashboard renders 30 Cards and the app 356 across 43 files. Each masked
+  card is an feTurbulence rasterisation, and the grain adds a second filter.
+  Measure render time on the dashboard before wiring this into Card itself.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Card boundary — Ghibli variants</title>
+<style>
+  :root { --dream-ink: #44403c; }
+  body {
+    margin: 0; padding: 16px 16px 60px;
+    background: linear-gradient(to bottom right, #f0fdf4, #ffffff, rgba(59,130,246,0.1));
+    font: 14px/1.5 system-ui, sans-serif; color: #111827;
+  }
+  h2 { margin: 20px 0 2px; font-size: 13px; font-weight: 700; color: #374151; }
+  .note { color: #6b7280; font-size: 11.5px; margin: 0 0 8px; }
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 760px; }
+  .card-today {
+    background: #fff; border-radius: 1rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0/.1), 0 2px 4px -2px rgb(0 0 0/.1);
+    border: 1px solid #f3f4f6;
+  }
+  .card-body { padding: 16px 24px; text-align: center; position: relative; z-index: 1; }
+  .emoji { font-size: 40px; margin-bottom: 8px; }
+  .num   { font-size: 28px; font-weight: 700; margin-bottom: 2px; }
+  .lbl   { color: #4b5563; font-weight: 500; font-size: 13px; }
+  .card  { position: relative; }
+</style>
+</head>
+<body>
+
+<div id="out"></div>
+
+<script>
+// ═══ Mask: same maths as components/ui/DreamSketchBoundary.tsx ══════════════
+function geometry(w, h, fadeWidth, irregularity) {
+  const band = Math.min(w, h) * fadeWidth
+  return { band, inset: band*0.5, blur: band*0.15, displace: band*0.8*irregularity,
+           radius: band*1.5, frequency: 3.2/Math.min(w, h) }
+}
+function buildMask(w, h, o) {
+  const g = geometry(w, h, o.fadeWidth, o.irregularity)
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
+    `<filter id="m" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">` +
+    `<feGaussianBlur stdDeviation="${g.blur.toFixed(2)}" result="s"/>` +
+    `<feTurbulence type="fractalNoise" baseFrequency="${g.frequency.toFixed(5)}" ` +
+    `numOctaves="2" seed="${o.seed}" result="n"/>` +
+    `<feDisplacementMap in="s" in2="n" scale="${g.displace.toFixed(2)}" ` +
+    `xChannelSelector="R" yChannelSelector="G"/></filter>` +
+    `<rect x="${g.inset.toFixed(1)}" y="${g.inset.toFixed(1)}" ` +
+    `width="${(w-g.inset*2).toFixed(1)}" height="${(h-g.inset*2).toFixed(1)}" ` +
+    `rx="${g.radius.toFixed(1)}" fill="#fff" filter="url(#m)"/></svg>`
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`
+}
+
+/*
+  Paper grain. Watercolour paper is the single most Ghibli thing here — a flat
+  fill reads as a UI panel however warm the colour, because real paint always
+  sits on a surface with tooth.
+*/
+function grain(slope, freq) {
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140">` +
+    `<filter id="g"><feTurbulence type="fractalNoise" baseFrequency="${freq}" ` +
+    `numOctaves="4" seed="11"/><feColorMatrix type="saturate" values="0"/>` +
+    `<feComponentTransfer><feFuncA type="linear" slope="${slope}"/></feComponentTransfer>` +
+    `</filter><rect width="140" height="140" filter="url(#g)"/></svg>`
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`
+}
+
+const GRAIN_FINE   = grain(0.10, 0.9)
+const GRAIN_COARSE = grain(0.14, 0.55)
+
+/*
+  Pigment pooling: watercolour dries darker where the wash stopped, because
+  pigment migrates to the drying edge. An INSET shadow paints inside the border
+  box, so it survives the mask and fades along the same irregular contour.
+*/
+const POOL_WARM = 'inset 0 0 26px 6px rgba(176,138,88,0.20)'
+const POOL_SOFT = 'inset 0 0 20px 4px rgba(150,130,95,0.13)'
+const POOL_COOL = 'inset 0 0 26px 6px rgba(110,140,130,0.18)'
+
+const VARIANTS = [
+  { name: 'Reference — today', note: 'White, 1px border, shadow-md.', today: true },
+  { name: 'Flat cream #faf3e4', note: 'Best of the plain tints. Warm, but reads as a painted panel.',
+    css: 'background:#faf3e4' },
+  { name: 'A — warm wash + paper grain',
+    note: 'A gradient rather than a fill: lighter top-left, warmer bottom-right, like light falling across paper.',
+    css: `background-image:${GRAIN_FINE},radial-gradient(120% 110% at 22% 0%, #fffdf4 0%, rgba(255,253,244,0) 62%),linear-gradient(155deg,#fdf7e9 0%,#f4ecd6 100%)` },
+  { name: 'B — A, plus pigment pooling at the edge   ← CHOSEN',
+    note: 'The rim dries darker where the wash ran out. This is the one that stops reading as a UI panel.',
+    css: `background-image:${GRAIN_FINE},radial-gradient(120% 110% at 22% 0%, #fffdf4 0%, rgba(255,253,244,0) 62%),linear-gradient(155deg,#fdf7e9 0%,#f4ecd6 100%);box-shadow:${POOL_WARM}` },
+  { name: 'C — meadow: pale green-gold, coarse grain, pooling',
+    note: 'Ghibli greens rather than sepia. Sits nearer the page gradient, which is already green-tinted.',
+    css: `background-image:${GRAIN_COARSE},radial-gradient(120% 110% at 25% 5%, #fbfdf2 0%, rgba(251,253,242,0) 58%),linear-gradient(155deg,#f6f8e6 0%,#e9f0d8 100%);box-shadow:${POOL_COOL}` },
+  { name: 'D — golden hour: deeper, warmer, strongest pooling',
+    note: 'Late-afternoon light. The most character, and the most departure from the current look.',
+    css: `background-image:${GRAIN_COARSE},radial-gradient(130% 120% at 20% 0%, #fff6de 0%, rgba(255,246,222,0) 60%),linear-gradient(155deg,#fbeed2 0%,#f0dfba 100%);box-shadow:${POOL_WARM}` },
+  { name: 'E — B, but barely tinted (closest to today)',
+    note: 'For comparison: the wash and grain without committing to a colour shift.',
+    css: `background-image:${GRAIN_FINE},linear-gradient(155deg,#fffdf8 0%,#faf6ec 100%);box-shadow:${POOL_SOFT}` },
+]
+
+const CONTENT = [['📚','3','Classes'], ['🎯','12','Challenges'], ['⭐','840','Score']]
+const body = ([e,n,l]) =>
+  `<div class="card-body"><div class="emoji">${e}</div><div class="num">${n}</div><div class="lbl">${l}</div></div>`
+
+// Styles are applied from JS, never through style="...": the grain and wash are
+// data URIs containing double quotes, which terminate an HTML attribute early
+// and silently leave the card with no background at all.
+document.getElementById('out').innerHTML = VARIANTS.map((v, i) => `
+  <h2>${v.name}</h2><p class="note">${v.note}</p>
+  <div class="row" data-v="${i}">${CONTENT.map(c =>
+    v.today ? `<div class="card-today">${body(c)}</div>`
+            : `<div class="card"></div>`).join('')}</div>`).join('')
+
+VARIANTS.forEach((v, i) => {
+  if (v.today) return
+  const row = document.querySelector(`.row[data-v="${i}"]`)
+  row.querySelectorAll('.card').forEach((el, k) => {
+    el.style.cssText = v.css
+    el.innerHTML = body(CONTENT[k])
+  })
+})
+
+const OPTS = { fadeWidth: 0.06, irregularity: 0.5, seed: 20260801 }
+requestAnimationFrame(() => {
+  document.querySelectorAll('.card').forEach(el => {
+    const r = el.getBoundingClientRect()
+    const m = buildMask(Math.round(r.width), Math.round(r.height), OPTS)
+    el.style.maskImage = m; el.style.webkitMaskImage = m
+    el.style.maskSize = '100% 100%'; el.style.webkitMaskSize = '100% 100%'
+    el.style.maskRepeat = 'no-repeat'; el.style.webkitMaskRepeat = 'no-repeat'
+  })
+})
+</script>
+</body>
+</html>
