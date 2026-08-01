@@ -1,0 +1,99 @@
+<!doctype html>
+<!--
+  Why the pet room's background vanished, and the check that catches it.
+
+  Open directly in a browser. The right panel needs pet.png beside it to show
+  art; the measurement below works regardless.
+
+  DreamSketchBoundary hardcodes `relative` on its wrapper. Tailwind defines
+  .relative AFTER .absolute, so passing `absolute inset-0` as its className
+  loses the cascade: the wrapper stays relative with auto height, collapses to
+  zero, and the masked layer inside collapses with it. Positioning has to live
+  on a plain wrapper div instead, with the boundary given h-full w-full.
+
+  The build passes either way — a collapsed layer is valid CSS. Run
+  window.__check() in the console: the masked layer must fill its box. The
+  shipped version measured 0px inside a 400px box.
+
+  Kept because the softened pet room is deferred, not abandoned — the blocker
+  is AnimatedRoomLayer drawing its decorations above the mask, so zones near
+  the edges stay hard-cut against a boundary that has dissolved.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Pet area nesting check</title>
+<style>
+  body { margin:0; padding:16px; font:13px/1.5 system-ui,sans-serif;
+         background: linear-gradient(to bottom right,#f0fdf4,#fff,rgba(59,130,246,.1)); }
+  h2 { font-size:13px; margin:14px 0 4px; }
+  .note { color:#6b7280; font-size:11.5px; margin:0 0 8px; }
+
+  /* Mirrors app/dashboard/page.tsx exactly */
+  .pet-area { position:relative; min-height:400px; max-width:640px; }
+  .pos      { position:absolute; inset:0; }            /* the fix: positioning here */
+  .dsb      { position:relative; height:100%; width:100%; }   /* DreamSketchBoundary */
+  .masked   { position:absolute; inset:0; }            /* contentClassName */
+  .art      { position:absolute; inset:0; background-size:cover; background-position:center bottom; }
+  .photo    { position:absolute; left:60%; top:6%; width:20%; height:30%;
+              background:#c7d2fe; border:2px solid #fff; }
+  .pet      { position:absolute; left:50%; bottom:8%; transform:translateX(-50%);
+              font-size:56px; }
+
+  /* The broken version, for contrast: `absolute` on the boundary itself. */
+  .dsb-broken { position:relative; inset:0; }
+</style>
+</head>
+<body>
+
+<h2>Fixed nesting — positioning on a wrapper div</h2>
+<p class="note">Art masked; wall photo and pet sit above it, untouched.</p>
+<div class="pet-area" id="ok">
+  <div class="pos"><div class="dsb"><div class="masked"><div class="art"></div></div></div></div>
+  <div class="photo"></div><div class="pet">🐉</div>
+</div>
+
+<h2>What shipped — `absolute` passed to the boundary's className</h2>
+<p class="note">Tailwind's .relative wins the cascade, wrapper collapses to 0 height.</p>
+<div class="pet-area" id="broken">
+  <div class="dsb-broken"><div class="masked"><div class="art"></div></div></div>
+  <div class="photo"></div><div class="pet">🐉</div>
+</div>
+
+<script>
+function geometry(w,h,fw,irr){const band=Math.min(w,h)*fw
+  return {band,inset:band*.5,blur:band*.15,displace:band*.8*irr,radius:band*1.5,frequency:3.2/Math.min(w,h)}}
+function buildMask(w,h,o){const g=geometry(w,h,o.fadeWidth,o.irregularity)
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`+
+   `<filter id="m" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">`+
+   `<feGaussianBlur stdDeviation="${g.blur.toFixed(2)}" result="s"/>`+
+   `<feTurbulence type="fractalNoise" baseFrequency="${g.frequency.toFixed(5)}" numOctaves="2" seed="${o.seed}" result="n"/>`+
+   `<feDisplacementMap in="s" in2="n" scale="${g.displace.toFixed(2)}" xChannelSelector="R" yChannelSelector="G"/></filter>`+
+   `<rect x="${g.inset.toFixed(1)}" y="${g.inset.toFixed(1)}" width="${(w-g.inset*2).toFixed(1)}" `+
+   `height="${(h-g.inset*2).toFixed(1)}" rx="${g.radius.toFixed(1)}" fill="#fff" filter="url(#m)"/></svg>`
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`}
+
+document.querySelectorAll('.art').forEach(a => { a.style.backgroundImage = 'url(pet.png)' })
+
+const OPTS={fadeWidth:.06,irregularity:.5,seed:20260801}
+requestAnimationFrame(()=>{
+  document.querySelectorAll('.masked').forEach(el=>{
+    const r=el.getBoundingClientRect()
+    if(!r.height) return                      // the collapse: nothing to mask
+    const m=buildMask(Math.round(r.width),Math.round(r.height),OPTS)
+    el.style.maskImage=m; el.style.webkitMaskImage=m
+    el.style.maskSize='100% 100%'; el.style.webkitMaskSize='100% 100%'
+    el.style.maskRepeat='no-repeat'; el.style.webkitMaskRepeat='no-repeat'
+  })
+})
+
+// The assertion that would have caught this: the masked layer must fill the box.
+window.__check = () => ['ok','broken'].map(id => {
+  const box = document.getElementById(id).getBoundingClientRect()
+  const m = document.querySelector('#'+id+' .masked').getBoundingClientRect()
+  return { id, boxH: Math.round(box.height), maskedH: Math.round(m.height),
+           fills: Math.abs(box.height - m.height) < 1 }
+})
+</script>
+</body>
+</html>
