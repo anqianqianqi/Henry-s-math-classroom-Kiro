@@ -162,6 +162,8 @@ export const admin = {
   },
   'design.mood': { en: 'Mood', zh: '氛围' },
   'design.palette': { en: 'Palette', zh: '配色' },
+  // Art style is its own axis now — it used to be welded into the prompt.
+  'design.artStyle': { en: 'Art style', zh: '画风' },
   'design.refine': { en: 'Refine', zh: '微调' },
   'design.regenerate': { en: 'Regenerate', zh: '重新生成' },
   'design.describeChange': {
@@ -185,6 +187,7 @@ export const admin = {
   'bundle.collectionName': { en: 'Collection name', zh: '系列名称' },
   'bundle.paper': { en: 'Paper', zh: '纸张' },
   'bundle.frame': { en: 'Frame', zh: '边框' },
+  'bundle.innerAccent': { en: 'Inner-page accent', zh: '内页点缀' },
   'bundle.topLeft': { en: 'Top left', zh: '左上' },
   'bundle.topRight': { en: 'Top right', zh: '右上' },
   'bundle.bottomLeft': { en: 'Bottom left', zh: '左下' },
@@ -211,6 +214,7 @@ export const admin = {
   'roomAdmin.themeName': { en: 'Theme name', zh: '主题名称' },
   'roomAdmin.architecture': { en: 'Architecture', zh: '建筑风格' },
   'roomAdmin.materials': { en: 'Materials', zh: '材质' },
+  'roomAdmin.aperture': { en: 'Window / aperture', zh: '窗口造型' },
   'roomAdmin.lighting': { en: 'Lighting', zh: '光照' },
   'roomAdmin.outsideView': { en: 'Outside the window', zh: '窗外景色' },
   'roomAdmin.accent': { en: 'Decorative accent', zh: '装饰点缀' },
