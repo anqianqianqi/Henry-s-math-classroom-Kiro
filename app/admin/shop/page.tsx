@@ -50,6 +50,97 @@ const EMPTY_FORM: ShopItemForm = {
 }
 
 // ── Admin Room Browse Modal (with Edit/Off/Delete per item) ───────────────────
+/**
+ * Admin browse modal for a cluster of picture-and-price assets.
+ *
+ * Serves challenge rooms and their book bundles; they differ only in aspect
+ * ratio and title, so one component avoids a second near-copy of a screen with
+ * a delete button on it.
+ */
+function AssetBrowseAdminModal({
+  title, aspect, assets, items, onClose, onEdit, onDeactivate, onReactivate, onDelete,
+}: {
+  title: string
+  aspect: string
+  assets: Array<{ id: string; name: string; imageUrl: string; shop_item_id: string }>
+  items: ShopItem[]
+  onClose: () => void
+  onEdit: (item: ShopItem) => void
+  onDeactivate: (id: string) => void
+  onReactivate: (id: string) => void
+  onDelete: (id: string) => void
+}) {
+  const { t } = useLanguage()
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+          <div className="font-bold text-gray-900">{title} ({assets.length})</div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+        </div>
+        <div className="overflow-y-auto p-4 grid grid-cols-2 gap-4">
+          {assets.map(asset => {
+            const shopItem = items.find(i => i.id === asset.shop_item_id)
+            return (
+              <div
+                key={asset.id}
+                className={`bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex flex-col ${shopItem && !shopItem.is_active ? 'opacity-60' : ''}`}
+              >
+                <div className={`relative w-full ${aspect} overflow-hidden`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={asset.imageUrl} alt={asset.name} className="w-full h-full object-cover" />
+                  {shopItem && !shopItem.is_active && (
+                    <div className="absolute top-1.5 right-1.5 bg-gray-700/80 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                      {t('shopAdmin.inactive')}
+                    </div>
+                  )}
+                </div>
+                <div className="p-2.5">
+                  <p className="font-semibold text-gray-900 text-sm truncate mb-0.5">{asset.name}</p>
+                  {shopItem && <p className="text-primary-600 font-bold text-xs mb-2">{shopItem.cost} pts</p>}
+                  {shopItem && (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => onEdit(shopItem)}
+                        className="flex-1 text-xs font-semibold px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                      >
+                        {t('shopAdmin.edit')}
+                      </button>
+                      {shopItem.is_active ? (
+                        <button
+                          onClick={() => onDeactivate(shopItem.id)}
+                          className="text-xs font-semibold px-2 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                        >
+                          {t('shopAdmin.off')}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => onReactivate(shopItem.id)}
+                          className="text-xs font-semibold px-2 py-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                        >
+                          {t('shopAdmin.on')}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onDelete(shopItem.id)}
+                        className="text-xs font-semibold px-2 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                        title={t('shopAdmin.deleteTitle')}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function RoomBrowseAdminModal({
   roomBgs,
   items,
@@ -325,10 +416,17 @@ export default function AdminShopPage() {
   // Room backgrounds + book skins cluster (same as user shop)
   interface RoomBg { id: string; name: string; image_url: string; animation_zones: any[]; shop_item_id: string }
   interface BookSkin { id: string; name: string; image_url: string; shop_item_id: string }
+  // Challenge rooms + their book bundles — same shop_item_id pattern again.
+  interface ChallengeRoomRow { id: string; name: string; room_url: string; shop_item_id: string }
+  interface BundleRow { id: string; name: string; cover_url: string; shop_item_id: string }
   const [roomBgs, setRoomBgs] = useState<RoomBg[]>([])
   const [bookSkins, setBookSkins] = useState<BookSkin[]>([])
+  const [challengeRooms, setChallengeRooms] = useState<ChallengeRoomRow[]>([])
+  const [bookBundles, setBookBundles] = useState<BundleRow[]>([])
   const [showRoomBrowse, setShowRoomBrowse] = useState(false)
   const [showBookBrowse, setShowBookBrowse] = useState(false)
+  const [showChallengeRoomBrowse, setShowChallengeRoomBrowse] = useState(false)
+  const [showBundleBrowse, setShowBundleBrowse] = useState(false)
   // Preview states for clicking individual images
   const [previewRoom, setPreviewRoom] = useState<RoomBg | null>(null)
   const [previewCover, setPreviewCover] = useState<BookSkin | null>(null)
@@ -367,6 +465,20 @@ export default function AdminShopPage() {
         .eq('skin_type', 'cover')
         .not('shop_item_id', 'is', null)
       if (skinRows) setBookSkins(skinRows.filter((s: any) => shopItemMap[s.shop_item_id]))
+
+      const { data: crRows } = await supabase
+        .from('challenge_rooms')
+        .select('id, name, room_url, shop_item_id')
+        .eq('is_active', true)
+        .not('shop_item_id', 'is', null)
+      if (crRows) setChallengeRooms((crRows as any[]).filter(r => shopItemMap[r.shop_item_id]))
+
+      const { data: btpRows } = await supabase
+        .from('book_texture_packages')
+        .select('id, name, cover_url, shop_item_id')
+        .eq('is_active', true)
+        .not('shop_item_id', 'is', null)
+      if (btpRows) setBookBundles((btpRows as any[]).filter(b => shopItemMap[b.shop_item_id]))
     } catch (_) {}
 
     // Fetch inventory for physical_blindbox items (set quantities)
@@ -1007,6 +1119,34 @@ export default function AdminShopPage() {
           onDelete={async (id) => { await handleDelete(id) }}
         />
       )}
+      {/* ── Challenge Room Browse Modal ── */}
+      {showChallengeRoomBrowse && (
+        <AssetBrowseAdminModal
+          title={`🪟 ${t('shop.challengeRooms')}`}
+          aspect="aspect-video"
+          assets={challengeRooms.map(r => ({ id: r.id, name: r.name, imageUrl: r.room_url, shop_item_id: r.shop_item_id }))}
+          items={items}
+          onClose={() => setShowChallengeRoomBrowse(false)}
+          onEdit={(item) => { setShowChallengeRoomBrowse(false); handleEdit(item) }}
+          onDeactivate={async (id) => { await handleDeactivate(id) }}
+          onReactivate={async (id) => { await handleReactivate(id) }}
+          onDelete={async (id) => { await handleDelete(id) }}
+        />
+      )}
+      {/* ── Challenge Book Browse Modal ── */}
+      {showBundleBrowse && (
+        <AssetBrowseAdminModal
+          title={`📚 ${t('shop.challengeBooks')}`}
+          aspect="aspect-[3/4]"
+          assets={bookBundles.map(b => ({ id: b.id, name: b.name, imageUrl: b.cover_url, shop_item_id: b.shop_item_id }))}
+          items={items}
+          onClose={() => setShowBundleBrowse(false)}
+          onEdit={(item) => { setShowBundleBrowse(false); handleEdit(item) }}
+          onDeactivate={async (id) => { await handleDeactivate(id) }}
+          onReactivate={async (id) => { await handleReactivate(id) }}
+          onDelete={async (id) => { await handleDelete(id) }}
+        />
+      )}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-3">
           <HomeButton noSlash />
@@ -1494,10 +1634,46 @@ export default function AdminShopPage() {
                   <div className="p-2"><p className="font-semibold text-xs">{t('shop.bookCovers')}</p><p className="text-gray-400 text-[10px]">{t('shopAdmin.clickToBrowse')}</p></div>
                 </div>
               )}
+              {/* ── Challenge Rooms cluster card ── */}
+              {challengeRooms.length > 0 && (
+                <div className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:border-sky-200 cursor-pointer flex flex-col"
+                  onClick={() => setShowChallengeRoomBrowse(true)}>
+                  <div className="relative w-full aspect-square bg-sky-50 overflow-hidden">
+                    <div className="grid grid-cols-2 w-full h-full">
+                      {challengeRooms.slice(0, 4).map((r, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} src={r.room_url} alt={r.name} className="w-full h-full object-cover" />
+                      ))}
+                    </div>
+                    <div className="absolute top-1.5 left-1.5 bg-white/90 text-sky-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">🪟 {challengeRooms.length}</div>
+                  </div>
+                  <div className="p-2"><p className="font-semibold text-xs">{t('shop.challengeRooms')}</p><p className="text-gray-400 text-[10px]">{t('shopAdmin.clickToBrowse')}</p></div>
+                </div>
+              )}
+              {/* ── Challenge Books cluster card ── */}
+              {bookBundles.length > 0 && (
+                <div className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:border-rose-200 cursor-pointer flex flex-col"
+                  onClick={() => setShowBundleBrowse(true)}>
+                  <div className="relative w-full aspect-square bg-rose-50 overflow-hidden">
+                    <div className="grid grid-cols-2 w-full h-full">
+                      {bookBundles.slice(0, 4).map((b, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} src={b.cover_url} alt={b.name} className="w-full h-full object-cover" />
+                      ))}
+                    </div>
+                    <div className="absolute top-1.5 left-1.5 bg-white/90 text-rose-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">📚 {bookBundles.length}</div>
+                  </div>
+                  <div className="p-2"><p className="font-semibold text-xs">{t('shop.challengeBooks')}</p><p className="text-gray-400 text-[10px]">{t('shopAdmin.clickToBrowse')}</p></div>
+                </div>
+              )}
               {items.filter(item => {
+                // Exclusion from this grid is what puts an item in a folder.
                 const roomIds = new Set(roomBgs.map(bg => bg.shop_item_id))
                 const bookIds = new Set(bookSkins.map(s => s.shop_item_id))
+                const crIds = new Set(challengeRooms.map(r => r.shop_item_id))
+                const btpIds = new Set(bookBundles.map(b => b.shop_item_id))
                 return !roomIds.has(item.id) && !bookIds.has(item.id)
+                  && !crIds.has(item.id) && !btpIds.has(item.id)
               }).map((item) => {
                 const isBlindbox = item.commodity_type === 'blindbox' || item.commodity_type === 'physical_blindbox'
                 const isPhysical = item.commodity_type === 'physical'
