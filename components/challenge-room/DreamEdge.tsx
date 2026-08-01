@@ -1,9 +1,10 @@
 /**
- * Dissolves the challenge room into the page instead of ending at a rectangle.
+ * Finishes the challenge room with a crayon edge instead of a cut rectangle.
  *
- * The room is meant to feel like somewhere you drifted into, not a picture hung
- * on a wall. A hard edge says "this is a component on a web page"; a torn,
- * uneven one says the room simply stops being in focus.
+ * The room should feel like something drawn into a page, not a photograph
+ * cropped to a box. So the boundary is a torn, hand-drawn line with flecks
+ * thrown clear of it — enough to break the rectangle, not so much that the
+ * room dissolves.
  *
  * ── WHY A MASK RATHER THAN AN OVERLAY ───────────────────────
  * An overlay painted on top can only fade the room toward a colour it paints,
@@ -14,26 +15,23 @@
  * if the page background is ever restyled.
  *
  * ── WHY NOISE RATHER THAN GRADIENTS ─────────────────────────
- * The first two attempts stacked CSS radial gradients. Unioned, each extra
+ * Two earlier attempts stacked CSS radial gradients. Unioned, each extra
  * ellipse ADDS opaque area and fills back in exactly the edge the core was
- * fading — a solid rectangle with faintly rounded corners. Intersected, the
- * result is better but still convex, because the intersection of convex shapes
- * is always convex: a smooth oval, and an oval inside a box still lets the eye
- * rebuild the box. No tuning escapes that; it is geometry, not parameters.
+ * fading. Intersected, the result is smoother but still convex — because the
+ * intersection of convex shapes is always convex, giving a smooth oval, and an
+ * oval inside a box still lets the eye rebuild the box. That is geometry, not
+ * parameters: no tuning escapes it. Noise gives a non-convex contour, which is
+ * the only thing that reads as torn rather than as a shape.
  *
- * Fractal noise displacing the edge of an ellipse gives a NON-convex contour —
- * inlets, bites and wisps at genuinely random depths, which is what reads as
- * real rather than as a shape.
- *
- * ── WHY AN ELLIPSE, NOT A RADIAL GRADIENT ───────────────────
- * rx and ry are independent, so the blob dies out before the short axis reaches
- * the box edge. A circular gradient in a 3:2 box always overshoots top and
- * bottom, and whatever the box clips comes back as a straight line — the
- * rectangle returning by the back door.
+ * ── WHY A RECT, NOT AN ELLIPSE ──────────────────────────────
+ * A third attempt used an ellipse and faded far too much: an ellipse throws
+ * away all four corners, and the corners are most of what a 3:2 picture can't
+ * spare. A rounded rect inset a few percent keeps nearly the whole room and
+ * chews only the boundary, which is what was actually wanted.
  *
  * ── A BOLT-ON ───────────────────────────────────────────────
  * It wraps the room block and changes nothing inside it. Deleting the two
- * wrapper lines restores the previous look exactly.
+ * wrapper lines restores the plain rectangle exactly.
  *
  * ── THE position:fixed TRAP ─────────────────────────────────
  * Book3DReveal keeps its zoomed reading surface as a SIBLING of the stage on
@@ -45,56 +43,61 @@
 
 /**
  * The mask is authored in a 600×400 space and stretched to whatever the room
- * block actually is (preserveAspectRatio="none"), so these numbers are
- * proportions, not pixels.
+ * block actually is (preserveAspectRatio="none"), so these are proportions.
  */
 const W = 600
 const H = 400
 
 /**
- * The lit area, before the noise chews on it.
+ * How far the drawn edge sits inside the box.
  *
- * ry is deliberately far short of H/2: everything the displacement and blur add
- * has to still land inside the box, or the box clips it and the straight edge
- * comes back. Raising ry past ~140 is where that starts to show.
+ * The bottom is held much tighter than the rest: the book stands there, and the
+ * dissolve must not reach its foot — that is the thing students click. The top
+ * and sides are ceiling and shelves, which can afford to lose a little.
+ *
+ * These cannot go much below the throw of the filter (scale/2 + a couple of
+ * blurs, ≈25 here) without the box clipping the result, and anything the box
+ * clips comes back as a straight line — the rectangle returning by the back
+ * door.
  */
-const SHAPE = { rx: 258, ry: 128 }
+const INSET = 30
+const INSET_BOTTOM = 14
+const RADIUS = 26
 
 /**
- * A second lobe over the lower centre, where the book stands.
+ * The crayon recipe: blur → displace → threshold.
  *
- * Without it the dissolve eats the foot of the book — the thing students are
- * meant to click. Painted into the same filtered group as the main ellipse so
- * the same noise warps both; filtering them separately leaves a visible seam
- * where the two contours cross.
+ * The blur makes a soft band along the edge. The fine noise breaks that band
+ * into a ragged contour. The steep alpha curve then cuts it back to nearly
+ * hard, which is what turns fog into crayon — and the scraps of halo thrown
+ * clear of the body survive the cut as detached flecks, the splashes.
+ *
+ * Raising `scale` throws the line further and makes more flecks; lowering the
+ * middle values of `cut` softens it back toward mist. Those two are the knobs
+ * worth turning.
  */
-const BOOK_LOBE = { cy: 250, rx: 148, ry: 118 }
-
-/**
- * scale is how violently the edge is warped and is the one number worth
- * turning: higher is wispier and eats more of the room. Past ~110 the noise
- * starts pulling transparent streaks into the middle of the picture, which
- * reads as smoke over the window rather than as a soft edge.
- */
-const NOISE = { freq: 0.011, octaves: 4, scale: 84, blur: 19, seed: 3 }
+const BLUR = 5
+const FREQ = 0.045
+const OCTAVES = 4
+const SCALE = 30
+const SEED = 9
+const CUT = '0 0 0.05 0.6 0.95 1 1'
 
 const MASK_SVG =
   `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" ` +
   `viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">` +
-  `<filter id="w" x="-50%" y="-50%" width="200%" height="200%" ` +
+  `<filter id="c" x="-25%" y="-25%" width="150%" height="150%" ` +
   `color-interpolation-filters="sRGB">` +
-  `<feTurbulence type="fractalNoise" baseFrequency="${NOISE.freq}" ` +
-  `numOctaves="${NOISE.octaves}" seed="${NOISE.seed}" result="n"/>` +
-  // Displace first, then blur: warp the hard ellipse into an irregular contour,
-  // then soften it so it dissolves rather than tears.
-  `<feDisplacementMap in="SourceGraphic" in2="n" scale="${NOISE.scale}" ` +
+  `<feGaussianBlur stdDeviation="${BLUR}" result="soft"/>` +
+  `<feTurbulence type="fractalNoise" baseFrequency="${FREQ}" ` +
+  `numOctaves="${OCTAVES}" seed="${SEED}" result="n"/>` +
+  `<feDisplacementMap in="soft" in2="n" scale="${SCALE}" ` +
   `xChannelSelector="R" yChannelSelector="G"/>` +
-  `<feGaussianBlur stdDeviation="${NOISE.blur}"/>` +
+  `<feComponentTransfer><feFuncA type="table" tableValues="${CUT}"/></feComponentTransfer>` +
   `</filter>` +
-  `<g filter="url(#w)">` +
-  `<ellipse cx="${W / 2}" cy="${H / 2}" rx="${SHAPE.rx}" ry="${SHAPE.ry}" fill="#fff"/>` +
-  `<ellipse cx="${W / 2}" cy="${BOOK_LOBE.cy}" rx="${BOOK_LOBE.rx}" ry="${BOOK_LOBE.ry}" fill="#fff"/>` +
-  `</g></svg>`
+  `<rect x="${INSET}" y="${INSET}" width="${W - INSET * 2}" ` +
+  `height="${H - INSET - INSET_BOTTOM}" rx="${RADIUS}" fill="#fff" filter="url(#c)"/>` +
+  `</svg>`
 
 /**
  * Encoded once at module load. A data URI rather than an inline <svg mask>
