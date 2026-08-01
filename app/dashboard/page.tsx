@@ -662,9 +662,15 @@ export default function DashboardPage() {
 
               No pencil on this one: lineDensity 0 is the fade alone.
             */}
+            {/* The positioning lives on THIS div, not on the boundary's own
+                className: the component hardcodes `relative`, and Tailwind
+                defines .relative after .absolute, so an `absolute` passed in
+                loses the cascade and the wrapper collapses to zero height —
+                taking the room art with it. */}
+            <div className="absolute inset-0">
             <DreamSketchBoundary
               lineDensity={0}
-              className="absolute inset-0"
+              className="h-full w-full"
               contentClassName="absolute inset-0"
             >
               {/* The art goes INSIDE the masked layer. On the wrapper it would
@@ -678,6 +684,7 @@ export default function DashboardPage() {
                 }}
               />
             </DreamSketchBoundary>
+            </div>
 
             {/* User's blindbox photo — clipped to the frame_slot area, rotated to match frame perspective */}
             {userPhotoUrl && petRoomFrameSlot && (

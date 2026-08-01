@@ -537,16 +537,20 @@ export default function PetPage() {
               {/* Background + pet overlay container */}
               <div className="relative w-full" style={{ height: '300px' }}>
                 {/* Only the scene is softened — the pet on top stays crisp. */}
-                <DreamSketchBoundary
-                  lineDensity={0}
-                  className="absolute inset-0"
-                  contentClassName="absolute inset-0"
-                >
-                  <BackgroundScene
-                    stage={pet?.evolution_stage ?? 'baby'}
-                    className="absolute inset-0 w-full h-full"
-                  />
-                </DreamSketchBoundary>
+                {/* Positioning on this div, not the boundary's className — see
+                    the note on the dashboard pet area. */}
+                <div className="absolute inset-0">
+                  <DreamSketchBoundary
+                    lineDensity={0}
+                    className="h-full w-full"
+                    contentClassName="absolute inset-0"
+                  >
+                    <BackgroundScene
+                      stage={pet?.evolution_stage ?? 'baby'}
+                      className="absolute inset-0 w-full h-full"
+                    />
+                  </DreamSketchBoundary>
+                </div>
 
                 {/* PetSvg centered on top of the background */}
                 <div className="absolute inset-0 flex items-center justify-center">
