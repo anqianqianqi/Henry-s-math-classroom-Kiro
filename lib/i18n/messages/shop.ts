@@ -100,4 +100,7 @@ export const shop = {
   'shop.yourPrizes': { en: 'Your {count} prizes', zh: '您的 {count} 件奖品' },
   'shop.yourPrize': { en: 'Your prize', zh: '您的奖品' },
   'shop.tooCostly': { en: 'Too costly', zh: '积分不够' },
+  'shop.taBalance': { en: 'TA points available', zh: '可用助教积分' },
+  'shop.taPoints': { en: 'TA points', zh: '助教积分' },
+  'shop.challengePoints': { en: 'Challenge points', zh: '挑战积分' },
 } as const

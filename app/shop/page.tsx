@@ -788,6 +788,7 @@ export default function ShopPage() {
 
   const [loading, setLoading] = useState(true)
   const [balance, setBalance] = useState(0)
+  const [taBalance, setTaBalance] = useState(0)
   const [items, setItems] = useState<ShopItemWithCount[]>([])
   const [redemptions, setRedemptions] = useState<RedemptionWithTitle[]>([])
   const [redeeming, setRedeeming] = useState<string | null>(null)
@@ -822,11 +823,14 @@ export default function ShopPage() {
     let newBalance = 0
     const { data: walletData } = await supabase
       .from('student_wallets')
-      .select('spendable_balance')
+      .select('spendable_balance, ta_balance')
       .eq('user_id', userId)
       .single()
     newBalance = walletData?.spendable_balance ?? 0
     setBalance(newBalance)
+    // Defaults to 0 before the TA migration runs, so the panel reads 0 rather
+    // than blank on a database that predates it.
+    setTaBalance((walletData as any)?.ta_balance ?? 0)
 
     // Shop items — show all active items (food/accessory/pet shown to students too now)
     const { data: shopItems, error: itemsError } = await supabase
@@ -1230,10 +1234,17 @@ export default function ShopPage() {
         )}
 
         {/* Balance */}
-        <div className="mb-8 bg-gradient-to-br from-primary-500 to-accent-blue rounded-3xl px-6 py-6 text-white shadow-lg">
-          <p className="text-white/80 text-sm font-medium uppercase tracking-wide mb-1">{t('shop.spendableBalance')}</p>
-          <p className="text-5xl font-bold">{balance}</p>
-          <p className="text-white/70 text-sm mt-1">points available to spend</p>
+        <div className="mb-8 grid grid-cols-2 gap-px overflow-hidden rounded-3xl bg-white/20 shadow-lg">
+          <div className="bg-gradient-to-br from-primary-500 to-accent-blue px-6 py-6 text-white">
+            <p className="text-white/80 text-sm font-medium uppercase tracking-wide mb-1">{t('shop.spendableBalance')}</p>
+            <p className="text-5xl font-bold">{balance}</p>
+            <p className="text-white/70 text-sm mt-1">{t('shop.challengePoints')}</p>
+          </div>
+          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 px-6 py-6 text-white">
+            <p className="text-white/80 text-sm font-medium uppercase tracking-wide mb-1">{t('shop.taBalance')}</p>
+            <p className="text-5xl font-bold">{taBalance}</p>
+            <p className="text-white/70 text-sm mt-1">{t('shop.taPoints')}</p>
+          </div>
         </div>
 
         {/* Items Grid */}

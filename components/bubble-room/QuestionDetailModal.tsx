@@ -31,6 +31,7 @@ import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import type { Language } from '@/lib/i18n/catalog'
 import { useOnDemandTranslation } from '@/lib/i18n/useOnDemandTranslation'
 import { BadgePill } from './BadgePill'
+import { ThankResponderBar } from './ThankResponderBar'
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
@@ -72,6 +73,10 @@ export function QuestionDetailModal({
   const [loadingResponses, setLoadingResponses] = useState(true)
   const [confirmDeleteQuestion, setConfirmDeleteQuestion] = useState(false)
   const [confirmDeleteResponseId, setConfirmDeleteResponseId] = useState<string | null>(null)
+  // Local so the bar can flip to "Resolved" without refetching the question.
+  const [resolvedAt, setResolvedAt] = useState<string | null>(
+    (question as any).resolved_at ?? null,
+  )
   // Challenge context: fetch the full challenge content when challenge_id is set
   const [challengeContext, setChallengeContext] = useState<{
     title: string
@@ -722,6 +727,19 @@ export function QuestionDetailModal({
                 </a>
               )}
             </div>
+            {/* Bottom-left of the question: resolve it by thanking whoever
+                answered. Hidden for non-owners and until somebody replies. */}
+            <ThankResponderBar
+              questionId={question.id}
+              isOwner={currentUserId === question.user_id}
+              resolvedAt={resolvedAt}
+              responseCount={responses.length}
+              onResolved={() => {
+                setResolvedAt(new Date().toISOString())
+                onResponseSubmitted()
+              }}
+            />
+
             {canDelete(question.user_id) && (
               <div>
                 {deleteQuestionError && <p role="alert" className="text-sm text-gray-500 mb-1">{deleteQuestionError}</p>}

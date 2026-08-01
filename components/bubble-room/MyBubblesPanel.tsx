@@ -25,6 +25,7 @@ interface BubbleSummary {
   text: string
   created_at: string
   expires_at: string
+  resolved_at: string | null
   revived_at: string | null
   user_id: string
   author_display_name?: string
@@ -49,7 +50,7 @@ export function MyBubblesPanel({
   const { t } = useLanguage()
   const supabase = createClient()
 
-  const [tab, setTab] = useState<'active' | 'expired'>('active')
+  const [tab, setTab] = useState<'active' | 'completed' | 'expired'>('active')
   const [bubbles, setBubbles] = useState<BubbleSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [actionId, setActionId] = useState<string | null>(null)
@@ -63,7 +64,7 @@ export function MyBubblesPanel({
 
     let query = supabase
       .from('bubble_room_questions')
-      .select('id, title, text, created_at, expires_at, revived_at, user_id')
+      .select('id, title, text, created_at, expires_at, revived_at, resolved_at, user_id')
       .order('expires_at', { ascending: false })
 
     // Students see only their own; teachers see all
@@ -109,9 +110,13 @@ export function MyBubblesPanel({
 
   // ── Partition ────────────────────────────────────────────────────────────
 
-  const active = bubbles.filter((b) => b.expires_at > now)
-  const expired = bubbles.filter((b) => b.expires_at <= now)
-  const displayed = tab === 'active' ? active : expired
+  // Resolved is checked first: a thanked bubble belongs under Completed even
+  // once its expiry date has passed, or a student's answered questions would
+  // quietly migrate to Expired after ten days.
+  const completed = bubbles.filter((b) => b.resolved_at)
+  const active = bubbles.filter((b) => !b.resolved_at && b.expires_at > now)
+  const expired = bubbles.filter((b) => !b.resolved_at && b.expires_at <= now)
+  const displayed = tab === 'active' ? active : tab === 'completed' ? completed : expired
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
@@ -211,7 +216,7 @@ export function MyBubblesPanel({
         {/* Tabs */}
         <div className="flex border-b border-gray-100">
           {/* `tabKey`, not `t` — `t` is the translate function in this scope. */}
-          {(['active', 'expired'] as const).map((tabKey) => (
+          {(['active', 'completed', 'expired'] as const).map((tabKey) => (
             <button
               key={tabKey}
               type="button"
@@ -226,7 +231,9 @@ export function MyBubblesPanel({
             >
               {tabKey === 'active'
                 ? t('myBubbles.tabActive', { count: active.length })
-                : t('myBubbles.tabExpired', { count: expired.length })}
+                : tabKey === 'completed'
+                  ? t('myBubbles.tabCompleted', { count: completed.length })
+                  : t('myBubbles.tabExpired', { count: expired.length })}
             </button>
           ))}
         </div>
@@ -239,7 +246,11 @@ export function MyBubblesPanel({
             </div>
           ) : displayed.length === 0 ? (
             <div className="py-12 text-center text-sm text-gray-400">
-              {tab === 'active' ? t('myBubbles.noneActive') : t('myBubbles.noneExpired')}
+              {tab === 'active'
+                ? t('myBubbles.noneActive')
+                : tab === 'completed'
+                  ? t('myBubbles.noneCompleted')
+                  : t('myBubbles.noneExpired')}
             </div>
           ) : (
             displayed.map((b) => {
