@@ -90,10 +90,23 @@ export function TAApplicationModal({ onClose, onSubmitted }: TAApplicationModalP
           </button>
         </div>
 
+        {/* What the role asks of you, before the box where you argue for it. */}
+        <div className="rounded-xl bg-gray-50 px-4 py-3">
+          <p className="text-sm font-medium text-gray-700">{t('bubble.taGoodMeans')}</p>
+          {/* An ordered list rather than numbers typed into each string, so the
+              numerals come from the browser and cannot drift between the two
+              languages or be renumbered by a translation edit. */}
+          <ol className="mt-1.5 list-decimal space-y-1 pl-5 text-sm leading-relaxed text-gray-600">
+            <li>{t('bubble.taGood1')}</li>
+            <li>{t('bubble.taGood2')}</li>
+            <li>{t('bubble.taGood3')}</li>
+          </ol>
+        </div>
+
         {/* Pitch */}
         <div className="space-y-1.5">
           <label htmlFor="ta-note" className="text-sm font-medium text-gray-700">
-            Why do you want to be a TA? <span className="text-gray-400 font-normal">(optional)</span>
+            {t('bubble.taWhyLabel')} <span className="text-gray-400 font-normal">{t('admin.optional')}</span>
           </label>
           <textarea
             id="ta-note"

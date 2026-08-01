@@ -163,6 +163,29 @@ export const bubbleRoom = {
     zh: '简单介绍一下您自己，以及您为什么适合当助教……',
   },
   'bubble.taSubmitApplication': { en: 'Submit Application', zh: '提交申请' },
+
+  // What the role actually asks of you, shown before the pitch box so an
+  // applicant knows what they are volunteering for.
+  'bubble.taGoodMeans': {
+    en: 'Being a good TA means…',
+    zh: '成为一名优秀的助教意味着……',
+  },
+  'bubble.taGood1': {
+    en: "Understand what the person's question is",
+    zh: '理解对方的问题是什么',
+  },
+  'bubble.taGood2': {
+    en: 'Think about what is the best way to guide the person to the answer',
+    zh: '思考引导对方找到答案的最佳方式',
+  },
+  'bubble.taGood3': {
+    en: 'Explain in a clear and helpful way',
+    zh: '以清晰且有帮助的方式进行讲解',
+  },
+  'bubble.taWhyLabel': {
+    en: 'Why do you want to be a TA?',
+    zh: '您为什么想成为助教？',
+  },
   'bubble.taWaiting': {
     en: 'Waiting for a teacher to review your application.',
     zh: '正在等待老师审核您的申请。',
