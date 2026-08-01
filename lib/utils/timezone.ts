@@ -140,6 +140,15 @@ export interface ConvertedSession {
   time: string
   /** How many days the viewer's date differs: -1, 0 or +1. */
   dayShift: number
+  /**
+   * The instant this session actually happens.
+   *
+   * Returned so zone labels can be taken AT the session rather than at page
+   * load. Those differ across a clock change: a class a fortnight out may be
+   * EST while today is still EDT, and labelling it with today's would tell the
+   * reader the wrong thing about the very session they are planning for.
+   */
+  at: Date
 }
 
 /**
@@ -206,6 +215,7 @@ export function convertSession(
       day: pick('weekday').toLowerCase(),
       time: `${pick('hour')}:${pick('minute')}`,
       dayShift,
+      at,
     }
   }
   return null

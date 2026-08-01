@@ -150,6 +150,9 @@ export const classes = {
   // falls on the next morning in Shanghai, saying so is the difference between
   // arriving and missing it.
   'class.yourTime': { en: 'your time', zh: '您所在时区' },
+  // Shown beside the converted time so the reader can check it against what
+  // the teacher actually scheduled, rather than trusting a bare number.
+  'class.classTime': { en: 'class time', zh: '班级时区' },
   'class.nextDay': { en: '(next day)', zh: '（次日）' },
   'class.prevDay': { en: '(previous day)', zh: '（前一日）' },
   'class.timezone': { en: 'Class timezone', zh: '班级时区' },

@@ -47,48 +47,70 @@ export function ClassSchedule({
 
   const sameZone = classTimezone === viewerTimezone
 
+  const dayName = (key: string | undefined, fallback: string) =>
+    key ? t(key as any) : fallback
+
   return (
     <span className={className}>
       {slots.map((slot, i) => {
-        const dayKey = DAY_KEYS[String(slot.day).trim().toLowerCase()]
+        const rawDay = String(slot.day).trim().toLowerCase()
+        const dayKey = DAY_KEYS[rawDay]
         const converted = sameZone
           ? null
           : convertSession(slot.day, slot.startTime, classTimezone, viewerTimezone)
 
-        // Unparseable day or time, or an unknown zone: show what was entered
-        // rather than nothing. A schedule someone typed is still information.
-        if (!sameZone && !converted) {
+        // Reader and class share a clock: one time, one label, nothing to
+        // reconcile.
+        if (sameZone) {
           return (
             <span key={i}>
               {i > 0 && ', '}
-              {dayKey ? t(dayKey as any) : slot.day} {slot.startTime}
+              {dayName(dayKey, slot.day)} {slot.startTime}
+              <span className="text-gray-400"> {zoneLabel(classTimezone)}</span>
             </span>
           )
         }
 
-        const shownDayKey = converted ? DAY_KEYS[converted.day] : dayKey
-        const shownTime = converted ? converted.time : slot.startTime
+        // Unparseable day or time, or an unknown zone: show what was entered
+        // rather than nothing. A schedule someone typed is still information.
+        if (!converted) {
+          return (
+            <span key={i}>
+              {i > 0 && ', '}
+              {dayName(dayKey, slot.day)} {slot.startTime}
+              <span className="text-gray-400"> {zoneLabel(classTimezone)}</span>
+            </span>
+          )
+        }
 
+        /*
+          Both times, always — the reader's first because it is the one they
+          act on, the class's after it so they can check it against what the
+          teacher actually scheduled. Showing only the converted time leaves
+          no way to tell whether it has been translated for them at all, which
+          is the question this is here to answer.
+
+          Zone labels are taken AT the session, not at page load: those differ
+          across a clock change, and the reader is planning for the session.
+        */
         return (
-          <span key={i}>
-            {i > 0 && ', '}
-            {shownDayKey ? t(shownDayKey as any) : (converted?.day ?? slot.day)} {shownTime}
-            {converted && converted.dayShift !== 0 && (
-              // The reader's date differs from the class's. Silent here and
-              // somebody turns up a day out.
-              <span className="text-gray-400">
-                {' '}
-                {converted.dayShift > 0 ? t('class.nextDay') : t('class.prevDay')}
-              </span>
-            )}
+          <span key={i} className="inline-block">
+            {i > 0 && <span className="text-gray-400">, </span>}
+            {dayName(DAY_KEYS[converted.day], converted.day)} {converted.time}
+            <span className="text-gray-400">
+              {' '}{zoneLabel(viewerTimezone, converted.at)} · {t('class.yourTime')}
+              {converted.dayShift !== 0 && (
+                // The reader's DATE differs from the class's. Silent here and
+                // somebody turns up a day out.
+                <> {converted.dayShift > 0 ? t('class.nextDay') : t('class.prevDay')}</>
+              )}
+              {' · '}
+              {dayName(dayKey, slot.day)} {slot.startTime}{' '}
+              {zoneLabel(classTimezone, converted.at)} · {t('class.classTime')}
+            </span>
           </span>
         )
       })}
-      <span className="text-gray-400">
-        {' '}
-        {zoneLabel(viewerTimezone)}
-        {!sameZone && ` · ${t('class.yourTime')}`}
-      </span>
     </span>
   )
 }
