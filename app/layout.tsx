@@ -3,6 +3,7 @@ import './globals.css'
 import DesktopPetWrapper from '@/components/desktop-pet/DesktopPetWrapper'
 import { LanguageProvider } from '@/lib/i18n/LanguageProvider'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { RegionWelcomeCard } from '@/components/ui/RegionWelcomeCard'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,6 +37,11 @@ export default function RootLayout({
         <LanguageProvider>
           {children}
           <LanguageSwitcher />
+          {/* Inside the provider because it SETS the language, and at the root
+              because it must appear once wherever a student happens to land —
+              not everyone arrives at the dashboard. It renders nothing when
+              signed out or already answered. */}
+          <RegionWelcomeCard />
           <DesktopPetWrapper />
         </LanguageProvider>
       </body>

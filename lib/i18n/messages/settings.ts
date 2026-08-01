@@ -13,6 +13,47 @@ export const settings = {
   'settings.lastNamePlaceholder': { en: 'Last name', zh: '姓' },
   'settings.email': { en: 'Email', zh: '邮箱' },
   'settings.nickname': { en: 'Nickname (shown to classmates)', zh: '昵称（同学看到的名字）' },
+  // ── The one-time welcome card ─────────────────────────────────────────────
+  // Shown once, before anyone has chosen a language, so the card renders BOTH
+  // languages at once instead of switching. The wording still lives here rather
+  // than in the component — the catalog is where wording belongs — and showing
+  // both is done by asking translate() for each language explicitly.
+  'welcome.title': {
+    en: 'Hello Students, website region/timezone logic is now online!',
+    zh: '各位同学，网站的地区与时区功能现已上线！',
+  },
+  'welcome.choose': {
+    en: 'Please choose where you are from and your preferred language display',
+    zh: '请选择您所在的地区及首选的显示语言。',
+  },
+  'welcome.later': {
+    en: 'In the future, you can change your region in the setting and your preferred language on the top right of the website',
+    zh: '今后，您可以在“设置”中更改地区，并通过网站右上角切换首选语言。',
+  },
+  'welcome.country': { en: 'Country / region', zh: '国家或地区' },
+  'welcome.city': { en: 'City', zh: '城市' },
+  'welcome.detectedZone': { en: 'Your timezone', zh: '您的时区' },
+  'welcome.language': { en: 'Display language', zh: '显示语言' },
+  'welcome.confirm': { en: 'Save and continue', zh: '保存并继续' },
+  'welcome.saving': { en: 'Saving…', zh: '正在保存……' },
+
+  // Timezone and region. Detection covers almost everyone; these exist so the
+  // people it gets wrong can say so.
+  'settings.timezone': { en: 'Timezone', zh: '时区' },
+  'settings.timezoneHint': {
+    en: 'Times across the site are shown in this timezone.',
+    zh: '网站上的时间将按此时区显示。',
+  },
+  'settings.region': { en: 'Region', zh: '所在地区' },
+  'settings.regionHint': {
+    en: 'Used only for items that need posting, so nothing is bought that cannot reach you.',
+    zh: '仅用于需要邮寄的商品，以免购买无法寄达的物品。',
+  },
+  'settings.regionUnset': { en: 'Not set', zh: '未设置' },
+  'settings.region_us': { en: 'United States', zh: '美国' },
+  'settings.region_cn': { en: 'China', zh: '中国' },
+  'settings.region_other': { en: 'Elsewhere', zh: '其他地区' },
+
   'settings.nicknameHint': {
     en: 'Optional — displayed instead of your full name to other students',
     zh: '可选——其他同学会看到昵称而不是您的全名',

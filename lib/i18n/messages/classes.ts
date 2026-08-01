@@ -145,6 +145,21 @@ export const classes = {
   'day.friday': { en: 'Friday', zh: '星期五' },
   'day.saturday': { en: 'Saturday', zh: '星期六' },
   'day.sunday': { en: 'Sunday', zh: '星期日' },
+
+  // Timezone-aware schedules. The day markers matter: when a class in New York
+  // falls on the next morning in Shanghai, saying so is the difference between
+  // arriving and missing it.
+  'class.yourTime': { en: 'your time', zh: '您所在时区' },
+  // Shown beside the converted time so the reader can check it against what
+  // the teacher actually scheduled, rather than trusting a bare number.
+  'class.classTime': { en: 'class time', zh: '班级时区' },
+  'class.nextDay': { en: '(next day)', zh: '（次日）' },
+  'class.prevDay': { en: '(previous day)', zh: '（前一日）' },
+  'class.timezone': { en: 'Class timezone', zh: '班级时区' },
+  'class.timezoneHelp': {
+    en: 'The timezone this class actually runs in. Students see the time converted to theirs.',
+    zh: '本班级实际所在的时区。学生将看到转换为自己时区的时间。',
+  },
   'classForm.selectDay': { en: 'Select day…', zh: '选择星期…' },
   'classForm.selectLevel': { en: 'Select level…', zh: '选择难度…' },
   'classForm.select': { en: 'Select…', zh: '请选择…' },

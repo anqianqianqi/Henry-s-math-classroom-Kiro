@@ -12,7 +12,7 @@ import { FormField } from '@/components/ui/FormField'
 import TagInput, { TagOption } from '@/components/TagInput'
 import { generateChallenge, GenerativeTemplate } from '@/lib/challenge-generator'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { localDateString } from '@/lib/utils/date'
+import { schoolDateString } from '@/lib/utils/timezone'
 import {
   HENRY_PROBLEM_EXTENSION,
   HenryProblemError,
@@ -159,7 +159,7 @@ export default function NewChallengePage() {
 
     // Set default date to today (only if not saving to bank)
     if (!fromBank) {
-      const today = localDateString()
+      const today = schoolDateString()
       setChallengeDate(today)
     }
     

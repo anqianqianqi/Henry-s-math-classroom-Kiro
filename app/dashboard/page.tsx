@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import NotificationBell from '@/components/NotificationBell'
 import { AnnouncementButton } from '@/components/AnnouncementButton'
-import { localDateString } from '@/lib/utils/date'
+import { schoolDateString } from '@/lib/utils/timezone'
 import dynamicImport from 'next/dynamic'
 import StudentStudyCurve from '@/components/StudentStudyCurve'
 
@@ -278,7 +278,7 @@ export default function DashboardPage() {
           .in('class_id', userClassMemberships.map(m => m.class_id))
         const allChallengeIds = [...new Set(assignmentData?.map(a => a.challenge_id) || [])]
         if (allChallengeIds.length > 0) {
-          const today = localDateString()
+          const today = schoolDateString()
           const { data: visibleChallenges } = await supabase
             .from('daily_challenges')
             .select('id')
@@ -389,7 +389,7 @@ export default function DashboardPage() {
 
   async function loadTodayChallenge(userId: string, teacherRole: boolean) {
     try {
-      const today = localDateString()
+      const today = schoolDateString()
 
       if (teacherRole) {
         const { data } = await supabase

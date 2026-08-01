@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/Card'
 import { runSchedulerForClass } from '@/lib/scheduler'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { localDateString, localDateOffset } from '@/lib/utils/date'
+import { schoolDateString, schoolDateOffset } from '@/lib/utils/timezone'
 import { HenryProblemSheet } from '@/components/HenryProblemSheet'
 import { readStoredHenryProblem } from '@/lib/henryproblem'
 
@@ -223,13 +223,13 @@ export default function ChallengesPage() {
         // Load individually assigned challenges
         const indivIds = [...new Set(individualOnly.map(a => a.challenge_id))]
         // Only show challenges from the past 10 days
-        const tenDaysAgoStr = localDateOffset(-10)
+        const tenDaysAgoStr = schoolDateOffset(-10)
 
         const { data: challengesData } = await supabase
           .from('daily_challenges')
           .select('*')
           .in('id', indivIds)
-          .lte('challenge_date', localDateString())
+          .lte('challenge_date', schoolDateString())
           .gte('challenge_date', tenDaysAgoStr)
           .order('challenge_date', { ascending: false })
 
@@ -292,7 +292,7 @@ export default function ChallengesPage() {
 
       // Only show challenges from the past 10 days for class assignments,
       // but individually assigned challenges should always show regardless of date
-      const tenDaysAgoStr = localDateOffset(-10)
+      const tenDaysAgoStr = schoolDateOffset(-10)
 
       // Fetch class-assigned challenges (10-day window)
       const classOnlyIds = classAssignedIds.filter(id => !individualIds.includes(id))
@@ -311,7 +311,7 @@ export default function ChallengesPage() {
               .select('*')
               .in('id', windowIds)
               .eq('is_hidden', false)
-              .lte('challenge_date', localDateString())
+              .lte('challenge_date', schoolDateString())
               .gte('challenge_date', tenDaysAgoStr)
               .order('challenge_date', { ascending: false })
           : Promise.resolve({ data: [] }),
@@ -321,7 +321,7 @@ export default function ChallengesPage() {
               .select('*')
               .in('id', noWindowIds)
               .eq('is_hidden', false)
-              .lte('challenge_date', localDateString())
+              .lte('challenge_date', schoolDateString())
               .order('challenge_date', { ascending: false })
           : Promise.resolve({ data: [] }),
       ])
@@ -836,7 +836,7 @@ export default function ChallengesPage() {
     // Build date columns: today + next 7 days
     const dates: string[] = []
     for (let i = 0; i <= 7; i++) {
-      dates.push(localDateOffset(i))
+      dates.push(schoolDateOffset(i))
     }
     setWeekDates(dates)
 
@@ -917,7 +917,7 @@ export default function ChallengesPage() {
     }
 
     // Apply date filter
-    const today = localDateString()
+    const today = schoolDateString()
     if (dateFilter === 'today') {
       filtered = filtered.filter(c => c.challenge_date === today)
     } else if (dateFilter === 'upcoming') {
@@ -925,7 +925,7 @@ export default function ChallengesPage() {
     } else if (dateFilter === 'past') {
       filtered = filtered.filter(c => c.challenge_date && c.challenge_date < today)
     } else if (dateFilter === 'this-week') {
-      const weekFromNowStr = localDateOffset(7)
+      const weekFromNowStr = schoolDateOffset(7)
       filtered = filtered.filter(c => 
         c.challenge_date && c.challenge_date >= today && c.challenge_date <= weekFromNowStr
       )
@@ -965,7 +965,7 @@ export default function ChallengesPage() {
     )
   }
 
-  const today = localDateString()
+  const today = schoolDateString()
   const displayChallenges = filteredChallenges.length > 0 ? filteredChallenges : challenges
   // For teachers: deduplicate by source_bank_id so the same bank item published
   // to multiple classes only appears once in Today's Challenges.
@@ -1218,7 +1218,7 @@ export default function ChallengesPage() {
                     </th>
                     {weekDates.map((d, i) => {
                       const dateObj = new Date(d + 'T12:00:00')
-                      const isToday = d === localDateString()
+                      const isToday = d === schoolDateString()
                       const dayLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short' })
                       const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                       return (
@@ -1246,7 +1246,7 @@ export default function ChallengesPage() {
                         {cls.name}
                       </td>
                       {weekDates.map(d => {
-                        const isToday = d === localDateString()
+                        const isToday = d === schoolDateString()
                         const entries = weekGrid[cls.id]?.[d] ?? []
                         return (
                           <td
