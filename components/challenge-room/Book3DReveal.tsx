@@ -254,12 +254,14 @@ export function Book3DReveal({
         }}
       >
         {/* Wraps only the room block. Must not enclose the zoomed reader below
-            — see the note on that element, and on DreamEdge itself. */}
-        <DreamEdge>
-        <div
-          className="relative mx-auto overflow-hidden bg-gray-950"
-          style={{ width: 'min(100%, 132vh)' }}
-        >
+            — see the note on that element, and on DreamEdge itself.
+
+            The letterbox width lives HERE rather than on the box below, so the
+            drawn border and the picture are sized by the same declaration.
+            When they each had their own, the border was drawn around the 96vw
+            breakout while the room sat centred and narrower inside it. */}
+        <DreamEdge style={{ width: 'min(100%, 132vh)' }}>
+        <div className="relative w-full overflow-hidden bg-gray-950">
         <div
           aria-hidden="true"
           className="absolute inset-0 scale-110 blur-2xl"

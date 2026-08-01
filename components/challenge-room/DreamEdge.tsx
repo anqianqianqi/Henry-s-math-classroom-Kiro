@@ -145,9 +145,23 @@ const INK_STROKES: InkStroke[] = (() => {
   return strokes
 })()
 
-export function DreamEdge({ children }: { children: React.ReactNode }) {
+export interface DreamEdgeProps {
+  children: React.ReactNode
+  /**
+   * Sizing for the wrapper, forwarded from the call site.
+   *
+   * The caller owns the box; this component only draws on it. They have to be
+   * the SAME box: when the room carried its own width and this wrapper took
+   * whatever its parent gave, the border was drawn around the full-width
+   * breakout while the picture sat centred and narrower inside it — strokes
+   * across the whole page, and a room still ending in a hard rectangle.
+   */
+  style?: React.CSSProperties
+}
+
+export function DreamEdge({ children, style }: DreamEdgeProps) {
   return (
-    <div className="relative">
+    <div className="relative mx-auto" style={style}>
       <div
         style={{
           maskImage: FEATHER_MASK,
@@ -171,6 +185,9 @@ export function DreamEdge({ children }: { children: React.ReactNode }) {
         className="pointer-events-none absolute inset-0 h-full w-full"
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
+        /* An <svg> clips to its viewport by default, which would shear the
+           corner overshoots off flat — the one detail that says "drawn". */
+        style={{ overflow: 'visible' }}
       >
         {INK_STROKES.map((s, i) => (
           <path
