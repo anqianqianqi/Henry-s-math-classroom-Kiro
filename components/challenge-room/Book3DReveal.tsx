@@ -31,7 +31,7 @@ import {
   type AnimationConfig,
   type Placement,
 } from '@/lib/types/challengeRoom'
-import { DreamEdge } from './DreamEdge'
+import { DreamSketchBoundary } from '@/components/ui/DreamSketchBoundary'
 
 const RoomPlacementStage = dynamicImport(
   () => import('./RoomPlacementStage').then(m => m.RoomPlacementStage),
@@ -254,13 +254,20 @@ export function Book3DReveal({
         }}
       >
         {/* Wraps only the room block. Must not enclose the zoomed reader below
-            — see the note on that element, and on DreamEdge itself.
+            — see the note on that element, and on DreamSketchBoundary itself.
 
             The letterbox width lives HERE rather than on the box below, so the
-            drawn border and the picture are sized by the same declaration.
-            When they each had their own, the border was drawn around the 96vw
+            boundary and the picture are sized by the same declaration. When
+            they each had their own, the effect was drawn around the 96vw
             breakout while the room sat centred and narrower inside it. */}
-        <DreamEdge style={{ width: 'min(100%, 132vh)' }}>
+        <DreamSketchBoundary
+          style={{
+            width: 'min(100%, 132vh)',
+            // Warm graphite against this room's cream. The component reads
+            // --dream-ink, so a different surface can set its own.
+            '--dream-ink': '#44403c',
+          } as React.CSSProperties}
+        >
         <div className="relative w-full overflow-hidden bg-gray-950">
         <div
           aria-hidden="true"
@@ -331,7 +338,7 @@ export function Book3DReveal({
         )}
 
         </div>
-        </DreamEdge>
+        </DreamSketchBoundary>
       </div>
 
       {/*
