@@ -66,6 +66,22 @@ export const shop = {
   },
   'shop.bookCovers': { en: 'Book Covers', zh: '书封面' },
   'shop.browseCovers': { en: 'Browse Covers', zh: '浏览封面' },
+
+  // Challenge rooms and their matching books. Separate folders rather than one,
+  // mirroring the Room Backgrounds / Book Covers split — a student buys the two
+  // for different reasons.
+  'shop.challengeRooms': { en: 'Challenge Rooms', zh: '挑战题房间' },
+  'shop.browseChallengeRooms': { en: 'Browse Rooms', zh: '浏览房间' },
+  'shop.challengeRoomsBlurb': {
+    en: 'The room your challenge book opens in. Tap to browse all worlds.',
+    zh: '挑战题书本所在的房间场景，点击浏览全部主题。',
+  },
+  'shop.challengeBooks': { en: 'Challenge Books', zh: '挑战题书本' },
+  'shop.browseChallengeBooks': { en: 'Browse Books', zh: '浏览书本' },
+  'shop.challengeBooksBlurb': {
+    en: 'Cover and pages for the book on your desk. Tap to browse all sets.',
+    zh: '书桌上书本的封面与内页，点击浏览全部套装。',
+  },
   'shop.zoomHint': {
     en: 'Click an image to zoom preview · Buy to unlock',
     zh: '点击图片放大预览 · 购买即可解锁',

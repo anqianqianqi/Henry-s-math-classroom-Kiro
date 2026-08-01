@@ -88,8 +88,8 @@ const BASELINE = new Set([
   'components/pet/AccessoryInventory.tsx',
   'components/pet/PetPreviewCard.tsx',
   'components/pet/XpBar.tsx',
-  'components/ui/Card.tsx',
-  'components/ui/Input.tsx',
+  // Card.tsx and Input.tsx were removed once plain /* */ comments stopped being
+  // read as UI text — their only findings had always been prose in a comment.
 ])
 
 interface Finding {
@@ -131,17 +131,23 @@ function findUntranslated(file: string): Finding[] {
   const isBracketedByTags = (i: number) =>
     /(^|>)\s*$/.test(lines[i - 1] ?? '') && /^\s*<\//.test(lines[i + 1] ?? '')
 
-  // A JSX comment spans lines and its continuations are bare prose:
+  // A block comment spans lines and its continuations are bare prose:
   //
   //   {/* Dropped by container query when the strip
   //       itself is narrow */}                        <- looks like UI text
   //
   // Tracked rather than pattern-matched, because only the first line carries
   // the opening marker.
+  //
+  // Plain /* */ blocks count too, not just the {/* */} JSX form. A continuation
+  // line that happens to read like a sentence — "It has to come after countMap
+  // exists." — was flagged as untranslated UI, which sends whoever hit it
+  // hunting for a string that does not exist. Prose in a comment is never UI
+  // text, whichever bracket opened it.
   let inJsxComment = false
 
   lines.forEach((line, i) => {
-    const opensComment = line.includes('{/*') && !line.includes('*/')
+    const opensComment = /\{\/\*|\/\*/.test(line) && !line.includes('*/')
     const closesComment = inJsxComment && line.includes('*/')
     const skipAsComment = inJsxComment
     if (opensComment) inJsxComment = true
