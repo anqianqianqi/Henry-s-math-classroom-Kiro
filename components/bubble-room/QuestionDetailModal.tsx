@@ -32,6 +32,7 @@ import type { Language } from '@/lib/i18n/catalog'
 import { useOnDemandTranslation } from '@/lib/i18n/useOnDemandTranslation'
 import { BadgePill } from './BadgePill'
 import { ThankResponderBar } from './ThankResponderBar'
+import { canAnswerBubble } from '@/lib/utils/bubbleAnswerPermission'
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
@@ -40,6 +41,8 @@ export interface QuestionDetailModalProps {
   question: BubbleQuestion
   currentUserId: string
   currentUserRole: 'teacher' | 'student'
+  /** Holds the bubble_room_ta badge — decides whether the reply box appears. */
+  currentUserIsTA: boolean
   currentUserDisplayName: string
   onClose: () => void
   onResponseSubmitted: () => void
@@ -53,6 +56,7 @@ export function QuestionDetailModal({
   question,
   currentUserId,
   currentUserRole,
+  currentUserIsTA,
   currentUserDisplayName,
   onClose,
   onResponseSubmitted,
@@ -312,6 +316,15 @@ export function QuestionDetailModal({
   function canDelete(contentUserId: string): boolean {
     return currentUserId === contentUserId || currentUserRole === 'teacher'
   }
+
+  /* Answering is a TA's job — a student without the badge reads the thread but
+     replies only under their own question. The brr_insert policy enforces this;
+     hiding the box just spares them writing an answer that would be refused. */
+  const canAnswer = canAnswerBubble({
+    isOwner: currentUserId === question.user_id,
+    role: currentUserRole,
+    isTA: currentUserIsTA,
+  })
 
   // ── Response image handler ────────────────────────────────────────────────
 
@@ -874,6 +887,7 @@ export function QuestionDetailModal({
         </div>
 
         {/* ── Response form (Req 3.3, 3.4, 3.5, 3.6) ─────────────────── */}
+        {canAnswer ? (
         <form
           onSubmit={handleResponseSubmit}
           className="relative z-10 p-4 space-y-2"
@@ -965,6 +979,26 @@ export function QuestionDetailModal({
             </Button>
           </div>
         </form>
+        ) : (
+          /* A notice rather than a disabled textarea: there is nothing they can
+             do to make the box work on this question, so offering one would
+             only invite them to write an answer that cannot be posted. */
+          <div
+            className="relative z-10 p-4 text-center"
+            style={{
+              borderTop: '1px solid rgba(200,180,255,0.3)',
+              background: 'rgba(255,255,255,0.25)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            <p className="text-sm font-medium text-gray-600">
+              {t('bubble.answersAreForTAs')}
+            </p>
+            <p className="mt-0.5 text-xs text-gray-500">
+              {t('bubble.answersAreForTAsHint')}
+            </p>
+          </div>
+        )}
           </div>{/* end RIGHT column */}
         </div>{/* end two-column body */}
       </div>

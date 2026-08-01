@@ -144,6 +144,16 @@ export const bubbleRoom = {
   'bubble.loadingResponses': { en: 'Loading responses', zh: '正在加载回复' },
   'bubble.postAResponse': { en: 'Post a response', zh: '发布回复' },
   'bubble.attachResponseImage': { en: 'Attach image to response', zh: '为回复添加图片' },
+
+  // Shown in place of the reply box to a student without the TA badge.
+  'bubble.answersAreForTAs': {
+    en: 'Only TAs and teachers can answer here.',
+    zh: '只有助教和老师才能在这里回答。',
+  },
+  'bubble.answersAreForTAsHint': {
+    en: 'Want to help? Apply for the TA badge.',
+    zh: '想帮助大家？欢迎申请成为助教。',
+  },
   'bubble.deleteThisQuestion': { en: 'Delete this question', zh: '删除这个问题' },
   'bubble.deleting': { en: 'Deleting…', zh: '正在删除…' },
   'bubble.errResponseEmpty': { en: 'Response cannot be empty.', zh: '回复内容不能为空。' },
@@ -163,6 +173,29 @@ export const bubbleRoom = {
     zh: '简单介绍一下您自己，以及您为什么适合当助教……',
   },
   'bubble.taSubmitApplication': { en: 'Submit Application', zh: '提交申请' },
+
+  // What the role actually asks of you, shown before the pitch box so an
+  // applicant knows what they are volunteering for.
+  'bubble.taGoodMeans': {
+    en: 'Being a good TA means…',
+    zh: '成为一名优秀的助教意味着……',
+  },
+  'bubble.taGood1': {
+    en: "Understand what the person's question is",
+    zh: '理解对方的问题是什么',
+  },
+  'bubble.taGood2': {
+    en: 'Think about what is the best way to guide the person to the answer',
+    zh: '思考引导对方找到答案的最佳方式',
+  },
+  'bubble.taGood3': {
+    en: 'Explain in a clear and helpful way',
+    zh: '以清晰且有帮助的方式进行讲解',
+  },
+  'bubble.taWhyLabel': {
+    en: 'Why do you want to be a TA?',
+    zh: '您为什么想成为助教？',
+  },
   'bubble.taWaiting': {
     en: 'Waiting for a teacher to review your application.',
     zh: '正在等待老师审核您的申请。',
