@@ -30,8 +30,9 @@ import { createClient } from '@/lib/supabase/client'
 import { translate } from '@/lib/i18n/catalog'
 import type { Language } from '@/lib/i18n/catalog'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
-import { COUNTRIES, cityForTimeZone, countryForTimeZone } from '@/lib/utils/places'
-import { detectTimeZone, zoneLabel } from '@/lib/utils/timezone'
+import { placeFromTimeZone } from '@/lib/utils/places'
+import { detectTimeZone } from '@/lib/utils/timezone'
+import { PlacePicker, type PlaceSelection } from '@/components/ui/PlacePicker'
 
 /** Both languages, stacked. The card's whole reason for existing. */
 function Bilingual({ k, className = '' }: { k: string; className?: string }) {
@@ -55,25 +56,8 @@ export function RegionWelcomeCard() {
   const [saving, setSaving] = useState(false)
 
   const detected = useMemo(() => detectTimeZone(), [])
-  const [countryCode, setCountryCode] = useState(
-    () => countryForTimeZone(detected)?.code ?? 'US',
-  )
-  /*
-    The city is tracked by NAME, not by its timezone. New York, Boston and
-    Atlanta all sit in America/New_York, so a select keyed on the zone would
-    snap back to whichever shares it first — pick Boston, watch it say New York.
-  */
-  const [cityName, setCityName] = useState<string>(
-    () => {
-      const c = countryForTimeZone(detected)
-      return (c && cityForTimeZone(c, detected)?.nameEn) ?? ''
-    },
-  )
+  const [place, setPlace] = useState<PlaceSelection>(() => placeFromTimeZone(detected))
   const [chosenLanguage, setChosenLanguage] = useState<Language>('en')
-
-  const country = COUNTRIES.find(c => c.code === countryCode) ?? COUNTRIES[0]
-  const city = country.cities.find(c => c.nameEn === cityName) ?? country.cities[0]
-  const timezone = city.timezone
 
   useEffect(() => {
     let cancelled = false
@@ -143,13 +127,6 @@ export function RegionWelcomeCard() {
     }
   }, [])
 
-  // Changing country invalidates the city, so fall back to its first.
-  useEffect(() => {
-    if (!country.cities.some(c => c.nameEn === cityName)) {
-      setCityName(country.cities[0].nameEn)
-    }
-  }, [country, cityName])
-
   if (!show) return null
 
   async function save() {
@@ -160,8 +137,8 @@ export function RegionWelcomeCard() {
       await supabase
         .from('profiles')
         .update({
-          timezone,
-          region: country.region,
+          timezone: place.timezone,
+          region: place.region,
           preferred_language: chosenLanguage,
           region_onboarded_at: new Date().toISOString(),
         })
@@ -180,48 +157,17 @@ export function RegionWelcomeCard() {
         <Bilingual k="welcome.title" className="text-base font-bold text-gray-900" />
         <Bilingual k="welcome.choose" className="mt-3 text-sm text-gray-600" />
 
-        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="w-country" className="block text-xs font-medium text-gray-700 mb-1">
-              {label('welcome.country')}
-            </label>
-            <select
-              id="w-country"
-              value={countryCode}
-              onChange={e => setCountryCode(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
-            >
-              {COUNTRIES.map(c => (
-                <option key={c.code} value={c.code}>{c.nameEn} / {c.nameZh}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="w-city" className="block text-xs font-medium text-gray-700 mb-1">
-              {label('welcome.city')}
-            </label>
-            <select
-              id="w-city"
-              value={city.nameEn}
-              onChange={e => setCityName(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
-            >
-              {country.cities.map(c => (
-                <option key={c.nameEn} value={c.nameEn}>
-                  {c.nameEn} / {c.nameZh}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="mt-5">
+          <PlacePicker
+            countryCode={place.countryCode}
+            cityName={place.cityName}
+            onChange={setPlace}
+            countryLabel={label('welcome.country')}
+            cityLabel={label('welcome.city')}
+            zoneCaption={label('welcome.detectedZone')}
+            idPrefix="welcome"
+          />
         </div>
-
-        {/* Shown back so the answer can be checked. */}
-        <p className="mt-3 text-xs text-gray-500">
-          {label('welcome.detectedZone')}: <span className="font-medium text-gray-700">
-            {timezone.replace(/_/g, ' ')} · {zoneLabel(timezone)}
-          </span>
-        </p>
 
         <div className="mt-5">
           <p className="mb-1.5 text-xs font-medium text-gray-700">{label('welcome.language')}</p>

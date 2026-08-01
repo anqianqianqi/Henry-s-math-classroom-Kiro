@@ -105,6 +105,37 @@ export const COUNTRIES: Country[] = [
   },
 ]
 
+/**
+ * The country/city/region a detected zone corresponds to, for pre-selecting a
+ * picker. Falls back to the first entry when the zone is not one we list —
+ * better to show a wrong-but-editable answer than an empty control.
+ */
+export function placeFromTimeZone(timeZone: string): {
+  countryCode: string
+  cityName: string
+  timezone: string
+  region: Region
+} {
+  for (const country of COUNTRIES) {
+    const city = country.cities.find(c => c.timezone === timeZone)
+    if (city) {
+      return {
+        countryCode: country.code,
+        cityName: city.nameEn,
+        timezone: city.timezone,
+        region: country.region,
+      }
+    }
+  }
+  const fallback = COUNTRIES[0]
+  return {
+    countryCode: fallback.code,
+    cityName: fallback.cities[0].nameEn,
+    timezone: fallback.cities[0].timezone,
+    region: fallback.region,
+  }
+}
+
 /** The country a zone most likely belongs to, for pre-selecting the card. */
 export function countryForTimeZone(timeZone: string): Country | null {
   return COUNTRIES.find(c => c.cities.some(city => city.timezone === timeZone)) ?? null

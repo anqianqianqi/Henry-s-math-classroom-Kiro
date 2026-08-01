@@ -11,7 +11,9 @@ import { Card } from '@/components/ui/Card'
 import NotificationPreferences from '@/components/NotificationPreferences'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
-import { REGIONS, SCHOOL_TIMEZONE, detectTimeZone, isValidTimeZone, zoneLabel } from '@/lib/utils/timezone'
+import { SCHOOL_TIMEZONE, detectTimeZone, isValidTimeZone } from '@/lib/utils/timezone'
+import { placeFromTimeZone } from '@/lib/utils/places'
+import { PlacePicker, type PlaceSelection } from '@/components/ui/PlacePicker'
 
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null)
@@ -22,8 +24,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
   const [loading, setLoading] = useState(true)
-  const [timezone, setTimezone] = useState(SCHOOL_TIMEZONE)
-  const [region, setRegion] = useState<string>('')
+  // One answer, not two: the country decides the region, the city the zone.
+  const [place, setPlace] = useState<PlaceSelection>(() => placeFromTimeZone(SCHOOL_TIMEZONE))
   const [isTeacher, setIsTeacher] = useState(false)
   const [scoreStats, setScoreStats] = useState<{
     totalScore: number
@@ -69,8 +71,7 @@ export default function SettingsPage() {
       // it fills the field solely when nothing has been stored — or when what
       // was stored is a name this browser no longer recognises.
       const stored = (profile as any).timezone as string | null
-      setTimezone(isValidTimeZone(stored) ? (stored as string) : detectTimeZone())
-      setRegion((profile as any).region ?? '')
+      setPlace(placeFromTimeZone(isValidTimeZone(stored) ? (stored as string) : detectTimeZone()))
     }
 
     // Check role
@@ -126,11 +127,8 @@ export default function SettingsPage() {
     const { error } = await supabase
       .from('profiles')
       .update({
-        timezone,
-        // Empty select means 'not said'. Stored as NULL so the shop and the
-        // redemptions trigger both read it as unknown and allow everything,
-        // rather than as a region that matches nothing.
-        region: region || null,
+        timezone: place.timezone,
+        region: place.region,
         first_name: firstName.trim() || '',
         last_name: lastName.trim() || '',
         nickname: nickname.trim() || null
@@ -193,53 +191,22 @@ export default function SettingsPage() {
                 <p className="text-gray-900">{profile?.email}</p>
               </div>
 
-              {/* Detection is right for almost everyone and wrong for anyone
-                  travelling, behind a VPN, or on a borrowed machine. These
-                  exist so that being wrong is fixable rather than permanent. */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="tz" className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('settings.timezone')}
-                  </label>
-                  <select
-                    id="tz"
-                    value={timezone}
-                    onChange={e => setTimezone(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white"
-                  >
-                    {/* The detected zone is always offered, even if it is not in
-                        the short list — otherwise anyone outside these few
-                        places silently has their real zone replaced on save. */}
-                    {Array.from(new Set([
-                      detectTimeZone(), timezone, SCHOOL_TIMEZONE,
-                      'Asia/Shanghai', 'Asia/Taipei', 'Asia/Hong_Kong',
-                      'America/Los_Angeles', 'America/Chicago', 'Europe/London',
-                    ])).filter(isValidTimeZone).map(zone => (
-                      <option key={zone} value={zone}>
-                        {zone.replace(/_/g, ' ')} · {zoneLabel(zone)}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-gray-500">{t('settings.timezoneHint')}</p>
-                </div>
-
-                <div>
-                  <label htmlFor="region" className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('settings.region')}
-                  </label>
-                  <select
-                    id="region"
-                    value={region}
-                    onChange={e => setRegion(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white"
-                  >
-                    <option value="">{t('settings.regionUnset')}</option>
-                    {REGIONS.map(r => (
-                      <option key={r} value={r}>{t(`settings.region_${r}` as any)}</option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-gray-500">{t('settings.regionHint')}</p>
-                </div>
+              {/* The same control as the welcome card, so the question is asked
+                  the same way in both places. Detection is right for almost
+                  everyone and wrong for anyone travelling, behind a VPN, or on a
+                  borrowed machine — this is where being wrong gets fixed. */}
+              <div>
+                <PlacePicker
+                  countryCode={place.countryCode}
+                  cityName={place.cityName}
+                  onChange={setPlace}
+                  countryLabel={t('welcome.country')}
+                  cityLabel={t('welcome.city')}
+                  zoneCaption={t('settings.timezone')}
+                  idPrefix="settings"
+                />
+                <p className="mt-1 text-xs text-gray-500">{t('settings.timezoneHint')}</p>
+                <p className="mt-0.5 text-xs text-gray-500">{t('settings.regionHint')}</p>
               </div>
               <FormField
                 label={t('settings.nickname')}
