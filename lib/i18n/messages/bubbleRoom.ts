@@ -144,6 +144,16 @@ export const bubbleRoom = {
   'bubble.loadingResponses': { en: 'Loading responses', zh: '正在加载回复' },
   'bubble.postAResponse': { en: 'Post a response', zh: '发布回复' },
   'bubble.attachResponseImage': { en: 'Attach image to response', zh: '为回复添加图片' },
+
+  // Shown in place of the reply box to a student without the TA badge.
+  'bubble.answersAreForTAs': {
+    en: 'Only TAs and teachers can answer here.',
+    zh: '只有助教和老师才能在这里回答。',
+  },
+  'bubble.answersAreForTAsHint': {
+    en: 'Want to help? Apply for the TA badge.',
+    zh: '想帮助大家？欢迎申请成为助教。',
+  },
   'bubble.deleteThisQuestion': { en: 'Delete this question', zh: '删除这个问题' },
   'bubble.deleting': { en: 'Deleting…', zh: '正在删除…' },
   'bubble.errResponseEmpty': { en: 'Response cannot be empty.', zh: '回复内容不能为空。' },

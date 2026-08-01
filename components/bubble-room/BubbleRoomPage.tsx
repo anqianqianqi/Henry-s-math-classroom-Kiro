@@ -559,6 +559,7 @@ export function BubbleRoomPage({
           question={selectedQuestion}
           currentUserId={currentUserId}
           currentUserRole={currentUserRole}
+          currentUserIsTA={isTA}
           currentUserDisplayName={currentUserDisplayName}
           onClose={() => {
             setSelectedQuestion(null)
