@@ -86,7 +86,26 @@ export interface DreamSketchBoundaryProps {
    */
   inkStrength?: number
 
-  /** Change for a different drawing at identical settings. */
+  /**
+   * URL of a drawn frame to use instead of the generated strokes.
+   *
+   * Must be a PNG whose ALPHA is the drawing — it is used as a mask and filled
+   * with `lineColor`, so the artwork's own colours are discarded and the ink
+   * stays tunable in CSS. scripts/png-to-alpha.mjs converts a drawing on a
+   * green screen or white paper into that form.
+   *
+   * Worth the asset: procedural strokes can get the geometry right — placement,
+   * smoothness, breaks — but not the texture. Real graphite has paper tooth,
+   * pressure falling off mid-stroke, edges that are not a constant width. An
+   * SVG path is a perfect ribbon of uniform opacity, so it reads as synthetic
+   * however carefully the shape is tuned.
+   *
+   * The image is stretched to the box, so its aspect ratio should match. Ours
+   * is 3:2, which is what the room always is.
+   */
+  edgeTexture?: string
+
+  /** Change for a different drawing at identical settings. Generated mode only. */
   seed?: number
 
   className?: string
@@ -301,6 +320,7 @@ export function DreamSketchBoundary({
   lineColor = 'var(--dream-ink, currentColor)',
   strength = 1,
   inkStrength = 1,
+  edgeTexture,
   seed = 20260801,
   className,
   style,
@@ -349,10 +369,30 @@ export function DreamSketchBoundary({
         {children}
       </div>
 
-      {/* Outside the masked element, so the fade does not erase the very lines
-          meant to sit in it. pointer-events-none so it never eats a click, and
-          overflow visible because an outermost <svg> otherwise clips its own
-          strokes flat at the corners. */}
+      {/* Both ink layers sit OUTSIDE the masked element, so the fade does not
+          erase the very marks meant to sit in it, and pointer-events-none so
+          neither can eat a click meant for the content. */}
+
+      {edgeTexture ? (
+        // The drawing is the mask; the colour comes from CSS. That way the ink
+        // can be re-tinted or dimmed without regenerating the artwork.
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: lineColor,
+            opacity: Math.max(0, Math.min(1, inkStrength)),
+            maskImage: `url(${edgeTexture})`,
+            WebkitMaskImage: `url(${edgeTexture})`,
+            maskSize: '100% 100%',
+            WebkitMaskSize: '100% 100%',
+            maskRepeat: 'no-repeat',
+            WebkitMaskRepeat: 'no-repeat',
+          }}
+        />
+      ) : (
+      /* overflow visible because an outermost <svg> otherwise clips its own
+         strokes flat at the corners. */
       <svg
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 h-full w-full"
@@ -374,6 +414,7 @@ export function DreamSketchBoundary({
           />
         ))}
       </svg>
+      )}
     </div>
   )
 }

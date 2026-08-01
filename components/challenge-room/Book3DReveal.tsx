@@ -265,8 +265,10 @@ export function Book3DReveal({
              centred here — the component stays layout-neutral rather than
              imposing a margin its consumers might not want. */
           className="mx-auto"
-          lineDensity={26}
-          inkStrength={1.7}
+          /* A drawn frame rather than generated strokes — see the note on the
+             prop. It is 3:2, which is what this box always is. */
+          edgeTexture="/sketch-frame.png"
+          inkStrength={0.75}
           style={{
             width: 'min(100%, 132vh)',
             // Warm graphite against this room's cream. The component reads
