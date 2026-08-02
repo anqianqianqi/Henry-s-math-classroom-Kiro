@@ -23,7 +23,7 @@ import { Book3DReveal } from './Book3DReveal'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import { bookModelUrl } from '@/lib/challengeRoom/model'
 import { RADIO_MODEL_URL } from '@/lib/challengeRoom/radio'
-import type { AnimationConfig, Placement } from '@/lib/types/challengeRoom'
+import type { AnimationConfig, LightPosition, Placement } from '@/lib/types/challengeRoom'
 import type { OverlayObject } from '@/components/BookCoverWithOverlays'
 
 export interface ChallengeScene {
@@ -40,6 +40,8 @@ export interface ChallengeScene {
   radioPlacement?: Placement | null
   /** The student's chosen colourway, already resolved to a file. */
   radioTextureUrl?: string | null
+  /** The room key light, shared by book and radio. */
+  lightPosition?: LightPosition | null
 }
 
 export interface ChallengeBookShellProps {
@@ -116,6 +118,7 @@ export function ChallengeBookShell({
         radioUrl={scene.radioPlacement ? RADIO_MODEL_URL : null}
         radioTextureUrl={scene.radioTextureUrl}
         radioPlacement={scene.radioPlacement}
+        lightPosition={scene.lightPosition}
       >
         {children}
       </Book3DReveal>

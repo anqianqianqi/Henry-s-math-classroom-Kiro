@@ -58,10 +58,11 @@ import {
   BOOK_MODEL_KEY,
   DEFAULT_ANIMATION,
   DEFAULT_PLACEMENT,
-  DEFAULT_SHADOW_DEPTH,
+  DEFAULT_LIGHT_POSITION,
   SPREAD_FRAME,
   type AnimationConfig,
   type ChallengeRoom,
+  type LightPosition,
   type Placement,
   type RoomSpec,
 } from '@/lib/types/challengeRoom'
@@ -100,6 +101,9 @@ export default function ChallengeRoomsAdminPage() {
    * chosen the original on the version without the change.
    */
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null)
+
+  /** One key light for the whole room — see LightPosition. */
+  const [lightPosition, setLightPosition] = useState<LightPosition>(DEFAULT_LIGHT_POSITION)
 
   /*
     The radio on the sill.
@@ -253,6 +257,7 @@ export default function ChallengeRoomsAdminPage() {
         recipe: spec,
         placement,
         radio_placement: radioPlacement,
+        light_position: lightPosition,
         animation,
         model_key: BOOK_MODEL_KEY,
         visibility,
@@ -304,6 +309,7 @@ export default function ChallengeRoomsAdminPage() {
     if (room.recipe) setSpec(room.recipe)
     setPlacement(room.placement ?? DEFAULT_PLACEMENT)
     setRadioPlacement((room as any).radio_placement ?? null)
+    setLightPosition((room as any).light_position ?? DEFAULT_LIGHT_POSITION)
     setTarget('book')
     setAnimation(room.animation ?? DEFAULT_ANIMATION)
     setRoomName(room.name)
@@ -392,7 +398,14 @@ export default function ChallengeRoomsAdminPage() {
         breadcrumbs={[{ label: t('nav.decorations'), href: '/decorations' }, { label: t('roomAdmin.pageTitle') }]}
       />
 
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+      {/*
+        Wide on purpose. Placing a book and a radio against a painted plate is
+        judged by eye, and the stage used to be half of a max-w-6xl — about
+        550px, a third of the size a student sees it at. Details that decide
+        whether an object sits ON the sill or floats in front of it are simply
+        not visible at that scale.
+      */}
+      <main className="mx-auto max-w-[1800px] space-y-6 px-4 py-8 sm:px-6 lg:px-8">
         <p className="text-sm text-gray-500">
           Design the 3D challenge room: generate a background plate, then position the animated book on it.
         </p>
@@ -415,7 +428,8 @@ export default function ChallengeRoomsAdminPage() {
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        {/* Recipe narrow on the left, everything visual to the right of it. */}
+        <div className="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
           {/* ── Spec form ──────────────────────────────────────────────── */}
           <Card>
             <Card.Body className="space-y-4">
@@ -531,8 +545,13 @@ export default function ChallengeRoomsAdminPage() {
             </Card.Body>
           </Card>
 
-          {/* ── Stage + placement ──────────────────────────────────────── */}
-          <div className="space-y-4">
+          {/*
+            ── Stage + placement ────────────────────────────────────────
+            Stage takes the room it needs; the controls become a rail beside
+            it once there is width for both. `items-start` so the short rail
+            does not stretch to the stage's height.
+          */}
+          <div className="grid gap-4 items-start 2xl:grid-cols-[minmax(0,1fr)_21rem]">
             <Card>
               <Card.Body className="space-y-3">
                 <h2 className="text-lg font-bold text-gray-900">{t('roomAdmin.placement')}</h2>
@@ -574,6 +593,7 @@ export default function ChallengeRoomsAdminPage() {
                       radioUrl={radioPlacement ? RADIO_MODEL_URL : null}
                       radioTextureUrl={radioPaletteUrl(radioPaletteId)}
                       radioPlacement={radioPlacement}
+                      lightPosition={lightPosition}
                       onRadioPlacementChange={setRadioPlacement}
                     />
                     <p className="text-xs text-gray-400">
@@ -728,18 +748,35 @@ export default function ChallengeRoomsAdminPage() {
                       onChange={v => setEditing({ ...editing, roll: v })} />
                   </div>
 
-                  {/* Only the book casts a shadow, so this belongs to it alone. */}
-                  {target === 'book' && (
-                    <div className="space-y-1">
-                      <Slider
-                        label={t('roomAdmin.shadowDepth')}
-                        value={placement.shadowDepth ?? DEFAULT_SHADOW_DEPTH}
-                        min={-3} max={0} step={0.01}
-                        onChange={v => setPlacement({ ...placement, shadowDepth: v })}
-                      />
-                      <p className="text-xs text-gray-400">{t('roomAdmin.shadowDepthHint')}</p>
+                  {/*
+                    One lamp, lighting both objects and casting both shadows —
+                    which is what a room has. Replaces a "shadow depth" number
+                    that had no physical meaning and could only be dialled in by
+                    trial and error.
+                  */}
+                  <div className="space-y-2 border-t border-gray-100 pt-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-600">
+                        💡 {t('roomAdmin.lightHeading')}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setLightPosition(DEFAULT_LIGHT_POSITION)}
+                      >
+                        {t('roomAdmin.resetLight')}
+                      </Button>
                     </div>
-                  )}
+                    <div className="grid grid-cols-3 gap-3">
+                      <Slider label={t('roomAdmin.lightX')} value={lightPosition.x} min={-12} max={12} step={0.1}
+                        onChange={v => setLightPosition({ ...lightPosition, x: v })} />
+                      <Slider label={t('roomAdmin.lightY')} value={lightPosition.y} min={-12} max={12} step={0.1}
+                        onChange={v => setLightPosition({ ...lightPosition, y: v })} />
+                      <Slider label={t('roomAdmin.lightZ')} value={lightPosition.z} min={1} max={20} step={0.1}
+                        onChange={v => setLightPosition({ ...lightPosition, z: v })} />
+                    </div>
+                    <p className="text-xs text-gray-400">{t('roomAdmin.lightHint')}</p>
+                  </div>
 
                   <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-3">
                     <Slider label="Playback fps" value={animation.playbackFps} min={12} max={120} step={1}

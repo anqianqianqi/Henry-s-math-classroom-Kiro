@@ -28,6 +28,18 @@ ALTER TABLE challenge_rooms
 ALTER TABLE user_book_skin_preferences
   ADD COLUMN IF NOT EXISTS radio_palette TEXT;
 
+-- Where the room's key light hangs: { "x": -4, "y": 6, "z": 8 }.
+--
+-- The plates are paintings with their own light already in them — a storm
+-- through a window on the left and a desk lamp on the right want their shadows
+-- going opposite ways — so one hardcoded direction cannot serve every room.
+-- NULL keeps the position every room was built against.
+--
+-- Added after the two columns above; this file is idempotent, so re-running it
+-- adds only what is missing.
+ALTER TABLE challenge_rooms
+  ADD COLUMN IF NOT EXISTS light_position JSONB;
+
 COMMENT ON COLUMN challenge_rooms.radio_placement IS
   'Optional 6-DOF placement for the vintage radio. NULL = this room has no radio.';
 COMMENT ON COLUMN user_book_skin_preferences.radio_palette IS

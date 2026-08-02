@@ -19,9 +19,11 @@ import { renderPageCanvas, type PageContent } from '@/lib/challengeRoom/pageText
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import {
   BOOK_MATERIALS,
+  DEFAULT_LIGHT_POSITION,
   DEFAULT_SHADOW_DEPTH,
   MIRRORED_U_MATERIALS,
   type AnimationConfig,
+  type LightPosition,
   type Placement,
 } from '@/lib/types/challengeRoom'
 
@@ -80,6 +82,11 @@ export interface RoomPlacementStageProps {
    * and so on. The mesh arrives as one primitive per region, so this costs a
    * raycast and nothing else.
    */
+  /**
+   * The key light both objects are lit by and cast from. Absent keeps the
+   * position every room was built against.
+   */
+  lightPosition?: LightPosition | null
   onRadioClick?: (region: string) => void
   /** Drag the radio rather than the book. Admin placement only. */
   radioInteractive?: boolean
@@ -144,6 +151,7 @@ export function RoomPlacementStage({
   radioUrl,
   radioTextureUrl,
   radioPlacement,
+  lightPosition,
   onRadioClick,
   radioInteractive = false,
   onRadioPlacementChange,
@@ -172,6 +180,7 @@ export function RoomPlacementStage({
   const readyFiredRef = useRef(false)
 
   const shadowPlaneRef = useRef<THREE.Mesh | null>(null)
+  const keyLightRef = useRef<THREE.DirectionalLight | null>(null)
   const radioGroupRef = useRef<THREE.Group | null>(null)
   const radioTextureRef = useRef<THREE.Texture | null>(null)
   const onRadioClickRef = useRef(onRadioClick)
@@ -224,10 +233,13 @@ export function RoomPlacementStage({
 
     scene.add(new THREE.HemisphereLight(0xfff4dd, 0x263d45, 2.35))
     const keyLight = new THREE.DirectionalLight(0xffe4bc, 3.2)
-    keyLight.position.set(-4, 6, 8)
+    keyLight.position.set(
+      DEFAULT_LIGHT_POSITION.x, DEFAULT_LIGHT_POSITION.y, DEFAULT_LIGHT_POSITION.z,
+    )
     keyLight.castShadow = true
     keyLight.shadow.mapSize.set(1024, 1024)
     scene.add(keyLight)
+    keyLightRef.current = keyLight
     const fillLight = new THREE.DirectionalLight(0x9ac8e8, 1.25)
     fillLight.position.set(5, 1, 6)
     scene.add(fillLight)
@@ -471,6 +483,18 @@ export function RoomPlacementStage({
     if (!plane) return
     plane.position.z = placement.shadowDepth ?? DEFAULT_SHADOW_DEPTH
   }, [placement.shadowDepth])
+
+  // ── Where the light is ───────────────────────────────────────────────────
+  useEffect(() => {
+    const light = keyLightRef.current
+    if (!light) return
+    const p = lightPosition ?? DEFAULT_LIGHT_POSITION
+    light.position.set(p.x, p.y, p.z)
+    // The shadow camera follows the light; without this the map is still
+    // rendered from where the light used to be and the shadow does not move.
+    light.shadow.camera.updateProjectionMatrix()
+    light.updateMatrixWorld(true)
+  }, [lightPosition])
 
   // ── Load the radio ───────────────────────────────────────────────────────
   /*

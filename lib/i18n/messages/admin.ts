@@ -250,10 +250,16 @@ export const admin = {
     en: 'Loaded "{name}" — saving updates it.',
     zh: '已载入“{name}”，保存后将更新该房间。',
   },
-  'roomAdmin.shadowDepth': { en: 'Shadow depth', zh: '阴影深度' },
-  'roomAdmin.shadowDepthHint': {
-    en: 'Bring this closer to 0 if the book looks like it is hovering over the table.',
-    zh: '如果书本看起来浮在桌面上方，把这个数值调向 0。',
+  // One lamp for the room, lighting the book and the radio and casting both
+  // shadows. Replaced an abstract "shadow depth" number.
+  'roomAdmin.lightHeading': { en: 'Light source', zh: '光源位置' },
+  'roomAdmin.lightX': { en: 'Left ↔ right', zh: '左右' },
+  'roomAdmin.lightY': { en: 'Down ↕ up', zh: '上下' },
+  'roomAdmin.lightZ': { en: 'Distance', zh: '远近' },
+  'roomAdmin.resetLight': { en: 'Reset light', zh: '重置光源' },
+  'roomAdmin.lightHint': {
+    en: 'Match the light already painted into the room, and the shadows will sit right.',
+    zh: '让光源方向与房间画面中的光线一致，阴影就会自然贴合。',
   },
   'roomAdmin.roomUpdated': { en: '"{name}" updated.', zh: '“{name}”已更新。' },
   'roomAdmin.roomSaved': { en: '"{name}" saved.', zh: '“{name}”已保存。' },

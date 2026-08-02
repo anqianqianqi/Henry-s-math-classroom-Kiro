@@ -461,7 +461,7 @@ export default function ChallengePage() {
           const roomQuery = userPrefData?.challenge_room_id
             ? supabase
                 .from('challenge_rooms')
-                .select('room_url, placement, animation, radio_placement')
+                .select('room_url, placement, animation, radio_placement, light_position')
                 .eq('id', userPrefData.challenge_room_id)
                 .maybeSingle()
             : supabase
@@ -499,6 +499,7 @@ export default function ChallengePage() {
             // No placement means this room has no radio, and nothing about it
             // is fetched or rendered.
             radioPlacement: room.radio_placement ?? null,
+            lightPosition: room.light_position ?? null,
             radioTextureUrl: room.radio_placement
               ? radioPaletteUrl(userPrefData?.radio_palette)
               : null,

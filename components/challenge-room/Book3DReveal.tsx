@@ -29,6 +29,7 @@ import dynamicImport from 'next/dynamic'
 import {
   DEFAULT_PLACEMENT,
   type AnimationConfig,
+  type LightPosition,
   type Placement,
 } from '@/lib/types/challengeRoom'
 import { DreamSketchBoundary } from '@/components/ui/DreamSketchBoundary'
@@ -69,6 +70,8 @@ export interface Book3DRevealProps {
   radioUrl?: string | null
   radioTextureUrl?: string | null
   radioPlacement?: Placement | null
+  /** Room key light, shared with the radio. */
+  lightPosition?: LightPosition | null
 }
 
 type Phase = 'closed' | 'opening' | 'open' | 'zoomed'
@@ -105,6 +108,7 @@ export function Book3DReveal({
   radioUrl,
   radioTextureUrl,
   radioPlacement,
+  lightPosition,
 }: Book3DRevealProps) {
   const [phase, setPhase] = useState<Phase>('closed')
   const [radioPanelOpen, setRadioPanelOpen] = useState(false)
@@ -359,6 +363,7 @@ export function Book3DReveal({
             radioUrl={radioUrl}
             radioTextureUrl={radioTextureUrl}
             radioPlacement={radioPlacement}
+            lightPosition={lightPosition}
             onRadioClick={handleRadioClick}
           />
 
