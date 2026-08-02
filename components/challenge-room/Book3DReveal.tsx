@@ -36,7 +36,7 @@ import { DreamSketchBoundary } from '@/components/ui/DreamSketchBoundary'
 import { useAdaptiveInk } from '@/components/ui/useAdaptiveInk'
 import { RadioPanel } from './RadioPanel'
 import { radioActionFor } from '@/lib/challengeRoom/radio'
-import { nextTrack } from '@/lib/music/audioStore'
+import { getState, nextTrack, subscribe } from '@/lib/music/audioStore'
 
 const RoomPlacementStage = dynamicImport(
   () => import('./RoomPlacementStage').then(m => m.RoomPlacementStage),
@@ -89,6 +89,19 @@ const ZOOM_MS = 700
  */
 const SOLUTION_TOP_OFFSET = '7.3rem'
 
+/**
+ * The notes that drift off a playing radio.
+ *
+ * Three, fixed rather than spawned: each one loops with its own delay, drift
+ * and tilt, which reads as a continuous stream without a timer, without state,
+ * and without re-rendering anything while the music plays.
+ */
+const RADIO_NOTES = [
+  { glyph: '♪', drift: -9, tilt: -14 },
+  { glyph: '♫', drift: 11, tilt: 16 },
+  { glyph: '♬', drift: -4, tilt: 9 },
+]
+
 const easeInOut = (t: number) =>
   t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
 
@@ -113,6 +126,21 @@ export function Book3DReveal({
   const [phase, setPhase] = useState<Phase>('closed')
   const [radioPanelOpen, setRadioPanelOpen] = useState(false)
   const [radioPlaylistOpen, setRadioPlaylistOpen] = useState(false)
+  const [radioRect, setRadioRect] = useState<{ xPct: number; yPct: number; wPct: number; hPct: number } | null>(null)
+
+  /*
+    Whether the notes should be drifting.
+
+    Subscribed rather than passed in, because the pill on another page, the
+    panel here and a track ending on its own can all change it. Only the one
+    boolean is read, so a progress tick does not re-render the room.
+  */
+  const [musicPlaying, setMusicPlaying] = useState(false)
+  useEffect(() => {
+    const sync = () => setMusicPlaying(getState().isPlaying)
+    sync()
+    return subscribe(sync)
+  }, [])
 
   /**
    * Clicking the radio.
@@ -364,6 +392,7 @@ export function Book3DReveal({
             radioTextureUrl={radioTextureUrl}
             radioPlacement={radioPlacement}
             lightPosition={lightPosition}
+            onRadioRect={setRadioRect}
             onRadioClick={handleRadioClick}
           />
 
@@ -373,6 +402,37 @@ export function Book3DReveal({
             — at that point the student is working on the pages, and the room
             behind them is blurred out of the way.
           */}
+          {/*
+            Notes drifting off the radio while it plays.
+
+            Anchored to the radio's own reported rect rather than a fixed
+            corner, so they keep coming out of the radio wherever an admin put
+            it. Only while it is actually playing — that is the whole signal.
+          */}
+          {radioRect && musicPlaying && !zoomed && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute"
+              style={{ left: `${radioRect.xPct}%`, top: `${radioRect.yPct - radioRect.hPct / 2}%` }}
+            >
+              {RADIO_NOTES.map((note, i) => (
+                <span
+                  key={i}
+                  className="radio-note select-none text-white/90"
+                  style={{
+                    fontSize: 15,
+                    textShadow: '0 1px 3px rgba(0,0,0,0.45)',
+                    animationDelay: `${i * 0.9}s`,
+                    ['--drift' as any]: `${note.drift}px`,
+                    ['--tilt' as any]: `${note.tilt}deg`,
+                  }}
+                >
+                  {note.glyph}
+                </span>
+              ))}
+            </div>
+          )}
+
           {radioUrl && radioPlacement && !zoomed && (
             <RadioPanel
               open={radioPanelOpen}

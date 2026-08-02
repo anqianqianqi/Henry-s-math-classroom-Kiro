@@ -1,0 +1,94 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Radio notes — drift preview</title>
+<!--
+  Standalone preview of the notes that drift off the challenge room's radio
+  while it plays. Same keyframes, same three glyphs, same delays and drifts as
+  app/globals.css and Book3DReveal, on a stand-in for the room plate.
+
+  Here because the real thing needs a login, a room with a radio placed, and
+  music actually playing — and the only thing worth judging is the timing.
+-->
+<style>
+  body {
+    margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1.5rem;
+    background: #1c1713; font-family: system-ui, sans-serif; color: #d8cbb8;
+  }
+  .room {
+    position: relative; width: 560px; height: 373px; border-radius: 12px;
+    background:
+      radial-gradient(120% 90% at 50% 18%, #6f7f86 0%, #43443f 45%, #2a231c 100%);
+    overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,.5);
+  }
+  /* Stand-in for the window and the radio on its sill. */
+  .window {
+    position: absolute; left: 50%; top: 12%; transform: translateX(-50%);
+    width: 46%; height: 42%; border-radius: 6px;
+    background: linear-gradient(#8d9aa2, #6b7a80); border: 5px solid #6d5a3c;
+  }
+  .radio {
+    position: absolute; left: 50%; top: 50%; transform: translateX(-50%);
+    width: 78px; height: 40px; border-radius: 7px;
+    background: linear-gradient(#8f5635, #6d3f26); border: 2px solid #4e2d1b;
+  }
+  .radio::after {
+    content: ''; position: absolute; right: 7px; top: 7px;
+    width: 44px; height: 26px; border-radius: 3px; background: #c5ad83;
+  }
+
+  /* ── copied verbatim from app/globals.css ── */
+  @keyframes radio-note {
+    0%   { opacity: 0; transform: translate(-50%, 0) scale(0.6) rotate(0deg); }
+    15%  { opacity: 0.85; }
+    70%  { opacity: 0.55; }
+    100% {
+      opacity: 0;
+      transform: translate(calc(-50% + var(--drift, 0px)), -58px) scale(1.05) rotate(var(--tilt, 12deg));
+    }
+  }
+  .radio-note {
+    position: absolute;
+    animation: radio-note 2.7s ease-out infinite;
+    pointer-events: none;
+    will-change: transform, opacity;
+    font-size: 15px;
+    color: rgba(255,255,255,.9);
+    text-shadow: 0 1px 3px rgba(0,0,0,.45);
+    user-select: none;
+  }
+  /* ── end copy ── */
+
+  .notes { position: absolute; left: 50%; top: 50%; }
+  button {
+    font: inherit; padding: .45rem 1rem; border-radius: 999px;
+    border: 1px solid #6d5a3c; background: #2a231c; color: #d8cbb8; cursor: pointer;
+  }
+  button:hover { background: #3a2f24; }
+  p { margin: 0; font-size: .8rem; opacity: .65; }
+</style>
+
+<div class="room">
+  <div class="window"></div>
+  <div class="radio"></div>
+  <div class="notes" id="notes">
+    <span class="radio-note" style="animation-delay:0s;   --drift:-9px; --tilt:-14deg">♪</span>
+    <span class="radio-note" style="animation-delay:0.9s; --drift:11px; --tilt:16deg">♫</span>
+    <span class="radio-note" style="animation-delay:1.8s; --drift:-4px; --tilt:9deg">♬</span>
+  </div>
+</div>
+
+<button id="toggle">Pause the music</button>
+<p>Three notes on one 2.7s loop, staggered 0.9s apart — no timers, no state.</p>
+
+<script>
+  const notes = document.getElementById('notes')
+  const button = document.getElementById('toggle')
+  let playing = true
+  button.onclick = () => {
+    playing = !playing
+    // The real component unmounts them; hiding is the same thing to look at.
+    notes.style.display = playing ? '' : 'none'
+    button.textContent = playing ? 'Pause the music' : 'Play the music'
+  }
+</script>
