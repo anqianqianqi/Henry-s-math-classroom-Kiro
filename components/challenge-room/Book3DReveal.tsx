@@ -59,6 +59,8 @@ export interface Book3DRevealProps {
    * — the working copy lives in the zoomed DOM pages.
    */
   problemPreview?: { title: string; body: string }
+  /** Fired once the book is on screen WITH its cover and pages — see the stage. */
+  onReady?: () => void
 }
 
 type Phase = 'closed' | 'opening' | 'open' | 'zoomed'
@@ -91,6 +93,7 @@ export function Book3DReveal({
   placement,
   animation,
   problemPreview,
+  onReady,
 }: Book3DRevealProps) {
   const [phase, setPhase] = useState<Phase>('closed')
   const [frame, setFrame] = useState(animation.startFrame)
@@ -320,6 +323,7 @@ export function Book3DReveal({
             // airborne and the text would tumble through the air with it.
             pagePreview={phase === 'open' || zoomed ? pagePreview : undefined}
             onBookRect={setBookRect}
+            onReady={onReady}
           />
         </div>
 

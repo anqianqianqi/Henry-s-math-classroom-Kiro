@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -16,6 +16,9 @@ import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { readStoredHenryProblem } from '@/lib/henryproblem'
 import { useUserBadges } from '@/lib/hooks/useUserBadges'
 import { UserNameWithBadges } from '@/components/UserNameWithBadges'
+import { ChallengeLoader, useLoaderVisible } from '@/components/challenge-room/ChallengeLoader'
+import { bookModelUrl } from '@/lib/challengeRoom/model'
+import { challengeAssetTasks, preloadAll, usesRoom } from '@/lib/challengeRoom/preload'
 
 interface Challenge {
   id: string
@@ -131,6 +134,23 @@ export default function ChallengePage() {
   // the page on the existing 2D MagicBookReveal path.
   const [challengeScene, setChallengeScene] = useState<ChallengeScene | null>(null)
   const isDesktop = useIsDesktop()
+
+  /*
+    ── The readiness gate ──────────────────────────────────────
+    `loading` above covers the DATA only, and used to be the whole gate — which
+    is why the page appeared and then kept assembling itself: the room plate,
+    the 2.63 MiB book model, both page textures and the problem's graph all
+    began loading only once it cleared.
+
+    Two more signals now stand between the data landing and the page being
+    shown. `assetsWarm` is every file fetched and decoded; `bookReady` is the 3D
+    stage confirming its textures are actually on the book (the 2D shell
+    reports immediately, having nothing further to wait for).
+  */
+  const [assetsWarm, setAssetsWarm] = useState(false)
+  const [assetProgress, setAssetProgress] = useState(0)
+  const [bookReady, setBookReady] = useState(false)
+  const handleBookReady = useCallback(() => setBookReady(true), [])
   // Whether this reader turned the room off, kept so the page can say WHY it is
   // showing the flat book rather than leaving it to be guessed.
   const [roomOptOut, setRoomOptOut] = useState(false)
@@ -154,6 +174,54 @@ export default function ChallengePage() {
   useEffect(() => {
     loadChallenge()
   }, [params.id])
+
+  /*
+    Warm every file the first paint needs, then let the page through.
+
+    Runs after the data lands, because which files those are depends on it: the
+    3D path wants a room plate, a model and two textures, the 2D path wants the
+    book art, and both want the problem's graph. The condition is `usesRoom`,
+    which is deliberately the same one ChallengeBookShell renders on — if the
+    two ever disagreed, this would either wait for a model that is never drawn
+    or reveal a room whose textures had not arrived.
+  */
+  useEffect(() => {
+    if (loading) return
+    let cancelled = false
+
+    const room = usesRoom({
+      isDesktop,
+      hasScene: !!challengeScene?.roomUrl,
+      modelUrl: bookModelUrl(),
+    })
+
+    const tasks = challengeAssetTasks({
+      graphUrl: challenge?.image_url,
+      roomUrl: challengeScene?.roomUrl,
+      modelUrl: bookModelUrl(),
+      coverUrl: challengeScene?.coverUrl,
+      innerUrl: challengeScene?.innerUrl,
+      bookCoverUrl: defaultCoverUrl,
+      bookPageUrl: defaultPageUrl,
+      bookFrameUrls: defaultCoverFrameUrls,
+    }, room)
+
+    preloadAll(tasks, fraction => { if (!cancelled) setAssetProgress(fraction) })
+      .then(() => { if (!cancelled) setAssetsWarm(true) })
+
+    return () => { cancelled = true }
+    // challengeScene and the book art are set together with `loading`, so this
+    // settles once rather than re-running as each piece of state lands.
+  }, [loading, isDesktop, challengeScene, challenge?.image_url,
+      defaultCoverUrl, defaultPageUrl, defaultCoverFrameUrls])
+
+  /**
+   * The loader is up until the data, the files AND the book itself are all
+   * done, and never for less than a beat — see MIN_VISIBLE_MS. On a warm cache
+   * this whole sequence finishes in tens of milliseconds, and an unfloored
+   * loader would be a single flashed frame that reads as a fault.
+   */
+  const showLoader = useLoaderVisible(!loading && assetsWarm && bookReady)
 
   // Poll for new comments every 5 seconds
   useEffect(() => {
@@ -371,8 +439,18 @@ export default function ChallengePage() {
 
     // challenge_room_opt_out is the student saying "no room", which is not the
     // same as having chosen nothing — that falls through to the default below.
-    if (hasHenryProblem && !userPrefData?.challenge_room_opt_out) {
-      ;(async () => {
+    /*
+      Awaited with Round 2 below, NOT fired and forgotten.
+
+      Detached, this resolved after setLoading(false), so the page rendered the
+      2D MagicBookReveal and then swapped the entire book to Book3DReveal when
+      the room landed — the most jarring moment in opening a challenge. Folding
+      it into the existing Promise.all costs no latency: it already ran its own
+      two queries in parallel, and now runs alongside six more.
+    */
+    const scenePromise: Promise<ChallengeScene | null> =
+      hasHenryProblem && !userPrefData?.challenge_room_opt_out
+      ? (async () => {
         try {
           // Selection wins; otherwise fall back to whatever an admin marked
           // default. A default room is how the 3D path gets switched on for
@@ -406,21 +484,24 @@ export default function ChallengePage() {
           const [roomResult, packageResult] = await Promise.all([roomQuery, packageQuery])
 
           const room = (roomResult as any).data
-          if (!room?.room_url || !room.placement || !room.animation) return
+          if (!room?.room_url || !room.placement || !room.animation) return null
           const pkg = (packageResult as any).data
 
-          setChallengeScene({
+          return {
             roomUrl: room.room_url,
             placement: room.placement,
             animation: room.animation,
             coverUrl: pkg?.cover_url ?? null,
             innerUrl: pkg?.inner_url ?? null,
-          })
+          }
         } catch (err) {
+          // Unchanged contract: any failure here means no room, and the page
+          // renders the 2D book rather than nothing.
           console.error('[challenge] challenge room load failed:', err)
+          return null
         }
       })()
-    }
+      : Promise.resolve(null)
 
     // bankItemId needed for submission lookup
     const bankItemId: string | null = challengeData?.is_bank_item
@@ -440,6 +521,7 @@ export default function ChallengePage() {
       userPageSkinResult,
       tagsResult,
       userSubmissionResult,
+      sceneResult,
     ] = await Promise.all([
       // Default cover frames (only if animated)
       defCover?.is_animated && defCoverSkinId
@@ -465,7 +547,12 @@ export default function ChallengePage() {
       bankItemId
         ? supabase.from('challenge_submissions').select('*, profiles!inner(full_name, nickname)').eq('bank_item_id', bankItemId).eq('user_id', user.id).maybeSingle()
         : supabase.from('challenge_submissions').select('*, profiles!inner(full_name, nickname)').eq('challenge_id', params.id).eq('user_id', user.id).maybeSingle(),
+      scenePromise,
     ])
+
+    // Set before setLoading(false), so the first render already knows which
+    // book it is drawing.
+    if (sceneResult) setChallengeScene(sceneResult)
 
     // Apply default cover frames
     const defFrames = (defFramesResult as any).data
@@ -1364,15 +1451,11 @@ export default function ChallengePage() {
     setSavingHint(false)
   }
 
+  // Data still in flight. Same loader as the asset phase, at zero — so opening
+  // a challenge is one continuous screen rather than a spinner that hands over
+  // to a different spinner.
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-4">🎯</div>
-          <p className="text-gray-600">{t('challenge.loadingDetail')}</p>
-        </div>
-      </div>
-    )
+    return <ChallengeLoader progress={0} />
   }
 
   if (!challenge) {
@@ -1411,7 +1494,27 @@ export default function ChallengePage() {
   const completionRate = totalStudents > 0 ? Math.round((submissionCount / totalStudents) * 100) : 0
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
+    <>
+    {/*
+      The real page is MOUNTED the whole time and merely hidden — not deferred.
+
+      It has to be: the 3D stage cannot report that its textures reached the
+      book if it was never allowed to mount, and gating on mount instead would
+      mean trusting the browser cache for correctness rather than waiting for
+      the thing itself. Hidden-then-cross-fade reveals at the exact moment the
+      finished book is on screen.
+    */}
+    {showLoader && (
+      <div className="fixed inset-0 z-50">
+        <ChallengeLoader progress={assetProgress} />
+      </div>
+    )}
+    <div
+      className={`min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 transition-opacity duration-500 ${
+        showLoader ? 'opacity-0 pointer-events-none' : 'opacity-100'
+      }`}
+      aria-hidden={showLoader}
+    >
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
@@ -1523,6 +1626,7 @@ export default function ChallengePage() {
             has one selected on desktop, otherwise the 2D MagicBookReveal book */}
         <ChallengeBookShell
           scene={challengeScene}
+          onReady={handleBookReady}
           problemPreview={{ title: challenge.title, body: challenge.description ?? '' }}
           title={challenge.title}
           date={new Date(challenge.challenge_date + 'T12:00:00').toLocaleDateString('en-US', {
@@ -2380,5 +2484,6 @@ export default function ChallengePage() {
         </div>
       )}
     </div>
+    </>
   )
 }

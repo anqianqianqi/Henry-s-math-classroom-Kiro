@@ -17,6 +17,7 @@
  * degrades to today's behaviour rather than an empty page.
  */
 
+import { useEffect } from 'react'
 import { MagicBookReveal } from '@/components/MagicBookReveal'
 import { Book3DReveal } from './Book3DReveal'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
@@ -47,6 +48,15 @@ export interface ChallengeBookShellProps {
   scene?: ChallengeScene | null
   /** Plain text printed onto the book page in the 3D path. Ignored in 2D. */
   problemPreview?: { title: string; body: string }
+  /**
+   * Fired when this shell has nothing left to load.
+   *
+   * On the 3D path that means the book is dressed — the stage decides, because
+   * only it knows when the textures reached the GPU. On the 2D path there is no
+   * such moment to wait for: MagicBookReveal is plain DOM and its images are
+   * already in the preload set, so it reports immediately on mount.
+   */
+  onReady?: () => void
 }
 
 export function ChallengeBookShell({
@@ -61,11 +71,24 @@ export function ChallengeBookShell({
   coverOverlays,
   scene,
   problemPreview,
+  onReady,
 }: ChallengeBookShellProps) {
   const isDesktop = useIsDesktop()
   const modelUrl = bookModelUrl()
 
-  if (isDesktop && scene?.roomUrl && modelUrl) {
+  const uses3D = isDesktop && !!scene?.roomUrl && !!modelUrl
+
+  /*
+    The 2D book has no load to wait on beyond its images, which the page has
+    already preloaded, so it announces on mount. Effect rather than a call
+    during render — reporting readiness is a side effect, and a setState in the
+    parent during a child's render is a React warning.
+  */
+  useEffect(() => {
+    if (!uses3D) onReady?.()
+  }, [uses3D, onReady])
+
+  if (uses3D && scene) {
     return (
       <Book3DReveal
         title={title}
@@ -78,6 +101,7 @@ export function ChallengeBookShell({
         placement={scene.placement}
         animation={scene.animation}
         problemPreview={problemPreview}
+        onReady={onReady}
       >
         {children}
       </Book3DReveal>
