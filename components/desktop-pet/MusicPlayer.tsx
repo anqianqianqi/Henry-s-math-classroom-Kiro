@@ -15,80 +15,25 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { PLAYLIST } from '@/lib/music-playlist'
+import {
+  ensureAudio,
+  fetchUnlockedTracks,
+  formatTime,
+  getState,
+  nextTrack as storeNext,
+  playTrack as storePlay,
+  prevTrack as storePrev,
+  seekRatio,
+  setVolume as storeSetVolume,
+  subscribe,
+  togglePlay as storeTogglePlay,
+} from '@/lib/music/audioStore'
 
-// ── Module-level singletons — survive remounts/page navigation ────────────
-// Shuffle playlist once per browser session
-function buildShuffledPlaylist() {
-  const arr = [...PLAYLIST]
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp
-  }
-  return arr
-}
-
-// These are initialised once and never reset
-let _audio: HTMLAudioElement | null = null
-let _playlist = buildShuffledPlaylist()
-let _trackIndex = 0
-let _isPlaying = false
-let _volume = 0.6
-let _progress = 0
-let _duration = 0
-
-// Listeners so any mounted MusicPlayer instance can react to audio changes
-type Listener = () => void
-const _listeners = new Set<Listener>()
-function notifyAll() { _listeners.forEach(fn => fn()) }
-
-function getOrCreateAudio(): HTMLAudioElement {
-  if (_audio) return _audio
-  const audio = new Audio()
-  audio.loop = false
-  audio.volume = _volume
-  _audio = audio
-
-  audio.addEventListener('timeupdate', () => {
-    if (audio.duration > 0) { _progress = audio.currentTime / audio.duration; notifyAll() }
-  })
-  audio.addEventListener('loadedmetadata', () => { _duration = audio.duration; notifyAll() })
-  audio.addEventListener('play',  () => { _isPlaying = true;  notifyAll() })
-  audio.addEventListener('pause', () => { _isPlaying = false; notifyAll() })
-  audio.addEventListener('ended', () => {
-    _trackIndex = (_trackIndex + 1) % _playlist.length
-    const next = _playlist[_trackIndex]
-    if (next) {
-      audio.src = `/music/${next.file}`
-      audio.load()
-      audio.addEventListener('canplay', function onCan() {
-        audio.removeEventListener('canplay', onCan)
-        audio.play().catch(() => { _isPlaying = false; notifyAll() })
-      })
-    }
-    notifyAll()
-  })
-
-  return audio
-}
-
-// Fetch unlocked tracks from server and merge into playlist (runs once per session)
-let _unlockedFetched = false
-function fetchAndMergeUnlockedTracks() {
-  _unlockedFetched = true
-  fetch('/api/music/unlocked')
-    .then(r => r.json())
-    .then(({ tracks }: { tracks: { file: string; title: string }[] }) => {
-      if (!tracks?.length) return
-      // Add tracks that aren't already in the playlist (by filename)
-      const existing = new Set(_playlist.map(t => t.file))
-      const newTracks = tracks.filter(t => !existing.has(t.file))
-      if (!newTracks.length) return
-      _playlist = [..._playlist, ...newTracks]
-      notifyAll()
-    })
-    .catch(() => { /* silent — user may not be logged in */ })
-}
+/*
+  The audio itself now lives in lib/music/audioStore — see the note there.
+  This component is one view onto it; the challenge room's radio is another.
+  Its appearance and props are unchanged.
+*/
 
 
 const C = {
@@ -134,35 +79,27 @@ interface Props {
 }
 
 export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) {
-  // ── Sync React state from module singletons ───────────────────────────────
-  // A single re-render trigger — whenever audio fires an event, we re-read globals
+  // ── Sync React state from the store ───────────────────────────────────────
+  // A single re-render trigger — whenever audio fires an event, we re-read it
   const [, forceUpdate] = useState(0)
   const rerender = useCallback(() => forceUpdate(n => n + 1), [])
 
   useEffect(() => {
-    _listeners.add(rerender)
-    // Init audio on first mount (client-side only)
-    getOrCreateAudio()
-    // Fetch unlocked tracks and merge into playlist
-    fetchAndMergeUnlockedTracks()
+    const unsubscribe = subscribe(rerender)
+    ensureAudio()
+    fetchUnlockedTracks()
     // Re-fetch when a new track is purchased from the shop
-    const onUpdate = () => { _unlockedFetched = false; fetchAndMergeUnlockedTracks() }
+    const onUpdate = () => fetchUnlockedTracks(true)
     window.addEventListener('music-tracks-updated', onUpdate)
     return () => {
-      _listeners.delete(rerender)
+      unsubscribe()
       window.removeEventListener('music-tracks-updated', onUpdate)
     }
   }, [rerender])
 
-  // Read playback state from singletons
-  const isPlaying  = _isPlaying
-  const trackIndex = _trackIndex
-  const progress   = _progress
-  const duration   = _duration
-  const playlist   = _playlist
+  const { isPlaying, trackIndex, progress, duration, playlist, volume } = getState()
 
   // ── Local UI state ────────────────────────────────────────────────────────
-  const [volume,       setVolumeState]  = useState(_volume)
   const [mounted,      setMounted]      = useState(false)
   const [collapsed,    setCollapsed]    = useState(true)
   const [showPlaylist, setShowPlaylist] = useState(false)
@@ -198,12 +135,7 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
     return () => clearInterval(t)
   }, [isPlaying])
 
-  // ── Volume sync ───────────────────────────────────────────────────────────
-  const setVolume = (v: number) => {
-    _volume = v
-    if (_audio) _audio.volume = v
-    setVolumeState(v)
-  }
+  const setVolume = (v: number) => storeSetVolume(v)
 
   // ── Drag (standalone mode only) ───────────────────────────────────────────
   const PILL_W = 44
@@ -255,53 +187,23 @@ export default function MusicPlayer({ dockPos, groupMode = false }: Props = {}) 
     window.addEventListener('touchend',  onEnd)
   }, [dockPos, groupMode, ownPos])
 
-  // ── Playback controls ─────────────────────────────────────────────────────
-  const togglePlay = useCallback(() => {
-    const audio = getOrCreateAudio()
-    if (!currentTrack) return
-    if (_isPlaying) {
-      audio.pause()
-    } else {
-      if (!audio.src || !audio.src.endsWith(currentTrack.file)) {
-        audio.src = `/music/${currentTrack.file}`
-        audio.load()
-      }
-      audio.play().catch(() => { _isPlaying = false; notifyAll() })
-    }
-  }, [currentTrack])
+  // ── Playback controls — all of them the store's ───────────────────────────
+  const togglePlay = useCallback(() => storeTogglePlay(), [])
 
   const playTrack = useCallback((idx: number) => {
-    const audio = getOrCreateAudio()
-    _trackIndex = idx
     setShowPlaylist(false)
-    const track = _playlist[idx]
-    if (!track) return
-    audio.src = `/music/${track.file}`
-    audio.load()
-    const onCan = () => {
-      audio.removeEventListener('canplay', onCan)
-      audio.play().catch(() => { _isPlaying = false; notifyAll() })
-    }
-    audio.addEventListener('canplay', onCan)
-    notifyAll()
+    storePlay(idx)
   }, [])
 
-  const prevTrack = () => playTrack((trackIndex - 1 + playlist.length) % playlist.length)
-  const nextTrack = () => playTrack((trackIndex + 1) % playlist.length)
+  const prevTrack = () => storePrev()
+  const nextTrack = () => storeNext()
 
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const audio = _audio; if (!audio || !audio.duration) return
     const rect = e.currentTarget.getBoundingClientRect()
-    const ratio = (e.clientX - rect.left) / rect.width
-    audio.currentTime = ratio * audio.duration
-    _progress = ratio
-    notifyAll()
+    seekRatio((e.clientX - rect.left) / rect.width)
   }
 
-  const fmt = (sec: number) => {
-    if (!sec || isNaN(sec)) return '0:00'
-    return `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`
-  }
+  const fmt = formatTime
 
   if (!mounted || (!pillPos && !groupMode)) return <style>{STYLES}</style>
 

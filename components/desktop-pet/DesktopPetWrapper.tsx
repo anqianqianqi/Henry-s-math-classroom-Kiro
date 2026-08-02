@@ -133,6 +133,16 @@ export default function DesktopPetWrapper() {
     pathname === '/forgot-password' || pathname === '/reset-password'
   const isDashboard = pathname === '/dashboard'
 
+  /*
+    A challenge has its own music control: the radio on the room's window sill.
+    Two players on one screen would be two switches for one light, so the pill
+    stands down here. Didi stays — only the pill goes.
+
+    Matches /challenges/<id> but not /challenges itself, which is the list and
+    has no radio.
+  */
+  const isChallengeDetail = /^\/challenges\/[^/]+$/.test(pathname ?? '')
+
   useEffect(() => {
     // Initial fetch on mount
     initialFetchDone.current = false
@@ -280,19 +290,23 @@ export default function DesktopPetWrapper() {
   }
 
   // MusicPlayer is ALWAYS rendered (except auth pages) — audio never unmounts.
+  //
+  // Unmounting it no longer stops the music either way: the <audio> element
+  // lives in lib/music/audioStore, outside React. What unmounting costs is the
+  // control, which on a challenge page the radio provides instead.
   if (isAuthPage) return null
 
   const showPet = status !== null && !isDashboard && status.hasPet
 
   // Dashboard or no pet — just music player standalone
-  if (!showPet) return <MusicPlayer />
+  if (!showPet) return isChallengeDetail ? null : <MusicPlayer />
 
   const handleGroupMove = (x: number, y: number) => setGroupPos({ left: x, top: y })
 
   if (status!.isEgg) {
     return (
       <FloatingGroup onMove={handleGroupMove}>
-        <MusicPlayer groupMode />
+        {!isChallengeDetail && <MusicPlayer groupMode />}
         <DesktopPet
           petStage="egg"
           petName={status!.petName ?? undefined}
@@ -311,7 +325,7 @@ export default function DesktopPetWrapper() {
   const stage = (status!.stage ?? 'adult') as DidiStage
   return (
     <FloatingGroup onMove={handleGroupMove}>
-      <MusicPlayer groupMode />
+      {!isChallengeDetail && <MusicPlayer groupMode />}
       <DesktopPet
         petStage={stage}
         petName={status!.petName ?? undefined}
