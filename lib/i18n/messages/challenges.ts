@@ -68,6 +68,12 @@ export const challenges = {
 
   // ── Detail page ──────────────────────────────────────────
   'challenge.loadingDetail': { en: 'Loading challenge...', zh: '挑战题加载中…' },
+  // The preload screen. "Getting your book ready" rather than "Loading",
+  // because the wait is a real one — the book model alone is 2.63 MiB — and
+  // naming what is happening beats a spinner that says nothing.
+  'challenge.preparingRoom': { en: 'Getting your book ready…', zh: '正在准备您的书本…' },
+  'challenge.preparingPct': { en: '{pct}%', zh: '{pct}%' },
+  'challenge.loadingBook': { en: 'Loading book…', zh: '书本加载中…' },
   'challenge.label': { en: 'Challenge', zh: '挑战题' },
   'challenge.copy': { en: 'Copy', zh: '复制' },
   'challenge.saveAsTemplate': { en: 'Save as Template', zh: '保存为模板' },

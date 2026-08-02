@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { renderPageCanvas, type PageContent } from '@/lib/challengeRoom/pageTexture'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import {
   BOOK_MATERIALS,
   MIRRORED_U_MATERIALS,
@@ -55,6 +56,16 @@ export interface RoomPlacementStageProps {
    * anchoring to the book (labels, hints) has to use this instead.
    */
   onBookRect?: (rect: { xPct: number; yPct: number; wPct: number; hPct: number }) => void
+  /**
+   * Fired once the book is fully DRESSED — model loaded AND cover and page
+   * textures applied.
+   *
+   * Deliberately not the same moment as the internal `loading` flag, which
+   * clears on modelReady. The texture effect does not even start until then, so
+   * anything keying off `loading` reveals a bare white book that puts its cover
+   * on a beat later. That is the pop this exists to close.
+   */
+  onReady?: () => void
 }
 
 const deg = (value: number) => THREE.MathUtils.degToRad(value)
@@ -90,7 +101,9 @@ export function RoomPlacementStage({
   hideRoom = false,
   pagePreview,
   onBookRect,
+  onReady,
 }: RoomPlacementStageProps) {
+  const { t } = useLanguage()
   const stageRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -109,6 +122,9 @@ export function RoomPlacementStage({
   const lastReportRef = useRef(0)
   const pageNodesRef = useRef<THREE.Object3D[]>([])
   const onBookRectRef = useRef(onBookRect)
+  const onReadyRef = useRef(onReady)
+  /** Latched: the page reveals once, and a texture swap must not re-fire it. */
+  const readyFiredRef = useRef(false)
   const lastRectRef = useRef(0)
   const prevRectRef = useRef<{ xPct: number; yPct: number; wPct: number; hPct: number } | null>(null)
 
@@ -121,6 +137,7 @@ export function RoomPlacementStage({
   useEffect(() => { playingRef.current = playing }, [playing])
   useEffect(() => { frameRef.current = frame }, [frame])
   useEffect(() => { onBookRectRef.current = onBookRect }, [onBookRect])
+  useEffect(() => { onReadyRef.current = onReady }, [onReady])
 
   // ── Scene setup (once) ────────────────────────────────────────────────────
   useEffect(() => {
@@ -346,6 +363,17 @@ export function RoomPlacementStage({
         console.error('[RoomPlacementStage] model load failed:', loadError)
         setError('The book model could not be loaded. Check the model URL.')
         setLoading(false)
+        /*
+          Report ready even on failure. The texture effect is gated on
+          modelReady, so on this path it never runs and never announces — which
+          would leave the page sitting on its loading screen until the ceiling
+          for a room that is never going to arrive. Revealing shows the error
+          message below, which is the useful outcome.
+        */
+        if (!readyFiredRef.current) {
+          readyFiredRef.current = true
+          onReadyRef.current?.()
+        }
       },
     )
 
@@ -509,6 +537,20 @@ export function RoomPlacementStage({
       // they must live until the next swap rather than being disposed here.
       if (cover) appliedTexturesRef.current.push(cover)
       if (inner) appliedTexturesRef.current.push(inner)
+
+      /*
+        The book is dressed. Announced from HERE and nowhere earlier: this is
+        the first instant at which what the student would see is the finished
+        book rather than a bare one.
+
+        One frame of grace so the renderer has actually drawn with the new maps
+        before the page cross-fades in — announcing on the same tick reveals the
+        frame before the upload lands.
+      */
+      if (!readyFiredRef.current) {
+        readyFiredRef.current = true
+        requestAnimationFrame(() => onReadyRef.current?.())
+      }
     })
 
     return () => { cancelled = true }
@@ -558,10 +600,17 @@ export function RoomPlacementStage({
       style={{ aspectRatio: '3 / 2' }}
     >
       {!hideRoom && (
+        /*
+          crossOrigin matches useAdaptiveInk, which loads this same URL with
+          crossOrigin='anonymous' to sample the edge band. CORS mode is part of
+          the HTTP cache key, so without this the room plate is fetched TWICE —
+          once for the picture and once for the ink.
+        */
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={roomUrl}
           alt="Challenge room background"
+          crossOrigin="anonymous"
           className="absolute inset-0 h-full w-full object-cover"
         />
       )}
@@ -583,7 +632,7 @@ export function RoomPlacementStage({
         <div className="absolute inset-0 flex items-center justify-center bg-black/40">
           <div className="flex items-center gap-3 rounded-xl bg-white/90 px-4 py-2">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
-            <span className="text-sm font-medium text-gray-700">Loading book…</span>
+            <span className="text-sm font-medium text-gray-700">{t('challenge.loadingBook')}</span>
           </div>
         </div>
       )}
