@@ -1539,7 +1539,7 @@ export default function ChallengePage() {
             <>{hasSubmitted && !isEditing ? (
               <>
               {/* Show submitted solution */}
-              <Card className={onBookPage ? 'mb-4 !bg-transparent !shadow-none border-2 border-[rgba(100,60,10,0.3)] hover:!shadow-none hover:!translate-y-0' : 'mb-4 border-2 border-primary-500'}>
+              <Card bare={onBookPage} className={onBookPage ? 'mb-4 rounded-2xl border-2 border-[rgba(100,60,10,0.3)]' : 'mb-4 border-2 border-primary-500'}>
                 <Card.Header>
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <Card.Title className="flex items-center gap-2 flex-wrap">
@@ -1623,7 +1623,7 @@ export default function ChallengePage() {
               </>
             ) : (
               // Show submission form
-              <Card className={onBookPage ? 'mb-4 !bg-transparent !shadow-none !border-0 hover:!shadow-none hover:!translate-y-0' : 'mb-4'}>
+              <Card bare={onBookPage} className="mb-4">
                 <Card.Header className={onBookPage ? '!border-b-0 !px-0 !py-0' : ''}>
                   <Card.Title className={`flex items-center gap-2 ${onBookPage ? 'justify-center' : ''}`}>
                     <span>✍️</span>
