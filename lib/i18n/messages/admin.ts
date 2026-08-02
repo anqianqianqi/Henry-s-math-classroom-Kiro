@@ -238,6 +238,20 @@ export const admin = {
     en: 'Preview colour only — each student sees the colourway they picked.',
     zh: '此处仅为预览配色，学生看到的是各自选择的颜色。',
   },
+  // Retuning writes back to the room it was loaded from. It used to insert a
+  // copy, so these say plainly which of the two a save will do.
+  'roomAdmin.updateRoom': { en: 'Update this room', zh: '更新此房间' },
+  'roomAdmin.saveAsNew': { en: 'Save as a new room instead', zh: '改为另存为新房间' },
+  'roomAdmin.editingHint': {
+    en: 'Editing a saved room — changes replace it.',
+    zh: '正在编辑已保存的房间，保存后将覆盖原有设置。',
+  },
+  'roomAdmin.loadedForRetune': {
+    en: 'Loaded "{name}" — saving updates it.',
+    zh: '已载入“{name}”，保存后将更新该房间。',
+  },
+  'roomAdmin.roomUpdated': { en: '"{name}" updated.', zh: '“{name}”已更新。' },
+  'roomAdmin.roomSaved': { en: '"{name}" saved.', zh: '“{name}”已保存。' },
   'roomAdmin.previewWithPackage': { en: 'Preview with book package', zh: '用书本套装预览' },
   'roomAdmin.plainPages': { en: 'Plain pages (no package)', zh: '空白内页（不使用套装）' },
   // ── Shop admin ───────────────────────────────────────────

@@ -99,6 +99,15 @@ export default function ChallengeRoomsAdminPage() {
     point at whichever object `target` names, rather than the form growing a
     second copy of the whole placement rig.
   */
+  /**
+   * The room being retuned, or null when the next save creates a new one.
+   *
+   * Students' preferences point at a specific challenge_rooms row, so editing
+   * has to write back to that row — saving a copy would leave everyone who had
+   * chosen the original on the version without the change.
+   */
+  const [editingRoomId, setEditingRoomId] = useState<string | null>(null)
+
   const [radioPlacement, setRadioPlacement] = useState<Placement | null>(null)
   const [target, setTarget] = useState<'book' | 'radio'>('book')
   const [radioPaletteId, setRadioPaletteId] = useState(DEFAULT_RADIO_PALETTE)
@@ -236,7 +245,7 @@ export default function ChallengeRoomsAdminPage() {
         return
       }
 
-      const { error: insertErr } = await supabase.from('challenge_rooms').insert({
+      const fields = {
         name: roomName.trim(),
         description: roomDescription.trim() || null,
         room_url: plateUrl,
@@ -246,17 +255,31 @@ export default function ChallengeRoomsAdminPage() {
         animation,
         model_key: BOOK_MODEL_KEY,
         visibility,
-        is_active: true,
-        created_by: user.id,
-      })
+      }
 
-      if (insertErr) {
-        setError('Failed to save: ' + insertErr.message)
+      /*
+        Retuning UPDATES the room it was loaded from.
+
+        It used to insert unconditionally, so the only way to adjust a saved
+        room's placement was to save a second copy of it and deactivate the
+        first — which is not retuning, and is how a list of near-duplicate rooms
+        happens. Students hold challenge_room_id against a specific row, so a
+        duplicate also silently leaves everyone who chose the old one on the
+        untouched version.
+      */
+      const { error: saveErr } = editingRoomId
+        ? await supabase.from('challenge_rooms').update(fields).eq('id', editingRoomId)
+        : await supabase.from('challenge_rooms').insert({ ...fields, is_active: true, created_by: user.id })
+
+      if (saveErr) {
+        setError('Failed to save: ' + saveErr.message)
         return
       }
 
-      setSuccess(`"${roomName.trim()}" saved.`)
-      setRoomDescription('')
+      setSuccess(editingRoomId
+        ? t('roomAdmin.roomUpdated', { name: roomName.trim() })
+        : t('roomAdmin.roomSaved', { name: roomName.trim() }))
+      if (!editingRoomId) setRoomDescription('')
       await loadRooms()
     } catch (err: any) {
       setError(err.message || 'Failed to save.')
@@ -287,8 +310,15 @@ export default function ChallengeRoomsAdminPage() {
     setVisibility(room.visibility)
     setFrame(room.animation?.endFrame ?? SPREAD_FRAME)
     setPlaying(false)
-    setSuccess(`Loaded "${room.name}" — saving creates a new room.`)
+    setEditingRoomId(room.id)
+    setSuccess(t('roomAdmin.loadedForRetune', { name: room.name }))
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  /** Drop the link to the loaded room, so the next save makes a new one. */
+  function stopEditing() {
+    setEditingRoomId(null)
+    setSuccess(null)
   }
 
   const field = (label: string, key: keyof RoomSpec, multiline = false) => (
@@ -739,9 +769,21 @@ export default function ChallengeRoomsAdminPage() {
                   </select>
                 </div>
               </div>
-              <Button variant="primary" onClick={save} isLoading={saving} disabled={saving}>
-                {t('roomAdmin.save')}
-              </Button>
+              {/* The button says which of the two things it will do, because
+                  "Save" over a loaded room used to quietly mean "duplicate". */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="primary" onClick={save} isLoading={saving} disabled={saving}>
+                  {editingRoomId ? t('roomAdmin.updateRoom') : t('roomAdmin.save')}
+                </Button>
+                {editingRoomId && (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={stopEditing} disabled={saving}>
+                      {t('roomAdmin.saveAsNew')}
+                    </Button>
+                    <span className="text-xs text-gray-400">{t('roomAdmin.editingHint')}</span>
+                  </>
+                )}
+              </div>
               {compiledPrompt && (
                 <details className="text-xs text-gray-500">
                   <summary className="cursor-pointer">View compiled prompt</summary>
