@@ -87,6 +87,11 @@ export interface RoomPlacementStageProps {
    * position every room was built against.
    */
   lightPosition?: LightPosition | null
+  /**
+   * Where the radio landed on screen, in percent of the stage — so the caller
+   * can anchor things to it. Same contract as onBookRect.
+   */
+  onRadioRect?: (rect: { xPct: number; yPct: number; wPct: number; hPct: number }) => void
   onRadioClick?: (region: string) => void
   /** Drag the radio rather than the book. Admin placement only. */
   radioInteractive?: boolean
@@ -152,6 +157,7 @@ export function RoomPlacementStage({
   radioTextureUrl,
   radioPlacement,
   lightPosition,
+  onRadioRect,
   onRadioClick,
   radioInteractive = false,
   onRadioPlacementChange,
@@ -184,6 +190,9 @@ export function RoomPlacementStage({
   const radioGroupRef = useRef<THREE.Group | null>(null)
   const radioTextureRef = useRef<THREE.Texture | null>(null)
   const onRadioClickRef = useRef(onRadioClick)
+  const onRadioRectRef = useRef(onRadioRect)
+  const prevRadioRectRef = useRef<{ xPct: number; yPct: number; wPct: number; hPct: number } | null>(null)
+  const lastRadioRectRef = useRef(0)
   const [radioReady, setRadioReady] = useState(false)
   /** Reused across clicks — allocating a raycaster per pointer event is waste. */
   const raycasterRef = useRef(new THREE.Raycaster())
@@ -201,6 +210,7 @@ export function RoomPlacementStage({
   useEffect(() => { onBookRectRef.current = onBookRect }, [onBookRect])
   useEffect(() => { onReadyRef.current = onReady }, [onReady])
   useEffect(() => { onRadioClickRef.current = onRadioClick }, [onRadioClick])
+  useEffect(() => { onRadioRectRef.current = onRadioRect }, [onRadioRect])
 
   // ── Scene setup (once) ────────────────────────────────────────────────────
   useEffect(() => {
@@ -340,6 +350,51 @@ export function RoomPlacementStage({
         ) {
           prevRectRef.current = rect
           onBookRectRef.current(rect)
+        }
+      }
+
+      /*
+        Same for the radio, so notes can be floated out of it.
+
+        Its bounding box is enough — unlike the book, the radio has no animated
+        geometry and no off-centre origin. Computed in the loop rather than in a
+        placement effect purely so a resize fixes itself: the rect is a share of
+        the stage, and the frustum changes with the stage's aspect.
+
+        Throttled hard because it never moves on its own. Half a second is
+        imperceptible for something that only changes when the window does.
+      */
+      if (onRadioRectRef.current && radioGroupRef.current
+          && time - lastRadioRectRef.current > 500) {
+        lastRadioRectRef.current = time
+        const box = new THREE.Box3().setFromObject(radioGroupRef.current)
+        if (!box.isEmpty()) {
+          const corner = new THREE.Vector3()
+          let rMinX = Infinity, rMinY = Infinity, rMaxX = -Infinity, rMaxY = -Infinity
+          for (const sx of [box.min.x, box.max.x]) {
+            for (const sy of [box.min.y, box.max.y]) {
+              for (const sz of [box.min.z, box.max.z]) {
+                corner.set(sx, sy, sz).project(camera)
+                const x = (corner.x * 0.5 + 0.5) * 100
+                const y = (-corner.y * 0.5 + 0.5) * 100
+                if (x < rMinX) rMinX = x
+                if (x > rMaxX) rMaxX = x
+                if (y < rMinY) rMinY = y
+                if (y > rMaxY) rMaxY = y
+              }
+            }
+          }
+          const rect = {
+            xPct: (rMinX + rMaxX) / 2,
+            yPct: (rMinY + rMaxY) / 2,
+            wPct: rMaxX - rMinX,
+            hPct: rMaxY - rMinY,
+          }
+          const prev = prevRadioRectRef.current
+          if (!prev || Math.abs(prev.xPct - rect.xPct) > 0.4 || Math.abs(prev.yPct - rect.yPct) > 0.4) {
+            prevRadioRectRef.current = rect
+            onRadioRectRef.current(rect)
+          }
         }
       }
 

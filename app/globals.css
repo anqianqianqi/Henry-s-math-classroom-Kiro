@@ -293,3 +293,36 @@ body {
 .paper-card:hover {
   box-shadow: inset 0 0 30px 8px rgba(176, 138, 88, 0.30);
 }
+
+/* ── Notes drifting out of the challenge room's radio ────────────────────────
+   Pure CSS, on a loop, with each note offset by an animation-delay. No timers
+   and no state, so a playing radio costs nothing per frame and nothing
+   re-renders — the notes simply exist while the element is mounted.
+
+   --drift and --tilt are set per note so the three do not move in lockstep. */
+@keyframes radio-note {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.6) rotate(0deg);
+  }
+  15% { opacity: 0.85; }
+  70% { opacity: 0.55; }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--drift, 0px)), -58px) scale(1.05) rotate(var(--tilt, 12deg));
+  }
+}
+
+.radio-note {
+  position: absolute;
+  animation: radio-note 2.7s ease-out infinite;
+  /* Decoration only — it must never eat a click meant for the radio. */
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Someone who asked for less motion should not get a perpetual animation in
+   the corner of a page they are trying to work on. */
+@media (prefers-reduced-motion: reduce) {
+  .radio-note { display: none; }
+}
