@@ -137,6 +137,34 @@ interface BookSkinItem {
   shopItem?: ShopItemWithCount
 }
 
+/**
+ * Challenge rooms and their book bundles, sold through browse folders like
+ * everything else.
+ *
+ * Both asset tables already carried shop_item_id — the same link the room and
+ * cover folders use. These were loose cards in the shop only because this page
+ * never queried the tables, so their shop_items rows fell through to the
+ * generic grid.
+ */
+interface ChallengeRoomItem {
+  id: string
+  name: string
+  description: string | null
+  room_url: string
+  shop_item_id: string
+  shopItem?: ShopItemWithCount
+}
+
+interface BookBundleItem {
+  id: string
+  name: string
+  description: string | null
+  cover_url: string
+  inner_url: string | null
+  shop_item_id: string
+  shopItem?: ShopItemWithCount
+}
+
 // ── Book Cover Browse Modal ───────────────────────────────────────────────────
 function BookCoverBrowseModal({
   skins,
@@ -783,6 +811,162 @@ function MusicBrowseModal({
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
+/**
+ * Browse modal for a cluster of picture-and-price assets.
+ *
+ * Serves both challenge rooms and their book bundles: the two differ only in
+ * aspect ratio and title, so one component avoids a second near-copy of a
+ * screen that spends points. Purchasing goes through the page's shared
+ * handleRedeem, exactly as the older modals do.
+ */
+function AssetBrowseModal({
+  title, hint, aspect, assets, ownedItemIds, balance, redeeming, redeemErrors, onRedeem, onClose,
+}: {
+  title: string
+  hint?: string
+  /** Tailwind aspect class — rooms are landscape, book covers portrait. */
+  aspect: string
+  assets: { id: string; name: string; description: string | null; imageUrl: string; shopItem?: ShopItemWithCount }[]
+  ownedItemIds: Set<string>
+  balance: number
+  redeeming: string | null
+  redeemErrors: Record<string, string>
+  onRedeem: (item: any) => void
+  onClose: () => void
+}) {
+  const { t } = useLanguage()
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+          <div>
+            <div className="font-bold text-gray-900 text-lg">{title}</div>
+            {hint && <div className="text-xs text-gray-400 mt-0.5">{hint}</div>}
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl font-light">×</button>
+        </div>
+        <div className="overflow-y-auto p-4">
+          <div className="grid grid-cols-2 gap-4">
+            {assets.map(asset => {
+              const si = asset.shopItem
+              if (!si) return null
+              const isOwned = ownedItemIds.has(si.id)
+              const canAfford = balance >= si.cost
+              const disabled = isOwned || !canAfford || redeeming === si.id
+              return (
+                <div key={asset.id} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100 hover:border-primary-300 transition-colors">
+                  <div className={`relative w-full ${aspect} overflow-hidden`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={asset.imageUrl} alt={asset.name} className="w-full h-full object-cover" />
+                    {isOwned && (
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                        <span className="bg-green-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+                          ✓ {t('shop.ownedBadge')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="font-semibold text-gray-900 text-sm truncate">{asset.name}</p>
+                    {asset.description && (
+                      <p className="text-gray-400 text-xs line-clamp-1 mb-2">{asset.description}</p>
+                    )}
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <span className="text-primary-600 font-bold">
+                        {si.cost}<span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
+                      </span>
+                      <button
+                        disabled={disabled}
+                        onClick={() => onRedeem(si)}
+                        className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                          disabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                   : 'bg-primary-600 text-white hover:bg-primary-700'
+                        }`}
+                      >
+                        {redeeming === si.id ? '…'
+                          : isOwned ? `✓ ${t('shop.ownedBadge')}`
+                          : !canAfford ? t('shop.tooCostly')
+                          : t('shop.buy')}
+                      </button>
+                    </div>
+                    {redeemErrors[si.id] && <p className="text-red-500 text-xs mt-1">{redeemErrors[si.id]}</p>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * A folder tile: mosaic of the first four thumbnails, a count, a "from N pts".
+ *
+ * The three older tiles (music, room backgrounds, book covers) predate this and
+ * are still written out longhand below. They were left alone deliberately —
+ * they work, and rewriting them to prove a point risks a regression in a screen
+ * that takes real money. New clusters use this.
+ */
+function ClusterTile({
+  count, thumbnails, badge, title, blurb, fromCost, accent, onOpen, browseLabel, browseCta,
+}: {
+  count: number
+  thumbnails: string[]
+  badge: string
+  title: string
+  blurb: string
+  fromCost: number
+  /** Tailwind border colour for the hover state, e.g. 'hover:border-sky-200'. */
+  accent: string
+  onOpen: () => void
+  browseLabel: string
+  browseCta: string
+}) {
+  return (
+    <div
+      className={`group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md ${accent} transition-all cursor-pointer flex flex-col`}
+      onClick={onOpen}
+    >
+      <div className="relative w-full aspect-square bg-gray-50 overflow-hidden">
+        <div className="grid grid-cols-2 w-full h-full">
+          {thumbnails.slice(0, 4).map((src, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={i} src={src} alt="" className="w-full h-full object-cover" />
+          ))}
+          {thumbnails.length < 4 && Array.from({ length: 4 - thumbnails.length }).map((_, i) => (
+            <div key={`pad-${i}`} className="w-full h-full bg-gradient-to-br from-primary-100 to-primary-200" />
+          ))}
+        </div>
+        <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="text-white text-sm font-bold">{browseLabel}</span>
+        </div>
+        <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-primary-700 text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm">
+          {badge}
+        </div>
+      </div>
+      <div className="p-3 flex flex-col flex-1">
+        <h3 className="font-semibold text-gray-900 text-sm mb-0.5">{title}</h3>
+        <p className="text-gray-500 text-xs line-clamp-2 mb-auto">{blurb}</p>
+        <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
+          <span className="text-primary-600 font-bold text-sm">
+            from {fromCost}
+            <span className="text-gray-400 font-normal text-xs ml-0.5">pts</span>
+          </span>
+          <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary-600 text-white group-hover:bg-primary-700 transition-colors">
+            {browseCta}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ShopPage() {
   const { t } = useLanguage()
   const { region: viewerRegion } = useViewerZone()
@@ -813,6 +997,14 @@ export default function ShopPage() {
   // Music tracks cluster
   const [musicTracks, setMusicTracks] = useState<ShopItemWithCount[]>([])
   const [showMusicBrowse, setShowMusicBrowse] = useState(false)
+
+  // Challenge rooms cluster
+  const [challengeRooms, setChallengeRooms] = useState<ChallengeRoomItem[]>([])
+  const [showRoomsBrowse, setShowRoomsBrowse] = useState(false)
+
+  // Challenge-room book bundles cluster
+  const [bookBundles, setBookBundles] = useState<BookBundleItem[]>([])
+  const [showBundleBrowse, setShowBundleBrowse] = useState(false)
   const [previewingTrack, setPreviewingTrack] = useState<string | null>(null) // filename
   const previewAudioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -884,10 +1076,44 @@ export default function ShopPage() {
       }
     } catch (_) {}
 
-    // Fetch music tracks available in the shop
+    // Fetch challenge rooms available in the shop
     try {
-      const musicItems = (shopItems ?? []).filter((i: any) => i.commodity_type === 'music_track' && i.is_active)
-      setMusicTracks(musicItems.map((i: any) => ({ ...i, redemption_count: countMap[i.id] ?? 0 })))
+      const { data: roomRows } = await supabase
+        .from('challenge_rooms')
+        .select('id, name, description, room_url, shop_item_id')
+        .eq('is_active', true)
+        .not('shop_item_id', 'is', null)
+        .order('created_at', { ascending: false })
+
+      if (roomRows && shopItems) {
+        const shopItemMap: Record<string, any> = {}
+        for (const si of shopItems) shopItemMap[si.id] = si
+        setChallengeRooms(
+          (roomRows as any[])
+            .filter(r => shopItemMap[r.shop_item_id!])
+            .map(r => ({ ...r, shopItem: shopItemMap[r.shop_item_id!] })) as ChallengeRoomItem[]
+        )
+      }
+    } catch (_) {}
+
+    // Fetch challenge-room book bundles available in the shop
+    try {
+      const { data: bundleRows } = await supabase
+        .from('book_texture_packages')
+        .select('id, name, description, cover_url, inner_url, shop_item_id')
+        .eq('is_active', true)
+        .not('shop_item_id', 'is', null)
+        .order('created_at', { ascending: false })
+
+      if (bundleRows && shopItems) {
+        const shopItemMap: Record<string, any> = {}
+        for (const si of shopItems) shopItemMap[si.id] = si
+        setBookBundles(
+          (bundleRows as any[])
+            .filter(b => shopItemMap[b.shop_item_id!])
+            .map(b => ({ ...b, shopItem: shopItemMap[b.shop_item_id!] })) as BookBundleItem[]
+        )
+      }
     } catch (_) {}
 
     // Redemption counts
@@ -896,6 +1122,17 @@ export default function ShopPage() {
     for (const r of redemptionCounts ?? []) {
       countMap[r.item_id] = (countMap[r.item_id] ?? 0) + 1
     }
+
+    /*
+     * Music tracks. This block used to sit ABOVE the countMap declaration and
+     * read it — a temporal dead zone ReferenceError, swallowed whole by its own
+     * catch. musicTracks stayed empty forever and the music tile never
+     * rendered. It has to come after countMap exists.
+     */
+    try {
+      const musicItems = (shopItems ?? []).filter((i: any) => i.commodity_type === 'music_track' && i.is_active)
+      setMusicTracks(musicItems.map((i: any) => ({ ...i, redemption_count: countMap[i.id] ?? 0 })))
+    } catch (_) {}
 
     // Blind box remaining counts — use the RPC which handles both set-based and legacy modes
     const allBlindboxIds = (shopItems ?? [])
@@ -1023,15 +1260,31 @@ export default function ShopPage() {
         }
       }
 
-      // Method 2: check if any redeemed item_id matches a book skin or pet room's shop_item_id
+      /*
+        Method 2: match redeemed item_ids against each asset table's shop_item_id.
+
+        challenge_rooms and book_texture_packages are included here for the same
+        reason as the other two — there is no challenge_room_id or
+        texture_package_id column on redemptions, so this join is the ONLY way a
+        purchased room can be known. Without it a room a student already owns
+        shows "Redeem" beside correctly badged covers in the same folder.
+      */
       const redeemedIds = (allUserRedemptions ?? []).map(r => r.item_id)
       if (redeemedIds.length > 0) {
-        const [{ data: bySkinShopId }, { data: byRoomShopId }] = await Promise.all([
-          supabase.from('book_skins').select('shop_item_id').in('shop_item_id', redeemedIds).not('shop_item_id', 'is', null),
-          supabase.from('pet_room_backgrounds').select('shop_item_id').in('shop_item_id', redeemedIds).not('shop_item_id', 'is', null),
+        const owns = (table: string) =>
+          supabase.from(table).select('shop_item_id')
+            .in('shop_item_id', redeemedIds).not('shop_item_id', 'is', null)
+
+        const results = await Promise.all([
+          owns('book_skins'),
+          owns('pet_room_backgrounds'),
+          owns('challenge_rooms'),
+          owns('book_texture_packages'),
         ])
-        for (const r of [...(bySkinShopId ?? []), ...(byRoomShopId ?? [])]) {
-          if (r.shop_item_id) owned.add(r.shop_item_id)
+        for (const { data } of results) {
+          for (const r of (data ?? []) as { shop_item_id: string | null }[]) {
+            if (r.shop_item_id) owned.add(r.shop_item_id)
+          }
         }
       }
 
@@ -1174,6 +1427,38 @@ export default function ShopPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       {/* Modals */}
+      {showRoomsBrowse && challengeRooms.length > 0 && (
+        <AssetBrowseModal
+          title={`🪟 ${t('shop.challengeRooms')}`}
+          aspect="aspect-video"
+          assets={challengeRooms.map(r => ({
+            id: r.id, name: r.name, description: r.description,
+            imageUrl: r.room_url, shopItem: r.shopItem,
+          }))}
+          ownedItemIds={ownedItemIds}
+          balance={balance}
+          redeeming={redeeming}
+          redeemErrors={redeemErrors}
+          onRedeem={handleRedeem}
+          onClose={() => setShowRoomsBrowse(false)}
+        />
+      )}
+      {showBundleBrowse && bookBundles.length > 0 && (
+        <AssetBrowseModal
+          title={`📚 ${t('shop.challengeBooks')}`}
+          aspect="aspect-[3/4]"
+          assets={bookBundles.map(b => ({
+            id: b.id, name: b.name, description: b.description,
+            imageUrl: b.cover_url, shopItem: b.shopItem,
+          }))}
+          ownedItemIds={ownedItemIds}
+          balance={balance}
+          redeeming={redeeming}
+          redeemErrors={redeemErrors}
+          onRedeem={handleRedeem}
+          onClose={() => setShowBundleBrowse(false)}
+        />
+      )}
       {showRoomBrowse && roomBgs.length > 0 && (
         <RoomBrowseModal
           rooms={roomBgs}
@@ -1316,11 +1601,16 @@ export default function ShopPage() {
           const roomBgItemIds = new Set(roomBgs.map(bg => bg.shop_item_id))
           const bookSkinItemIds = new Set(bookSkins.map(s => s.shop_item_id))
           const musicTrackItemIds = new Set(musicTracks.map(t => t.id))
+          const challengeRoomItemIds = new Set(challengeRooms.map(r => r.shop_item_id))
+          const bookBundleItemIds = new Set(bookBundles.map(b => b.shop_item_id))
           const filteredItems = items.filter(item => {
-            // Exclude room background, book skin, and music track items — they appear in dedicated cluster cards
+            // Exclusion from this grid is what puts something in a folder — there
+            // is no database notion of a cluster, only this filter plus a tile.
             if (roomBgItemIds.has(item.id)) return false
             if (bookSkinItemIds.has(item.id)) return false
             if (musicTrackItemIds.has(item.id)) return false
+            if (challengeRoomItemIds.has(item.id)) return false
+            if (bookBundleItemIds.has(item.id)) return false
             if (activeTab === 'all') return true
             // 'rewards' = everything (pet categories already excluded at query level)
             return true
@@ -1372,6 +1662,38 @@ export default function ShopPage() {
                 </div>
               </div>
             )}
+            {/* ── Challenge Rooms entry card ── */}
+            {challengeRooms.length > 0 && (
+              <ClusterTile
+                count={challengeRooms.length}
+                thumbnails={challengeRooms.map(r => r.room_url)}
+                badge={`🪟 ${challengeRooms.length}`}
+                title={t('shop.challengeRooms')}
+                blurb={t('shop.challengeRoomsBlurb')}
+                fromCost={Math.min(...challengeRooms.map(r => r.shopItem?.cost ?? 999))}
+                accent="hover:border-sky-200"
+                onOpen={() => setShowRoomsBrowse(true)}
+                browseLabel={t('shop.browseChallengeRooms')}
+                browseCta={t('shop.browse')}
+              />
+            )}
+
+            {/* ── Challenge Room Books entry card ── */}
+            {bookBundles.length > 0 && (
+              <ClusterTile
+                count={bookBundles.length}
+                thumbnails={bookBundles.map(b => b.cover_url)}
+                badge={`📚 ${bookBundles.length}`}
+                title={t('shop.challengeBooks')}
+                blurb={t('shop.challengeBooksBlurb')}
+                fromCost={Math.min(...bookBundles.map(b => b.shopItem?.cost ?? 999))}
+                accent="hover:border-rose-200"
+                onOpen={() => setShowBundleBrowse(true)}
+                browseLabel={t('shop.browseChallengeBooks')}
+                browseCta={t('shop.browse')}
+              />
+            )}
+
             {/* ── Room Backgrounds entry card ── */}
             {roomBgs.length > 0 && (
               <div

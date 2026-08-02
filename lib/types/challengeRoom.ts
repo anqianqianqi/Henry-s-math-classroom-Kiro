@@ -24,6 +24,19 @@ export interface RoomSpec {
   rightObjects: [string, string]
   accent: string
   notes: string
+
+  /*
+   * Added after the first rooms were made, so both are OPTIONAL and must stay
+   * that way. A RoomSpec is persisted as challenge_rooms.recipe (JSONB) and
+   * validated both in the admin page and again in the API route — making
+   * either one required would 400 every existing recipe the moment somebody
+   * hit regenerate.
+   */
+
+  /** An ART_STYLES id. Absent, blank or unknown all fall back to the old look. */
+  artStyle?: string
+  /** The window's form — "brass-ringed observation port". Absent keeps the arch. */
+  aperture?: string
 }
 
 /**
@@ -43,6 +56,11 @@ export interface BookSpec {
   /** Exactly four: top-left, top-right, bottom-left, bottom-right. */
   cornerClusters: [string, string, string, string]
   notes: string
+
+  /** Optional for the same reason as RoomSpec's — see the note there. */
+  artStyle?: string
+  /** The sparse motif edging the inner page. Absent keeps the botanical default. */
+  innerAccent?: string
 }
 
 /** A book_texture_packages row. */

@@ -17,6 +17,7 @@ export const dynamic = 'force-dynamic'
  * frame, same palette, with the corner clusters only on the cover.
  */
 
+import { ART_STYLES } from '@/lib/art-styles'
 import { useCallback, useEffect, useState } from 'react'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
@@ -182,14 +183,14 @@ export default function BookBundlesAdminPage() {
       {multiline ? (
         <textarea
           rows={2}
-          value={spec[key] as string}
+          value={(spec[key] as string) ?? ''}
           onChange={e => setSpec({ ...spec, [key]: e.target.value })}
           className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-400"
         />
       ) : (
         <input
           type="text"
-          value={spec[key] as string}
+          value={(spec[key] as string) ?? ''}
           onChange={e => setSpec({ ...spec, [key]: e.target.value })}
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-400"
         />
@@ -315,9 +316,39 @@ export default function BookBundlesAdminPage() {
             <Card.Body className="space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-lg font-bold text-gray-900">{t('bundle.recipe')}</h2>
-                <Button variant="secondary" size="sm" onClick={() => setSpec(randomBookSpec())}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  /* avoid: re-rolling the theme already on screen is the one
+                     outcome that reads as a broken button. */
+                  onClick={() => setSpec(prev => randomBookSpec(undefined, { avoid: prev.name }))}
+                >
                   🎲 Randomise
                 </Button>
+              </div>
+
+              {/* Style is a real axis now — the prompt no longer forces
+                  watercolour on everything. */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-gray-500">{t('design.artStyle')}</span>
+                {ART_STYLES.map(style => (
+                  <button
+                    key={style.id}
+                    type="button"
+                    onClick={() => setSpec(prev => {
+                      const theme = BOOK_THEMES.find(x => x.name === prev.name)
+                      return theme ? randomBookSpec(theme, { style: style.id })
+                                   : { ...prev, artStyle: style.id }
+                    })}
+                    className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                      spec.artStyle === style.id
+                        ? 'border-primary-400 bg-primary-50 font-semibold text-primary-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    {style.emoji} {style.label}
+                  </button>
+                ))}
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -343,6 +374,7 @@ export default function BookBundlesAdminPage() {
                 {field(t('design.palette'), 'palette')}
                 {field(t('bundle.paper'), 'paper')}
                 {field(t('bundle.frame'), 'frame')}
+                {field(t('bundle.innerAccent'), 'innerAccent')}
 
                 <p className="pt-1 text-xs font-medium text-gray-500">
                   Corner clusters — cover only; the inner page stays clear of them

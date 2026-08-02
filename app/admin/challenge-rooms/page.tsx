@@ -15,6 +15,7 @@ export const dynamic = 'force-dynamic'
  *   4. save the plate + placement + animation to challenge_rooms
  */
 
+import { ART_STYLES } from '@/lib/art-styles'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
@@ -271,14 +272,14 @@ export default function ChallengeRoomsAdminPage() {
       {multiline ? (
         <textarea
           rows={2}
-          value={spec[key] as string}
+          value={(spec[key] as string) ?? ''}
           onChange={e => setSpec({ ...spec, [key]: e.target.value })}
           className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-400"
         />
       ) : (
         <input
           type="text"
-          value={spec[key] as string}
+          value={(spec[key] as string) ?? ''}
           onChange={e => setSpec({ ...spec, [key]: e.target.value })}
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-400"
         />
@@ -364,9 +365,39 @@ export default function ChallengeRoomsAdminPage() {
             <Card.Body className="space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-lg font-bold text-gray-900">{t('roomAdmin.recipe')}</h2>
-                <Button variant="secondary" size="sm" onClick={() => setSpec(randomRoomSpec())}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  /* avoid: the dice landing on the theme already on screen is
+                     the one outcome that reads as a broken button. */
+                  onClick={() => setSpec(prev => randomRoomSpec(undefined, { avoid: prev.name }))}
+                >
                   🎲 Randomise
                 </Button>
+              </div>
+
+              {/* Style is its own axis now, so it gets its own row. Picking one
+                  re-rolls the current theme with that style forced. */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-gray-500">{t('design.artStyle')}</span>
+                {ART_STYLES.map(style => (
+                  <button
+                    key={style.id}
+                    type="button"
+                    onClick={() => setSpec(prev => {
+                      const theme = ROOM_THEMES.find(x => x.name === prev.name)
+                      return theme ? randomRoomSpec(theme, { style: style.id })
+                                   : { ...prev, artStyle: style.id }
+                    })}
+                    className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                      spec.artStyle === style.id
+                        ? 'border-primary-400 bg-primary-50 font-semibold text-primary-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    {style.emoji} {style.label}
+                  </button>
+                ))}
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -392,6 +423,7 @@ export default function ChallengeRoomsAdminPage() {
                 {field(t('design.palette'), 'palette')}
                 {field(t('roomAdmin.architecture'), 'architecture', true)}
                 {field(t('roomAdmin.materials'), 'materials')}
+                {field(t('roomAdmin.aperture'), 'aperture')}
                 {field(t('roomAdmin.lighting'), 'lighting')}
                 {field(t('roomAdmin.outsideView'), 'outsideView')}
                 {field(t('roomAdmin.accent'), 'accent')}
