@@ -24,6 +24,7 @@ import { OverlayBurstRenderer } from '@/components/OverlayBurstRenderer'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { visibleInRegion, hiddenCount } from '@/lib/utils/shopRegion'
 import { useViewerZone } from '@/components/ui/useViewerZone'
+import { AssetPreviewOverlay, type PreviewPane } from '@/components/shop/AssetPreviewOverlay'
 const SHOP_ZP_KEYFRAMES = buildKeyframesCSS('szp') + `
 @keyframes szp-pulse-glow { 0%,100%{opacity:1} 50%{opacity:0.7} }
 `
@@ -826,7 +827,18 @@ function AssetBrowseModal({
   hint?: string
   /** Tailwind aspect class — rooms are landscape, book covers portrait. */
   aspect: string
-  assets: { id: string; name: string; description: string | null; imageUrl: string; shopItem?: ShopItemWithCount }[]
+  assets: {
+    id: string
+    name: string
+    description: string | null
+    imageUrl: string
+    /**
+     * What the enlarged preview shows. A room is its own single plate; a bundle
+     * is the cover AND the inner page, which the thumbnail cannot show.
+     */
+    preview: PreviewPane[]
+    shopItem?: ShopItemWithCount
+  }[]
   ownedItemIds: Set<string>
   balance: number
   redeeming: string | null
@@ -835,8 +847,12 @@ function AssetBrowseModal({
   onClose: () => void
 }) {
   const { t } = useLanguage()
+  const [preview, setPreview] = useState<{ name: string; panes: PreviewPane[] } | null>(null)
 
   return (
+    /* The preview is a SIBLING of the browse modal, not a child: nested, its
+       click-outside would bubble into the browse modal's own and close both. */
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div
         className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
@@ -859,9 +875,23 @@ function AssetBrowseModal({
               const disabled = isOwned || !canAfford || redeeming === si.id
               return (
                 <div key={asset.id} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100 hover:border-primary-300 transition-colors">
-                  <div className={`relative w-full ${aspect} overflow-hidden`}>
+                  {/* Thumbnail opens the enlarged preview — the same affordance
+                      the pet-room folder already has. */}
+                  <div
+                    className={`relative w-full ${aspect} overflow-hidden group cursor-pointer`}
+                    onClick={() => setPreview({ name: asset.name, panes: asset.preview })}
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={asset.imageUrl} alt={asset.name} className="w-full h-full object-cover" />
+                    <img
+                      src={asset.imageUrl}
+                      alt={asset.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/10">
+                      <span className="bg-black/60 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+                        🔍 {t('shop.preview')}
+                      </span>
+                    </div>
                     {isOwned && (
                       <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                         <span className="bg-green-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
@@ -902,6 +932,14 @@ function AssetBrowseModal({
         </div>
       </div>
     </div>
+    {preview && (
+      <AssetPreviewOverlay
+        name={preview.name}
+        panes={preview.panes}
+        onClose={() => setPreview(null)}
+      />
+    )}
+    </>
   )
 }
 
@@ -1430,10 +1468,12 @@ export default function ShopPage() {
       {showRoomsBrowse && challengeRooms.length > 0 && (
         <AssetBrowseModal
           title={`🪟 ${t('shop.challengeRooms')}`}
+          hint={t('shop.zoomHint')}
           aspect="aspect-video"
           assets={challengeRooms.map(r => ({
             id: r.id, name: r.name, description: r.description,
             imageUrl: r.room_url, shopItem: r.shopItem,
+            preview: [{ url: r.room_url }],
           }))}
           ownedItemIds={ownedItemIds}
           balance={balance}
@@ -1446,10 +1486,17 @@ export default function ShopPage() {
       {showBundleBrowse && bookBundles.length > 0 && (
         <AssetBrowseModal
           title={`📚 ${t('shop.challengeBooks')}`}
+          hint={t('shop.zoomHint')}
           aspect="aspect-[3/4]"
           assets={bookBundles.map(b => ({
             id: b.id, name: b.name, description: b.description,
             imageUrl: b.cover_url, shopItem: b.shopItem,
+            // Both halves: the thumbnail is the cover, and the inner texture is
+            // the other half of what the points actually buy.
+            preview: b.inner_url
+              ? [{ url: b.cover_url, label: t('shop.previewCover') },
+                 { url: b.inner_url, label: t('shop.previewInnerPage') }]
+              : [{ url: b.cover_url }],
           }))}
           ownedItemIds={ownedItemIds}
           balance={balance}

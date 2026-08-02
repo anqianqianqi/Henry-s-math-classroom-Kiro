@@ -86,6 +86,11 @@ export const shop = {
     en: 'Click an image to zoom preview · Buy to unlock',
     zh: '点击图片放大预览 · 购买即可解锁',
   },
+  // A bundle is a pair, so its preview is captioned — the thumbnail only ever
+  // shows the cover, and the inner pages are half of what is being bought.
+  'shop.preview': { en: 'Preview', zh: '预览' },
+  'shop.previewCover': { en: 'Cover', zh: '封面' },
+  'shop.previewInnerPage': { en: 'Inner pages', zh: '内页' },
   'shop.animateHint': {
     en: 'Click an image to preview with animations · Buy to unlock',
     zh: '点击图片查看动画预览 · 购买即可解锁',
