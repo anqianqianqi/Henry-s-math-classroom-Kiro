@@ -228,6 +228,41 @@ export const admin = {
     zh: '拖动书本可移动 · 滚轮缩放',
   },
   'roomAdmin.resetPlacement': { en: 'Reset placement', zh: '重置位置' },
+  // The radio on the sill. One placement rig serves both objects, so these
+  // label which one the sliders and the drag are currently moving.
+  'roomAdmin.targetBook': { en: 'Move the book', zh: '调整书本' },
+  'roomAdmin.targetRadio': { en: 'Move the radio', zh: '调整收音机' },
+  'roomAdmin.addRadio': { en: 'Add a radio', zh: '添加收音机' },
+  'roomAdmin.removeRadio': { en: 'Remove radio', zh: '移除收音机' },
+  'roomAdmin.radioPaletteHint': {
+    en: 'Preview colour only — each student sees the colourway they picked.',
+    zh: '此处仅为预览配色，学生看到的是各自选择的颜色。',
+  },
+  // Retuning writes back to the room it was loaded from. It used to insert a
+  // copy, so these say plainly which of the two a save will do.
+  'roomAdmin.updateRoom': { en: 'Update this room', zh: '更新此房间' },
+  'roomAdmin.saveAsNew': { en: 'Save as a new room instead', zh: '改为另存为新房间' },
+  'roomAdmin.editingHint': {
+    en: 'Editing a saved room — changes replace it.',
+    zh: '正在编辑已保存的房间，保存后将覆盖原有设置。',
+  },
+  'roomAdmin.loadedForRetune': {
+    en: 'Loaded "{name}" — saving updates it.',
+    zh: '已载入“{name}”，保存后将更新该房间。',
+  },
+  // One lamp for the room, lighting the book and the radio and casting both
+  // shadows. Replaced an abstract "shadow depth" number.
+  'roomAdmin.lightHeading': { en: 'Light source', zh: '光源位置' },
+  'roomAdmin.lightX': { en: 'Left ↔ right', zh: '左右' },
+  'roomAdmin.lightY': { en: 'Down ↕ up', zh: '上下' },
+  'roomAdmin.lightZ': { en: 'Distance', zh: '远近' },
+  'roomAdmin.resetLight': { en: 'Reset light', zh: '重置光源' },
+  'roomAdmin.lightHint': {
+    en: 'Match the light already painted into the room, and the shadows will sit right.',
+    zh: '让光源方向与房间画面中的光线一致，阴影就会自然贴合。',
+  },
+  'roomAdmin.roomUpdated': { en: '"{name}" updated.', zh: '“{name}”已更新。' },
+  'roomAdmin.roomSaved': { en: '"{name}" saved.', zh: '“{name}”已保存。' },
   'roomAdmin.previewWithPackage': { en: 'Preview with book package', zh: '用书本套装预览' },
   'roomAdmin.plainPages': { en: 'Plain pages (no package)', zh: '空白内页（不使用套装）' },
   // ── Shop admin ───────────────────────────────────────────

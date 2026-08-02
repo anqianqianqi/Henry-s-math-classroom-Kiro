@@ -92,7 +92,52 @@ export interface Placement {
   tilt: number
   turn: number
   roll: number
+  /**
+   * How far behind the object its shadow falls, in world units.
+   *
+   * The shadow catcher used to sit at a fixed -1.2 for every room. Rooms are
+   * painted at different scales, so on some of them the book's shadow landed
+   * well behind where the tabletop appears to be and the book read as hovering
+   * over it. Optional: absent means the old fixed distance, so every saved
+   * room keeps exactly the look it was tuned to.
+   */
+  shadowDepth?: number
 }
+
+/**
+ * Where the shadow catcher sits when a room does not say.
+ *
+ * Superseded by lightPosition below, which is the control an admin actually
+ * has intuitions about. Still honoured, so a room tuned with it before the
+ * light became adjustable does not shift.
+ *
+ * Lives here rather than beside the plane it positions: RoomPlacementStage
+ * imports all of three.js, and the admin page loads that lazily on purpose. A
+ * static import of one number from it would drag the whole renderer into the
+ * page's first bundle.
+ */
+export const DEFAULT_SHADOW_DEPTH = -1.2
+
+/**
+ * The key light, in world units — the lamp that casts the shadows.
+ *
+ * Per room, because the plates are paintings with their own light in them: a
+ * storm through a window on the left and a desk lamp on the right want the
+ * shadow going opposite ways, and one hardcoded direction cannot serve both.
+ * Moving the light is also the honest control — "shadow depth" was a number
+ * with no physical meaning, and getting a believable shadow out of it was
+ * guesswork.
+ *
+ * Shared by the book and the radio, as one lamp in one room should be.
+ */
+export interface LightPosition {
+  x: number
+  y: number
+  z: number
+}
+
+/** Where the key light sat before it was adjustable. */
+export const DEFAULT_LIGHT_POSITION: LightPosition = { x: -4, y: 6, z: 8 }
 
 /** Playback window over the baked GLB clip. */
 export interface AnimationConfig {

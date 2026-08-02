@@ -48,12 +48,21 @@ import { ROOM_THEMES, randomRoomSpec } from '@/lib/challengeRoom/themes'
 import { validateRoomSpec } from '@/lib/challengeRoom/prompt'
 import { bookModelUrl, MODEL_SETUP_HINT } from '@/lib/challengeRoom/model'
 import {
+  DEFAULT_RADIO_PALETTE,
+  DEFAULT_RADIO_PLACEMENT,
+  RADIO_MODEL_URL,
+  RADIO_PALETTES,
+  radioPaletteUrl,
+} from '@/lib/challengeRoom/radio'
+import {
   BOOK_MODEL_KEY,
   DEFAULT_ANIMATION,
   DEFAULT_PLACEMENT,
+  DEFAULT_LIGHT_POSITION,
   SPREAD_FRAME,
   type AnimationConfig,
   type ChallengeRoom,
+  type LightPosition,
   type Placement,
   type RoomSpec,
 } from '@/lib/types/challengeRoom'
@@ -83,6 +92,33 @@ export default function ChallengeRoomsAdminPage() {
   const [animation, setAnimation] = useState<AnimationConfig>(DEFAULT_ANIMATION)
   const [frame, setFrame] = useState(SPREAD_FRAME)
   const [playing, setPlaying] = useState(false)
+
+  /**
+   * The room being retuned, or null when the next save creates a new one.
+   *
+   * Students' preferences point at a specific challenge_rooms row, so editing
+   * has to write back to that row — saving a copy would leave everyone who had
+   * chosen the original on the version without the change.
+   */
+  const [editingRoomId, setEditingRoomId] = useState<string | null>(null)
+
+  /** One key light for the whole room — see LightPosition. */
+  const [lightPosition, setLightPosition] = useState<LightPosition>(DEFAULT_LIGHT_POSITION)
+
+  /*
+    The radio on the sill.
+
+    null is a room WITHOUT one, and that is the default — so a room only gains
+    a radio when someone deliberately adds it here. The same six controls below
+    point at whichever object `target` names, rather than the form growing a
+    second copy of the whole placement rig.
+  */
+  const [radioPlacement, setRadioPlacement] = useState<Placement | null>(null)
+  const [target, setTarget] = useState<'book' | 'radio'>('book')
+  const [radioPaletteId, setRadioPaletteId] = useState(DEFAULT_RADIO_PALETTE)
+  const editing = target === 'radio' && radioPlacement ? radioPlacement : placement
+  const setEditing = (next: Placement) =>
+    target === 'radio' && radioPlacement ? setRadioPlacement(next) : setPlacement(next)
 
   const [packages, setPackages] = useState<TexturePackageOption[]>([])
   const [packageId, setPackageId] = useState<string>('')
@@ -214,26 +250,42 @@ export default function ChallengeRoomsAdminPage() {
         return
       }
 
-      const { error: insertErr } = await supabase.from('challenge_rooms').insert({
+      const fields = {
         name: roomName.trim(),
         description: roomDescription.trim() || null,
         room_url: plateUrl,
         recipe: spec,
         placement,
+        radio_placement: radioPlacement,
+        light_position: lightPosition,
         animation,
         model_key: BOOK_MODEL_KEY,
         visibility,
-        is_active: true,
-        created_by: user.id,
-      })
+      }
 
-      if (insertErr) {
-        setError('Failed to save: ' + insertErr.message)
+      /*
+        Retuning UPDATES the room it was loaded from.
+
+        It used to insert unconditionally, so the only way to adjust a saved
+        room's placement was to save a second copy of it and deactivate the
+        first — which is not retuning, and is how a list of near-duplicate rooms
+        happens. Students hold challenge_room_id against a specific row, so a
+        duplicate also silently leaves everyone who chose the old one on the
+        untouched version.
+      */
+      const { error: saveErr } = editingRoomId
+        ? await supabase.from('challenge_rooms').update(fields).eq('id', editingRoomId)
+        : await supabase.from('challenge_rooms').insert({ ...fields, is_active: true, created_by: user.id })
+
+      if (saveErr) {
+        setError('Failed to save: ' + saveErr.message)
         return
       }
 
-      setSuccess(`"${roomName.trim()}" saved.`)
-      setRoomDescription('')
+      setSuccess(editingRoomId
+        ? t('roomAdmin.roomUpdated', { name: roomName.trim() })
+        : t('roomAdmin.roomSaved', { name: roomName.trim() }))
+      if (!editingRoomId) setRoomDescription('')
       await loadRooms()
     } catch (err: any) {
       setError(err.message || 'Failed to save.')
@@ -256,14 +308,24 @@ export default function ChallengeRoomsAdminPage() {
     setPlateUrl(room.room_url)
     if (room.recipe) setSpec(room.recipe)
     setPlacement(room.placement ?? DEFAULT_PLACEMENT)
+    setRadioPlacement((room as any).radio_placement ?? null)
+    setLightPosition((room as any).light_position ?? DEFAULT_LIGHT_POSITION)
+    setTarget('book')
     setAnimation(room.animation ?? DEFAULT_ANIMATION)
     setRoomName(room.name)
     setRoomDescription(room.description ?? '')
     setVisibility(room.visibility)
     setFrame(room.animation?.endFrame ?? SPREAD_FRAME)
     setPlaying(false)
-    setSuccess(`Loaded "${room.name}" — saving creates a new room.`)
+    setEditingRoomId(room.id)
+    setSuccess(t('roomAdmin.loadedForRetune', { name: room.name }))
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  /** Drop the link to the loaded room, so the next save makes a new one. */
+  function stopEditing() {
+    setEditingRoomId(null)
+    setSuccess(null)
   }
 
   const field = (label: string, key: keyof RoomSpec, multiline = false) => (
@@ -336,7 +398,14 @@ export default function ChallengeRoomsAdminPage() {
         breadcrumbs={[{ label: t('nav.decorations'), href: '/decorations' }, { label: t('roomAdmin.pageTitle') }]}
       />
 
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+      {/*
+        Wide on purpose. Placing a book and a radio against a painted plate is
+        judged by eye, and the stage used to be half of a max-w-6xl — about
+        550px, a third of the size a student sees it at. Details that decide
+        whether an object sits ON the sill or floats in front of it are simply
+        not visible at that scale.
+      */}
+      <main className="mx-auto max-w-[1800px] space-y-6 px-4 py-8 sm:px-6 lg:px-8">
         <p className="text-sm text-gray-500">
           Design the 3D challenge room: generate a background plate, then position the animated book on it.
         </p>
@@ -359,7 +428,8 @@ export default function ChallengeRoomsAdminPage() {
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        {/* Recipe narrow on the left, everything visual to the right of it. */}
+        <div className="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
           {/* ── Spec form ──────────────────────────────────────────────── */}
           <Card>
             <Card.Body className="space-y-4">
@@ -475,8 +545,13 @@ export default function ChallengeRoomsAdminPage() {
             </Card.Body>
           </Card>
 
-          {/* ── Stage + placement ──────────────────────────────────────── */}
-          <div className="space-y-4">
+          {/*
+            ── Stage + placement ────────────────────────────────────────
+            Stage takes the room it needs; the controls become a rail beside
+            it once there is width for both. `items-start` so the short rail
+            does not stretch to the stage's height.
+          */}
+          <div className="grid gap-4 items-start 2xl:grid-cols-[minmax(0,1fr)_21rem]">
             <Card>
               <Card.Body className="space-y-3">
                 <h2 className="text-lg font-bold text-gray-900">{t('roomAdmin.placement')}</h2>
@@ -512,10 +587,72 @@ export default function ChallengeRoomsAdminPage() {
                       onFrameChange={setFrame}
                       playing={playing}
                       onPlayingChange={setPlaying}
+                      // Dragging moves whichever object is selected below.
+                      interactive={target === 'book'}
+                      radioInteractive={target === 'radio'}
+                      radioUrl={radioPlacement ? RADIO_MODEL_URL : null}
+                      radioTextureUrl={radioPaletteUrl(radioPaletteId)}
+                      radioPlacement={radioPlacement}
+                      lightPosition={lightPosition}
+                      onRadioPlacementChange={setRadioPlacement}
                     />
                     <p className="text-xs text-gray-400">
                       {t('roomAdmin.dragHint')}
                     </p>
+
+                    {/* ── What the sliders and the drag act on ─────────── */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTarget('book')}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          target === 'book'
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        📖 {t('roomAdmin.targetBook')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // First click on an empty room both adds the radio and
+                          // selects it — otherwise the toggle would appear to do
+                          // nothing at all.
+                          if (!radioPlacement) setRadioPlacement(DEFAULT_RADIO_PLACEMENT)
+                          setTarget('radio')
+                        }}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          target === 'radio'
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        📻 {radioPlacement ? t('roomAdmin.targetRadio') : t('roomAdmin.addRadio')}
+                      </button>
+                      {radioPlacement && (
+                        <>
+                          <select
+                            value={radioPaletteId}
+                            onChange={e => setRadioPaletteId(e.target.value)}
+                            className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs text-gray-900"
+                            aria-label={t('radio.palette')}
+                          >
+                            {RADIO_PALETTES.map(p => (
+                              <option key={p.id} value={p.id}>{t(p.labelKey)}</option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => { setRadioPlacement(null); setTarget('book') }}
+                            className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
+                          >
+                            {t('roomAdmin.removeRadio')}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400">{t('roomAdmin.radioPaletteHint')}</p>
                   </>
                 )}
 
@@ -558,9 +695,23 @@ export default function ChallengeRoomsAdminPage() {
                     >
                       ⏭ Open spread
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setPlacement(DEFAULT_PLACEMENT)}>
+                    {/* Resets whatever is selected, not always the book. */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditing(
+                        target === 'radio' ? DEFAULT_RADIO_PLACEMENT : DEFAULT_PLACEMENT,
+                      )}
+                    >
                       {t('roomAdmin.resetPlacement')}
                     </Button>
+                  </div>
+
+                  {/* Which object every control below moves. The sliders live in
+                      a different card from the toggle, so without this it is not
+                      obvious that they follow it. */}
+                  <div className="rounded-lg bg-primary-50 px-3 py-2 text-xs font-semibold text-primary-700">
+                    {target === 'radio' ? `📻 ${t('roomAdmin.targetRadio')}` : `📖 ${t('roomAdmin.targetBook')}`}
                   </div>
 
                   <div className="space-y-1">
@@ -581,19 +732,50 @@ export default function ChallengeRoomsAdminPage() {
                     </p>
                   </div>
 
+                  {/* One rig, pointed at whichever object the toggle above selected. */}
                   <div className="grid grid-cols-2 gap-3">
-                    <Slider label="X" value={placement.x} min={-3} max={3} step={0.01}
-                      onChange={v => setPlacement({ ...placement, x: v })} />
-                    <Slider label="Y" value={placement.y} min={-3} max={3} step={0.01}
-                      onChange={v => setPlacement({ ...placement, y: v })} />
-                    <Slider label="Scale" value={placement.scale} min={0.2} max={4} step={0.01}
-                      onChange={v => setPlacement({ ...placement, scale: v })} />
-                    <Slider label="Tilt°" value={placement.tilt} min={-90} max={90} step={1}
-                      onChange={v => setPlacement({ ...placement, tilt: v })} />
-                    <Slider label="Turn°" value={placement.turn} min={-180} max={180} step={1}
-                      onChange={v => setPlacement({ ...placement, turn: v })} />
-                    <Slider label="Roll°" value={placement.roll} min={-180} max={180} step={1}
-                      onChange={v => setPlacement({ ...placement, roll: v })} />
+                    <Slider label="X" value={editing.x} min={-3} max={3} step={0.01}
+                      onChange={v => setEditing({ ...editing, x: v })} />
+                    <Slider label="Y" value={editing.y} min={-3} max={3} step={0.01}
+                      onChange={v => setEditing({ ...editing, y: v })} />
+                    <Slider label="Scale" value={editing.scale} min={0.2} max={4} step={0.01}
+                      onChange={v => setEditing({ ...editing, scale: v })} />
+                    <Slider label="Tilt°" value={editing.tilt} min={-90} max={90} step={1}
+                      onChange={v => setEditing({ ...editing, tilt: v })} />
+                    <Slider label="Turn°" value={editing.turn} min={-180} max={180} step={1}
+                      onChange={v => setEditing({ ...editing, turn: v })} />
+                    <Slider label="Roll°" value={editing.roll} min={-180} max={180} step={1}
+                      onChange={v => setEditing({ ...editing, roll: v })} />
+                  </div>
+
+                  {/*
+                    One lamp, lighting both objects and casting both shadows —
+                    which is what a room has. Replaces a "shadow depth" number
+                    that had no physical meaning and could only be dialled in by
+                    trial and error.
+                  */}
+                  <div className="space-y-2 border-t border-gray-100 pt-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-600">
+                        💡 {t('roomAdmin.lightHeading')}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setLightPosition(DEFAULT_LIGHT_POSITION)}
+                      >
+                        {t('roomAdmin.resetLight')}
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <Slider label={t('roomAdmin.lightX')} value={lightPosition.x} min={-12} max={12} step={0.1}
+                        onChange={v => setLightPosition({ ...lightPosition, x: v })} />
+                      <Slider label={t('roomAdmin.lightY')} value={lightPosition.y} min={-12} max={12} step={0.1}
+                        onChange={v => setLightPosition({ ...lightPosition, y: v })} />
+                      <Slider label={t('roomAdmin.lightZ')} value={lightPosition.z} min={1} max={20} step={0.1}
+                        onChange={v => setLightPosition({ ...lightPosition, z: v })} />
+                    </div>
+                    <p className="text-xs text-gray-400">{t('roomAdmin.lightHint')}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-3">
@@ -652,9 +834,21 @@ export default function ChallengeRoomsAdminPage() {
                   </select>
                 </div>
               </div>
-              <Button variant="primary" onClick={save} isLoading={saving} disabled={saving}>
-                {t('roomAdmin.save')}
-              </Button>
+              {/* The button says which of the two things it will do, because
+                  "Save" over a loaded room used to quietly mean "duplicate". */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="primary" onClick={save} isLoading={saving} disabled={saving}>
+                  {editingRoomId ? t('roomAdmin.updateRoom') : t('roomAdmin.save')}
+                </Button>
+                {editingRoomId && (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={stopEditing} disabled={saving}>
+                      {t('roomAdmin.saveAsNew')}
+                    </Button>
+                    <span className="text-xs text-gray-400">{t('roomAdmin.editingHint')}</span>
+                  </>
+                )}
+              </div>
               {compiledPrompt && (
                 <details className="text-xs text-gray-500">
                   <summary className="cursor-pointer">View compiled prompt</summary>

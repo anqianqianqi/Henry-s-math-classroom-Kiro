@@ -156,5 +156,9 @@ export const decorations = {
   },
   'roomPage.introLink': { en: 'Book Cover & Page', zh: '书本与封面' },
   'roomPage.introB': { en: '.', zh: '的普通书本。' },
+  'roomPage.radioIntro': {
+    en: 'Some rooms have a radio on the window sill. Pick the colour yours is painted.',
+    zh: '有些房间的窗台上放着一台收音机，你可以选择它的颜色。',
+  },
   'templates.title': { en: 'Templates', zh: '模板' },
 } as const
