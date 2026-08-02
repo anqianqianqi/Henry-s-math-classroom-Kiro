@@ -58,6 +58,7 @@ import {
   BOOK_MODEL_KEY,
   DEFAULT_ANIMATION,
   DEFAULT_PLACEMENT,
+  DEFAULT_SHADOW_DEPTH,
   SPREAD_FRAME,
   type AnimationConfig,
   type ChallengeRoom,
@@ -91,14 +92,6 @@ export default function ChallengeRoomsAdminPage() {
   const [frame, setFrame] = useState(SPREAD_FRAME)
   const [playing, setPlaying] = useState(false)
 
-  /*
-    The radio on the sill.
-
-    null is a room WITHOUT one, and that is the default — so a room only gains
-    a radio when someone deliberately adds it here. The same six controls below
-    point at whichever object `target` names, rather than the form growing a
-    second copy of the whole placement rig.
-  */
   /**
    * The room being retuned, or null when the next save creates a new one.
    *
@@ -108,6 +101,14 @@ export default function ChallengeRoomsAdminPage() {
    */
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null)
 
+  /*
+    The radio on the sill.
+
+    null is a room WITHOUT one, and that is the default — so a room only gains
+    a radio when someone deliberately adds it here. The same six controls below
+    point at whichever object `target` names, rather than the form growing a
+    second copy of the whole placement rig.
+  */
   const [radioPlacement, setRadioPlacement] = useState<Placement | null>(null)
   const [target, setTarget] = useState<'book' | 'radio'>('book')
   const [radioPaletteId, setRadioPaletteId] = useState(DEFAULT_RADIO_PALETTE)
@@ -674,9 +675,23 @@ export default function ChallengeRoomsAdminPage() {
                     >
                       ⏭ Open spread
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setPlacement(DEFAULT_PLACEMENT)}>
+                    {/* Resets whatever is selected, not always the book. */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditing(
+                        target === 'radio' ? DEFAULT_RADIO_PLACEMENT : DEFAULT_PLACEMENT,
+                      )}
+                    >
                       {t('roomAdmin.resetPlacement')}
                     </Button>
+                  </div>
+
+                  {/* Which object every control below moves. The sliders live in
+                      a different card from the toggle, so without this it is not
+                      obvious that they follow it. */}
+                  <div className="rounded-lg bg-primary-50 px-3 py-2 text-xs font-semibold text-primary-700">
+                    {target === 'radio' ? `📻 ${t('roomAdmin.targetRadio')}` : `📖 ${t('roomAdmin.targetBook')}`}
                   </div>
 
                   <div className="space-y-1">
@@ -712,6 +727,19 @@ export default function ChallengeRoomsAdminPage() {
                     <Slider label="Roll°" value={editing.roll} min={-180} max={180} step={1}
                       onChange={v => setEditing({ ...editing, roll: v })} />
                   </div>
+
+                  {/* Only the book casts a shadow, so this belongs to it alone. */}
+                  {target === 'book' && (
+                    <div className="space-y-1">
+                      <Slider
+                        label={t('roomAdmin.shadowDepth')}
+                        value={placement.shadowDepth ?? DEFAULT_SHADOW_DEPTH}
+                        min={-3} max={0} step={0.01}
+                        onChange={v => setPlacement({ ...placement, shadowDepth: v })}
+                      />
+                      <p className="text-xs text-gray-400">{t('roomAdmin.shadowDepthHint')}</p>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-3">
                     <Slider label="Playback fps" value={animation.playbackFps} min={12} max={120} step={1}

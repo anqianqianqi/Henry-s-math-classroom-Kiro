@@ -92,7 +92,30 @@ export interface Placement {
   tilt: number
   turn: number
   roll: number
+  /**
+   * How far behind the object its shadow falls, in world units.
+   *
+   * The shadow catcher used to sit at a fixed -1.2 for every room. Rooms are
+   * painted at different scales, so on some of them the book's shadow landed
+   * well behind where the tabletop appears to be and the book read as hovering
+   * over it. Optional: absent means the old fixed distance, so every saved
+   * room keeps exactly the look it was tuned to.
+   */
+  shadowDepth?: number
 }
+
+/**
+ * Where the shadow catcher sits when a room does not say.
+ *
+ * The value every room was tuned against before the depth became adjustable,
+ * so an absent `shadowDepth` has to keep meaning exactly what it used to.
+ *
+ * Lives here rather than beside the plane it positions: RoomPlacementStage
+ * imports all of three.js, and the admin page loads that lazily on purpose. A
+ * static import of one number from it would drag the whole renderer into the
+ * page's first bundle.
+ */
+export const DEFAULT_SHADOW_DEPTH = -1.2
 
 /** Playback window over the baked GLB clip. */
 export interface AnimationConfig {

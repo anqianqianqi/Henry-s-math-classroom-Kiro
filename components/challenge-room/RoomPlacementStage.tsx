@@ -19,6 +19,7 @@ import { renderPageCanvas, type PageContent } from '@/lib/challengeRoom/pageText
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import {
   BOOK_MATERIALS,
+  DEFAULT_SHADOW_DEPTH,
   MIRRORED_U_MATERIALS,
   type AnimationConfig,
   type Placement,
@@ -100,6 +101,18 @@ const MODEL_TARGET_SIZE = 2.35
 const RADIO_TARGET_SIZE = 0.8
 
 /**
+ * How much slack a click gets around the radio, as a fraction of its own
+ * on-screen size.
+ *
+ * The radio renders about 150px wide on a sill, and a mantel radio is not a
+ * rectangle: between the knobs, around the dial and past the rounded cabinet
+ * corners there are gaps where an exact triangle hit misses. A click landing in
+ * one of those used to fall through to the room behind and open the book, which
+ * is the opposite of what pointing at a radio should do.
+ */
+const RADIO_HIT_PADDING = 0.18
+
+/**
  * A page's own corners, from the baked mesh bounds: X 0..2, Z -1.333..1.333,
  * flat in Y. Note X starts at 0 — the origin is the spine edge, not the middle.
  */
@@ -158,6 +171,7 @@ export function RoomPlacementStage({
   /** Latched: the page reveals once, and a texture swap must not re-fire it. */
   const readyFiredRef = useRef(false)
 
+  const shadowPlaneRef = useRef<THREE.Mesh | null>(null)
   const radioGroupRef = useRef<THREE.Group | null>(null)
   const radioTextureRef = useRef<THREE.Texture | null>(null)
   const onRadioClickRef = useRef(onRadioClick)
@@ -218,14 +232,16 @@ export function RoomPlacementStage({
     fillLight.position.set(5, 1, 6)
     scene.add(fillLight)
 
-    // Catches the book's shadow so it sits on the painted tabletop
+    // Catches the book's shadow so it sits on the painted tabletop. Its depth
+    // is tunable per room — see DEFAULT_SHADOW_DEPTH.
     const shadowPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(9, 6),
       new THREE.ShadowMaterial({ color: 0x172d29, opacity: 0.26 }),
     )
-    shadowPlane.position.z = -1.2
+    shadowPlane.position.z = DEFAULT_SHADOW_DEPTH
     shadowPlane.receiveShadow = true
     scene.add(shadowPlane)
+    shadowPlaneRef.current = shadowPlane
 
     const resize = () => {
       const rect = stage.getBoundingClientRect()
@@ -448,6 +464,13 @@ export function RoomPlacementStage({
     group.scale.setScalar(placement.scale)
     group.rotation.set(deg(placement.tilt), deg(placement.turn), deg(placement.roll))
   }, [placement, modelReady])
+
+  // ── Where the shadow lands ───────────────────────────────────────────────
+  useEffect(() => {
+    const plane = shadowPlaneRef.current
+    if (!plane) return
+    plane.position.z = placement.shadowDepth ?? DEFAULT_SHADOW_DEPTH
+  }, [placement.shadowDepth])
 
   // ── Load the radio ───────────────────────────────────────────────────────
   /*
@@ -774,9 +797,34 @@ export function RoomPlacementStage({
     )
     raycasterRef.current.setFromCamera(ndc, camera)
     const hit = raycasterRef.current.intersectObject(group, true)[0]
-    if (!hit) return null
-    const material = (hit.object as THREE.Mesh).material as THREE.Material
-    return material?.name || null
+    if (hit) {
+      const material = (hit.object as THREE.Mesh).material as THREE.Material
+      return material?.name || 'region_cabinet'
+    }
+
+    /*
+      Missed the geometry, but is the pointer near enough to have MEANT the
+      radio? A padded projected bounding box says yes, and the caller treats
+      that as a plain "the radio" click.
+
+      Without this, a click in one of the gaps in the silhouette — between the
+      knobs, past a rounded corner — sails through to the room and opens the
+      book. At this size those gaps are only a few pixels wide, but they are
+      exactly where a finger aiming at a knob lands.
+    */
+    const box = new THREE.Box3().setFromObject(group)
+    if (box.isEmpty()) return null
+    const min = box.min.clone().project(camera)
+    const max = box.max.clone().project(camera)
+    const left = Math.min(min.x, max.x)
+    const right = Math.max(min.x, max.x)
+    const bottom = Math.min(min.y, max.y)
+    const top = Math.max(min.y, max.y)
+    const padX = (right - left) * RADIO_HIT_PADDING
+    const padY = (top - bottom) * RADIO_HIT_PADDING
+    const near = ndc.x >= left - padX && ndc.x <= right + padX
+      && ndc.y >= bottom - padY && ndc.y <= top + padY
+    return near ? 'region_cabinet' : null
   }, [])
 
   const [radioHover, setRadioHover] = useState(false)
