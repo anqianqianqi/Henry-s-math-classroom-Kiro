@@ -19,6 +19,7 @@ import { UserNameWithBadges } from '@/components/UserNameWithBadges'
 import { ChallengeLoader, useLoaderVisible } from '@/components/challenge-room/ChallengeLoader'
 import { bookModelUrl } from '@/lib/challengeRoom/model'
 import { challengeAssetTasks, preloadAll, usesRoom } from '@/lib/challengeRoom/preload'
+import { RADIO_MODEL_URL, radioPaletteUrl } from '@/lib/challengeRoom/radio'
 
 interface Challenge {
   id: string
@@ -204,6 +205,8 @@ export default function ChallengePage() {
       bookCoverUrl: defaultCoverUrl,
       bookPageUrl: defaultPageUrl,
       bookFrameUrls: defaultCoverFrameUrls,
+      radioModelUrl: challengeScene?.radioPlacement ? RADIO_MODEL_URL : null,
+      radioTextureUrl: challengeScene?.radioTextureUrl,
     }, room)
 
     preloadAll(tasks, fraction => { if (!cancelled) setAssetProgress(fraction) })
@@ -458,12 +461,12 @@ export default function ChallengePage() {
           const roomQuery = userPrefData?.challenge_room_id
             ? supabase
                 .from('challenge_rooms')
-                .select('room_url, placement, animation')
+                .select('room_url, placement, animation, radio_placement')
                 .eq('id', userPrefData.challenge_room_id)
                 .maybeSingle()
             : supabase
                 .from('challenge_rooms')
-                .select('room_url, placement, animation')
+                .select('room_url, placement, animation, radio_placement')
                 .eq('is_default', true)
                 .eq('is_active', true)
                 .maybeSingle()
@@ -493,6 +496,12 @@ export default function ChallengePage() {
             animation: room.animation,
             coverUrl: pkg?.cover_url ?? null,
             innerUrl: pkg?.inner_url ?? null,
+            // No placement means this room has no radio, and nothing about it
+            // is fetched or rendered.
+            radioPlacement: room.radio_placement ?? null,
+            radioTextureUrl: room.radio_placement
+              ? radioPaletteUrl(userPrefData?.radio_palette)
+              : null,
           }
         } catch (err) {
           // Unchanged contract: any failure here means no room, and the page

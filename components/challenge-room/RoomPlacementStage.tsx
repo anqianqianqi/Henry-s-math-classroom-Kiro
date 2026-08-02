@@ -66,12 +66,38 @@ export interface RoomPlacementStageProps {
    * on a beat later. That is the pop this exists to close.
    */
   onReady?: () => void
+
+  // ── The radio on the window sill ─────────────────────────────────────────
+  /** Stripped GLB. Absent means no radio, which is the default for a room. */
+  radioUrl?: string | null
+  /** Baked palette to paint every region with. */
+  radioTextureUrl?: string | null
+  /** Where it stands, tuned per room against that room's plate. */
+  radioPlacement?: Placement | null
+  /**
+   * Which part was clicked, by material name — `region_knobs`, `region_dial_face`
+   * and so on. The mesh arrives as one primitive per region, so this costs a
+   * raycast and nothing else.
+   */
+  onRadioClick?: (region: string) => void
+  /** Drag the radio rather than the book. Admin placement only. */
+  radioInteractive?: boolean
+  onRadioPlacementChange?: (next: Placement) => void
 }
 
 const deg = (value: number) => THREE.MathUtils.degToRad(value)
 
 /** Normalised longest-side length, so any re-bake lands at the same size. */
 const MODEL_TARGET_SIZE = 2.35
+
+/**
+ * The radio's normalised size, in the same units.
+ *
+ * Roughly a third of the book, which is about right for a mantel radio next to
+ * an open folio. The per-room placement scales from here, so this only has to
+ * put it in the right ballpark for an admin's first drag.
+ */
+const RADIO_TARGET_SIZE = 0.8
 
 /**
  * A page's own corners, from the baked mesh bounds: X 0..2, Z -1.333..1.333,
@@ -102,6 +128,12 @@ export function RoomPlacementStage({
   pagePreview,
   onBookRect,
   onReady,
+  radioUrl,
+  radioTextureUrl,
+  radioPlacement,
+  onRadioClick,
+  radioInteractive = false,
+  onRadioPlacementChange,
 }: RoomPlacementStageProps) {
   const { t } = useLanguage()
   const stageRef = useRef<HTMLDivElement>(null)
@@ -125,6 +157,13 @@ export function RoomPlacementStage({
   const onReadyRef = useRef(onReady)
   /** Latched: the page reveals once, and a texture swap must not re-fire it. */
   const readyFiredRef = useRef(false)
+
+  const radioGroupRef = useRef<THREE.Group | null>(null)
+  const radioTextureRef = useRef<THREE.Texture | null>(null)
+  const onRadioClickRef = useRef(onRadioClick)
+  const [radioReady, setRadioReady] = useState(false)
+  /** Reused across clicks — allocating a raycaster per pointer event is waste. */
+  const raycasterRef = useRef(new THREE.Raycaster())
   const lastRectRef = useRef(0)
   const prevRectRef = useRef<{ xPct: number; yPct: number; wPct: number; hPct: number } | null>(null)
 
@@ -138,6 +177,7 @@ export function RoomPlacementStage({
   useEffect(() => { frameRef.current = frame }, [frame])
   useEffect(() => { onBookRectRef.current = onBookRect }, [onBookRect])
   useEffect(() => { onReadyRef.current = onReady }, [onReady])
+  useEffect(() => { onRadioClickRef.current = onRadioClick }, [onRadioClick])
 
   // ── Scene setup (once) ────────────────────────────────────────────────────
   useEffect(() => {
@@ -409,6 +449,117 @@ export function RoomPlacementStage({
     group.rotation.set(deg(placement.tilt), deg(placement.turn), deg(placement.roll))
   }, [placement, modelReady])
 
+  // ── Load the radio ───────────────────────────────────────────────────────
+  /*
+    A second object in the same scene, camera and lighting as the book — the
+    room stays a flat <img> behind both.
+
+    Normalised the same way the book is: centred on its own bounds and scaled to
+    a fixed longest side, so the saved placement means the same thing no matter
+    what the source model's units were.
+  */
+  useEffect(() => {
+    if (!radioUrl || !sceneRef.current) return
+    let cancelled = false
+
+    new GLTFLoader().load(
+      radioUrl,
+      gltf => {
+        if (cancelled || !sceneRef.current) return
+
+        const model = gltf.scene
+        model.updateMatrixWorld(true)
+        const bounds = new THREE.Box3().setFromObject(model)
+        const center = bounds.getCenter(new THREE.Vector3())
+        const size = bounds.getSize(new THREE.Vector3())
+        const longest = Math.max(size.x, size.y, size.z) || 1
+        model.position.sub(center)
+        model.scale.setScalar(RADIO_TARGET_SIZE / longest)
+
+        model.traverse(object => {
+          if (!(object instanceof THREE.Mesh)) return
+          object.castShadow = true
+          object.receiveShadow = true
+          // Cloned before anything is changed on it. GLTFLoader caches
+          // materials across loads, and painting a palette onto a shared
+          // instance would repaint every other radio using it — the handoff's
+          // AGENTS.md calls this out for the same reason.
+          object.material = (object.material as THREE.Material).clone()
+        })
+
+        const group = new THREE.Group()
+        group.add(model)
+        sceneRef.current.add(group)
+        radioGroupRef.current = group
+        setRadioReady(true)
+      },
+      undefined,
+      loadError => {
+        // A missing radio is a room without one, not a broken room. The book is
+        // the point of the page and must not be held hostage to a prop.
+        if (!cancelled) console.error('[RoomPlacementStage] radio load failed:', loadError)
+      },
+    )
+
+    return () => {
+      cancelled = true
+      const group = radioGroupRef.current
+      if (group && sceneRef.current) {
+        sceneRef.current.remove(group)
+        group.traverse(object => {
+          if (object instanceof THREE.Mesh) {
+            object.geometry.dispose()
+            const list = Array.isArray(object.material) ? object.material : [object.material]
+            for (const material of list) material?.dispose()
+          }
+        })
+      }
+      radioGroupRef.current = null
+      radioTextureRef.current?.dispose()
+      radioTextureRef.current = null
+      setRadioReady(false)
+    }
+  }, [radioUrl])
+
+  // ── Paint the radio with the chosen palette ──────────────────────────────
+  useEffect(() => {
+    if (!radioReady || !radioTextureUrl) return
+    let cancelled = false
+
+    new THREE.TextureLoader().load(radioTextureUrl, texture => {
+      if (cancelled || !radioGroupRef.current) { texture.dispose(); return }
+      texture.colorSpace = THREE.SRGBColorSpace
+      // glTF UV convention, same as the book's pages.
+      texture.flipY = false
+      texture.wrapS = THREE.ClampToEdgeWrapping
+      texture.wrapT = THREE.ClampToEdgeWrapping
+      texture.anisotropy = rendererRef.current?.capabilities.getMaxAnisotropy() ?? 1
+
+      radioTextureRef.current?.dispose()
+      radioTextureRef.current = texture
+
+      // Every region shares the one baked image: the palette was baked as a
+      // single texture covering all seven UV islands at once.
+      radioGroupRef.current.traverse(object => {
+        if (!(object instanceof THREE.Mesh)) return
+        const material = object.material as THREE.MeshStandardMaterial
+        material.map = texture
+        material.needsUpdate = true
+      })
+    })
+
+    return () => { cancelled = true }
+  }, [radioReady, radioTextureUrl])
+
+  // ── Apply the radio's placement ──────────────────────────────────────────
+  useEffect(() => {
+    const group = radioGroupRef.current
+    if (!group || !radioPlacement) return
+    group.position.set(radioPlacement.x, radioPlacement.y, 0)
+    group.scale.setScalar(radioPlacement.scale)
+    group.rotation.set(deg(radioPlacement.tilt), deg(radioPlacement.turn), deg(radioPlacement.roll))
+  }, [radioPlacement, radioReady])
+
   // ── Scrub to a frame when not playing ────────────────────────────────────
   useEffect(() => {
     const action = actionRef.current
@@ -559,17 +710,28 @@ export function RoomPlacementStage({
   // ── Drag to move, wheel to scale ─────────────────────────────────────────
   const dragRef = useRef<{ id: number; x: number; y: number; startX: number; startY: number } | null>(null)
 
+  /*
+    Which placement the drag and wheel act on. The admin tool points the same
+    six controls at either object rather than growing a second editor, so the
+    stage has to know which one is live.
+  */
+  const dragTarget = radioInteractive && radioPlacement ? radioPlacement : placement
+  const emitTarget = radioInteractive && radioPlacement
+    ? (onRadioPlacementChange ?? (() => {}))
+    : onPlacementChange
+  const dragEnabled = interactive || (radioInteractive && !!radioPlacement)
+
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!interactive) return
+    if (!dragEnabled) return
     event.currentTarget.setPointerCapture(event.pointerId)
     dragRef.current = {
       id: event.pointerId,
       x: event.clientX,
       y: event.clientY,
-      startX: placement.x,
-      startY: placement.y,
+      startX: dragTarget.x,
+      startY: dragTarget.y,
     }
-  }, [interactive, placement.x, placement.y])
+  }, [dragEnabled, dragTarget.x, dragTarget.y])
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
     const drag = dragRef.current
@@ -581,17 +743,60 @@ export function RoomPlacementStage({
     // Convert pixel delta into world units via the orthographic frustum
     const dx = ((event.clientX - drag.x) / rect.width) * viewWidth
     const dy = -((event.clientY - drag.y) / rect.height) * viewHeight
-    onPlacementChange({ ...placement, x: drag.startX + dx, y: drag.startY + dy })
-  }, [onPlacementChange, placement])
+    emitTarget({ ...dragTarget, x: drag.startX + dx, y: drag.startY + dy })
+  }, [emitTarget, dragTarget])
 
   const endDrag = useCallback(() => { dragRef.current = null }, [])
 
   const handleWheel = useCallback((event: React.WheelEvent<HTMLCanvasElement>) => {
-    if (!interactive) return
+    if (!dragEnabled) return
     event.preventDefault()
-    const next = placement.scale * (event.deltaY > 0 ? 0.96 : 1.04)
-    onPlacementChange({ ...placement, scale: Math.min(4, Math.max(0.2, next)) })
-  }, [interactive, onPlacementChange, placement])
+    const next = dragTarget.scale * (event.deltaY > 0 ? 0.96 : 1.04)
+    emitTarget({ ...dragTarget, scale: Math.min(4, Math.max(0.2, next)) })
+  }, [dragEnabled, emitTarget, dragTarget])
+
+  /**
+   * Which region of the radio is under the pointer, or null.
+   *
+   * The stripped GLB is one mesh per region material, so the intersected
+   * object's material name IS the region — no lookup table, no extra data.
+   */
+  const pickRadioRegion = useCallback((clientX: number, clientY: number): string | null => {
+    const group = radioGroupRef.current
+    const camera = cameraRef.current
+    const stage = stageRef.current
+    if (!group || !camera || !stage) return null
+
+    const rect = stage.getBoundingClientRect()
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1,
+    )
+    raycasterRef.current.setFromCamera(ndc, camera)
+    const hit = raycasterRef.current.intersectObject(group, true)[0]
+    if (!hit) return null
+    const material = (hit.object as THREE.Mesh).material as THREE.Material
+    return material?.name || null
+  }, [])
+
+  const [radioHover, setRadioHover] = useState(false)
+
+  const handleCanvasPointerMove = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
+    handlePointerMove(event)
+    // Only worth a raycast when something can respond to it.
+    if (!onRadioClickRef.current || !radioReady) return
+    setRadioHover(pickRadioRegion(event.clientX, event.clientY) !== null)
+  }, [handlePointerMove, pickRadioRegion, radioReady])
+
+  const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    // The radio gets first refusal. Without this the click falls through to the
+    // book and opens it, which is not what clicking a radio should do.
+    if (onRadioClickRef.current && radioReady) {
+      const region = pickRadioRegion(event.clientX, event.clientY)
+      if (region) { onRadioClickRef.current(region); return }
+    }
+    onCanvasClick?.()
+  }, [onCanvasClick, pickRadioRegion, radioReady])
 
   return (
     <div
@@ -618,14 +823,15 @@ export function RoomPlacementStage({
       <canvas
         ref={canvasRef}
         className={`absolute inset-0 h-full w-full ${
-          interactive ? 'cursor-move' : onCanvasClick ? 'cursor-pointer' : ''
+          dragEnabled ? 'cursor-move' : radioHover || onCanvasClick ? 'cursor-pointer' : ''
         }`}
         onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
+        onPointerMove={handleCanvasPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        onPointerLeave={() => setRadioHover(false)}
         onWheel={handleWheel}
-        onClick={onCanvasClick}
+        onClick={handleCanvasClick}
       />
 
       {loading && (

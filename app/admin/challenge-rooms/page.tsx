@@ -48,6 +48,13 @@ import { ROOM_THEMES, randomRoomSpec } from '@/lib/challengeRoom/themes'
 import { validateRoomSpec } from '@/lib/challengeRoom/prompt'
 import { bookModelUrl, MODEL_SETUP_HINT } from '@/lib/challengeRoom/model'
 import {
+  DEFAULT_RADIO_PALETTE,
+  DEFAULT_RADIO_PLACEMENT,
+  RADIO_MODEL_URL,
+  RADIO_PALETTES,
+  radioPaletteUrl,
+} from '@/lib/challengeRoom/radio'
+import {
   BOOK_MODEL_KEY,
   DEFAULT_ANIMATION,
   DEFAULT_PLACEMENT,
@@ -83,6 +90,21 @@ export default function ChallengeRoomsAdminPage() {
   const [animation, setAnimation] = useState<AnimationConfig>(DEFAULT_ANIMATION)
   const [frame, setFrame] = useState(SPREAD_FRAME)
   const [playing, setPlaying] = useState(false)
+
+  /*
+    The radio on the sill.
+
+    null is a room WITHOUT one, and that is the default — so a room only gains
+    a radio when someone deliberately adds it here. The same six controls below
+    point at whichever object `target` names, rather than the form growing a
+    second copy of the whole placement rig.
+  */
+  const [radioPlacement, setRadioPlacement] = useState<Placement | null>(null)
+  const [target, setTarget] = useState<'book' | 'radio'>('book')
+  const [radioPaletteId, setRadioPaletteId] = useState(DEFAULT_RADIO_PALETTE)
+  const editing = target === 'radio' && radioPlacement ? radioPlacement : placement
+  const setEditing = (next: Placement) =>
+    target === 'radio' && radioPlacement ? setRadioPlacement(next) : setPlacement(next)
 
   const [packages, setPackages] = useState<TexturePackageOption[]>([])
   const [packageId, setPackageId] = useState<string>('')
@@ -220,6 +242,7 @@ export default function ChallengeRoomsAdminPage() {
         room_url: plateUrl,
         recipe: spec,
         placement,
+        radio_placement: radioPlacement,
         animation,
         model_key: BOOK_MODEL_KEY,
         visibility,
@@ -256,6 +279,8 @@ export default function ChallengeRoomsAdminPage() {
     setPlateUrl(room.room_url)
     if (room.recipe) setSpec(room.recipe)
     setPlacement(room.placement ?? DEFAULT_PLACEMENT)
+    setRadioPlacement((room as any).radio_placement ?? null)
+    setTarget('book')
     setAnimation(room.animation ?? DEFAULT_ANIMATION)
     setRoomName(room.name)
     setRoomDescription(room.description ?? '')
@@ -512,10 +537,71 @@ export default function ChallengeRoomsAdminPage() {
                       onFrameChange={setFrame}
                       playing={playing}
                       onPlayingChange={setPlaying}
+                      // Dragging moves whichever object is selected below.
+                      interactive={target === 'book'}
+                      radioInteractive={target === 'radio'}
+                      radioUrl={radioPlacement ? RADIO_MODEL_URL : null}
+                      radioTextureUrl={radioPaletteUrl(radioPaletteId)}
+                      radioPlacement={radioPlacement}
+                      onRadioPlacementChange={setRadioPlacement}
                     />
                     <p className="text-xs text-gray-400">
                       {t('roomAdmin.dragHint')}
                     </p>
+
+                    {/* ── What the sliders and the drag act on ─────────── */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTarget('book')}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          target === 'book'
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        📖 {t('roomAdmin.targetBook')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // First click on an empty room both adds the radio and
+                          // selects it — otherwise the toggle would appear to do
+                          // nothing at all.
+                          if (!radioPlacement) setRadioPlacement(DEFAULT_RADIO_PLACEMENT)
+                          setTarget('radio')
+                        }}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          target === 'radio'
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        📻 {radioPlacement ? t('roomAdmin.targetRadio') : t('roomAdmin.addRadio')}
+                      </button>
+                      {radioPlacement && (
+                        <>
+                          <select
+                            value={radioPaletteId}
+                            onChange={e => setRadioPaletteId(e.target.value)}
+                            className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs text-gray-900"
+                            aria-label={t('radio.palette')}
+                          >
+                            {RADIO_PALETTES.map(p => (
+                              <option key={p.id} value={p.id}>{t(p.labelKey)}</option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => { setRadioPlacement(null); setTarget('book') }}
+                            className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
+                          >
+                            {t('roomAdmin.removeRadio')}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400">{t('roomAdmin.radioPaletteHint')}</p>
                   </>
                 )}
 
@@ -581,19 +667,20 @@ export default function ChallengeRoomsAdminPage() {
                     </p>
                   </div>
 
+                  {/* One rig, pointed at whichever object the toggle above selected. */}
                   <div className="grid grid-cols-2 gap-3">
-                    <Slider label="X" value={placement.x} min={-3} max={3} step={0.01}
-                      onChange={v => setPlacement({ ...placement, x: v })} />
-                    <Slider label="Y" value={placement.y} min={-3} max={3} step={0.01}
-                      onChange={v => setPlacement({ ...placement, y: v })} />
-                    <Slider label="Scale" value={placement.scale} min={0.2} max={4} step={0.01}
-                      onChange={v => setPlacement({ ...placement, scale: v })} />
-                    <Slider label="Tilt°" value={placement.tilt} min={-90} max={90} step={1}
-                      onChange={v => setPlacement({ ...placement, tilt: v })} />
-                    <Slider label="Turn°" value={placement.turn} min={-180} max={180} step={1}
-                      onChange={v => setPlacement({ ...placement, turn: v })} />
-                    <Slider label="Roll°" value={placement.roll} min={-180} max={180} step={1}
-                      onChange={v => setPlacement({ ...placement, roll: v })} />
+                    <Slider label="X" value={editing.x} min={-3} max={3} step={0.01}
+                      onChange={v => setEditing({ ...editing, x: v })} />
+                    <Slider label="Y" value={editing.y} min={-3} max={3} step={0.01}
+                      onChange={v => setEditing({ ...editing, y: v })} />
+                    <Slider label="Scale" value={editing.scale} min={0.2} max={4} step={0.01}
+                      onChange={v => setEditing({ ...editing, scale: v })} />
+                    <Slider label="Tilt°" value={editing.tilt} min={-90} max={90} step={1}
+                      onChange={v => setEditing({ ...editing, tilt: v })} />
+                    <Slider label="Turn°" value={editing.turn} min={-180} max={180} step={1}
+                      onChange={v => setEditing({ ...editing, turn: v })} />
+                    <Slider label="Roll°" value={editing.roll} min={-180} max={180} step={1}
+                      onChange={v => setEditing({ ...editing, roll: v })} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-3">

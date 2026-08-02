@@ -22,6 +22,7 @@ import { MagicBookReveal } from '@/components/MagicBookReveal'
 import { Book3DReveal } from './Book3DReveal'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import { bookModelUrl } from '@/lib/challengeRoom/model'
+import { RADIO_MODEL_URL } from '@/lib/challengeRoom/radio'
 import type { AnimationConfig, Placement } from '@/lib/types/challengeRoom'
 import type { OverlayObject } from '@/components/BookCoverWithOverlays'
 
@@ -31,6 +32,14 @@ export interface ChallengeScene {
   animation: AnimationConfig
   coverUrl: string | null
   innerUrl: string | null
+  /**
+   * Where the radio stands on this room's sill, tuned by an admin against this
+   * room's plate. Null means this room has no radio — which is every room until
+   * someone places one, so the feature ships dark.
+   */
+  radioPlacement?: Placement | null
+  /** The student's chosen colourway, already resolved to a file. */
+  radioTextureUrl?: string | null
 }
 
 export interface ChallengeBookShellProps {
@@ -102,6 +111,11 @@ export function ChallengeBookShell({
         animation={scene.animation}
         problemPreview={problemPreview}
         onReady={onReady}
+        // Only pass the model when there is somewhere to put it, so a room
+        // without a placement never downloads it.
+        radioUrl={scene.radioPlacement ? RADIO_MODEL_URL : null}
+        radioTextureUrl={scene.radioTextureUrl}
+        radioPlacement={scene.radioPlacement}
       >
         {children}
       </Book3DReveal>

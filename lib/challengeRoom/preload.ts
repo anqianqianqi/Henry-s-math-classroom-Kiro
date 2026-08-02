@@ -170,6 +170,9 @@ export interface ChallengeAssets {
   modelUrl?: string | null
   coverUrl?: string | null
   innerUrl?: string | null
+  /** The radio, when this room has one placed. Both, or neither. */
+  radioModelUrl?: string | null
+  radioTextureUrl?: string | null
   /** 2D path. */
   bookCoverUrl?: string | null
   bookPageUrl?: string | null
@@ -216,6 +219,22 @@ export function challengeAssetTasks(assets: ChallengeAssets, room: boolean): Pre
     for (const url of [assets.coverUrl, assets.innerUrl]) {
       if (url) tasks.push({ kind: 'texture', run: () => preloadImage(url) })
     }
+
+    /*
+      The radio goes in the gate rather than arriving after it. Stripped it is
+      24 KB against the book's 2.63 MiB, so waiting for it costs essentially
+      nothing — and letting it land late would put a radio popping onto the sill
+      a beat after the room appears, which is the fault this gate exists to fix.
+
+      Weighted as an image, not a model: `model` is sized for a 2.63 MiB book,
+      and giving 24 KB 60% of the bar would park the progress bar at nothing
+      while the real download ran.
+    */
+    if (assets.radioModelUrl) {
+      const url = assets.radioModelUrl
+      tasks.push({ kind: 'image', run: onProgress => preloadModel(url, onProgress) })
+    }
+    image(assets.radioTextureUrl)
   } else {
     image(assets.bookCoverUrl)
     image(assets.bookPageUrl)

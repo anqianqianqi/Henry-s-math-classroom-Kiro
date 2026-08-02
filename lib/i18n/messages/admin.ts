@@ -228,6 +228,16 @@ export const admin = {
     zh: '拖动书本可移动 · 滚轮缩放',
   },
   'roomAdmin.resetPlacement': { en: 'Reset placement', zh: '重置位置' },
+  // The radio on the sill. One placement rig serves both objects, so these
+  // label which one the sliders and the drag are currently moving.
+  'roomAdmin.targetBook': { en: 'Move the book', zh: '调整书本' },
+  'roomAdmin.targetRadio': { en: 'Move the radio', zh: '调整收音机' },
+  'roomAdmin.addRadio': { en: 'Add a radio', zh: '添加收音机' },
+  'roomAdmin.removeRadio': { en: 'Remove radio', zh: '移除收音机' },
+  'roomAdmin.radioPaletteHint': {
+    en: 'Preview colour only — each student sees the colourway they picked.',
+    zh: '此处仅为预览配色，学生看到的是各自选择的颜色。',
+  },
   'roomAdmin.previewWithPackage': { en: 'Preview with book package', zh: '用书本套装预览' },
   'roomAdmin.plainPages': { en: 'Plain pages (no package)', zh: '空白内页（不使用套装）' },
   // ── Shop admin ───────────────────────────────────────────

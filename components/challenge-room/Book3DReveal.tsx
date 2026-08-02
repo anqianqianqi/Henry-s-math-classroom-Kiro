@@ -33,6 +33,9 @@ import {
 } from '@/lib/types/challengeRoom'
 import { DreamSketchBoundary } from '@/components/ui/DreamSketchBoundary'
 import { useAdaptiveInk } from '@/components/ui/useAdaptiveInk'
+import { RadioPanel } from './RadioPanel'
+import { radioActionFor } from '@/lib/challengeRoom/radio'
+import { nextTrack } from '@/lib/music/audioStore'
 
 const RoomPlacementStage = dynamicImport(
   () => import('./RoomPlacementStage').then(m => m.RoomPlacementStage),
@@ -61,6 +64,11 @@ export interface Book3DRevealProps {
   problemPreview?: { title: string; body: string }
   /** Fired once the book is on screen WITH its cover and pages — see the stage. */
   onReady?: () => void
+
+  /** The radio on the sill. All three, or none — a placement is what turns it on. */
+  radioUrl?: string | null
+  radioTextureUrl?: string | null
+  radioPlacement?: Placement | null
 }
 
 type Phase = 'closed' | 'opening' | 'open' | 'zoomed'
@@ -94,8 +102,32 @@ export function Book3DReveal({
   animation,
   problemPreview,
   onReady,
+  radioUrl,
+  radioTextureUrl,
+  radioPlacement,
 }: Book3DRevealProps) {
   const [phase, setPhase] = useState<Phase>('closed')
+  const [radioPanelOpen, setRadioPanelOpen] = useState(false)
+  const [radioPlaylistOpen, setRadioPlaylistOpen] = useState(false)
+
+  /**
+   * Clicking the radio.
+   *
+   * The knobs and the dial are the two parts a hand would actually reach for,
+   * so they do the thing that part does. Everything else opens the panel, which
+   * is where the controls a mesh cannot offer — seek, volume, the full list —
+   * actually live.
+   */
+  const handleRadioClick = useCallback((region: string) => {
+    const action = radioActionFor(region)
+    if (action === 'next') { nextTrack(); return }
+    if (action === 'playlist') {
+      setRadioPanelOpen(true)
+      setRadioPlaylistOpen(open => !open)
+      return
+    }
+    setRadioPanelOpen(open => !open)
+  }, [])
   const [frame, setFrame] = useState(animation.startFrame)
   const [playing, setPlaying] = useState(false)
 
@@ -324,7 +356,26 @@ export function Book3DReveal({
             pagePreview={phase === 'open' || zoomed ? pagePreview : undefined}
             onBookRect={setBookRect}
             onReady={onReady}
+            radioUrl={radioUrl}
+            radioTextureUrl={radioTextureUrl}
+            radioPlacement={radioPlacement}
+            onRadioClick={handleRadioClick}
           />
+
+          {/*
+            Sits over the stage, inside the same box, so it reads as belonging
+            to the room rather than floating above the page. Hidden once zoomed
+            — at that point the student is working on the pages, and the room
+            behind them is blurred out of the way.
+          */}
+          {radioUrl && radioPlacement && !zoomed && (
+            <RadioPanel
+              open={radioPanelOpen}
+              onClose={() => setRadioPanelOpen(false)}
+              playlistOpen={radioPlaylistOpen}
+              onPlaylistOpenChange={setRadioPlaylistOpen}
+            />
+          )}
         </div>
 
         {/* ── Affordances ─────────────────────────────────────────────── */}
