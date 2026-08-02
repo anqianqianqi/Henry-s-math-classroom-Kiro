@@ -273,6 +273,10 @@ export const admin = {
   'shopAdmin.off': { en: 'Off', zh: '停用' },
   'shopAdmin.on': { en: 'On', zh: '启用' },
   'shopAdmin.deleteTitle': { en: 'Permanently delete shop item', zh: '永久删除该商品' },
+  'shopAdmin.previewHint': {
+    en: 'Click an image to preview · Edit/Off/Delete per item',
+    zh: '点击图片查看预览 · 每件商品可编辑／停用／删除',
+  },
   'shopAdmin.redemptions': { en: 'All Redemptions', zh: '全部兑换记录' },
   'shopAdmin.noRedemptions': { en: 'No redemptions yet.', zh: '还没有兑换记录。' },
   'shopAdmin.colStudent': { en: 'Student', zh: '学生' },

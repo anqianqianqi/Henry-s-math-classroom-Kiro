@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { HomeButton } from '@/components/ui/HomeButton'
+import { AssetPreviewOverlay, type PreviewPane } from '@/components/shop/AssetPreviewOverlay'
 import dynamicImport from 'next/dynamic'
 import {
   validateShopItemForm,
@@ -62,7 +63,7 @@ function AssetBrowseAdminModal({
 }: {
   title: string
   aspect: string
-  assets: Array<{ id: string; name: string; imageUrl: string; shop_item_id: string }>
+  assets: Array<{ id: string; name: string; imageUrl: string; preview: PreviewPane[]; shop_item_id: string }>
   items: ShopItem[]
   onClose: () => void
   onEdit: (item: ShopItem) => void
@@ -71,12 +72,19 @@ function AssetBrowseAdminModal({
   onDelete: (id: string) => void
 }) {
   const { t } = useLanguage()
+  const [preview, setPreview] = useState<{ name: string; panes: PreviewPane[] } | null>(null)
 
   return (
+    /* Preview is a sibling — nested, its click-outside would bubble into this
+       modal's own and close both. */
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
-          <div className="font-bold text-gray-900">{title} ({assets.length})</div>
+          <div>
+            <div className="font-bold text-gray-900">{title} ({assets.length})</div>
+            <div className="text-xs text-gray-400 mt-0.5">{t('shopAdmin.previewHint')}</div>
+          </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
         </div>
         <div className="overflow-y-auto p-4 grid grid-cols-2 gap-4">
@@ -87,9 +95,15 @@ function AssetBrowseAdminModal({
                 key={asset.id}
                 className={`bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex flex-col ${shopItem && !shopItem.is_active ? 'opacity-60' : ''}`}
               >
-                <div className={`relative w-full ${aspect} overflow-hidden`}>
+                <div
+                  className={`relative w-full ${aspect} overflow-hidden group cursor-zoom-in`}
+                  onClick={() => setPreview({ name: asset.name, panes: asset.preview })}
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={asset.imageUrl} alt={asset.name} className="w-full h-full object-cover" />
+                  <img src={asset.imageUrl} alt={asset.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/10">
+                    <span className="bg-black/60 text-white text-xs font-semibold px-2.5 py-1 rounded-full">🔍 {t('shop.preview')}</span>
+                  </div>
                   {shopItem && !shopItem.is_active && (
                     <div className="absolute top-1.5 right-1.5 bg-gray-700/80 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
                       {t('shopAdmin.inactive')}
@@ -138,6 +152,14 @@ function AssetBrowseAdminModal({
         </div>
       </div>
     </div>
+    {preview && (
+      <AssetPreviewOverlay
+        name={preview.name}
+        panes={preview.panes}
+        onClose={() => setPreview(null)}
+      />
+    )}
+    </>
   )
 }
 
@@ -418,7 +440,8 @@ export default function AdminShopPage() {
   interface BookSkin { id: string; name: string; image_url: string; shop_item_id: string }
   // Challenge rooms + their book bundles — same shop_item_id pattern again.
   interface ChallengeRoomRow { id: string; name: string; room_url: string; shop_item_id: string }
-  interface BundleRow { id: string; name: string; cover_url: string; shop_item_id: string }
+  /** inner_url so the preview can show the pair — a bundle is cover AND pages. */
+  interface BundleRow { id: string; name: string; cover_url: string; inner_url: string | null; shop_item_id: string }
   const [roomBgs, setRoomBgs] = useState<RoomBg[]>([])
   const [bookSkins, setBookSkins] = useState<BookSkin[]>([])
   const [challengeRooms, setChallengeRooms] = useState<ChallengeRoomRow[]>([])
@@ -475,7 +498,7 @@ export default function AdminShopPage() {
 
       const { data: btpRows } = await supabase
         .from('book_texture_packages')
-        .select('id, name, cover_url, shop_item_id')
+        .select('id, name, cover_url, inner_url, shop_item_id')
         .eq('is_active', true)
         .not('shop_item_id', 'is', null)
       if (btpRows) setBookBundles((btpRows as any[]).filter(b => shopItemMap[b.shop_item_id]))
@@ -1124,7 +1147,10 @@ export default function AdminShopPage() {
         <AssetBrowseAdminModal
           title={`🪟 ${t('shop.challengeRooms')}`}
           aspect="aspect-video"
-          assets={challengeRooms.map(r => ({ id: r.id, name: r.name, imageUrl: r.room_url, shop_item_id: r.shop_item_id }))}
+          assets={challengeRooms.map(r => ({
+            id: r.id, name: r.name, imageUrl: r.room_url, shop_item_id: r.shop_item_id,
+            preview: [{ url: r.room_url }],
+          }))}
           items={items}
           onClose={() => setShowChallengeRoomBrowse(false)}
           onEdit={(item) => { setShowChallengeRoomBrowse(false); handleEdit(item) }}
@@ -1138,7 +1164,13 @@ export default function AdminShopPage() {
         <AssetBrowseAdminModal
           title={`📚 ${t('shop.challengeBooks')}`}
           aspect="aspect-[3/4]"
-          assets={bookBundles.map(b => ({ id: b.id, name: b.name, imageUrl: b.cover_url, shop_item_id: b.shop_item_id }))}
+          assets={bookBundles.map(b => ({
+            id: b.id, name: b.name, imageUrl: b.cover_url, shop_item_id: b.shop_item_id,
+            preview: b.inner_url
+              ? [{ url: b.cover_url, label: t('shop.previewCover') },
+                 { url: b.inner_url, label: t('shop.previewInnerPage') }]
+              : [{ url: b.cover_url }],
+          }))}
           items={items}
           onClose={() => setShowBundleBrowse(false)}
           onEdit={(item) => { setShowBundleBrowse(false); handleEdit(item) }}
