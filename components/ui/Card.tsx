@@ -32,9 +32,29 @@ interface RootCardProps extends CardProps {
    * of forty rows.
    */
   plain?: boolean
+
+  /**
+   * No card chrome at all: no wash, no grain, no mask, no pooling, no lift.
+   * The caller supplies every visual it wants.
+   *
+   * For a Card that is already sitting on something painted — the book pages in
+   * the challenge room — where a second sheet of paper on top of the first is
+   * exactly the thing to avoid.
+   *
+   * This has to be a prop rather than a className override, because the
+   * treatment is an inline style. `!bg-transparent` compiles to
+   * `background-color: transparent !important`, which cannot touch
+   * `background-image`, so the wash and its two gradients kept painting and the
+   * mask kept feathering the edges of whatever was inside.
+   */
+  bare?: boolean
 }
 
-export function Card({ children, className = '', plain = false, ...props }: RootCardProps) {
+export function Card({ children, className = '', plain = false, bare = false, ...props }: RootCardProps) {
+  if (bare) {
+    return <div className={className} {...props}>{children}</div>
+  }
+
   if (plain) {
     return (
       <div
