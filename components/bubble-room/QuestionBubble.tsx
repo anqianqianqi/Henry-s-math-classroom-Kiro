@@ -137,7 +137,11 @@ export function QuestionBubble({ instance, onClick, searchQuery = '', dying = fa
           '--speed': `${speed}s`,
           left: `${x}%`,
           bottom: '-80px',
-          transform: 'translateX(-50%)',
+          // Only set the base transform when not dying — when dying the animation
+          // has already moved the element; removing the inline override lets the
+          // paused animation's last keyframe transform stay in effect at its
+          // current screen position, so visibility:hidden hides it in place.
+          transform: dying ? undefined : 'translateX(-50%)',
           animationPlayState: (phase !== 'idle' || dying) ? 'paused' : 'running',
           animationDuration: `${speed}s`,
           animationTimingFunction: 'ease-out',
