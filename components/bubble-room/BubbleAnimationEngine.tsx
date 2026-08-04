@@ -41,10 +41,10 @@ const ANIMATION_BUFFER_MS = 500
 const MAX_ON_SCREEN = 15
 const MAX_PER_QUESTION_SMALL_POOL = 2
 
-const X_MIN = 5
-const X_MAX = 95
-const DRIFT_MAG_MIN = 10
-const DRIFT_MAG_MAX = 28
+const X_MIN = 15
+const X_MAX = 85
+const DRIFT_MAG_MIN = 5
+const DRIFT_MAG_MAX = 15
 /** Rise speed range — slower for a more relaxed floating feel */
 const SPEED_MIN = 14   // slower floor for gentle drifting
 const SPEED_MAX = 28

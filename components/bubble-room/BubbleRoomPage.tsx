@@ -451,7 +451,7 @@ export function BubbleRoomPage({
       </div>
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
-      <div className="relative" style={{ height: 'calc(100vh - 112px)' }}>
+      <div className="relative overflow-hidden" style={{ height: 'calc(100vh - 112px)' }}>
         {isAnimationActive ? (
           /* Animation mode */
           <BubbleAnimationEngine
