@@ -44,7 +44,8 @@ const RoomPlacementStage = dynamicImport(
     ),
   },
 )
-import { ROOM_THEMES, randomRoomSpec } from '@/lib/challengeRoom/themes'
+import { ROOM_THEMES, randomRoomSpec, type RoomTheme } from '@/lib/challengeRoom/themes'
+import { AxisChips } from '@/components/challenge-room/AxisChips'
 import { validateRoomSpec } from '@/lib/challengeRoom/prompt'
 import { bookModelUrl, MODEL_SETUP_HINT } from '@/lib/challengeRoom/model'
 import {
@@ -61,6 +62,7 @@ import {
   DEFAULT_LIGHT_POSITION,
   SPREAD_FRAME,
   type AnimationConfig,
+  type AxisVector,
   type ChallengeRoom,
   type LightPosition,
   type Placement,
@@ -83,6 +85,32 @@ export default function ChallengeRoomsAdminPage() {
   const [isAdmin, setIsAdmin] = useState(false)
 
   const [spec, setSpec] = useState<RoomSpec>(() => randomRoomSpec())
+
+  /*
+    The invented-recipe half of the recipe panel.
+
+    `recentVectors` is what makes repeated presses of Invent land somewhere
+    genuinely different: the roller is told to stay at least two axes away from
+    the last six cells. Six because that is roughly a sitting's worth of
+    re-rolls — beyond it the constraint starts fighting the roll itself.
+  */
+  const [vector, setVector] = useState<AxisVector | null>(null)
+  const [recentVectors, setRecentVectors] = useState<AxisVector[]>([])
+  const [inventing, setInventing] = useState(false)
+
+  /*
+    The theme library: the constants in themes.ts plus whatever admins have
+    promoted since. Fetched rather than imported, which is the price of the
+    library being able to grow — until it arrives the picker falls back to the
+    constants, so the page is usable on first paint and if the migration has
+    not been run yet.
+  */
+  const [themes, setThemes] = useState<RoomTheme[]>(ROOM_THEMES)
+  const [seenVectors, setSeenVectors] = useState<AxisVector[]>([])
+  const [cellCount, setCellCount] = useState(0)
+  const [canPromote, setCanPromote] = useState(false)
+  const [savingTheme, setSavingTheme] = useState(false)
+
   const [plateUrl, setPlateUrl] = useState<string | null>(null)
   const [compiledPrompt, setCompiledPrompt] = useState('')
   const [changePrompt, setChangePrompt] = useState('')
@@ -178,11 +206,102 @@ export default function ChallengeRoomsAdminPage() {
     }
   }, [supabase])
 
+  const loadThemes = useCallback(async () => {
+    try {
+      const res = await fetch('/api/themes')
+      if (!res.ok) return
+      const payload = await res.json()
+      if (Array.isArray(payload.rooms) && payload.rooms.length > 0) setThemes(payload.rooms)
+      if (Array.isArray(payload.seenVectors)) setSeenVectors(payload.seenVectors)
+      if (typeof payload.cellCount === 'number') setCellCount(payload.cellCount)
+      setCanPromote(payload.promotable === true)
+    } catch {
+      // Keeping the constants is the whole fallback; nothing to report.
+    }
+  }, [])
+
   useEffect(() => {
     if (!isAdmin) return
     loadRooms()
     loadPackages()
-  }, [isAdmin, loadRooms, loadPackages])
+    loadThemes()
+  }, [isAdmin, loadRooms, loadPackages, loadThemes])
+
+  /** Fold the recipe on screen into the theme library so later rolls can use it. */
+  async function saveTheme() {
+    setError(null)
+    setSuccess(null)
+    setSavingTheme(true)
+    try {
+      const res = await fetch('/api/themes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'room', spec }),
+      })
+      const payload = await res.json()
+      if (!res.ok) {
+        setError(payload.error || t('design.themeSaveFailed'))
+        return
+      }
+      setSuccess(
+        payload.created
+          ? t('design.themeCreated', { name: spec.name })
+          : t('design.themeExtended', { name: spec.name }),
+      )
+      await loadThemes()
+    } catch (err: any) {
+      setError(err.message || t('design.themeSaveFailed'))
+    } finally {
+      setSavingTheme(false)
+    }
+  }
+
+  /**
+   * Roll a cell, have the small model write a recipe into it, drop the result
+   * in the form.
+   *
+   * Nothing is saved and nothing is generated — the fields stay editable, so a
+   * theme that is nearly right is a starting point rather than a commitment.
+   */
+  async function invent() {
+    setError(null)
+    setSuccess(null)
+    setInventing(true)
+    try {
+      const res = await fetch('/api/invent-recipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'room',
+          avoidVectors: recentVectors,
+          seenVectors,
+          avoidNames: [spec.name, ...themes.map(x => x.name)],
+        }),
+      })
+      const payload = await res.json()
+      if (!res.ok) {
+        setError(payload.error || t('design.inventFailed'))
+        return
+      }
+
+      if (payload.room) setSpec(payload.room)
+      if (payload.vector) {
+        setVector(payload.vector)
+        setRecentVectors(prev => [payload.vector, ...prev].slice(0, 6))
+      }
+      // The note is diagnostic English from the route; the admin gets the
+      // translated sentence and the detail goes to the console.
+      if (payload.source === 'fallback') {
+        console.warn('[invent-recipe]', payload.note)
+        setSuccess(t('design.inventFellBack'))
+      }
+      if (payload.adjusted?.length) console.info('[invent-recipe] adjusted:', payload.adjusted)
+    } catch (err: any) {
+      setError(err.message || t('design.inventFailed'))
+    } finally {
+      setInventing(false)
+    }
+  }
 
   // ── Generate / refine ─────────────────────────────────────────────────────
   async function generate(refine: boolean) {
@@ -307,6 +426,8 @@ export default function ChallengeRoomsAdminPage() {
   function editRoom(room: ChallengeRoom) {
     setPlateUrl(room.room_url)
     if (room.recipe) setSpec(room.recipe)
+    // Rooms saved before Invent existed, and every preset roll, have no cell.
+    setVector(room.recipe?.axes ?? null)
     setPlacement(room.placement ?? DEFAULT_PLACEMENT)
     setRadioPlacement((room as any).radio_placement ?? null)
     setLightPosition((room as any).light_position ?? DEFAULT_LIGHT_POSITION)
@@ -435,16 +556,58 @@ export default function ChallengeRoomsAdminPage() {
             <Card.Body className="space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-lg font-bold text-gray-900">{t('roomAdmin.recipe')}</h2>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  /* avoid: the dice landing on the theme already on screen is
-                     the one outcome that reads as a broken button. */
-                  onClick={() => setSpec(prev => randomRoomSpec(undefined, { avoid: prev.name }))}
-                >
-                  🎲 Randomise
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    /* avoid: the dice landing on the theme already on screen is
+                       the one outcome that reads as a broken button. */
+                    onClick={() => {
+                      // Roll across the whole library, promoted themes included.
+                      const pool = themes.filter(x => x.name !== spec.name)
+                      const from = pool.length > 0 ? pool : themes
+                      setSpec(randomRoomSpec(from[Math.floor(Math.random() * from.length)]))
+                      // The preset came from the library, not from a cell.
+                      setVector(null)
+                    }}
+                    disabled={inventing}
+                  >
+                    🎲 {t('design.randomise')}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={invent}
+                    isLoading={inventing}
+                    disabled={inventing}
+                  >
+                    ✨ {inventing ? t('design.inventing') : t('design.invent')}
+                  </Button>
+                </div>
               </div>
+
+              <AxisChips vector={vector} />
+
+              {/* Promotion is what makes the library grow instead of discarding
+                  every good roll. Hidden until the migration has been run. */}
+              {canPromote && (
+                <div className="flex items-center justify-between gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={saveTheme}
+                    isLoading={savingTheme}
+                    disabled={savingTheme || !spec.name.trim()}
+                  >
+                    {savingTheme ? t('design.savingTheme') : t('design.saveTheme')}
+                  </Button>
+                  {cellCount > 0 && (
+                    <span className="text-[11px] text-gray-400">
+                      {t('design.coverage', { used: seenVectors.length, total: cellCount })}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Style is its own axis now, so it gets its own row. Picking one
                   re-rolls the current theme with that style forced. */}
@@ -454,11 +617,18 @@ export default function ChallengeRoomsAdminPage() {
                   <button
                     key={style.id}
                     type="button"
-                    onClick={() => setSpec(prev => {
-                      const theme = ROOM_THEMES.find(x => x.name === prev.name)
-                      return theme ? randomRoomSpec(theme, { style: style.id })
-                                   : { ...prev, artStyle: style.id }
-                    })}
+                    onClick={() => {
+                      const theme = themes.find(x => x.name === spec.name)
+                      if (!theme) {
+                        // An invented theme is not in the library; just restyle it.
+                        setSpec(prev => ({ ...prev, artStyle: style.id }))
+                        return
+                      }
+                      // A preset re-roll replaces the recipe wholesale, so the
+                      // cell on screen would no longer describe what is there.
+                      setSpec(randomRoomSpec(theme, { style: style.id }))
+                      setVector(null)
+                    }}
                     className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                       spec.artStyle === style.id
                         ? 'border-primary-400 bg-primary-50 font-semibold text-primary-700'
@@ -471,11 +641,11 @@ export default function ChallengeRoomsAdminPage() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {ROOM_THEMES.map(theme => (
+                {themes.map(theme => (
                   <button
                     key={theme.name}
                     type="button"
-                    onClick={() => setSpec(randomRoomSpec(theme))}
+                    onClick={() => { setSpec(randomRoomSpec(theme)); setVector(null) }}
                     className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                       spec.name === theme.name
                         ? 'border-primary-400 bg-primary-50 font-semibold text-primary-700'

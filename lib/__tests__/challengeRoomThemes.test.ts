@@ -18,7 +18,7 @@ function seeded(seed: number) {
 }
 
 const allRoomStrings = ROOM_THEMES.flatMap(t => [
-  t.name, t.architecture, t.materials,
+  t.name, ...t.architectures, ...t.materialSets,
   ...t.palettes, ...t.moods, ...t.lighting, ...t.apertures, ...t.views,
   ...t.accents, ...t.objects,
 ])
@@ -42,6 +42,11 @@ describe('vocabulary integrity', () => {
 
   it('gives every room theme enough of each axis', () => {
     for (const t of ROOM_THEMES) {
+      // These two are the ones a student can actually tell apart — everything
+      // else on the axis list re-tints the same interior. A theme that drops
+      // back to one of either is a theme that only makes one room again.
+      expect(t.architectures.length, `${t.name} architectures`).toBeGreaterThanOrEqual(2)
+      expect(t.materialSets.length, `${t.name} materialSets`).toBeGreaterThanOrEqual(2)
       expect(t.palettes.length, `${t.name} palettes`).toBeGreaterThanOrEqual(2)
       expect(t.moods.length, `${t.name} moods`).toBeGreaterThanOrEqual(2)
       expect(t.lighting.length, `${t.name} lighting`).toBeGreaterThanOrEqual(2)
@@ -140,6 +145,10 @@ describe('the axes actually vary', () => {
     const rng = seeded(2024)
     const theme = ROOM_THEMES[0]
     const rolls = Array.from({ length: 200 }, () => randomRoomSpec(theme, { rng }))
+    // architecture and materials first: they were fixed per theme until the
+    // axes were widened, which is what capped each world at a single room.
+    expect(new Set(rolls.map(r => r.architecture)).size).toBeGreaterThanOrEqual(2)
+    expect(new Set(rolls.map(r => r.materials)).size).toBeGreaterThanOrEqual(2)
     expect(new Set(rolls.map(r => r.palette)).size).toBeGreaterThanOrEqual(2)
     expect(new Set(rolls.map(r => r.mood)).size).toBeGreaterThanOrEqual(2)
     expect(new Set(rolls.map(r => r.lighting)).size).toBeGreaterThanOrEqual(2)

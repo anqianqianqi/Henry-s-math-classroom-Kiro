@@ -9,6 +9,35 @@
  * can be imported verbatim. Stored as JSONB in challenge_rooms.
  */
 
+/**
+ * Which family a theme belongs to. Groups the chips in the admin pickers and
+ * mirrors the /book-skins families.
+ *
+ * Lives here rather than in themes.ts because AxisVector below needs it and
+ * themes.ts imports from this file — the other direction would be a cycle.
+ * themes.ts re-exports it, so existing importers are unaffected.
+ */
+export type ThemeFamily = 'nature' | 'science' | 'fantasy' | 'history' | 'everyday'
+
+/**
+ * Coordinates in theme space — see lib/challengeRoom/axes.ts for what these
+ * mean and why a recipe is rolled before it is written.
+ *
+ * Part of the persisted recipe, which is why the shape is declared here with
+ * the other JSONB types. A saved room records the cell it came from, so the
+ * coverage map can be rebuilt from the rooms themselves rather than from a
+ * separate log that could drift out of step with them.
+ */
+export interface AxisVector {
+  family: ThemeFamily
+  substrate: 'paper' | 'stone' | 'metal' | 'wood' | 'textile' | 'synthetic'
+  era: 'ancient' | 'period' | 'contemporary' | 'speculative'
+  lightKey: 'high-key' | 'low-key' | 'mixed'
+  temperature: 'warm' | 'cool' | 'split'
+  ornament: 'sparse' | 'medium' | 'dense'
+  motif: 'botanical' | 'marine' | 'celestial' | 'mechanical' | 'geometric' | 'culinary'
+}
+
 /** The art-direction spec fed to the image prompt compiler. */
 export interface RoomSpec {
   name: string
@@ -37,6 +66,8 @@ export interface RoomSpec {
   artStyle?: string
   /** The window's form — "brass-ringed observation port". Absent keeps the arch. */
   aperture?: string
+  /** Set only on invented recipes. Ignored by the prompt compiler. */
+  axes?: AxisVector
 }
 
 /**
@@ -61,6 +92,8 @@ export interface BookSpec {
   artStyle?: string
   /** The sparse motif edging the inner page. Absent keeps the botanical default. */
   innerAccent?: string
+  /** Set only on invented recipes. Ignored by the prompt compiler. */
+  axes?: AxisVector
 }
 
 /** A book_texture_packages row. */
