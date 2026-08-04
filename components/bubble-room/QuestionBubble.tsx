@@ -17,6 +17,8 @@ export interface QuestionBubbleProps {
   instance: BubbleInstance
   onClick: () => void
   searchQuery?: string
+  /** When true, fade the bubble out before removal */
+  dying?: boolean
 }
 
 const PREVIEW_MAX_LENGTH = 55
@@ -56,7 +58,7 @@ function highlightInBubble(text: string, keyword: string): React.ReactNode {
 
 type BurstPhase = 'idle' | 'expand' | 'pop'
 
-export function QuestionBubble({ instance, onClick, searchQuery = '' }: QuestionBubbleProps) {
+export function QuestionBubble({ instance, onClick, searchQuery = '', dying = false }: QuestionBubbleProps) {
   const { question, id, x, drift, speed } = instance
   const { language } = useLanguage()
   // Show the reader's language; the original stays on the record for search.
@@ -115,10 +117,26 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
   }
 
   return (
+    // Outer: non-animated position anchor. Controls opacity for dying fade.
+    // Keeping this layer animation-free means setting opacity:0 here always
+    // wins — there's no competing CSS animation to fight against.
     <div
       key={id}
+      className="bubble-rise-anchor absolute"
+      style={{
+        left: `${x}%`,
+        bottom: '-80px',
+        // Instantly invisible when dying — no snap-back possible because
+        // the animation runs on the inner wrapper, not here.
+        opacity: dying ? 0 : undefined,
+        pointerEvents: dying ? 'none' : undefined,
+        // transition: intentionally none — we want instant disappearance
+      } as React.CSSProperties}
+    >
+    {/* Inner: carries the bubble-rise animation */}
+    <div
       role="button"
-      tabIndex={0}
+      tabIndex={dying ? -1 : 0}
       aria-label={`Question bubble: ${bubbleLabel}`}
       onClick={handleClick}
       onKeyDown={(e) => {
@@ -127,14 +145,11 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           handleClick()
         }
       }}
-      className="bubble-rise absolute cursor-pointer select-none"
+      className="bubble-rise cursor-pointer select-none"
       style={
         {
-          '--x': `${x}%`,
           '--drift': `${drift}vw`,
           '--speed': `${speed}s`,
-          left: `${x}%`,
-          bottom: '-80px',
           transform: 'translateX(-50%)',
           animationPlayState: phase !== 'idle' ? 'paused' : 'running',
           animationDuration: `${speed}s`,
@@ -305,6 +320,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '' }: Question
           </div>
         )}
       </div>
+    </div>
     </div>
   )
 }

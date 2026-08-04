@@ -373,8 +373,8 @@ export function BubbleRoomPage({
             🫧 <span className="hidden sm:inline">{t('myBubbles.mine')}</span>
           </button>
 
-          {/* Assigned-to-me button — visible for all students, teachers and TAs */}
-          {(currentUserRole === 'student' || currentUserRole === 'teacher' || isTA) && (
+          {/* Assigned-to-me button — visible for teachers and TAs only */}
+          {(currentUserRole === 'teacher' || isTA) && (
             <button
               type="button"
               onClick={() => setShowAssignedModal(true)}
