@@ -158,10 +158,12 @@ export function QuestionBubble({ instance, onClick, onNaturalEnd, searchQuery = 
           animationFillMode: 'forwards',
         } as React.CSSProperties
       }
-      onAnimationEnd={() => {
+      onAnimationEnd={(e) => {
+        // Only react to the bubble-rise animation ending, not the wobble
+        // or burst animations on child elements bubbling up.
+        if (e.animationName !== 'bubble-rise') return
         // Animation reached 100% — bubble is at opacity:0, fully off-screen.
-        // Remove it from state cleanly. No snap possible: the animation
-        // completed naturally at the top of the screen before removal.
+        // Remove it from state cleanly with no snap.
         onNaturalEnd()
       }}
     >
