@@ -158,8 +158,15 @@ export function BubbleAnimationEngine({
 
     setVisible((prev) => [...prev, instance])
 
+    // When the animation completes, mark as dying (instantly hides via opacity:0
+    // on the anchor wrapper) then remove from DOM after a brief cleanup tick.
+    // This prevents the browser from flashing the element at its base CSS position
+    // (bottom:-80px) during the React unmount cycle.
     setTimeout(() => {
-      setVisible((prev) => prev.filter((b) => b.id !== instance.id))
+      setVisible((prev) => prev.map((b) => b.id === instance.id ? { ...b, dying: true } : b))
+      setTimeout(() => {
+        setVisible((prev) => prev.filter((b) => b.id !== instance.id))
+      }, 50)
     }, speed * 1000 + ANIMATION_BUFFER_MS)
   }, [isActive, questions])
 
@@ -259,9 +266,12 @@ export function BubbleAnimationEngine({
           dying={(instance as any).dying === true}
           searchQuery={searchQuery}
           onClick={() => {
-            // Immediately remove this instance so the count drops and
-            // the keepalive effect spawns a replacement from the bottom
-            setVisible((prev) => prev.filter((b) => b.id !== instance.id))
+            // Mark as dying first (instantly hides), then remove after a tick
+            // to avoid the browser flashing the element at its base CSS position
+            setVisible((prev) => prev.map((b) => b.id === instance.id ? { ...b, dying: true } : b))
+            setTimeout(() => {
+              setVisible((prev) => prev.filter((b) => b.id !== instance.id))
+            }, 50)
             onBubbleClick(instance.question)
           }}
         />
