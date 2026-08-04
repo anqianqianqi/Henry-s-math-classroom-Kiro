@@ -98,13 +98,13 @@ export function BubbleAnimationEngine({
     })
   }, [questions])
 
-  // Clean up dying instances after fade completes (300 ms)
+  // Clean up dying instances immediately — display:none already hides them
   useEffect(() => {
     const dying = visible.filter((b) => (b as any).dying)
     if (dying.length === 0) return
     const timer = setTimeout(() => {
       setVisible((prev) => prev.filter((b) => !(b as any).dying))
-    }, 350)
+    }, 50)
     return () => clearTimeout(timer)
   }, [visible])
 
@@ -157,17 +157,12 @@ export function BubbleAnimationEngine({
     }
 
     setVisible((prev) => [...prev, instance])
-
-    // When the animation completes, mark as dying (instantly hides via opacity:0
-    // on the anchor wrapper) then remove from DOM after a brief cleanup tick.
-    // This prevents the browser from flashing the element at its base CSS position
-    // (bottom:-80px) during the React unmount cycle.
+    // Natural removal is handled by onAnimationEnd in QuestionBubble.
+    // We keep a fallback timer only as insurance (speed + 5s) in case
+    // the event never fires (e.g. element hidden, tab in background).
     setTimeout(() => {
-      setVisible((prev) => prev.map((b) => b.id === instance.id ? { ...b, dying: true } : b))
-      setTimeout(() => {
-        setVisible((prev) => prev.filter((b) => b.id !== instance.id))
-      }, 50)
-    }, speed * 1000 + ANIMATION_BUFFER_MS)
+      setVisible((prev) => prev.filter((b) => b.id !== instance.id))
+    }, (speed + 5) * 1000)
   }, [isActive, questions])
 
   // ── Main interval loop ─────────────────────────────────────────────────────
@@ -265,13 +260,12 @@ export function BubbleAnimationEngine({
           instance={instance}
           dying={(instance as any).dying === true}
           searchQuery={searchQuery}
+          onNaturalEnd={() => {
+            // Animation completed naturally at top of screen — safe to remove
+            setVisible((prev) => prev.filter((b) => b.id !== instance.id))
+          }}
           onClick={() => {
-            // Mark as dying first (instantly hides), then remove after a tick
-            // to avoid the browser flashing the element at its base CSS position
-            setVisible((prev) => prev.map((b) => b.id === instance.id ? { ...b, dying: true } : b))
-            setTimeout(() => {
-              setVisible((prev) => prev.filter((b) => b.id !== instance.id))
-            }, 50)
+            setVisible((prev) => prev.filter((b) => b.id !== instance.id))
             onBubbleClick(instance.question)
           }}
         />
