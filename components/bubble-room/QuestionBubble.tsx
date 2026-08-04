@@ -125,12 +125,13 @@ export function QuestionBubble({ instance, onClick, searchQuery = '', dying = fa
       className="bubble-rise-anchor absolute"
       style={{
         left: `${x}%`,
-        bottom: '-80px',
-        // Instantly invisible when dying — no snap-back possible because
-        // the animation runs on the inner wrapper, not here.
+        // Use top:100% (just below container bottom, INSIDE the overflow:hidden clip area)
+        // rather than bottom:-80px (outside the clip). This means if the element ever
+        // flashes at its base position during React unmount, overflow:hidden hides it.
+        top: '100%',
+        // Instantly invisible when dying — belt-and-suspenders on top of the clip.
         opacity: dying ? 0 : undefined,
         pointerEvents: dying ? 'none' : undefined,
-        // transition: intentionally none — we want instant disappearance
       } as React.CSSProperties}
     >
     {/* Inner: carries the bubble-rise animation */}
