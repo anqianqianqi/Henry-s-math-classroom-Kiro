@@ -117,10 +117,26 @@ export function QuestionBubble({ instance, onClick, searchQuery = '', dying = fa
   }
 
   return (
+    // Outer: non-animated position anchor. Controls opacity for dying fade.
+    // Keeping this layer animation-free means setting opacity:0 here always
+    // wins — there's no competing CSS animation to fight against.
     <div
       key={id}
+      className="bubble-rise-anchor absolute"
+      style={{
+        left: `${x}%`,
+        bottom: '-80px',
+        // Instantly invisible when dying — no snap-back possible because
+        // the animation runs on the inner wrapper, not here.
+        opacity: dying ? 0 : undefined,
+        pointerEvents: dying ? 'none' : undefined,
+        // transition: intentionally none — we want instant disappearance
+      } as React.CSSProperties}
+    >
+    {/* Inner: carries the bubble-rise animation */}
+    <div
       role="button"
-      tabIndex={0}
+      tabIndex={dying ? -1 : 0}
       aria-label={`Question bubble: ${bubbleLabel}`}
       onClick={handleClick}
       onKeyDown={(e) => {
@@ -129,27 +145,16 @@ export function QuestionBubble({ instance, onClick, searchQuery = '', dying = fa
           handleClick()
         }
       }}
-      className="bubble-rise absolute cursor-pointer select-none"
+      className="bubble-rise cursor-pointer select-none"
       style={
         {
-          '--x': `${x}%`,
           '--drift': `${drift}vw`,
           '--speed': `${speed}s`,
-          left: `${x}%`,
-          bottom: '-80px',
-          // Only set the base transform when not dying — when dying the animation
-          // has already moved the element; removing the inline override lets the
-          // paused animation's last keyframe transform stay in effect at its
-          // current screen position, so visibility:hidden hides it in place.
-          transform: dying ? undefined : 'translateX(-50%)',
-          animationPlayState: (phase !== 'idle' || dying) ? 'paused' : 'running',
+          transform: 'translateX(-50%)',
+          animationPlayState: phase !== 'idle' ? 'paused' : 'running',
           animationDuration: `${speed}s`,
           animationTimingFunction: 'ease-out',
           animationFillMode: 'forwards',
-          // When dying: pause the animation to freeze position, then hide instantly.
-          // visibility:hidden doesn't conflict with animation-controlled opacity.
-          visibility: dying ? 'hidden' : undefined,
-          pointerEvents: dying ? 'none' : undefined,
         } as React.CSSProperties
       }
     >
@@ -315,6 +320,7 @@ export function QuestionBubble({ instance, onClick, searchQuery = '', dying = fa
           </div>
         )}
       </div>
+    </div>
     </div>
   )
 }
