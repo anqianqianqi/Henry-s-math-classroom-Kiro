@@ -1,0 +1,919 @@
+<!doctype html>
+<!--
+  Art direction audit — the two directions on the site, and where they collide.
+
+  Open this file directly in a browser; it needs no server and no assets.
+
+  ── WHAT THIS IS ────────────────────────────────────────────
+  A read of the repository at 7b5d917 (2026-08-04), not of rendered screens.
+  Every number is a ripgrep count over app/ and components/; every colour is
+  lifted from source rather than sampled from a screenshot, so the collision
+  strip is a rebuild of what the code produces and not a picture of it.
+
+  ── THE FINDING ─────────────────────────────────────────────
+  The painted-paper direction (1–2 August: dissolved room edges, pencil
+  boundary, adaptive ink, then painted cards) is a treatment on a few
+  components rather than a system. It has no page ground, no typeface, no
+  button and no token in tailwind.config.ts, so everything structural still
+  belongs to the bright gamified direction it is replacing. Most of the
+  collisions listed are that one collision seen from different angles.
+
+  ── NOT A DECISION ──────────────────────────────────────────
+  Nothing here has been acted on. Sibling record: card-boundary-variants.html,
+  which chose variant B and is now shipping in components/ui/Card.tsx.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Art Direction Audit — Henry's Math Classroom</title>
+
+<style>
+  :root {
+    color-scheme: light dark;
+
+    --ground: #f4f5f6;
+    --surface: #ffffff;
+    --surface-2: #eceef0;
+    --ink: #16181c;
+    --ink-2: #434a54;
+    --ink-3: #737b85;
+    --rule: #d9dde1;
+    --rule-strong: #b9c0c7;
+    --accent: #3d6a8b;
+    --accent-wash: #e6eef4;
+
+    --flag-ships: #a8402c;
+    --flag-drift: #8a6414;
+    --flag-dead: #5c6670;
+
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+    --measure: 34rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #121418;
+      --surface: #191c21;
+      --surface-2: #22262c;
+      --ink: #e7eaee;
+      --ink-2: #b0b8c1;
+      --ink-3: #838c96;
+      --rule: #2b3037;
+      --rule-strong: #3d444d;
+      --accent: #7fa9c8;
+      --accent-wash: #1e2831;
+
+      --flag-ships: #e08a74;
+      --flag-drift: #d9ab52;
+      --flag-dead: #97a1ac;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #121418;
+    --surface: #191c21;
+    --surface-2: #22262c;
+    --ink: #e7eaee;
+    --ink-2: #b0b8c1;
+    --ink-3: #838c96;
+    --rule: #2b3037;
+    --rule-strong: #3d444d;
+    --accent: #7fa9c8;
+    --accent-wash: #1e2831;
+    --flag-ships: #e08a74;
+    --flag-drift: #d9ab52;
+    --flag-dead: #97a1ac;
+  }
+
+  :root[data-theme="light"] {
+    --ground: #f4f5f6;
+    --surface: #ffffff;
+    --surface-2: #eceef0;
+    --ink: #16181c;
+    --ink-2: #434a54;
+    --ink-3: #737b85;
+    --rule: #d9dde1;
+    --rule-strong: #b9c0c7;
+    --accent: #3d6a8b;
+    --accent-wash: #e6eef4;
+    --flag-ships: #a8402c;
+    --flag-drift: #8a6414;
+    --flag-dead: #5c6670;
+  }
+
+  .page {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.62;
+    padding: 0 1.25rem 6rem;
+  }
+
+  .wrap { max-width: 62rem; margin: 0 auto; }
+  .col { max-width: var(--measure); }
+
+  /* ── Masthead ─────────────────────────────────────────── */
+  .masthead {
+    padding: 3.5rem 0 2rem;
+    border-bottom: 2px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .kicker {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--accent);
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(2rem, 5.5vw, 3.1rem);
+    line-height: 1.08;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  .standfirst {
+    font-size: 1.12rem;
+    color: var(--ink-2);
+    max-width: var(--measure);
+    text-wrap: pretty;
+  }
+
+  .sourced {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    line-height: 1.75;
+    color: var(--ink-3);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1.5rem;
+  }
+  .sourced b { color: var(--ink-2); font-weight: 500; }
+
+  /* ── Sections ─────────────────────────────────────────── */
+  section { padding-top: 3.25rem; }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ink-3);
+    padding-bottom: 0.9rem;
+    margin-bottom: 1.75rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-size: clamp(1.4rem, 3vw, 1.85rem);
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    margin: 0 0 0.9rem;
+    text-wrap: balance;
+  }
+
+  p { margin: 0 0 1rem; }
+  p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.84em;
+    background: var(--surface-2);
+    padding: 0.1em 0.36em;
+    border-radius: 2px;
+    color: var(--ink);
+  }
+
+  /* ── The two directions ───────────────────────────────── */
+  .directions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin-top: 0.5rem;
+  }
+
+  .dir { background: var(--surface); padding: 1.5rem; }
+
+  .dir-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .dir-name {
+    font-family: var(--serif);
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .dir-age {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  .dir-note {
+    font-size: 0.92rem;
+    color: var(--ink-2);
+    margin: 0.6rem 0 1.25rem;
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+  .chip { width: 4.4rem; }
+
+  .chip-swatch {
+    height: 3.1rem;
+    border: 1px solid var(--rule-strong);
+    margin-bottom: 0.35rem;
+  }
+
+  .chip-hex {
+    font-family: var(--mono);
+    font-size: 0.63rem;
+    color: var(--ink-3);
+    letter-spacing: 0.01em;
+  }
+
+  .dir-evidence {
+    margin-top: 1.4rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    line-height: 1.7;
+    color: var(--ink-3);
+  }
+
+  /* ── Collision strip ──────────────────────────────────── */
+  .collision {
+    margin-top: 1.5rem;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+  }
+
+  .collision-demo {
+    padding: 2.5rem 1.5rem;
+    background: linear-gradient(to bottom right, #f0fdf4, #ffffff 55%, rgba(59, 130, 246, 0.1));
+    display: flex;
+    justify-content: center;
+  }
+
+  /* The real paperCard treatment, values lifted from lib/ui/paperCard.ts */
+  .paper-demo {
+    width: min(22rem, 100%);
+    padding: 1.4rem 1.5rem;
+    background-image:
+      radial-gradient(120% 110% at 22% 0%, #fffdf4 0%, rgba(255, 253, 244, 0) 62%),
+      linear-gradient(155deg, #fdf7e9 0%, #f4ecd6 100%);
+    box-shadow: inset 0 0 26px 6px rgba(176, 138, 88, 0.2);
+    border-radius: 10px;
+    color: #16181c;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  .paper-demo-title { font-weight: 700; font-size: 1rem; margin-bottom: 0.3rem; }
+  .paper-demo-body { font-size: 0.86rem; color: #434a54; margin-bottom: 1rem; }
+
+  .btn-demo {
+    display: inline-block;
+    background: #22c55e;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.84rem;
+    padding: 0.6rem 1.3rem;
+    border-radius: 1rem;
+    box-shadow: 0 4px 0 0 rgb(0 0 0 / 0.1);
+  }
+
+  .collision-caption {
+    padding: 0.85rem 1.5rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    line-height: 1.65;
+    color: var(--ink-3);
+    background: var(--surface);
+  }
+
+  /* ── Findings ─────────────────────────────────────────── */
+  .findings { display: flex; flex-direction: column; gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+
+  .finding {
+    background: var(--surface);
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: 8.5rem minmax(0, 1fr);
+    gap: 1.75rem;
+  }
+
+  @media (max-width: 40rem) {
+    .finding { grid-template-columns: 1fr; gap: 1rem; }
+  }
+
+  .finding-meta { display: flex; flex-direction: column; gap: 0.55rem; }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .flag {
+    font-family: var(--mono);
+    font-size: 0.61rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--flag-dead);
+  }
+
+  .flag::before {
+    content: "";
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+  }
+
+  .flag.ships { color: var(--flag-ships); }
+  .flag.drift { color: var(--flag-drift); }
+
+  .finding h3 {
+    font-family: var(--serif);
+    font-size: 1.12rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0 0 0.6rem;
+    text-wrap: balance;
+  }
+
+  .finding p { font-size: 0.96rem; }
+
+  .evidence {
+    margin-top: 0.9rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    line-height: 1.75;
+    color: var(--ink-3);
+    border-left: 2px solid var(--rule-strong);
+    padding-left: 0.9rem;
+  }
+  .evidence b { color: var(--ink-2); font-weight: 500; }
+
+  /* ── Census table ─────────────────────────────────────── */
+  .scroll { overflow-x: auto; }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+  }
+
+  caption {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.11em;
+    color: var(--ink-3);
+    padding-bottom: 0.7rem;
+  }
+
+  th, td { padding: 0.5rem 0.85rem; text-align: left; border-bottom: 1px solid var(--rule); }
+  th { font-weight: 600; color: var(--ink-2); border-bottom: 1px solid var(--rule-strong); white-space: nowrap; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:last-child td { border-bottom: none; }
+  .bar { display: inline-block; height: 0.5rem; background: var(--accent); vertical-align: middle; }
+
+  /* ── Close ────────────────────────────────────────────── */
+  .close {
+    margin-top: 1.5rem;
+    border-left: 3px solid var(--accent);
+    background: var(--accent-wash);
+    padding: 1.4rem 1.6rem;
+  }
+  .close h2 { margin-bottom: 0.7rem; }
+  .close ol { margin: 0; padding-left: 1.2rem; }
+  .close li { margin-bottom: 0.6rem; font-size: 0.97rem; }
+  .close li:last-child { margin-bottom: 0; }
+
+  .colophon {
+    margin-top: 3.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    line-height: 1.8;
+    color: var(--ink-3);
+  }
+</style>
+<style>
+  /* Standalone reset. The hosted copy inherits one from its wrapper; a file
+     opened straight off disk does not, and without this the page carries the
+     browser's default body margin outside its own ground. */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--ground); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="wrap">
+
+    <header class="masthead">
+      <div class="kicker">Research note · Art direction</div>
+      <h1>Two art directions, one website</h1>
+      <p class="standfirst">
+        The site is being repainted from the inside. A warm, hand-made storybook
+        treatment has been landing since late July and now owns the most
+        characteristic surfaces — but the bright, gamified layer it is replacing
+        is still underneath almost everything, and the two meet on the same
+        screens.
+      </p>
+      <div class="sourced">
+        <span><b>Read:</b> 60 commits to 2026-08-04</span>
+        <span><b>Config:</b> tailwind.config.ts, globals.css, layout.tsx</span>
+        <span><b>Components:</b> Card, Button, DreamSketchBoundary, paperCard</span>
+        <span><b>Census:</b> app/ + components/, all .tsx</span>
+      </div>
+    </header>
+
+    <section>
+      <div class="section-label">The two directions</div>
+      <div class="col">
+        <h2>What is being replaced, and what is replacing it</h2>
+        <p>
+          The older direction announces itself in the config: the Tailwind
+          palette is commented <code>Duolingo-inspired bright, friendly
+          colors</code> and the button shadow is the flat 4px press that style
+          is known for. It is bright, cool, plastic, and high-contrast.
+        </p>
+        <p>
+          The newer one arrives across 1&ndash;2 August in a dense run of
+          commits &mdash; a room that dissolves into the page instead of ending
+          at a rectangle, a pencil frame drawn on the boundary, ink that samples
+          the artwork it sits on, then painted-paper cards. It is warm, low
+          contrast, and deliberately imprecise.
+        </p>
+      </div>
+
+      <div class="directions">
+        <div class="dir">
+          <div class="dir-head">
+            <span class="dir-name">Bright gamified</span>
+            <span class="dir-age">inherited</span>
+          </div>
+          <p class="dir-note">Cool, saturated, plastic. Lives in the config and in every page ground.</p>
+          <div class="chips">
+            <div class="chip"><div class="chip-swatch" style="background:#22c55e"></div><div class="chip-hex">#22c55e</div></div>
+            <div class="chip"><div class="chip-swatch" style="background:#3b82f6"></div><div class="chip-hex">#3b82f6</div></div>
+            <div class="chip"><div class="chip-swatch" style="background:#a855f7"></div><div class="chip-hex">#a855f7</div></div>
+            <div class="chip"><div class="chip-swatch" style="background:#f0fdf4"></div><div class="chip-hex">#f0fdf4</div></div>
+          </div>
+          <div class="dir-evidence">
+            primary.500 &middot; accent.blue &middot; accent.purple<br>
+            shadow-float &nbsp;0 4px 0 0 rgb(0 0 0 / .1)<br>
+            rounded-2xl on every Button
+          </div>
+        </div>
+
+        <div class="dir">
+          <div class="dir-head">
+            <span class="dir-name">Painted paper</span>
+            <span class="dir-age">1&ndash;2 Aug</span>
+          </div>
+          <p class="dir-note">Warm, unsaturated, hand-made. Lives in Card, the challenge room and the loader.</p>
+          <div class="chips">
+            <div class="chip"><div class="chip-swatch" style="background:#fffdf4"></div><div class="chip-hex">#fffdf4</div></div>
+            <div class="chip"><div class="chip-swatch" style="background:#fdf7e9"></div><div class="chip-hex">#fdf7e9</div></div>
+            <div class="chip"><div class="chip-swatch" style="background:#f4ecd6"></div><div class="chip-hex">#f4ecd6</div></div>
+            <div class="chip"><div class="chip-swatch" style="background:#b08a58"></div><div class="chip-hex">#b08a58</div></div>
+          </div>
+          <div class="dir-evidence">
+            grain over a wash, no border, no drop shadow<br>
+            inset pigment pooling rgba(176,138,88,.20)<br>
+            irregular alpha mask, fade band 3.5%
+          </div>
+        </div>
+      </div>
+
+      <div class="collision">
+        <div class="collision-demo">
+          <div class="paper-demo">
+            <div class="paper-demo-title">Daily Challenge</div>
+            <div class="paper-demo-body">A painted-paper card, as it actually renders, on the page ground it actually sits on.</div>
+            <span class="btn-demo">Submit</span>
+          </div>
+        </div>
+        <div class="collision-caption">
+          Rebuilt from source values &mdash; card from lib/ui/paperCard.ts, ground from the
+          <code>from-primary-50 via-white to-accent-blue/10</code> gradient on 44 pages,
+          button from Button.tsx, body type from globals.css. Three vocabularies, one screen.
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Findings</div>
+      <div class="col">
+        <h2>Where the two collide</h2>
+        <p>
+          Ordered by what a student actually sees. Each finding is tagged by the
+          kind of problem it is: something already on screen, drift that is
+          compounding quietly, or a decision that was declared and never took
+          effect.
+        </p>
+      </div>
+
+      <div class="findings">
+
+        <article class="finding">
+          <div class="finding-meta">
+            <span class="tag">Ground</span>
+            <span class="flag ships">On screen</span>
+          </div>
+          <div>
+            <h3>Warm cards sit on a cool gradient</h3>
+            <p>
+              The painted card is a cream-to-ochre wash finished with brown
+              pigment pooling. The default page ground underneath it runs mint
+              green through white to translucent blue. Nothing is wrong with
+              either; together the card reads as a stain on the page rather than
+              a sheet of paper on a surface, because the ground is cooler than
+              the thing it is supporting.
+            </p>
+            <div class="evidence">
+              <b>Card wash</b> #fdf7e9 &rarr; #f4ecd6, pool rgba(176,138,88,.20)<br>
+              <b>Page ground</b> from-primary-50 (#f0fdf4) via-white to-accent-blue/10<br>
+              <b>Reach</b> 44 pages carry that gradient; Card is the default on 43 files
+            </div>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-meta">
+            <span class="tag">Type</span>
+            <span class="flag ships">On screen</span>
+          </div>
+          <div>
+            <h3>The site's two typefaces have never once loaded</h3>
+            <p>
+              Tailwind declares Inter for body and Poppins for display. No font
+              is loaded anywhere &mdash; no <code>next/font</code>, no stylesheet
+              link, no <code>@font-face</code> &mdash; and <code>globals.css</code>
+              sets the body to Arial. The <code>font-display</code> and
+              <code>font-sans</code> utilities are used zero times. Every word on
+              the site is Arial or Helvetica, and has been the whole time.
+            </p>
+            <p>
+              This is the largest single gap between the intended identity and
+              the shipped one, and the cheapest to close &mdash; but closing it
+              changes the look of every page at once, so it is a decision, not a
+              tidy-up.
+            </p>
+            <div class="evidence">
+              <b>Declared</b> sans: Inter &middot; display: Poppins<br>
+              <b>Loaded</b> none &mdash; 0 matches for next/font, fonts.googleapis, @font-face<br>
+              <b>Applied</b> font-display 0&times; &middot; font-sans 0&times; &middot; font-mono 7&times;<br>
+              <b>Actual</b> body { font-family: Arial, Helvetica, sans-serif }
+            </div>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-meta">
+            <span class="tag">Edges</span>
+            <span class="flag ships">On screen</span>
+          </div>
+          <div>
+            <h3>&ldquo;No rectangle survives&rdquo; is true on two surfaces out of dozens</h3>
+            <p>
+              A week of work went into making artwork end as an unfinished
+              drawing rather than a crop. It is used in two components. Meanwhile
+              the same screens carry 52 hand-rolled containers with a hard white
+              fill, a fixed radius and a drop shadow &mdash; each one the exact
+              rectangle the treatment exists to remove. The idea is sound and
+              under-distributed, not wrong.
+            </p>
+            <p>
+              The pet room is the honest test case: the soft edge was applied,
+              broke, and was reverted, because its animated decorations render
+              above the mask. That is an unsolved structural conflict, not a
+              taste call.
+            </p>
+            <div class="evidence">
+              <b>DreamSketchBoundary</b> Book3DReveal, ChallengeLoader<br>
+              <b>Hard rectangles</b> 52 occurrences across 21 files<br>
+              <b>Reverted</b> 89a5ddf &mdash; AnimatedRoomLayer paints above the mask
+            </div>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-meta">
+            <span class="tag">Depth</span>
+            <span class="flag ships">On screen</span>
+          </div>
+          <div>
+            <h3>Buttons are pressed plastic; the paper they sit on has no shadow at all</h3>
+            <p>
+              The card deliberately gives up its drop shadow &mdash; a mask clips
+              one outright &mdash; and separates from the page with inset pigment
+              pooling instead. The button sitting inside that card uses a hard
+              4px offset shadow with no blur and drops it on press. Two opposite
+              theories of depth, three centimetres apart.
+            </p>
+            <div class="evidence">
+              <b>Card</b> inset 0 0 26px 6px rgba(176,138,88,.20), no border<br>
+              <b>Button</b> shadow-float = 0 4px 0 0 rgb(0 0 0 / .1), active:shadow-none<br>
+              <b>Shadow census</b> sm 53 &middot; 2xl 53 &middot; lg 51 &middot; md 25 &middot; float 6
+            </div>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-meta">
+            <span class="tag">Grounds</span>
+            <span class="flag ships">On screen</span>
+          </div>
+          <div>
+            <h3>Four page backgrounds, and feature areas are picking their own</h3>
+            <p>
+              Most of the site uses one gradient. Twelve pages use flat grey. The
+              book-skins pages have quietly adopted a warm amber ground, and
+              class discovery an indigo-to-purple one. The amber pair is
+              interesting &mdash; it is the only place outside Card where the
+              warm direction reached a page ground, and it got there
+              independently.
+            </p>
+            <div class="evidence">
+              <b>44</b> from-primary-50 via-white to-accent-blue/10<br>
+              <b>12</b> bg-gray-50<br>
+              <b>2</b> from-amber-50 via-white to-yellow-50 &mdash; book-skins, admin + student<br>
+              <b>1</b> from-indigo-50 via-white to-purple-50 &mdash; classes/explore
+            </div>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-meta">
+            <span class="tag">Buttons</span>
+            <span class="flag ships">On screen</span>
+          </div>
+          <div>
+            <h3>&ldquo;Secondary&rdquo; is indistinguishable from a hovered primary</h3>
+            <p>
+              Primary is <code>bg-primary-500</code> hovering to
+              <code>primary-600</code>. Secondary is <code>bg-primary-600</code>.
+              A secondary button therefore looks exactly like a primary button
+              the pointer happens to be over. Where the two sit side by side
+              &mdash; which is now every recipe panel, since Randomise and Invent
+              are adjacent &mdash; there is no legible hierarchy between them.
+            </p>
+            <div class="evidence">
+              <b>primary</b> bg-primary-500 hover:bg-primary-600<br>
+              <b>secondary</b> bg-primary-600 hover:bg-primary-700
+            </div>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-meta">
+            <span class="tag">Chrome</span>
+            <span class="flag ships">On screen</span>
+          </div>
+          <div>
+            <h3>The installed app is blue; the website is green</h3>
+            <p>
+              <code>themeColor</code> in the root metadata is
+              <code>#2563eb</code>. The brand primary is
+              <code>#22c55e</code>. On Android and as an installed PWA the
+              browser chrome and splash take the blue, so the first colour a
+              student sees belongs to no part of either direction.
+            </p>
+            <div class="evidence">
+              <b>layout.tsx</b> themeColor: '#2563eb' (blue-600)<br>
+              <b>tailwind.config.ts</b> primary.500: '#22c55e'
+            </div>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-meta">
+            <span class="tag">Generated</span>
+            <span class="flag ships">On screen</span>
+          </div>
+          <div>
+            <h3>The generated artwork has no house style, and just got 19,440 ways not to have one</h3>
+            <p>
+              Rooms and book bundles can be rendered in six mutually exclusive
+              looks &mdash; photoreal, Ghibli, sci-fi, flat minimalist, antique
+              lithograph, watercolour. Per asset that is a feature. In the shop
+              grid, where a student sees a dozen at once, it means no two
+              adjacent tiles necessarily belong to the same world.
+            </p>
+            <p>
+              Nothing constrains which styles may appear together in a
+              student-facing collection; the constraints that exist all operate
+              inside a single asset. This is the one finding created rather than
+              inherited &mdash; the theme work of 1 August and 4 August widened
+              the space without narrowing what may sit next to what.
+            </p>
+            <div class="evidence">
+              <b>ART_STYLES</b> 6 render treatments, all reachable per asset<br>
+              <b>Cells</b> 19,440 classification vectors, styleFor gates within one asset only<br>
+              <b>Unconstrained</b> no rule spans a shop folder or a collection
+            </div>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-meta">
+            <span class="tag">Tokens</span>
+            <span class="flag drift">Drift</span>
+          </div>
+          <div>
+            <h3>Raw Tailwind colours outnumber the design tokens two to one</h3>
+            <p>
+              The palette in the config describes a smaller and smaller part of
+              the site. Amber alone is used more than the entire
+              <code>primary</code> ramp. That is not necessarily wrong &mdash;
+              amber is warm, and warm is where the site is heading &mdash; but it
+              means the direction is being set in class names rather than in the
+              token layer, so nothing can be changed centrally.
+            </p>
+            <div class="evidence">
+              <b>Tokens</b> primary.* 418 &middot; accent.* 52 &nbsp;&rarr;&nbsp; 470<br>
+              <b>Off-token</b> amber 419 &middot; purple 186 &middot; blue 176 &middot; indigo 62 &middot; +95 &nbsp;&rarr;&nbsp; 938
+            </div>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-meta">
+            <span class="tag">Radius</span>
+            <span class="flag drift">Drift</span>
+          </div>
+          <div>
+            <h3>Seven corner radii with no rule about which means what</h3>
+            <p>
+              Button is <code>rounded-2xl</code>, hand-rolled cards are mostly
+              <code>rounded-xl</code>, inputs are <code>rounded-lg</code>, and
+              the config bothers to redefine 2xl and 3xl. There is no stated
+              relationship between radius and elevation, size, or role, so the
+              value is chosen per component by whoever wrote it.
+            </p>
+            <div class="evidence">
+              xl <span class="bar" style="width:74px"></span> 372<br>
+              full <span class="bar" style="width:55px"></span> 276<br>
+              lg <span class="bar" style="width:52px"></span> 262<br>
+              2xl <span class="bar" style="width:22px"></span> 112<br>
+              md <span class="bar" style="width:5px"></span> 27 &nbsp;&middot;&nbsp; 3xl 15 &nbsp;&middot;&nbsp; sm 2
+            </div>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-meta">
+            <span class="tag">Card API</span>
+            <span class="flag dead">Declared, inert</span>
+          </div>
+          <div>
+            <h3>The escape hatch built for dense screens is used zero times</h3>
+            <p>
+              <code>Card</code> gained a <code>plain</code> prop for exactly the
+              case where painted paper costs more than it gives &mdash; an admin
+              list of forty rows. No page uses it. Those screens hand-roll a
+              <code>div</code> instead, which means the intended two-tier system
+              never came into being: in practice it is painted Card versus
+              ad-hoc markup, with no shared vocabulary between them.
+            </p>
+            <div class="evidence">
+              <b>&lt;Card&gt;</b> 357 occurrences, 43 files<br>
+              <b>plain</b> 0 &nbsp;&middot;&nbsp; <b>bare</b> 2<br>
+              <b>hand-rolled</b> 52 occurrences, 21 files
+            </div>
+          </div>
+        </article>
+
+        <article class="finding">
+          <div class="finding-meta">
+            <span class="tag">Dark</span>
+            <span class="flag dead">Declared, inert</span>
+          </div>
+          <div>
+            <h3>Dark mode is wired up and set to the light values</h3>
+            <p>
+              There is a <code>prefers-color-scheme: dark</code> block in
+              <code>globals.css</code>, and it assigns exactly the same two
+              variables as the light block. Someone deliberately neutralised it
+              rather than deleting it. Worth deciding either way, because the
+              painted-paper direction is a genuinely hard one to take dark
+              &mdash; a cream wash has nowhere to go.
+            </p>
+            <div class="evidence">
+              :root &nbsp;&rarr; --background #ffffff, --foreground #171717<br>
+              @media dark &nbsp;&rarr; --background #ffffff, --foreground #171717
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Census</div>
+      <div class="col">
+        <h2>What the code is actually made of</h2>
+        <p>
+          Counted across every <code>.tsx</code> in <code>app/</code> and
+          <code>components/</code>. These are occurrences, not files, and they
+          are the evidence behind the drift findings above.
+        </p>
+      </div>
+
+      <div class="scroll" style="margin-top:1.5rem">
+        <table>
+          <caption>Colour usage &mdash; design tokens against raw Tailwind ramps</caption>
+          <thead>
+            <tr><th>Family</th><th>Source</th><th class="n">Uses</th><th style="width:40%">Share</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>amber</td><td>raw ramp</td><td class="n">419</td><td><span class="bar" style="width:100%"></span></td></tr>
+            <tr><td>primary</td><td>token</td><td class="n">418</td><td><span class="bar" style="width:99.8%"></span></td></tr>
+            <tr><td>purple</td><td>raw ramp</td><td class="n">186</td><td><span class="bar" style="width:44%"></span></td></tr>
+            <tr><td>blue</td><td>raw ramp</td><td class="n">176</td><td><span class="bar" style="width:42%"></span></td></tr>
+            <tr><td>indigo</td><td>raw ramp</td><td class="n">62</td><td><span class="bar" style="width:15%"></span></td></tr>
+            <tr><td>accent.blue</td><td>token</td><td class="n">52</td><td><span class="bar" style="width:12%"></span></td></tr>
+            <tr><td>emerald / teal / rose / violet / slate / sky</td><td>raw ramp</td><td class="n">95</td><td><span class="bar" style="width:23%"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">Reading</div>
+      <div class="col close">
+        <h2>What this adds up to</h2>
+        <p>
+          The painted-paper direction is the stronger and more distinctive of the
+          two, and it is the one being actively developed &mdash; but it
+          currently exists as a treatment on a handful of components rather than
+          as a system. It has no page ground, no typeface, no button, and no
+          token in the config. Everything structural still belongs to the
+          direction it is replacing.
+        </p>
+        <p>
+          That is why the collisions above are nearly all the same collision seen
+          from different angles: a warm, soft, hand-made object placed inside a
+          cool, hard, manufactured frame. Three decisions would resolve most of
+          them at once.
+        </p>
+        <ol>
+          <li>Give the warm direction a page ground and a token ramp, so cards stop being warm objects on a cool page.</li>
+          <li>Decide the typeface question &mdash; ship Inter and Poppins, or delete them and choose deliberately. Today the site has no typographic identity at all.</li>
+          <li>Decide whether the gamified button survives. It is the loudest surviving piece of the old direction and it appears on every screen.</li>
+        </ol>
+      </div>
+    </section>
+
+    <div class="colophon">
+      Compiled 2026-08-04 from the repository at 7b5d917 &middot; counts by ripgrep over app/ and components/ &middot;
+      swatches and the collision strip are rebuilt from source values, not screenshots
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
