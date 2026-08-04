@@ -21,21 +21,42 @@
  *
  * randomRoomSpec() deals four distinct objects into the left/right tabletop
  * slots, so repeated rolls of one theme still differ.
+ *
+ * ── WHY THE COUNT THAT MATTERS IS SMALL ─────────────────────
+ * The axes below multiply out to millions of distinct prompts per theme, which
+ * is not the useful number. The composition is locked (see prompt.ts), so what
+ * a student actually distinguishes is the ROOM — and that is decided by
+ * `architectures` and `materialSets`. Adding a fourth palette changes a
+ * picture's tint; adding a fourth architecture changes the picture. Spend
+ * effort there.
  */
 
-import type { RoomSpec } from '@/lib/types/challengeRoom'
+import type { RoomSpec, ThemeFamily } from '@/lib/types/challengeRoom'
 
-/** Groups the theme chips in the admin picker; mirrors the /book-skins families. */
-export type ThemeFamily = 'nature' | 'science' | 'fantasy' | 'history' | 'everyday'
+/**
+ * Re-exported from the types module, which owns it now — AxisVector needs the
+ * union and this file already imports from there. Importers here still work.
+ */
+export type { ThemeFamily }
 
 export interface RoomTheme {
   name: string
   family: ThemeFamily
   /** ART_STYLES ids this world can carry without falling apart. */
   styles: string[]
-  /** Singular on purpose — these two ARE the world's identity. */
-  architecture: string
-  materials: string
+  /**
+   * The world's identity — and the two fields that decide whether a re-roll
+   * gives you a different ROOM or the same room with different trinkets.
+   *
+   * Singular until it became clear that was the whole ceiling: everything else
+   * on a theme could vary and every roll still painted one fixed interior.
+   * Three apiece turns ten worlds into thirty-odd. Widening these is safe for
+   * the reason the note above gives — each entry is authored inside its own
+   * world, so the coherence argument (which is about crossing themes) does not
+   * apply to varying within one.
+   */
+  architectures: string[]
+  materialSets: string[]
   palettes: string[]
   moods: string[]
   lighting: string[]
@@ -52,8 +73,16 @@ export const ROOM_THEMES: RoomTheme[] = [
     name: 'Moonlit Tide Observatory',
     family: 'fantasy',
     styles: ['ghibli', 'watercolour', 'realistic', 'vintage'],
-    architecture: 'an intimate dark-wood observatory-library with carved arches and restrained climbing ivy',
-    materials: 'walnut, aged brass, smoky glass, woven linen',
+    architectures: [
+      'an intimate dark-wood observatory-library with carved arches and restrained climbing ivy',
+      'a domed brass-ribbed reading chamber with a sunken chart well and tide tables inked across the plaster',
+      'a narrow lighthouse study spiralling around a central stair, its shelves following the curve',
+    ],
+    materialSets: [
+      'walnut, aged brass, smoky glass, woven linen',
+      'blackened oak, verdigris bronze, leaded glass, salt-stiffened canvas',
+      'ebonised teak, polished pewter, blown green glass, knotted rope',
+    ],
     palettes: [
       'deep teal, midnight blue, antique brass, warm amber',
       'abyssal indigo, pewter, sea-glass green, candle gold',
@@ -102,8 +131,16 @@ export const ROOM_THEMES: RoomTheme[] = [
     name: 'Cloud Garden Atelier',
     family: 'nature',
     styles: ['ghibli', 'watercolour', 'minimalist', 'realistic'],
-    architecture: 'a sun-washed botanical atelier with arched plasterwork and delicate trellised vines',
-    materials: 'limewash plaster, pale oak, frosted glass, porcelain',
+    architectures: [
+      'a sun-washed botanical atelier with arched plasterwork and delicate trellised vines',
+      'a whitewashed conservatory wing with slender iron ribs and hanging propagation glass',
+      'a terraced potting loft with stepped shelving and rope-hung drying racks',
+    ],
+    materialSets: [
+      'limewash plaster, pale oak, frosted glass, porcelain',
+      'chalk render, bleached ash, wired glass, unglazed stoneware',
+      'lime mortar, pale birch ply, seeded glass, glazed white tile',
+    ],
     palettes: [
       'powder blue, cream, pale sage, brushed gold',
       'chalk white, soft apricot, celadon, pale straw',
@@ -152,8 +189,16 @@ export const ROOM_THEMES: RoomTheme[] = [
     name: 'Emberglass Alchemist',
     family: 'fantasy',
     styles: ['realistic', 'vintage', 'ghibli'],
-    architecture: 'a refined volcanic-stone study with a broad arched aperture and geometric copper inlay',
-    materials: 'black basalt, smoked oak, hammered copper, amber glass',
+    architectures: [
+      'a refined volcanic-stone study with a broad arched aperture and geometric copper inlay',
+      'a vaulted forge-side scriptorium with soot-blacked ribs and a banked hearth along one wall',
+      'a hexagonal tower cell of fitted basalt blocks with a copper flue running floor to ceiling',
+    ],
+    materialSets: [
+      'black basalt, smoked oak, hammered copper, amber glass',
+      'fire-clay brick, charred elm, wrought iron, smoked quartz',
+      'dark pumice stone, oiled walnut, patinated bronze, ruby glass',
+    ],
     palettes: [
       'charcoal, oxblood, ember orange, tarnished copper',
       'obsidian, rust, molten gold, deep umber',
@@ -202,8 +247,16 @@ export const ROOM_THEMES: RoomTheme[] = [
     name: 'Frostbound Storykeeper',
     family: 'nature',
     styles: ['ghibli', 'watercolour', 'realistic', 'minimalist'],
-    architecture: 'a northern story room with deep timber window reveals and carved snowflake tracery',
-    materials: 'weathered pine, brushed silver, wool, translucent ice glass',
+    architectures: [
+      'a northern story room with deep timber window reveals and carved snowflake tracery',
+      'a turf-roofed longhouse corner with low painted beams and a shuttered gable opening',
+      'a stave-built loft with vertical plank walls and a rope-hung reading shelf',
+    ],
+    materialSets: [
+      'weathered pine, brushed silver, wool, translucent ice glass',
+      'silvered driftwood, pewter, felted wool, frosted pane glass',
+      'pale birch, tinned iron, undyed sheepskin, thick crown glass',
+    ],
     palettes: [
       'ice blue, parchment, silver, weathered pine',
       'glacier white, pale birch, cold pewter, soft rose',
@@ -252,8 +305,16 @@ export const ROOM_THEMES: RoomTheme[] = [
     name: 'Mosslight Woodland Archive',
     family: 'nature',
     styles: ['ghibli', 'watercolour', 'vintage'],
-    architecture: 'a storybook woodland archive grown into a hollow ancient tree with a deep arched window',
-    materials: 'living wood, moss, hammered bronze, handblown green glass',
+    architectures: [
+      'a storybook woodland archive grown into a hollow ancient tree with a deep arched window',
+      'a moss-roofed root cellar dug beneath a fallen giant, its shelves cut into the earth wall',
+      'a canopy reading platform lashed between two boughs, with a woven railing and a leaf awning',
+    ],
+    materialSets: [
+      'living wood, moss, hammered bronze, handblown green glass',
+      'bark and lichen, packed earth, tarnished copper, amber resin',
+      'woven willow, sphagnum moss, blackened iron, dew-clouded glass',
+    ],
     palettes: [
       'fern green, chestnut, honey, soft moss',
       'deep forest, bark brown, amber, pale lichen',
@@ -309,8 +370,16 @@ export const ROOM_THEMES: RoomTheme[] = [
     name: 'Brass Meridian Aeronautics',
     family: 'science',
     styles: ['vintage', 'realistic', 'ghibli'],
-    architecture: 'a riveted airship chart-room with a curved hull wall and folding brass instrument arms',
-    materials: 'riveted brass, oiled walnut, waxed canvas, cracked leather',
+    architectures: [
+      'a riveted airship chart-room with a curved hull wall and folding brass instrument arms',
+      'a gondola navigation bay slung beneath taut envelope fabric, with gimballed lamps overhead',
+      'a mooring-mast signal office with a girder lattice wall and a hinged chart shelf',
+    ],
+    materialSets: [
+      'riveted brass, oiled walnut, waxed canvas, cracked leather',
+      'polished bronze, mahogany veneer, doped linen, brass-buckled strapping',
+      'galvanised steel, teak decking, oiled sailcloth, worn brass fittings',
+    ],
     palettes: [
       'oxidised brass, cloud white, navy ink, worn leather tan',
       'storm pewter, ochre canvas, verdigris, oil-lamp yellow',
@@ -359,8 +428,16 @@ export const ROOM_THEMES: RoomTheme[] = [
     name: 'Quiet Signal Station',
     family: 'science',
     styles: ['minimalist', 'futuristic', 'realistic'],
-    architecture: 'a spare listening-station room of poured concrete and pale ply with one recessed instrument wall',
-    materials: 'poured concrete, pale ply, anodised aluminium, matte glass',
+    architectures: [
+      'a spare listening-station room of poured concrete and pale ply with one recessed instrument wall',
+      'a prefabricated survey hut with exposed stud framing and a single insulated window bay',
+      'a half-buried monitoring bunker with a shuttered slot and cable trays running the ceiling',
+    ],
+    materialSets: [
+      'poured concrete, pale ply, anodised aluminium, matte glass',
+      'painted blockwork, birch ply, powder-coated steel, wired safety glass',
+      'board-formed concrete, laminate worktop, brushed stainless, acrylic panel',
+    ],
     palettes: [
       'bone white, cool graphite, signal cyan, pale sand',
       'off-white, slate, muted coral, brushed aluminium',
@@ -409,8 +486,16 @@ export const ROOM_THEMES: RoomTheme[] = [
     name: "Scholars' Monsoon Veranda",
     family: 'history',
     styles: ['watercolour', 'ghibli', 'realistic', 'vintage'],
-    architecture: 'a shaded teak veranda study with carved screens and a broad shuttered opening onto the rain',
-    materials: 'oiled teak, woven rattan, brass, unglazed terracotta',
+    architectures: [
+      'a shaded teak veranda study with carved screens and a broad shuttered opening onto the rain',
+      'a stepped courtyard pavilion with a pillared edge and a deep overhanging eave',
+      'an upper-floor alcove with a carved stone balustrade and folding lattice panels',
+    ],
+    materialSets: [
+      'oiled teak, woven rattan, brass, unglazed terracotta',
+      'carved rosewood, split cane, bell metal, lime-plastered stone',
+      'weathered sal timber, coir matting, beaten copper, red sandstone',
+    ],
     palettes: [
       'monsoon green, teak brown, brass, rain-washed grey',
       'turmeric gold, deep jade, terracotta, wet stone',
@@ -459,8 +544,16 @@ export const ROOM_THEMES: RoomTheme[] = [
     name: 'Orbital Reading Deck',
     family: 'science',
     styles: ['futuristic', 'realistic', 'minimalist'],
-    architecture: 'a curved observation deck of white composite panels with a recessed instrument rail beneath the aperture',
-    materials: 'white composite, brushed titanium, smoked polycarbonate, grey foam',
+    architectures: [
+      'a curved observation deck of white composite panels with a recessed instrument rail beneath the aperture',
+      'a rotating habitat alcove where the floor curves gently upward and stowage lines the ceiling',
+      'a docking-node vestibule with padded ring bulkheads and handrails on every surface',
+    ],
+    materialSets: [
+      'white composite, brushed titanium, smoked polycarbonate, grey foam',
+      'matte ceramic panel, anodised aluminium, quilted insulation, black mesh',
+      'bonded carbon fibre, machined alloy, translucent silicone, velcro-faced fabric',
+    ],
     palettes: [
       'vacuum black, instrument cyan, bone white, warning amber',
       'deep navy, cold silver, pale mint, signal magenta',
@@ -509,8 +602,16 @@ export const ROOM_THEMES: RoomTheme[] = [
     name: 'Lantern Market Loft',
     family: 'everyday',
     styles: ['ghibli', 'watercolour', 'vintage', 'realistic'],
-    architecture: 'a snug upper-floor loft above a night market, with a low beamed ceiling and a wide shopfront window',
-    materials: 'worn floorboards, painted plaster, enamelled tin, warm glass',
+    architectures: [
+      'a snug upper-floor loft above a night market, with a low beamed ceiling and a wide shopfront window',
+      'a mezzanine tucked over a noodle counter, reached by a ladder, with a rail overlooking the stalls',
+      'a corner tea-house room with folding timber shutters thrown open on two sides',
+    ],
+    materialSets: [
+      'worn floorboards, painted plaster, enamelled tin, warm glass',
+      'oiled bamboo, smoke-stained render, lacquered wood, pressed tin',
+      'scrubbed pine, tiled dado, galvanised sheet, red-painted timber',
+    ],
     palettes: [
       'lantern red, warm ochre, night blue, aged cream',
       'paper-lantern orange, deep plum, soft jade, smoke grey',
@@ -597,8 +698,8 @@ export function randomRoomSpec(theme?: RoomTheme, opts: RandomRoomOpts = {}): Ro
     name: t.name,
     mood: pick(t.moods, rng),
     palette: pick(t.palettes, rng),
-    architecture: t.architecture,
-    materials: t.materials,
+    architecture: pick(t.architectures, rng),
+    materials: pick(t.materialSets, rng),
     lighting: pick(t.lighting, rng),
     outsideView: pick(t.views, rng),
     leftObjects: [objects[0], objects[1]],

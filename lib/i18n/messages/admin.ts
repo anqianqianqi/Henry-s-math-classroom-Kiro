@@ -422,4 +422,91 @@ export const admin = {
     en: 'e.g. make the lamp warmer and add more depth to the window reveal',
     zh: '例如：让灯光更暖，窗口的进深更明显',
   },
+
+  // ── Inventing a recipe ───────────────────────────────────
+  'design.randomise': { en: 'Randomise', zh: '随机' },
+  'design.invent': { en: 'Invent a theme', zh: '生成新主题' },
+  'design.inventing': { en: 'Inventing…', zh: '生成中…' },
+  'design.inventFailed': {
+    en: 'Could not invent a theme. Try again, or roll the dice instead.',
+    zh: '未能生成新主题。请重试，或改用随机。',
+  },
+  'design.inventFellBack': {
+    en: 'The model could not produce a usable theme, so this is a dice roll instead.',
+    zh: '模型未能生成可用主题，已改用随机配方。',
+  },
+  'design.rolledCell': { en: 'Rolled', zh: '本次坐标' },
+  'design.rolledCellHint': {
+    en: 'These seven coordinates are chosen before the model writes anything — that is what stops it returning the same theme every time.',
+    zh: '这七个坐标在模型动笔之前就已抽定，正因如此它每次才不会给出同一个主题。',
+  },
+  'design.matchRoom': { en: 'Match a saved room', zh: '匹配已保存的房间' },
+  'design.matchRoomNone': { en: 'No room — invent freely', zh: '不匹配 — 自由生成' },
+  'design.matchRoomHint': {
+    en: "Pick a room and the invented bundle's paper, frame and palette will be written to sit in it.",
+    zh: '选择房间后，生成的套装会在纸张、边框与配色上与该房间相配。',
+  },
+  'design.saveTheme': { en: 'Save as preset', zh: '存为预设主题' },
+  'design.savingTheme': { en: 'Saving…', zh: '保存中…' },
+  'design.themeCreated': {
+    en: '"{name}" is now a preset. Future rolls can draw from it.',
+    zh: '「{name}」已存为预设，之后的随机会从中抽取。',
+  },
+  'design.themeExtended': {
+    en: 'Folded into the existing "{name}" preset, which now has more to draw from.',
+    zh: '已并入现有预设「{name}」，其可抽取的内容更丰富了。',
+  },
+  'design.themeSaveFailed': { en: 'Could not save that as a preset.', zh: '未能存为预设。' },
+  'design.coverage': {
+    en: '{used} of {total} theme cells visited',
+    zh: '已探索 {total} 个主题坐标中的 {used} 个',
+  },
+
+  // Axis names, shown on hover over a chip.
+  'axis.family': { en: 'Subject world', zh: '题材世界' },
+  'axis.substrate': { en: 'Substrate', zh: '材质基底' },
+  'axis.era': { en: 'Era', zh: '年代' },
+  'axis.lightKey': { en: 'Light', zh: '光线' },
+  'axis.temperature': { en: 'Colour temperature', zh: '色温' },
+  'axis.ornament': { en: 'Ornament', zh: '装饰程度' },
+  'axis.motif': { en: 'Motif', zh: '装饰母题' },
+
+  // Axis values. Every one of these reaches the screen as a chip, so all 30
+  // need both languages — see lib/challengeRoom/axes.ts for what they mean.
+  'axis.family.nature': { en: 'nature', zh: '自然' },
+  'axis.family.science': { en: 'science', zh: '科学' },
+  'axis.family.fantasy': { en: 'fantasy', zh: '奇幻' },
+  'axis.family.history': { en: 'history', zh: '历史' },
+  'axis.family.everyday': { en: 'everyday', zh: '日常' },
+
+  'axis.substrate.paper': { en: 'paper', zh: '纸张' },
+  'axis.substrate.stone': { en: 'stone', zh: '石材' },
+  'axis.substrate.metal': { en: 'metal', zh: '金属' },
+  'axis.substrate.wood': { en: 'wood', zh: '木材' },
+  'axis.substrate.textile': { en: 'textile', zh: '织物' },
+  'axis.substrate.synthetic': { en: 'synthetic', zh: '合成材料' },
+
+  'axis.era.ancient': { en: 'ancient', zh: '远古' },
+  'axis.era.period': { en: 'period', zh: '古典' },
+  'axis.era.contemporary': { en: 'contemporary', zh: '当代' },
+  'axis.era.speculative': { en: 'speculative', zh: '未来' },
+
+  'axis.lightKey.high-key': { en: 'high-key', zh: '明亮' },
+  'axis.lightKey.low-key': { en: 'low-key', zh: '幽暗' },
+  'axis.lightKey.mixed': { en: 'high contrast', zh: '明暗强对比' },
+
+  'axis.temperature.warm': { en: 'warm', zh: '暖色' },
+  'axis.temperature.cool': { en: 'cool', zh: '冷色' },
+  'axis.temperature.split': { en: 'split warm/cool', zh: '冷暖并置' },
+
+  'axis.ornament.sparse': { en: 'sparse', zh: '极简' },
+  'axis.ornament.medium': { en: 'restrained', zh: '适度' },
+  'axis.ornament.dense': { en: 'dense', zh: '繁复' },
+
+  'axis.motif.botanical': { en: 'botanical', zh: '植物' },
+  'axis.motif.marine': { en: 'marine', zh: '海洋' },
+  'axis.motif.celestial': { en: 'celestial', zh: '星空' },
+  'axis.motif.mechanical': { en: 'mechanical', zh: '机械' },
+  'axis.motif.geometric': { en: 'geometric', zh: '几何' },
+  'axis.motif.culinary': { en: 'culinary', zh: '饮食' },
 } as const
