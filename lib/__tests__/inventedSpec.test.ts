@@ -43,7 +43,8 @@ function bookJson(over: Record<string, unknown> = {}) {
     name: 'Chandler\'s Wax Almanac',
     mood: 'warm, patient, faintly smoky',
     palette: 'tallow cream, soot black, ember orange, worn brass',
-    paper: 'laid stock with a faint waxed sheen',
+    coverSurface: 'waxed book-cloth over board with a close weave',
+    paper: 'laid paper with a faint waxed sheen',
     ground: 'tallow gold',
     frame: 'thin blackened rule with small dripped-wax corner marks',
     innerAccent: 'two slender tapers and a scatter of wax beads',
@@ -113,8 +114,12 @@ describe('the existing library passes its own filter', () => {
     }
   })
 
-  it('accepts every authored paper, ground and frame', () => {
+  it('accepts every authored material, ground and frame', () => {
     for (const theme of BOOK_THEMES) {
+      for (const coverSurface of theme.coverSurfaces) {
+        const r = parseInventedBook(bookJson({ coverSurface }), OPTS)
+        expect(r.ok ? '' : `${coverSurface} → ${r.reason}`).toBe('')
+      }
       for (const paper of theme.papers) {
         const r = parseInventedBook(bookJson({ paper }), OPTS)
         expect(r.ok ? '' : `${paper} → ${r.reason}`).toBe('')

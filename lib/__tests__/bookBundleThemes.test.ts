@@ -32,14 +32,14 @@ const COLOUR_WORDS = [
   'tan', 'toned', 'tinted', 'pale', 'dark', 'light-coloured', 'coloured',
 ]
 
-describe('paper is feel, not colour', () => {
-  it('never names a colour in any paper stock', () => {
+describe('material is feel, not colour', () => {
+  it('never names a colour in any material, cover or page', () => {
     for (const theme of BOOK_THEMES) {
-      for (const paper of theme.papers) {
+      for (const material of [...theme.coverSurfaces, ...theme.papers]) {
         const found = COLOUR_WORDS.filter(w =>
-          new RegExp(`\\b${w}\\b`, 'i').test(paper))
+          new RegExp(`\\b${w}\\b`, 'i').test(material))
         expect(
-          found.length ? `${theme.name}: "${paper}" names ${found.join(', ')}` : '',
+          found.length ? `${theme.name}: "${material}" names ${found.join(', ')}` : '',
         ).toBe('')
       }
     }
@@ -63,6 +63,41 @@ describe('paper is feel, not colour', () => {
         expect(tactile.test(paper), `${theme.name}: "${paper}" describes no texture`).toBe(true)
       }
     }
+  })
+})
+
+describe('the cover is bound, the pages are paper', () => {
+  /*
+   * The two lists collapsing back into one vocabulary is the failure this
+   * guards. It is what happened the first time: the field was called `paper`,
+   * so all 24 entries were paper and every cover rendered as a sheet however
+   * the theme was written. Adjective variety did not fix it and cannot.
+   */
+  const BINDINGS = /cloth|buckram|linen|canvas|silk|leather|calf|hide|lacquer|veneer|wood|metal|polymer|composite|laminate|oilcloth|board|vellum|marbled/i
+
+  it('binds every cover in something, and gives each theme a choice', () => {
+    for (const theme of BOOK_THEMES) {
+      expect(theme.coverSurfaces.length, `${theme.name}`).toBeGreaterThanOrEqual(2)
+      for (const s of theme.coverSurfaces) {
+        expect(BINDINGS.test(s), `${theme.name}: "${s}" names no binding material`).toBe(true)
+      }
+    }
+  })
+
+  it('never offers the same material for both halves', () => {
+    for (const theme of BOOK_THEMES) {
+      const overlap = theme.coverSurfaces.filter(s =>
+        theme.papers.some(p => p.toLowerCase() === s.toLowerCase()))
+      expect(overlap, `${theme.name} reuses a material on both halves`).toEqual([])
+    }
+  })
+
+  it('does not open most papers with the same two nouns', () => {
+    // 14 of 24 used to begin "stock" or "sheet", which read as one material
+    // wearing different adjectives.
+    const papers = BOOK_THEMES.flatMap(t => t.papers)
+    const stocky = papers.filter(p => /\b(stock|sheet)\b/i.test(p)).length
+    expect(stocky / papers.length).toBeLessThan(0.35)
   })
 })
 
@@ -103,9 +138,24 @@ describe('one colour, two values', () => {
     expect(inner).toContain('At least 75% of the framed interior must remain completely blank')
   })
 
-  it('states the same paper in both halves, so the pair still matches', () => {
-    expect(compileCoverPrompt(spec)).toContain(`Paper: ${spec.paper}.`)
-    expect(compileInnerPrompt(spec)).toContain(`Paper: ${spec.paper}.`)
+  it('gives each half its own material, and the cover a flat-swatch guard', () => {
+    const cover = compileCoverPrompt(spec)
+    const inner = compileInnerPrompt(spec)
+    expect(cover).toContain(`Surface: ${spec.coverSurface}.`)
+    expect(inner).toContain(`Paper: ${spec.paper}.`)
+    // "cloth over board" is an invitation to render a bound object, and the
+    // texture has to stay a flat UV map or it fights the GLB.
+    expect(cover).toContain('FLAT SWATCH')
+    expect(cover).toContain('never as a bound object')
+  })
+
+  it('keeps the frame identical across the halves', () => {
+    // Colour, palette and frame are what hold the pair together now that the
+    // materials deliberately differ.
+    expect(compileCoverPrompt(spec)).toContain(`Frame: ${spec.frame}.`)
+    expect(compileInnerPrompt(spec)).toContain(`Frame: ${spec.frame}.`)
+    expect(compileCoverPrompt(spec)).toContain(`Palette: ${spec.palette}.`)
+    expect(compileInnerPrompt(spec)).toContain(`Palette: ${spec.palette}.`)
   })
 
   it('never tells the cover to stay bright — only the inner page is constrained', () => {
@@ -120,7 +170,17 @@ describe('a recipe saved before `ground` existed', () => {
    * before today has no ground. Regenerating one must still produce a sane
    * prompt rather than the literal word "undefined".
    */
-  const legacy = { ...randomBookSpec(BOOK_THEMES[2], { rng: seeded(9) }), ground: undefined }
+  const legacy = {
+    ...randomBookSpec(BOOK_THEMES[2], { rng: seeded(9) }),
+    ground: undefined,
+    coverSurface: undefined,
+  }
+
+  it('uses the inner paper for the cover when no cover material was saved', () => {
+    // Which reproduces the old look exactly: those recipes had one field doing
+    // both jobs, so both halves used the paper.
+    expect(compileCoverPrompt(legacy)).toContain(`Surface: ${legacy.paper}.`)
+  })
 
   it('falls back to the palette rather than emitting undefined', () => {
     for (const prompt of [compileCoverPrompt(legacy), compileInnerPrompt(legacy)]) {

@@ -77,8 +77,13 @@ CREATE TABLE IF NOT EXISTS book_bundle_themes (
   palettes      JSONB NOT NULL DEFAULT '[]'::jsonb,
   moods         JSONB NOT NULL DEFAULT '[]'::jsonb,
 
-  -- How the sheet FEELS: tooth, fibre, deckle, weave. Never a colour — a
-  -- colour word here takes the ground back from `grounds` below.
+  -- What the COVER is bound in: cloth, leather, lacquer, veneer, metal.
+  -- A bound book is not made of one substance, so this is separate from the
+  -- inner page's paper below; the two match on colour, never on texture.
+  cover_surfaces JSONB NOT NULL DEFAULT '[]'::jsonb,
+
+  -- What the INNER PAGE is. Always a paper. Never a colour — a colour word
+  -- in either material list takes the ground back from `grounds` below.
   papers        JSONB NOT NULL DEFAULT '[]'::jsonb,
 
   -- What colour the sheet IS. One name per entry, carried by both halves:
@@ -109,6 +114,9 @@ CREATE INDEX IF NOT EXISTS idx_bbt_active ON book_bundle_themes(is_active);
 -- compiler handles by falling back to the palette's deepest tone.
 ALTER TABLE book_bundle_themes
   ADD COLUMN IF NOT EXISTS grounds JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+ALTER TABLE book_bundle_themes
+  ADD COLUMN IF NOT EXISTS cover_surfaces JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 -- ============================================================
 -- RLS

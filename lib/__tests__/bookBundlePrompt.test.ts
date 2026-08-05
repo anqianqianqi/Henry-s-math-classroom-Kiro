@@ -81,11 +81,29 @@ describe('the prompt no longer contradicts its own spec', () => {
     expect(prompt).toContain('Four small vignette clusters')
   })
 
-  it('states paper and frame in both halves, so the pair matches', () => {
+  it('states the frame in both halves, which is what now holds the pair together', () => {
+    /*
+     * The halves used to share one `paper`. They no longer do: a bound book has
+     * cloth or hide on the boards and paper inside, so each half names its own
+     * material and the pair matches on frame, palette and ground instead.
+     *
+     * SCI_FI predates coverSurface, so its cover falls back to `paper` — which
+     * is exactly the old behaviour, and the next test pins it.
+     */
     for (const prompt of [compileCoverPrompt(SCI_FI), compileInnerPrompt(SCI_FI)]) {
-      expect(prompt).toContain(`Paper: ${SCI_FI.paper}.`)
       expect(prompt).toContain(`Frame: ${SCI_FI.frame}.`)
+      expect(prompt).toContain(`Palette: ${SCI_FI.palette}.`)
     }
+    expect(compileCoverPrompt(SCI_FI)).toContain(`Surface: ${SCI_FI.paper}.`)
+    expect(compileInnerPrompt(SCI_FI)).toContain(`Paper: ${SCI_FI.paper}.`)
+  })
+
+  it('lets a cover name a material the inner page never could', () => {
+    const bound = { ...SCI_FI, coverSurface: 'anodised metal panel with a fine directional brush' }
+    expect(compileCoverPrompt(bound)).toContain('Surface: anodised metal panel with a fine directional brush.')
+    // The page stays paper regardless of what the boards are bound in.
+    expect(compileInnerPrompt(bound)).toContain(`Paper: ${SCI_FI.paper}.`)
+    expect(compileInnerPrompt(bound)).not.toContain('anodised metal')
   })
 })
 

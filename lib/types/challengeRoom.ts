@@ -82,6 +82,7 @@ export interface BookSpec {
   name: string
   mood: string
   palette: string
+  /** What the INNER PAGE is made of. Always a paper; see coverSurface above. */
   paper: string
   frame: string
   /** Exactly four: top-left, top-right, bottom-left, bottom-right. */
@@ -92,6 +93,20 @@ export interface BookSpec {
   artStyle?: string
   /** The sparse motif edging the inner page. Absent keeps the botanical default. */
   innerAccent?: string
+
+  /**
+   * What the COVER is made of — cloth over board, leather, lacquer, veneer,
+   * anodised metal. Texture and material only, never a colour.
+   *
+   * Split from `paper` because a bound book is not made of one material: the
+   * boards are cloth or hide and the pages are paper, and collapsing the two
+   * meant every cover rendered as a sheet of paper. `paper` below now means the
+   * inner page alone.
+   *
+   * Optional so a recipe saved before the split still compiles — those fall
+   * back to `paper`, which is exactly what they used to use for both halves.
+   */
+  coverSurface?: string
 
   /**
    * The sheet's colour — ONE colour name, carried by both halves.

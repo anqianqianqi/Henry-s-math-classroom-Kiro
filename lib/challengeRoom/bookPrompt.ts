@@ -10,9 +10,21 @@
  * The two are generated from one spec so the pair matches — same paper, same
  * frame, same palette — with the clusters appearing only on the cover.
  *
- * ── PAPER IS FEEL; GROUND IS COLOUR ─────────────────────────
- * `paper` names tooth, fibre, deckle and finish, never a colour. `ground` names
- * ONE colour, and both halves carry it:
+ * ── THE HALVES MATCH ON COLOUR, NOT ON MATERIAL ─────────────
+ * A bound book is not made of one substance: the boards are cloth or hide and
+ * the pages are paper. So the two halves name their own material —
+ *
+ *   coverSurface  cloth over board, leather, lacquer, veneer, anodised metal
+ *   paper         the inner page, always a paper
+ *
+ * — and are held together by everything else: one ground colour, one palette,
+ * one frame. Before the split there was a single `paper` field doing both jobs,
+ * which is why every cover rendered as a sheet of paper however the theme was
+ * written.
+ *
+ * ── MATERIAL IS FEEL; GROUND IS COLOUR ──────────────────────
+ * Neither material field names a colour. `ground` names ONE, and both halves
+ * carry it:
  *
  *   cover  → that colour at full strength
  *   inner  → a pale tint of the same hue
@@ -74,6 +86,18 @@ function groundPhrase(spec: BookSpec): string {
   return named ? clean(named) : 'the deepest colour named in the palette'
 }
 
+/**
+ * What the cover is made of.
+ *
+ * Falls back to `paper` for recipes written before covers could be anything
+ * else — which reproduces their old look exactly, since those used the one
+ * field for both halves.
+ */
+function coverSurfaceOf(spec: BookSpec): string {
+  const named = spec.coverSurface?.trim()
+  return clean(named || spec.paper)
+}
+
 export function compileCoverPrompt(spec: BookSpec): string {
   const [topLeft, topRight, bottomLeft, bottomRight] = spec.cornerClusters
   return [
@@ -82,16 +106,17 @@ export function compileCoverPrompt(spec: BookSpec): string {
     `COLLECTION THEME: ${clean(spec.name)}.`,
     `Mood: ${clean(spec.mood)}.`,
     `Palette: ${clean(spec.palette)}.`,
-    `Paper: ${clean(spec.paper)}.`,
+    `Surface: ${coverSurfaceOf(spec)}.`,
     `Frame: ${clean(spec.frame)}.`,
     '',
     'LOCKED LAYOUT — follow exactly:',
     '- Exact 3:4 portrait canvas, shown perfectly flat and orthographic, like a UV texture or print file.',
     '- No book mockup, no perspective, no spine, no page block, no drop shadow, no background surface outside the artwork.',
-    '- A very narrow bleed of that same paper touches every canvas edge.',
+    '- The surface above is a binding material. Render it as a FLAT SWATCH filling the whole canvas — the material seen straight on, filling the frame edge to edge, never as a bound object with corners, boards or a spine.',
+    '- A very narrow bleed of that same surface touches every canvas edge.',
     '- Place a single thin continuous frame exactly as described above, approximately 2% inward from every edge.',
     '- Keep the frame close to the canvas edges. Do not leave a wide exterior margin.',
-    `- The paper above describes FEEL, not colour. Tint the whole sheet — bleed and framed interior alike — evenly to ${groundPhrase(spec)}, keeping that stock’s grain visible through it.`,
+    `- The surface above describes MATERIAL and FEEL, not colour. Tint the whole thing — bleed and framed interior alike — evenly to ${groundPhrase(spec)}, keeping that material’s weave, grain or finish visible through it.`,
     '- Four small vignette clusters sit inside the frame, one in each corner:',
     `  top left: ${clean(topLeft)};`,
     `  top right: ${clean(topRight)};`,
@@ -128,6 +153,7 @@ export function compileInnerPrompt(spec: BookSpec): string {
     '- Keep the frame close to the canvas edges. Do not leave a wide exterior margin.',
     `- The paper above describes FEEL, not colour. Tint the whole page — inside and outside the frame — evenly to a PALE, WASHED-OUT TINT of ${groundPhrase(spec)}: unmistakably the same hue as the cover, but lightened far towards white. Keep that stock’s grain visible through it.`,
     '- The page must stay bright. Dark ink is printed onto it later, so a mid-tone or saturated page is a failure however well it suits the theme. When in doubt, lighten it further.',
+    '- This page is paper even where the cover is a bound material such as cloth or leather. That difference is deliberate and correct: the two halves match on colour, palette and frame, never on texture.',
     `- Use only a very small, sparse accent around the frame: ${clean(spec.innerAccent?.trim() || LEGACY_INNER_ACCENT)}.`,
     "- Do not include any of the cover's four object clusters. No animals, food, cups, books, gadgets, or large ornaments.",
     '- At least 75% of the framed interior must remain completely blank, evenly colored, and usable for later story text or illustration.',
