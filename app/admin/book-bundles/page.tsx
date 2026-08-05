@@ -577,6 +577,8 @@ export default function BookBundlesAdminPage() {
                 {field(t('design.mood'), 'mood')}
                 {field(t('design.palette'), 'palette')}
                 {field(t('bundle.paper'), 'paper')}
+                {field(t('bundle.ground'), 'ground')}
+                <p className="-mt-1 text-[11px] text-gray-400">{t('bundle.groundHint')}</p>
                 {field(t('bundle.frame'), 'frame')}
                 {field(t('bundle.innerAccent'), 'innerAccent')}
 

@@ -246,6 +246,7 @@ export function parseInventedBook(raw: unknown, opts: ParseOpts): InventResult<B
   const mood = clean(o.mood)
   const palette = clean(o.palette)
   const paper = clean(o.paper)
+  const ground = clean(o.ground)
   const frame = clean(o.frame)
   const innerAccent = clean(o.innerAccent)
 
@@ -257,6 +258,10 @@ export function parseInventedBook(raw: unknown, opts: ParseOpts): InventResult<B
       ['Mood', mood],
       ['Palette', palette],
       ['Paper', paper],
+      // Required of the model even though the spec type allows it to be
+      // absent: optional exists for recipes saved before the field did, not as
+      // licence for a fresh one to skip it and fall back to guesswork.
+      ['Ground', ground],
       ['Frame', frame],
     ],
     BOOK_PATTERNS,
@@ -291,6 +296,7 @@ export function parseInventedBook(raw: unknown, opts: ParseOpts): InventResult<B
       mood,
       palette,
       paper,
+      ground,
       frame,
       cornerClusters: [clusters[0], clusters[1], clusters[2], clusters[3]],
       notes: '',

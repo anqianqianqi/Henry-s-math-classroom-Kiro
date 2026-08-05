@@ -43,7 +43,8 @@ function bookJson(over: Record<string, unknown> = {}) {
     name: 'Chandler\'s Wax Almanac',
     mood: 'warm, patient, faintly smoky',
     palette: 'tallow cream, soot black, ember orange, worn brass',
-    paper: 'warm cream laid stock with a faint waxed sheen',
+    paper: 'laid stock with a faint waxed sheen',
+    ground: 'tallow gold',
     frame: 'thin blackened rule with small dripped-wax corner marks',
     innerAccent: 'two slender tapers and a scatter of wax beads',
     cornerClusters: [
@@ -112,11 +113,15 @@ describe('the existing library passes its own filter', () => {
     }
   })
 
-  it('accepts every authored paper and frame', () => {
+  it('accepts every authored paper, ground and frame', () => {
     for (const theme of BOOK_THEMES) {
       for (const paper of theme.papers) {
         const r = parseInventedBook(bookJson({ paper }), OPTS)
         expect(r.ok ? '' : `${paper} → ${r.reason}`).toBe('')
+      }
+      for (const ground of theme.grounds) {
+        const r = parseInventedBook(bookJson({ ground }), OPTS)
+        expect(r.ok ? '' : `${ground} → ${r.reason}`).toBe('')
       }
       for (const frame of theme.frames) {
         const r = parseInventedBook(bookJson({ frame }), OPTS)
@@ -219,6 +224,14 @@ describe('structural checks', () => {
     const r = parseInventedRoom(roomJson({ lighting: '   ' }), OPTS)
     expect(r.ok).toBe(false)
     expect(r.ok ? '' : r.reason).toMatch(/Lighting/)
+  })
+
+  it('requires a ground, even though the spec type allows one to be absent', () => {
+    // Optional exists for recipes saved before the field did, not as licence
+    // for a fresh invention to skip it and fall back to guesswork.
+    const r = parseInventedBook(bookJson({ ground: undefined }), OPTS)
+    expect(r.ok).toBe(false)
+    expect(r.ok ? '' : r.reason).toMatch(/Ground/)
   })
 
   it('rejects the wrong number of objects', () => {

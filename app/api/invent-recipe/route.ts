@@ -97,7 +97,8 @@ Return ONLY a JSON object with exactly these keys:
   "name":           "the collection's name, 2-4 words, title case",
   "mood":           "three adjectives, comma separated",
   "palette":        "4-5 named colours, comma separated",
-  "paper":          "the stock and its grain, one fragment",
+  "paper":          "how the stock FEELS — tooth, fibre, deckle, weave, finish. Never a colour",
+  "ground":         "ONE colour name for the sheet itself, mid-tone to deep, e.g. 'deep indigo'",
   "frame":          "a single thin border running just inside the cover edge, one fragment",
   "innerAccent":    "a very sparse motif for the inner page, one fragment",
   "cornerClusters": ["four", "distinct", "small", "vignettes"],
@@ -105,6 +106,9 @@ Return ONLY a JSON object with exactly these keys:
 }
 
 BOOK RULES:
+- "paper" is texture only. Write what the sheet feels like, never what colour it is: "coarse fibrous stock with visible pulp inclusions", not "warm ivory paper".
+- "ground" is a single colour, and it is the colour of the whole book: the cover takes it at full strength, the inner page takes a pale tint of the same hue. Choose something mid-tone or deep — a ground that is already pale gives a cover and an inner page that look identical. One colour name only, never a list.
+- "palette" colours the four corner clusters. It is not the ground, so it may range freely.
 - Each corner cluster is a compact group of 2-3 small objects, under 110 characters.
 - Never mention a title, a word, or anything printed. The cover carries no type.
 - The inner accent must stay quiet: at least 75% of the inner page has to remain blank, because a maths problem is printed onto it.`
@@ -206,7 +210,8 @@ function exampleFor(kind: 'room' | 'book', vector: AxisVector): string {
       const s = randomBookSpec(t)
       return JSON.stringify({
         name: s.name, mood: s.mood, palette: s.palette,
-        paper: s.paper, frame: s.frame, innerAccent: s.innerAccent,
+        paper: s.paper, ground: s.ground, frame: s.frame,
+        innerAccent: s.innerAccent,
         cornerClusters: s.cornerClusters, artStyle: s.artStyle,
       }, null, 2)
     })

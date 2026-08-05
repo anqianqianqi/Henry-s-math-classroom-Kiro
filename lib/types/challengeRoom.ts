@@ -92,6 +92,18 @@ export interface BookSpec {
   artStyle?: string
   /** The sparse motif edging the inner page. Absent keeps the botanical default. */
   innerAccent?: string
+
+  /**
+   * The sheet's colour — ONE colour name, carried by both halves.
+   *
+   * The cover takes it at full strength and the inner page takes a pale tint of
+   * the same hue, so the pair reads as one set rather than two books. Paper
+   * names feel only; this names colour.
+   *
+   * Optional for the reason given above: a recipe saved before it existed must
+   * still compile, so the compiler falls back to the palette's deepest tone.
+   */
+  ground?: string
   /** Set only on invented recipes. Ignored by the prompt compiler. */
   axes?: AxisVector
 }

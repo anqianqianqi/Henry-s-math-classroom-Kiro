@@ -185,7 +185,12 @@ export const admin = {
   'bundle.save': { en: 'Save bundle', zh: '保存套装' },
   'bundle.none': { en: 'No bundles yet.', zh: '还没有套装。' },
   'bundle.collectionName': { en: 'Collection name', zh: '系列名称' },
-  'bundle.paper': { en: 'Paper', zh: '纸张' },
+  'bundle.paper': { en: 'Paper — texture only', zh: '纸张质感（不含颜色）' },
+  'bundle.ground': { en: 'Sheet colour', zh: '纸张颜色' },
+  'bundle.groundHint': {
+    en: 'One colour. The cover takes it at full strength; the inner page takes a pale tint of the same hue.',
+    zh: '填写一种颜色。封面使用其原色，内页使用同色系的浅色调。',
+  },
   'bundle.frame': { en: 'Frame', zh: '边框' },
   'bundle.innerAccent': { en: 'Inner-page accent', zh: '内页点缀' },
   'bundle.topLeft': { en: 'Top left', zh: '左上' },
