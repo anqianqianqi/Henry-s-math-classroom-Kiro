@@ -203,9 +203,79 @@ async function callGrader(
   return callGPT(GRADER_PROMPT, userMsg, 1500)
 }
 
+// ── Node 0 — Image Parser ────────────────────────────────────────────────
+// Runs ONLY when submission has images. Transcribes the image and assesses
+// parse quality BEFORE the grader runs. Poor quality → skip grader entirely.
+
+const IMAGE_PARSER_PROMPT = `You are transcribing a student's handwritten math submission. Your ONLY job is to read and transcribe what is written — do NOT evaluate, grade, or judge correctness.
+
+Rules:
+- Read every symbol, number, and word you can see
+- Transcribe the student's work exactly as they wrote it, in the order it appears
+- If a region is unclear or cut off, note it explicitly (e.g. "[unclear — bottom right]")
+- Do NOT solve the problem yourself
+- Do NOT comment on whether the work is correct
+
+Then assess your own reading quality honestly:
+- "good": you can read virtually everything (>90% of the work is legible)
+- "partial": you can read most of it but some steps or regions are unclear (50-90% legible)
+- "poor": large portions are unreadable, cut off, or too blurry to follow (<50% legible)
+
+Output ONLY valid JSON — no markdown, no code blocks:
+{
+  "transcription": "Full transcription of what the student wrote, preserving their notation and order. Include [unclear — description] markers for unreadable parts.",
+  "parse_quality": "good | partial | poor",
+  "unreadable_regions": ["description of unclear area 1", "..."],
+  "parse_confidence": 0.0
+}`
+
+interface ImageParseResult {
+  transcription: string
+  parse_quality: 'good' | 'partial' | 'poor'
+  unreadable_regions: string[]
+  parse_confidence: number
+}
+
+async function callImageParser(imageUrl: string): Promise<ImageParseResult> {
+  const userContent: any[] = [
+    {
+      type: 'text',
+      text: 'Please transcribe this student submission image exactly as instructed.',
+    },
+    {
+      type: 'image_url',
+      image_url: { url: imageUrl, detail: 'high' },
+    },
+  ]
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${OPENAI_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: IMAGE_PARSER_PROMPT },
+        { role: 'user', content: userContent },
+      ],
+      max_tokens: 1000,
+      temperature: 0.1,
+    }),
+  })
+  if (!res.ok) throw new Error(`Image Parser error ${res.status}: ${await res.text()}`)
+  const raw = (await res.json()).choices[0].message.content as string
+  const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
+  const parsed = JSON.parse(cleaned)
+  return {
+    transcription: String(parsed.transcription || ''),
+    parse_quality: ['good', 'partial', 'poor'].includes(parsed.parse_quality) ? parsed.parse_quality : 'poor',
+    unreadable_regions: Array.isArray(parsed.unreadable_regions) ? parsed.unreadable_regions : [],
+    parse_confidence: typeof parsed.parse_confidence === 'number' ? Math.max(0, Math.min(1, parsed.parse_confidence)) : 0.5,
+  }
+}
+
 // ── Vision Grader (for image submissions) ────────────────────────────────
 // Sends the image directly to GPT-4o Vision along with the problem.
-// Replaces the 2-pass text flow when the student submits a photo.
+// Now receives the pre-parsed transcription from Node 0 as additional context.
 
 const VISION_GRADER_PROMPT = `You are a math grader for Henry's math classroom. The student has submitted a photo of their work. Read the image carefully and grade it.
 
@@ -254,8 +324,12 @@ async function callVisionGrader(
   maxPoints: number,
   imageUrl: string,
   textContent: string,
+  imageTranscription?: string,
 ): Promise<any> {
   const textPart = textContent ? `\n\nStudent also wrote: ${textContent}` : ''
+  const transcriptionPart = imageTranscription
+    ? `\n\nNote: A separate image parser already read this image and transcribed it as:\n"${imageTranscription}"\nUse this as a starting point, but look at the image yourself too.`
+    : ''
   const userContent: any[] = [
     {
       type: 'text',
@@ -264,7 +338,7 @@ async function callVisionGrader(
         problemDesc ? `Description: ${problemDesc}` : null,
         `Max points: ${maxPoints}`,
         ``,
-        `The student's submission is in the image below. Read it carefully and grade it.${textPart}`,
+        `The student's submission is in the image below. Read it carefully and grade it.${textPart}${transcriptionPart}`,
       ].filter(Boolean).join('\n'),
     },
     {
@@ -648,10 +722,70 @@ export async function POST(req: NextRequest) {
     // ── Grade: branch on image vs text ───────────────────────────────────
     let draftResult: any
     let readerResult: any = null
+    let imageParseResult: ImageParseResult | null = null
 
     if (imageUrl) {
-      // Image submission: use Vision grader (single call, reads the photo directly)
-      draftResult = await callVisionGrader(problemTitle, problemDescription, maxPoints, imageUrl, submissionText)
+      // Node 0 — Image Parser: transcribe and assess quality first
+      try {
+        imageParseResult = await callImageParser(imageUrl)
+      } catch (parseErr: any) {
+        console.error('Image Parser failed:', parseErr.message)
+        // If parser fails entirely, treat as poor quality and flag
+        imageParseResult = {
+          transcription: '',
+          parse_quality: 'poor',
+          unreadable_regions: ['Parser failed to read image'],
+          parse_confidence: 0,
+        }
+      }
+
+      // Route based on parse quality
+      if (imageParseResult.parse_quality === 'poor') {
+        // Skip grading entirely — flag for Henry with reason image_unreadable
+        const flagResult = {
+          suggested_score: null as number | null,
+          max_score: maxPoints,
+          confidence: 0,
+          comment: '',
+          high_confidence: false,
+          failed_at_step: null,
+          topic_module_used: null,
+          suggested_solution: '',
+          solution_from_cache: false,
+          image_transcription: imageParseResult.transcription,
+          parse_quality: imageParseResult.parse_quality,
+          parse_confidence: imageParseResult.parse_confidence,
+          flag_reason: 'image_unreadable',
+          reasoning: null,
+          critic: null,
+          anqi: null,
+        }
+
+        // Save to ta_grades as flagged
+        await supabase.from('ta_grades').upsert({
+          submission_id,
+          challenge_id: (submission as any).challenge_id,
+          student_id: (submission as any).user_id,
+          suggested_score: null,
+          max_score: maxPoints,
+          confidence: 0,
+          suggested_comment: '',
+          image_transcription: imageParseResult.transcription,
+          parse_quality: imageParseResult.parse_quality,
+          parse_confidence: imageParseResult.parse_confidence,
+          flag_reason: 'image_unreadable',
+          reasoning: { image_parse: imageParseResult },
+          status: 'flagged',
+        }, { onConflict: 'submission_id' })
+
+        return NextResponse.json({ ok: true, grade: flagResult })
+      }
+
+      // Image is readable — proceed with vision grader, passing the transcription
+      draftResult = await callVisionGrader(
+        problemTitle, problemDescription, maxPoints, imageUrl, submissionText,
+        imageParseResult.transcription,
+      )
     } else {
       // Text submission: 2-pass flow (reader → grader)
       readerResult = await callSubmissionReader(problemTitle, problemDescription, submissionText, false)
@@ -715,8 +849,13 @@ export async function POST(req: NextRequest) {
         max_score:         maxPoints,
         confidence:        displayConf,
         suggested_comment: displayComment,
+        image_transcription: imageParseResult?.transcription ?? null,
+        parse_quality:     imageParseResult?.parse_quality ?? null,
+        parse_confidence:  imageParseResult?.parse_confidence ?? null,
+        flag_reason:       imageParseResult?.parse_quality === 'partial' ? 'low_confidence' : null,
         reasoning: {
           reader_interpretation:    readerResult,
+          image_parse:              imageParseResult,
           step1_math_understanding: draftResult.step1_math_understanding,
           step2_student_approach:   draftResult.step2_student_approach,
           step3_deviation:          draftResult.step3_deviation,
@@ -736,7 +875,7 @@ export async function POST(req: NextRequest) {
           anqi_what_ta_missed:      anqiResult?.what_ta_missed ?? null,
           solution_from_cache:      !!cachedSolution,
         },
-        status: 'pending',
+        status: imageParseResult?.parse_quality === 'partial' ? 'flagged' : 'pending',
       }, { onConflict: 'submission_id' })
       .select()
       .single()
@@ -756,6 +895,10 @@ export async function POST(req: NextRequest) {
         topic_module_used:    classification.slug,
         suggested_solution:   suggestedSolution,
         solution_from_cache:  !!cachedSolution,
+        image_transcription:  imageParseResult?.transcription ?? null,
+        parse_quality:        imageParseResult?.parse_quality ?? null,
+        parse_confidence:     imageParseResult?.parse_confidence ?? null,
+        flag_reason:          imageParseResult?.parse_quality === 'partial' ? 'low_confidence' : null,
         reasoning: {
           reader_interpretation:   readerResult,
           step3_deviation:         draftResult.step3_deviation,

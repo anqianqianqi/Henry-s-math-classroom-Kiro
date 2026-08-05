@@ -163,6 +163,11 @@ export default function ChallengePage() {
     loading?: boolean; progress?: { step: number; pct: number; label: string }
     critic?: { upheld: boolean; draft_score: number; final_score: number; grade_changed: boolean; reasoning: string; what_student_did: string; main_issue: string }
     anqi?: { upheld: boolean; comment_assessment: string; revised_comment: string; anqi_question: string }
+    // Image parse fields (Node 0)
+    image_transcription?: string | null
+    parse_quality?: 'good' | 'partial' | 'poor' | null
+    parse_confidence?: number | null
+    flag_reason?: 'image_unreadable' | 'low_confidence' | 'verifier_disagreement' | null
     // Teacher feedback state
     feedbackOpen?: boolean; feedbackSending?: boolean
     whatTAMissed?: string; lessonType?: string
@@ -1114,9 +1119,11 @@ export default function ChallengePage() {
               }))
             } else if (event.type === 'done') {
               const grade = event.grade
-              // Pre-fill the grade input
-              const input = document.getElementById(`grade-${submissionId}`) as HTMLInputElement
-              if (input) input.value = String(grade.suggested_score)
+              // Pre-fill the grade input (only if not flagged as unreadable)
+              if (grade.suggested_score != null) {
+                const input = document.getElementById(`grade-${submissionId}`) as HTMLInputElement
+                if (input) input.value = String(grade.suggested_score)
+              }
               setTaGrades(prev => ({
                 ...prev,
                 [submissionId]: {
@@ -1128,6 +1135,10 @@ export default function ChallengePage() {
                   reasoning:       grade.reasoning,
                   critic:          grade.critic,
                   anqi:            grade.anqi,
+                  image_transcription: grade.image_transcription ?? null,
+                  parse_quality:   grade.parse_quality ?? null,
+                  parse_confidence: grade.parse_confidence ?? null,
+                  flag_reason:     grade.flag_reason ?? null,
                   loading:         false,
                   progress:        { step: 4, pct: 100, label: 'Complete ✓' },
                   feedbackOpen:    false,
@@ -2250,7 +2261,76 @@ export default function ChallengePage() {
 
                           {/* TA suggestion panel — shown after loading */}
                           {isTeacher && taGrades[submission.id] && !taGrades[submission.id]?.loading && (
-                            <div className={`mb-3 rounded-xl border-2 text-sm overflow-hidden ${taGrades[submission.id].confidence >= 0.85 ? 'border-indigo-200' : 'border-amber-200'}`}>
+                            <div className={`mb-3 rounded-xl border-2 text-sm overflow-hidden ${
+                              taGrades[submission.id].flag_reason === 'image_unreadable'
+                                ? 'border-red-300'
+                                : taGrades[submission.id].parse_quality === 'partial'
+                                ? 'border-amber-300'
+                                : taGrades[submission.id].confidence >= 0.85
+                                ? 'border-indigo-200'
+                                : 'border-amber-200'
+                            }`}>
+                              {/* Image Transcription Panel (Node 0 output) */}
+                              {taGrades[submission.id].image_transcription && (
+                                <div className={`px-3 py-2 border-b ${
+                                  taGrades[submission.id].flag_reason === 'image_unreadable'
+                                    ? 'bg-red-50 border-red-200'
+                                    : taGrades[submission.id].parse_quality === 'partial'
+                                    ? 'bg-amber-50 border-amber-200'
+                                    : 'bg-gray-50 border-gray-100'
+                                }`}>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide">🤖 AI read this as:</span>
+                                    {taGrades[submission.id].parse_quality && (
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                        taGrades[submission.id].flag_reason === 'image_unreadable'
+                                          ? 'bg-red-100 text-red-700'
+                                          : taGrades[submission.id].parse_quality === 'partial'
+                                          ? 'bg-amber-100 text-amber-700'
+                                          : 'bg-green-100 text-green-700'
+                                      }`}>
+                                        {taGrades[submission.id].flag_reason === 'image_unreadable'
+                                          ? 'unreadable ✗'
+                                          : taGrades[submission.id].parse_quality === 'partial'
+                                          ? 'partial ⚠️'
+                                          : 'good ✓'
+                                        }
+                                      </span>
+                                    )}
+                                    {taGrades[submission.id].parse_confidence != null && (
+                                      <span className="text-[10px] text-gray-400">{Math.round((taGrades[submission.id].parse_confidence ?? 0) * 100)}% legible</span>
+                                    )}
+                                  </div>
+                                  {taGrades[submission.id].image_transcription ? (
+                                    <p className="text-xs text-gray-700 whitespace-pre-wrap font-mono bg-white rounded p-2 border border-gray-100">
+                                      {taGrades[submission.id].image_transcription}
+                                    </p>
+                                  ) : null}
+                                  {taGrades[submission.id].flag_reason === 'image_unreadable' && (
+                                    <p className="text-xs text-red-600 font-medium mt-1">
+                                      Image too unclear to grade automatically — please grade manually.
+                                    </p>
+                                  )}
+                                  {taGrades[submission.id].parse_quality === 'partial' && (
+                                    <p className="text-xs text-amber-700 mt-1">
+                                      ⚠️ Some regions were unclear — review carefully before accepting.
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* If image is unreadable, skip showing score — just show the flag */}
+                              {taGrades[submission.id].flag_reason === 'image_unreadable' ? (
+                                <div className="px-3 py-3 bg-white flex gap-2">
+                                  <button
+                                    onClick={() => setTaGrades(prev => { const n = { ...prev }; delete n[submission.id]; return n })}
+                                    className="px-3 py-1.5 bg-white text-gray-500 text-xs font-medium rounded-lg border hover:bg-gray-50"
+                                  >
+                                    Dismiss
+                                  </button>
+                                </div>
+                              ) : (
+                              <>
                               {/* Header */}
                               <div className={`px-3 py-2 flex items-center justify-between ${taGrades[submission.id].confidence >= 0.85 ? 'bg-indigo-50' : 'bg-amber-50'}`}>
                                 <span className="font-semibold text-indigo-800">
@@ -2389,6 +2469,8 @@ export default function ChallengePage() {
                                   </div>
                                 )}
                               </div>
+                              </>
+                              )}
                             </div>
                           )}
                           {/* Show points to students */}
