@@ -111,7 +111,15 @@ export function compileCoverPrompt(spec: BookSpec): string {
     '',
     'LOCKED LAYOUT — follow exactly:',
     '- Exact 3:4 portrait canvas, shown perfectly flat and orthographic, like a UV texture or print file.',
-    '- No book mockup, no perspective, no spine, no page block, no drop shadow, no background surface outside the artwork.',
+    /*
+      "no drop shadow" used to be unqualified, which was too broad: a rim
+      vignette and an embossed rule are also shading, so the coverRelief lines
+      below were being cancelled by this one. What actually fights the GLB is a
+      shadow cast BY the book onto something behind it — the scene throws its
+      own, from a real light with a per-room position. Shading ON the material
+      is free.
+    */
+    '- No book mockup, no perspective, no spine, no page block, no drop shadow beneath or behind the artwork, no background surface outside the artwork.',
     '- The surface above is a binding material. Render it as a FLAT SWATCH filling the whole canvas — the material seen straight on, filling the frame edge to edge, never as a bound object with corners, boards or a spine.',
     '- A very narrow bleed of that same surface touches every canvas edge.',
     '- Place a single thin continuous frame exactly as described above, approximately 2% inward from every edge.',
@@ -127,16 +135,28 @@ export function compileCoverPrompt(spec: BookSpec): string {
     /*
       Optional weight, off by default.
 
-      Lifted from what the older /admin/book-skins prompt actually does to make
-      a cover feel bound — it has no spine either, and gets its physical weight
-      from embossing and a rim vignette. The second line is the guard: "raised
-      boards" is an invitation to draw an actual book, and this texture is
-      mapped onto a flat page in the GLB.
+      ── WHY THIS TALKS ABOUT LIGHT, NOT DEPTH ─────────────────
+      The first version said "give the material physical weight: embossed and
+      slightly raised near the edges", and then appended its own guard
+      restating that the canvas is flat. It produced nothing. Counted against
+      it in the compiled prompt were six assertions of flatness — "flat
+      printable artwork", "perfectly flat and orthographic", "no drop shadow",
+      "FLAT SWATCH", the guard itself, and every artStyle descriptor's "print
+      artwork". One sentence does not survive that, and the guard was the worst
+      of them because it immediately walked back the line above it.
+
+      The mistake was conflating flat GEOMETRY, which is required because this
+      is a UV map on a flat page, with flat SHADING, which never was. An
+      orthographic photograph of an embossed cloth board still shows the
+      emboss — raking light is what reveals it. So this asks for the light and
+      says nothing about depth, and the three lines above keep the geometry
+      honest without help.
     */
     ...(spec.coverRelief
       ? [
-        '- Give the material physical weight: embossed and slightly raised near the edges, smoothing towards the centre, with a gentle darkening around the outer rim as if it catches less light there.',
-        '- That weight comes from the material alone. Still no perspective, no tilt, no spine, no page block and no visible edge of a book — the canvas remains a flat swatch seen straight on.',
+        '- Light the material from slightly above and to one side, grazing across it, so its weave, grain or tooth is picked out in fine highlight and shadow rather than reading as a printed pattern.',
+        '- The frame line is pressed INTO the material rather than printed onto it: a fine bright edge along its upper side, a soft dark one below.',
+        '- The outermost 8% of the sheet falls gently into shade on all four sides, as a bound board does where it curves away.',
       ]
       : []),
     '',

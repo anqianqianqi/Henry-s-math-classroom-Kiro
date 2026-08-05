@@ -166,21 +166,35 @@ describe('one colour, two values', () => {
 describe('the embossed-cover toggle', () => {
   const base = randomBookSpec(BOOK_THEMES[0], { rng: seeded(77) })
 
-  it('adds weight to the cover when on', () => {
+  it('asks for raking light, not for depth, when on', () => {
+    /*
+     * The distinction that makes it work at all. Asking for "physical weight"
+     * lost against six assertions of flatness elsewhere in the prompt; asking
+     * for a grazing light does not contradict any of them, because
+     * orthographic does not mean unlit.
+     */
     const cover = compileCoverPrompt({ ...base, coverRelief: true })
-    expect(cover).toContain('embossed and slightly raised near the edges')
-    expect(cover).toContain('darkening around the outer rim')
+    expect(cover).toContain('grazing across it')
+    expect(cover).toContain('pressed INTO the material')
+    expect(cover).toContain('falls gently into shade')
+  })
+
+  it('never contradicts itself about flatness while doing so', () => {
+    // The first version appended a guard restating that the canvas is flat,
+    // immediately after asking for relief. It cancelled the effect.
+    const cover = compileCoverPrompt({ ...base, coverRelief: true })
+    expect(cover).not.toContain('remains a flat swatch seen straight on')
   })
 
   it('says nothing at all when off', () => {
     const cover = compileCoverPrompt({ ...base, coverRelief: false })
-    expect(cover).not.toContain('embossed and slightly raised')
-    expect(cover).not.toContain('outer rim')
+    expect(cover).not.toContain('grazing across it')
+    expect(cover).not.toContain('falls gently into shade')
   })
 
   it('treats an absent flag as off, so old recipes are untouched', () => {
     const { coverRelief, ...withoutFlag } = base
-    expect(compileCoverPrompt(withoutFlag)).not.toContain('embossed and slightly raised')
+    expect(compileCoverPrompt(withoutFlag)).not.toContain('grazing across it')
   })
 
   it('never reaches the inner page, however it is set', () => {
@@ -190,18 +204,24 @@ describe('the embossed-cover toggle', () => {
      */
     for (const coverRelief of [true, false]) {
       const inner = compileInnerPrompt({ ...base, coverRelief })
-      expect(inner).not.toContain('embossed and slightly raised')
-      expect(inner).not.toContain('outer rim')
+      expect(inner).not.toContain('grazing across it')
+      expect(inner).not.toContain('falls gently into shade')
       expect(inner).toContain('At least 75% of the framed interior must remain completely blank')
     }
   })
 
-  it('keeps the flat-swatch guard even with relief on', () => {
-    // "Raised boards" is an invitation to draw an actual book, and this texture
-    // is mapped onto a flat page in the GLB.
+  it('keeps the geometry locked even with relief on', () => {
+    /*
+     * Relief is allowed to change the SHADING and nothing else. The three
+     * locked lines are what stop "pressed into the material" becoming a
+     * drawing of a book, and they sit above the relief block rather than
+     * being restated inside it.
+     */
     const cover = compileCoverPrompt({ ...base, coverRelief: true })
     expect(cover).toContain('no spine')
-    expect(cover).toContain('remains a flat swatch seen straight on')
+    expect(cover).toContain('shown perfectly flat and orthographic')
+    expect(cover).toContain('FLAT SWATCH')
+    expect(cover).toContain('never as a bound object with corners, boards or a spine')
   })
 
   it('is on for a fresh roll', () => {

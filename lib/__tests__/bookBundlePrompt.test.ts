@@ -54,10 +54,28 @@ describe('the flat-texture contract', () => {
     // shadow baked in would fight the 3D geometry.
     for (const prompt of [compileCoverPrompt(SCI_FI), compileInnerPrompt(SCI_FI)]) {
       expect(prompt).toContain('Exact 3:4 portrait canvas, shown perfectly flat and orthographic')
-      expect(prompt).toContain('No book mockup, no perspective, no spine, no page block, no drop shadow')
+      expect(prompt).toContain('No book mockup, no perspective, no spine, no page block')
       expect(prompt).toContain('approximately 2% inward from every edge')
       expect(prompt).toContain('Keep the frame close to the canvas edges')
     }
+  })
+
+  it('bans shadow differently on each half, which is deliberate', () => {
+    /*
+     * The cover scopes it to BENEATH OR BEHIND the artwork, so shading ON the
+     * material is still available for coverRelief — unqualified, that ban was
+     * cancelling the relief lines outright. What actually fights the GLB is a
+     * shadow baked under the book, since the scene throws its own from a real
+     * light with a per-room position.
+     *
+     * The inner page keeps the unqualified ban, and should: it has to stay
+     * evenly coloured for the 75%-blank rule and for the #2d1a00 problem text
+     * printed over it, so no shading of any kind belongs there.
+     */
+    expect(compileCoverPrompt(SCI_FI))
+      .toContain('no drop shadow beneath or behind the artwork')
+    expect(compileInnerPrompt(SCI_FI))
+      .toContain('no page block, no drop shadow, no background surface')
   })
 })
 
