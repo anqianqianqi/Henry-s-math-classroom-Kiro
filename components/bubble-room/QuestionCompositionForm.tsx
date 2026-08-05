@@ -233,7 +233,7 @@ export function QuestionCompositionForm({
         {/* Title field */}
         <div className="space-y-1">
           <label htmlFor="question-title" className="text-sm font-medium text-gray-700">
-            Title
+            {t('bubble.titleLabel')}
           </label>
           <input
             id="question-title"
@@ -259,7 +259,7 @@ export function QuestionCompositionForm({
         {/* Body textarea */}
         <div className="space-y-1.5">
           <label htmlFor="question-text" className="text-sm font-medium text-gray-700">
-            Details
+            {t('bubble.details')}
           </label>
           <textarea
             id="question-text"

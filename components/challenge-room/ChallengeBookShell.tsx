@@ -17,11 +17,13 @@
  * degrades to today's behaviour rather than an empty page.
  */
 
+import { useEffect } from 'react'
 import { MagicBookReveal } from '@/components/MagicBookReveal'
 import { Book3DReveal } from './Book3DReveal'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import { bookModelUrl } from '@/lib/challengeRoom/model'
-import type { AnimationConfig, Placement } from '@/lib/types/challengeRoom'
+import { RADIO_MODEL_URL } from '@/lib/challengeRoom/radio'
+import type { AnimationConfig, LightPosition, Placement } from '@/lib/types/challengeRoom'
 import type { OverlayObject } from '@/components/BookCoverWithOverlays'
 
 export interface ChallengeScene {
@@ -30,6 +32,16 @@ export interface ChallengeScene {
   animation: AnimationConfig
   coverUrl: string | null
   innerUrl: string | null
+  /**
+   * Where the radio stands on this room's sill, tuned by an admin against this
+   * room's plate. Null means this room has no radio — which is every room until
+   * someone places one, so the feature ships dark.
+   */
+  radioPlacement?: Placement | null
+  /** The student's chosen colourway, already resolved to a file. */
+  radioTextureUrl?: string | null
+  /** The room key light, shared by book and radio. */
+  lightPosition?: LightPosition | null
 }
 
 export interface ChallengeBookShellProps {
@@ -47,6 +59,15 @@ export interface ChallengeBookShellProps {
   scene?: ChallengeScene | null
   /** Plain text printed onto the book page in the 3D path. Ignored in 2D. */
   problemPreview?: { title: string; body: string }
+  /**
+   * Fired when this shell has nothing left to load.
+   *
+   * On the 3D path that means the book is dressed — the stage decides, because
+   * only it knows when the textures reached the GPU. On the 2D path there is no
+   * such moment to wait for: MagicBookReveal is plain DOM and its images are
+   * already in the preload set, so it reports immediately on mount.
+   */
+  onReady?: () => void
 }
 
 export function ChallengeBookShell({
@@ -61,11 +82,24 @@ export function ChallengeBookShell({
   coverOverlays,
   scene,
   problemPreview,
+  onReady,
 }: ChallengeBookShellProps) {
   const isDesktop = useIsDesktop()
   const modelUrl = bookModelUrl()
 
-  if (isDesktop && scene?.roomUrl && modelUrl) {
+  const uses3D = isDesktop && !!scene?.roomUrl && !!modelUrl
+
+  /*
+    The 2D book has no load to wait on beyond its images, which the page has
+    already preloaded, so it announces on mount. Effect rather than a call
+    during render — reporting readiness is a side effect, and a setState in the
+    parent during a child's render is a React warning.
+  */
+  useEffect(() => {
+    if (!uses3D) onReady?.()
+  }, [uses3D, onReady])
+
+  if (uses3D && scene) {
     return (
       <Book3DReveal
         title={title}
@@ -78,6 +112,13 @@ export function ChallengeBookShell({
         placement={scene.placement}
         animation={scene.animation}
         problemPreview={problemPreview}
+        onReady={onReady}
+        // Only pass the model when there is somewhere to put it, so a room
+        // without a placement never downloads it.
+        radioUrl={scene.radioPlacement ? RADIO_MODEL_URL : null}
+        radioTextureUrl={scene.radioTextureUrl}
+        radioPlacement={scene.radioPlacement}
+        lightPosition={scene.lightPosition}
       >
         {children}
       </Book3DReveal>

@@ -16,26 +16,31 @@ export const dynamic = 'force-dynamic'
  */
 
 import { useCallback, useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RoomCollection } from '@/components/challenge-room/RoomCollection'
 import { BundleCollection } from '@/components/challenge-room/BundleCollection'
+import { DEFAULT_RADIO_PALETTE, RADIO_PALETTES } from '@/lib/challengeRoom/radio'
 
 interface Prefs {
   challenge_room_id: string | null
   texture_package_id: string | null
   /** NoChallengeRoom — see supabase/add-challenge-room-opt-out.sql. */
   challenge_room_opt_out: boolean
+  /** Baked colourway id for the radio on the sill, or null for the default. */
+  radio_palette: string | null
 }
 
 export default function ChallengeRoomsPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const supabase = createClient()
 
   const [userId, setUserId] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [prefs, setPrefs] = useState<Prefs>({ challenge_room_id: null, texture_package_id: null, challenge_room_opt_out: false })
+  const [prefs, setPrefs] = useState<Prefs>({ challenge_room_id: null, texture_package_id: null, challenge_room_opt_out: false, radio_palette: null })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -50,7 +55,7 @@ export default function ChallengeRoomsPage() {
         supabase.from('user_roles').select('roles!inner(name)').eq('user_id', user.id).is('class_id', null),
         supabase
           .from('user_book_skin_preferences')
-          .select('challenge_room_id, texture_package_id, challenge_room_opt_out')
+          .select('challenge_room_id, texture_package_id, challenge_room_opt_out, radio_palette')
           .eq('user_id', user.id)
           .maybeSingle(),
       ])
@@ -63,6 +68,7 @@ export default function ChallengeRoomsPage() {
           challenge_room_id: (prefRow as any).challenge_room_id ?? null,
           texture_package_id: (prefRow as any).texture_package_id ?? null,
           challenge_room_opt_out: !!(prefRow as any).challenge_room_opt_out,
+          radio_palette: (prefRow as any).radio_palette ?? null,
         })
       }
       setLoading(false)
@@ -75,7 +81,7 @@ export default function ChallengeRoomsPage() {
     if (!userId) return
     setSaving(true)
     setError(null)
-    // Only the two columns this page owns — a partial upsert would null the
+    // Only the columns this page owns — a partial upsert would null the
     // cover/page skin choices made on /book-skins.
     const { error: upsertErr } = await supabase
       .from('user_book_skin_preferences')
@@ -84,6 +90,7 @@ export default function ChallengeRoomsPage() {
         challenge_room_id: next.challenge_room_id,
         texture_package_id: next.texture_package_id,
         challenge_room_opt_out: next.challenge_room_opt_out,
+        radio_palette: next.radio_palette,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })
     setSaving(false)
@@ -92,14 +99,12 @@ export default function ChallengeRoomsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
-      <PageHeader breadcrumbs={[{ label: 'Decorations', href: '/decorations' }, { label: 'Challenge Room' }]} />
+      <PageHeader breadcrumbs={[{ label: t('nav.decorations'), href: '/decorations' }, { label: t('decor.roomHeading') }]} />
 
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
         <p className="mb-6 text-sm text-gray-500">
-          The Challenge Room replaces the flat book with a 3D room and an animated book.
-          It appears on desktop, on challenges imported from a .henryproblem file. Without
-          a room selected you get the usual book from{' '}
-          <a href="/book-skins" className="text-primary-600 underline">Book Cover &amp; Page</a>.
+          {t('roomPage.introA')}{' '}
+          <a href="/book-skins" className="text-primary-600 underline">{t('roomPage.introLink')}</a>{t('roomPage.introB')}
         </p>
 
         {error && (
@@ -109,7 +114,7 @@ export default function ChallengeRoomsPage() {
         )}
 
         {loading ? (
-          <div className="py-16 text-center text-gray-400">Loading your collection…</div>
+          <div className="py-16 text-center text-gray-400">{t('decor.loadingCollection')}</div>
         ) : (
           <>
             <RoomCollection
@@ -146,6 +151,55 @@ export default function ChallengeRoomsPage() {
                 save(next)
               }}
             />
+
+            {/*
+              The radio's colourway.
+
+              Shown whether or not the chosen room has a radio placed: which
+              rooms have one is an admin's decision and can change under the
+              student, and a preference that vanishes and reappears is worse
+              than one that occasionally does nothing.
+            */}
+            <section className="mt-8">
+              <h2 className="mb-1 text-lg font-bold text-gray-900">📻 {t('radio.palette')}</h2>
+              <p className="mb-3 text-sm text-gray-500">{t('roomPage.radioIntro')}</p>
+              <div className="flex flex-wrap gap-3">
+                {RADIO_PALETTES.map(palette => {
+                  const active = (prefs.radio_palette ?? DEFAULT_RADIO_PALETTE) === palette.id
+                  return (
+                    <button
+                      key={palette.id}
+                      onClick={() => {
+                        const next: Prefs = { ...prefs, radio_palette: palette.id }
+                        setPrefs(next)
+                        save(next)
+                      }}
+                      aria-pressed={active}
+                      className={`w-32 overflow-hidden rounded-xl border-2 bg-white text-left transition-colors ${
+                        active ? 'border-primary-500' : 'border-gray-200 hover:border-primary-300'
+                      }`}
+                    >
+                      {/*
+                        The UV atlas itself as the swatch. It is not a picture of
+                        the radio, but it is the actual colours in their actual
+                        proportions, and it costs nothing extra — the file is
+                        already being fetched for whichever one is chosen.
+                      */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={palette.url}
+                        alt=""
+                        className="h-20 w-full object-cover"
+                        loading="lazy"
+                      />
+                      <span className="block px-2 py-1.5 text-xs font-semibold text-gray-700">
+                        {active ? '✓ ' : ''}{t(palette.labelKey)}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
           </>
         )}
 

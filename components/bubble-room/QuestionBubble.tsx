@@ -16,8 +16,9 @@ import { useOnDemandTranslation } from '@/lib/i18n/useOnDemandTranslation'
 export interface QuestionBubbleProps {
   instance: BubbleInstance
   onClick: () => void
+  onNaturalEnd: () => void
   searchQuery?: string
-  /** When true, fade the bubble out before removal */
+  /** When true, hide the bubble immediately (display:none) */
   dying?: boolean
 }
 
@@ -58,7 +59,7 @@ function highlightInBubble(text: string, keyword: string): React.ReactNode {
 
 type BurstPhase = 'idle' | 'expand' | 'pop'
 
-export function QuestionBubble({ instance, onClick, searchQuery = '', dying = false }: QuestionBubbleProps) {
+export function QuestionBubble({ instance, onClick, onNaturalEnd, searchQuery = '', dying = false }: QuestionBubbleProps) {
   const { question, id, x, drift, speed } = instance
   const { language } = useLanguage()
   // Show the reader's language; the original stays on the record for search.
@@ -117,23 +118,23 @@ export function QuestionBubble({ instance, onClick, searchQuery = '', dying = fa
   }
 
   return (
-    // Outer: non-animated position anchor. Controls opacity for dying fade.
-    // Keeping this layer animation-free means setting opacity:0 here always
-    // wins — there's no competing CSS animation to fight against.
+    // Outer: non-animated position anchor.
+    // top:100% keeps it inside the overflow:hidden clip zone so any unmount
+    // flash is invisible. dying=true uses display:none to fully remove from
+    // layout — no opacity tricks that still allow the element to be seen.
     <div
       key={id}
       className="bubble-rise-anchor absolute"
       style={{
         left: `${x}%`,
-        bottom: '-80px',
-        // Instantly invisible when dying — no snap-back possible because
-        // the animation runs on the inner wrapper, not here.
-        opacity: dying ? 0 : undefined,
+        top: '100%',
+        display: dying ? 'none' : undefined,
         pointerEvents: dying ? 'none' : undefined,
-        // transition: intentionally none — we want instant disappearance
       } as React.CSSProperties}
     >
-    {/* Inner: carries the bubble-rise animation */}
+    {/* Inner: carries the bubble-rise animation. onAnimationEnd removes the
+        instance cleanly after the animation reaches 100% (opacity:0, off-screen)
+        so we never interrupt the animation mid-flight and cause a snap. */}
     <div
       role="button"
       tabIndex={dying ? -1 : 0}
@@ -157,6 +158,14 @@ export function QuestionBubble({ instance, onClick, searchQuery = '', dying = fa
           animationFillMode: 'forwards',
         } as React.CSSProperties
       }
+      onAnimationEnd={(e) => {
+        // Only react to the bubble-rise animation ending, not the wobble
+        // or burst animations on child elements bubbling up.
+        if (e.animationName !== 'bubble-rise') return
+        // Animation reached 100% — bubble is at opacity:0, fully off-screen.
+        // Remove it from state cleanly with no snap.
+        onNaturalEnd()
+      }}
     >
       {/* Burst particles */}
       {isPopping && PARTICLES.map((p, i) => {

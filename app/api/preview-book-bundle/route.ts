@@ -115,8 +115,8 @@ export async function POST(request: Request) {
       // texture, the frame inset, and — for inner pages — the blank centre the
       // challenge room prints the problem into.
       const guard = kind === 'cover'
-        ? 'Preserve exactly: flat orthographic 3:4 texture with no mockup, perspective, spine or shadow; the thin gold frame ~2% inward; one compact cluster per corner; a large quiet empty centre. No text anywhere.'
-        : 'Preserve exactly: flat orthographic 3:4 texture with no mockup, perspective, spine or shadow; the thin gold frame ~2% inward; only sparse accents near the frame; at least 75% of the framed interior completely blank. No text anywhere.'
+        ? 'Preserve exactly: flat orthographic 3:4 texture with no mockup, perspective, spine or shadow; the thin frame ~2% inward; one compact cluster per corner; a large quiet empty centre. No text anywhere.'
+        : 'Preserve exactly: flat orthographic 3:4 texture with no mockup, perspective, spine or shadow; the thin frame ~2% inward; only sparse accents near the frame; at least 75% of the framed interior completely blank. No text anywhere.'
       b64 = await callEdit(apiKey, sourceImageUrl, `${changePrompt.trim()}\n\n${guard}`)
       accumulatedPrompt = `${basePrompt}\n\n[Refinement] ${changePrompt.trim()}`
     } else {

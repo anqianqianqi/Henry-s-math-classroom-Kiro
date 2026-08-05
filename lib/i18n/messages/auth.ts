@@ -15,6 +15,8 @@
 export const auth = {
   // ── Shared ───────────────────────────────────────────────
   'auth.appName': { en: "Henry's Math Classroom", zh: 'Henry 数学教室' },
+  /** Short form for narrow headers. */
+  'auth.appNameShort': { en: "Henry's Math", zh: 'Henry 数学' },
   'auth.email': { en: 'Email', zh: '邮箱' },
   'auth.password': { en: 'Password', zh: '密码' },
   'auth.passwordHint': { en: 'At least 6 characters', zh: '至少 6 个字符' },
@@ -27,20 +29,20 @@ export const auth = {
   },
 
   // ── Sign in ──────────────────────────────────────────────
-  'auth.signInSubtitle': { en: 'Sign in to your account', zh: '登录你的账号' },
+  'auth.signInSubtitle': { en: 'Sign in to your account', zh: '登录您的账号' },
   'auth.signIn': { en: 'Sign In', zh: '登录' },
   'auth.forgotPassword': { en: 'Forgot password?', zh: '忘记密码？' },
   'auth.noAccount': { en: "Don't have an account?", zh: '还没有账号？' },
   'auth.signUpLink': { en: 'Sign up', zh: '注册' },
 
   // ── Sign up ──────────────────────────────────────────────
-  'auth.signUpSubtitle': { en: 'Create your account', zh: '创建你的账号' },
+  'auth.signUpSubtitle': { en: 'Create your account', zh: '创建您的账号' },
   'auth.firstName': { en: 'First Name', zh: '名' },
   'auth.lastName': { en: 'Last Name', zh: '姓' },
   'auth.nickname': { en: 'Nickname (shown to classmates)', zh: '昵称（同学看到的名字）' },
   'auth.nicknameHint': {
     en: 'Optional — displayed instead of your full name to other students',
-    zh: '可选——其他同学会看到昵称而不是你的全名',
+    zh: '可选——其他同学会看到昵称而不是您的全名',
   },
   'auth.confirmPassword': { en: 'Confirm Password', zh: '确认密码' },
   'auth.createAccount': { en: 'Create Account', zh: '创建账号' },
@@ -56,10 +58,10 @@ export const auth = {
   'auth.goToSignIn': { en: 'Go to Sign In', zh: '前往登录' },
 
   // ── Forgot password ──────────────────────────────────────
-  'auth.resetSubtitle': { en: 'Reset your password', zh: '重置你的密码' },
+  'auth.resetSubtitle': { en: 'Reset your password', zh: '重置您的密码' },
   'auth.resetIntro': {
     en: "Enter your email and we'll send you a link to reset your password.",
-    zh: '输入你的邮箱，我们会发送重置密码的链接。',
+    zh: '输入您的邮箱，我们会发送重置密码的链接。',
   },
   'auth.sendResetLink': { en: 'Send Reset Link', zh: '发送重置链接' },
   'auth.resetSent': {
@@ -78,4 +80,14 @@ export const auth = {
   'auth.newPassword': { en: 'New Password', zh: '新密码' },
   'auth.confirmNewPassword': { en: 'Confirm New Password', zh: '确认新密码' },
   'auth.updatePassword': { en: 'Update Password', zh: '更新密码' },
+  // ── Public landing page ──────────────────────────────────
+  'auth.landingTagline': {
+    en: 'Welcome to your math learning platform',
+    zh: '欢迎来到您的数学学习平台',
+  },
+  'auth.login': { en: 'Login', zh: '登录' },
+  'auth.signUp': { en: 'Sign Up', zh: '注册' },
+
+  'auth.signingIn': { en: 'Signing in…', zh: '正在登录…' },
+  'auth.signingOut': { en: 'Signing out…', zh: '正在退出…' },
 } as const

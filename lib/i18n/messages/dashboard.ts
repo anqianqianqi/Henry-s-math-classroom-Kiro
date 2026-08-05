@@ -18,6 +18,6 @@ export const dashboard = {
   'dash.qanda': { en: 'Q&A', zh: '问答' },
   'dash.joinRequests': {
     en: 'Students are waiting to join your classes',
-    zh: '有学生正在等待加入你的班级',
+    zh: '有学生正在等待加入您的班级',
   },
 } as const

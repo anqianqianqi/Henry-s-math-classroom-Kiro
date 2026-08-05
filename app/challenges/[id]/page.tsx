@@ -1,12 +1,12 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { CommentThread } from '@/components/CommentThread'
 import { TranslatedContent } from '@/components/TranslatedContent'
-import { localDateString, localDateOffset } from '@/lib/utils/date'
+import { schoolDateString, schoolDateOffset } from '@/lib/utils/timezone'
 import { HomeButton } from '@/components/ui/HomeButton'
 import { ChallengeBookShell, type ChallengeScene } from '@/components/challenge-room/ChallengeBookShell'
 import { HenryProblemSheet } from '@/components/HenryProblemSheet'
@@ -16,6 +16,10 @@ import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { readStoredHenryProblem } from '@/lib/henryproblem'
 import { useUserBadges } from '@/lib/hooks/useUserBadges'
 import { UserNameWithBadges } from '@/components/UserNameWithBadges'
+import { ChallengeLoader, useLoaderVisible } from '@/components/challenge-room/ChallengeLoader'
+import { bookModelUrl } from '@/lib/challengeRoom/model'
+import { challengeAssetTasks, preloadAll, usesRoom } from '@/lib/challengeRoom/preload'
+import { RADIO_MODEL_URL, radioPaletteUrl } from '@/lib/challengeRoom/radio'
 
 interface Challenge {
   id: string
@@ -131,6 +135,23 @@ export default function ChallengePage() {
   // the page on the existing 2D MagicBookReveal path.
   const [challengeScene, setChallengeScene] = useState<ChallengeScene | null>(null)
   const isDesktop = useIsDesktop()
+
+  /*
+    ── The readiness gate ──────────────────────────────────────
+    `loading` above covers the DATA only, and used to be the whole gate — which
+    is why the page appeared and then kept assembling itself: the room plate,
+    the 2.63 MiB book model, both page textures and the problem's graph all
+    began loading only once it cleared.
+
+    Two more signals now stand between the data landing and the page being
+    shown. `assetsWarm` is every file fetched and decoded; `bookReady` is the 3D
+    stage confirming its textures are actually on the book (the 2D shell
+    reports immediately, having nothing further to wait for).
+  */
+  const [assetsWarm, setAssetsWarm] = useState(false)
+  const [assetProgress, setAssetProgress] = useState(0)
+  const [bookReady, setBookReady] = useState(false)
+  const handleBookReady = useCallback(() => setBookReady(true), [])
   // Whether this reader turned the room off, kept so the page can say WHY it is
   // showing the flat book rather than leaving it to be guessed.
   const [roomOptOut, setRoomOptOut] = useState(false)
@@ -142,6 +163,11 @@ export default function ChallengePage() {
     loading?: boolean; progress?: { step: number; pct: number; label: string }
     critic?: { upheld: boolean; draft_score: number; final_score: number; grade_changed: boolean; reasoning: string; what_student_did: string; main_issue: string }
     anqi?: { upheld: boolean; comment_assessment: string; revised_comment: string; anqi_question: string }
+    // Image parse fields (Node 0)
+    image_transcription?: string | null
+    parse_quality?: 'good' | 'partial' | 'poor' | null
+    parse_confidence?: number | null
+    flag_reason?: 'image_unreadable' | 'low_confidence' | 'verifier_disagreement' | null
     // Teacher feedback state
     feedbackOpen?: boolean; feedbackSending?: boolean
     whatTAMissed?: string; lessonType?: string
@@ -154,6 +180,56 @@ export default function ChallengePage() {
   useEffect(() => {
     loadChallenge()
   }, [params.id])
+
+  /*
+    Warm every file the first paint needs, then let the page through.
+
+    Runs after the data lands, because which files those are depends on it: the
+    3D path wants a room plate, a model and two textures, the 2D path wants the
+    book art, and both want the problem's graph. The condition is `usesRoom`,
+    which is deliberately the same one ChallengeBookShell renders on — if the
+    two ever disagreed, this would either wait for a model that is never drawn
+    or reveal a room whose textures had not arrived.
+  */
+  useEffect(() => {
+    if (loading) return
+    let cancelled = false
+
+    const room = usesRoom({
+      isDesktop,
+      hasScene: !!challengeScene?.roomUrl,
+      modelUrl: bookModelUrl(),
+    })
+
+    const tasks = challengeAssetTasks({
+      graphUrl: challenge?.image_url,
+      roomUrl: challengeScene?.roomUrl,
+      modelUrl: bookModelUrl(),
+      coverUrl: challengeScene?.coverUrl,
+      innerUrl: challengeScene?.innerUrl,
+      bookCoverUrl: defaultCoverUrl,
+      bookPageUrl: defaultPageUrl,
+      bookFrameUrls: defaultCoverFrameUrls,
+      radioModelUrl: challengeScene?.radioPlacement ? RADIO_MODEL_URL : null,
+      radioTextureUrl: challengeScene?.radioTextureUrl,
+    }, room)
+
+    preloadAll(tasks, fraction => { if (!cancelled) setAssetProgress(fraction) })
+      .then(() => { if (!cancelled) setAssetsWarm(true) })
+
+    return () => { cancelled = true }
+    // challengeScene and the book art are set together with `loading`, so this
+    // settles once rather than re-running as each piece of state lands.
+  }, [loading, isDesktop, challengeScene, challenge?.image_url,
+      defaultCoverUrl, defaultPageUrl, defaultCoverFrameUrls])
+
+  /**
+   * The loader is up until the data, the files AND the book itself are all
+   * done, and never for less than a beat — see MIN_VISIBLE_MS. On a warm cache
+   * this whole sequence finishes in tens of milliseconds, and an unfloored
+   * loader would be a single flashed frame that reads as a fault.
+   */
+  const showLoader = useLoaderVisible(!loading && assetsWarm && bookReady)
 
   // Poll for new comments every 5 seconds
   useEffect(() => {
@@ -340,7 +416,7 @@ export default function ChallengePage() {
 
     // Block students from viewing future challenges
     if (!teacherRole && challengeData && challengeData.challenge_date) {
-      const today = localDateString()
+      const today = schoolDateString()
       if (challengeData.challenge_date > today) {
         router.push('/challenges')
         return
@@ -371,8 +447,18 @@ export default function ChallengePage() {
 
     // challenge_room_opt_out is the student saying "no room", which is not the
     // same as having chosen nothing — that falls through to the default below.
-    if (hasHenryProblem && !userPrefData?.challenge_room_opt_out) {
-      ;(async () => {
+    /*
+      Awaited with Round 2 below, NOT fired and forgotten.
+
+      Detached, this resolved after setLoading(false), so the page rendered the
+      2D MagicBookReveal and then swapped the entire book to Book3DReveal when
+      the room landed — the most jarring moment in opening a challenge. Folding
+      it into the existing Promise.all costs no latency: it already ran its own
+      two queries in parallel, and now runs alongside six more.
+    */
+    const scenePromise: Promise<ChallengeScene | null> =
+      hasHenryProblem && !userPrefData?.challenge_room_opt_out
+      ? (async () => {
         try {
           // Selection wins; otherwise fall back to whatever an admin marked
           // default. A default room is how the 3D path gets switched on for
@@ -380,12 +466,12 @@ export default function ChallengePage() {
           const roomQuery = userPrefData?.challenge_room_id
             ? supabase
                 .from('challenge_rooms')
-                .select('room_url, placement, animation')
+                .select('room_url, placement, animation, radio_placement, light_position')
                 .eq('id', userPrefData.challenge_room_id)
                 .maybeSingle()
             : supabase
                 .from('challenge_rooms')
-                .select('room_url, placement, animation')
+                .select('room_url, placement, animation, radio_placement')
                 .eq('is_default', true)
                 .eq('is_active', true)
                 .maybeSingle()
@@ -406,21 +492,31 @@ export default function ChallengePage() {
           const [roomResult, packageResult] = await Promise.all([roomQuery, packageQuery])
 
           const room = (roomResult as any).data
-          if (!room?.room_url || !room.placement || !room.animation) return
+          if (!room?.room_url || !room.placement || !room.animation) return null
           const pkg = (packageResult as any).data
 
-          setChallengeScene({
+          return {
             roomUrl: room.room_url,
             placement: room.placement,
             animation: room.animation,
             coverUrl: pkg?.cover_url ?? null,
             innerUrl: pkg?.inner_url ?? null,
-          })
+            // No placement means this room has no radio, and nothing about it
+            // is fetched or rendered.
+            radioPlacement: room.radio_placement ?? null,
+            lightPosition: room.light_position ?? null,
+            radioTextureUrl: room.radio_placement
+              ? radioPaletteUrl(userPrefData?.radio_palette)
+              : null,
+          }
         } catch (err) {
+          // Unchanged contract: any failure here means no room, and the page
+          // renders the 2D book rather than nothing.
           console.error('[challenge] challenge room load failed:', err)
+          return null
         }
       })()
-    }
+      : Promise.resolve(null)
 
     // bankItemId needed for submission lookup
     const bankItemId: string | null = challengeData?.is_bank_item
@@ -440,6 +536,7 @@ export default function ChallengePage() {
       userPageSkinResult,
       tagsResult,
       userSubmissionResult,
+      sceneResult,
     ] = await Promise.all([
       // Default cover frames (only if animated)
       defCover?.is_animated && defCoverSkinId
@@ -465,7 +562,12 @@ export default function ChallengePage() {
       bankItemId
         ? supabase.from('challenge_submissions').select('*, profiles!inner(full_name, nickname)').eq('bank_item_id', bankItemId).eq('user_id', user.id).maybeSingle()
         : supabase.from('challenge_submissions').select('*, profiles!inner(full_name, nickname)').eq('challenge_id', params.id).eq('user_id', user.id).maybeSingle(),
+      scenePromise,
     ])
+
+    // Set before setLoading(false), so the first render already knows which
+    // book it is drawing.
+    if (sceneResult) setChallengeScene(sceneResult)
 
     // Apply default cover frames
     const defFrames = (defFramesResult as any).data
@@ -1017,9 +1119,11 @@ export default function ChallengePage() {
               }))
             } else if (event.type === 'done') {
               const grade = event.grade
-              // Pre-fill the grade input
-              const input = document.getElementById(`grade-${submissionId}`) as HTMLInputElement
-              if (input) input.value = String(grade.suggested_score)
+              // Pre-fill the grade input (only if not flagged as unreadable)
+              if (grade.suggested_score != null) {
+                const input = document.getElementById(`grade-${submissionId}`) as HTMLInputElement
+                if (input) input.value = String(grade.suggested_score)
+              }
               setTaGrades(prev => ({
                 ...prev,
                 [submissionId]: {
@@ -1031,6 +1135,10 @@ export default function ChallengePage() {
                   reasoning:       grade.reasoning,
                   critic:          grade.critic,
                   anqi:            grade.anqi,
+                  image_transcription: grade.image_transcription ?? null,
+                  parse_quality:   grade.parse_quality ?? null,
+                  parse_confidence: grade.parse_confidence ?? null,
+                  flag_reason:     grade.flag_reason ?? null,
                   loading:         false,
                   progress:        { step: 4, pct: 100, label: 'Complete ✓' },
                   feedbackOpen:    false,
@@ -1364,15 +1472,11 @@ export default function ChallengePage() {
     setSavingHint(false)
   }
 
+  // Data still in flight. Same loader as the asset phase, at zero — so opening
+  // a challenge is one continuous screen rather than a spinner that hands over
+  // to a different spinner.
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-4">🎯</div>
-          <p className="text-gray-600">{t('challenge.loadingDetail')}</p>
-        </div>
-      </div>
-    )
+    return <ChallengeLoader progress={0} />
   }
 
   if (!challenge) {
@@ -1411,7 +1515,27 @@ export default function ChallengePage() {
   const completionRate = totalStudents > 0 ? Math.round((submissionCount / totalStudents) * 100) : 0
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
+    <>
+    {/*
+      The real page is MOUNTED the whole time and merely hidden — not deferred.
+
+      It has to be: the 3D stage cannot report that its textures reached the
+      book if it was never allowed to mount, and gating on mount instead would
+      mean trusting the browser cache for correctness rather than waiting for
+      the thing itself. Hidden-then-cross-fade reveals at the exact moment the
+      finished book is on screen.
+    */}
+    {showLoader && (
+      <div className="fixed inset-0 z-50">
+        <ChallengeLoader progress={assetProgress} />
+      </div>
+    )}
+    <div
+      className={`min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 transition-opacity duration-500 ${
+        showLoader ? 'opacity-0 pointer-events-none' : 'opacity-100'
+      }`}
+      aria-hidden={showLoader}
+    >
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
@@ -1523,6 +1647,7 @@ export default function ChallengePage() {
             has one selected on desktop, otherwise the 2D MagicBookReveal book */}
         <ChallengeBookShell
           scene={challengeScene}
+          onReady={handleBookReady}
           problemPreview={{ title: challenge.title, body: challenge.description ?? '' }}
           title={challenge.title}
           date={new Date(challenge.challenge_date + 'T12:00:00').toLocaleDateString('en-US', {
@@ -1539,7 +1664,7 @@ export default function ChallengePage() {
             <>{hasSubmitted && !isEditing ? (
               <>
               {/* Show submitted solution */}
-              <Card className={onBookPage ? 'mb-4 !bg-transparent !shadow-none border-2 border-[rgba(100,60,10,0.3)] hover:!shadow-none hover:!translate-y-0' : 'mb-4 border-2 border-primary-500'}>
+              <Card bare={onBookPage} className={onBookPage ? 'mb-4 rounded-2xl border-2 border-[rgba(100,60,10,0.3)]' : 'mb-4 border-2 border-primary-500'}>
                 <Card.Header>
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <Card.Title className="flex items-center gap-2 flex-wrap">
@@ -1623,7 +1748,7 @@ export default function ChallengePage() {
               </>
             ) : (
               // Show submission form
-              <Card className={onBookPage ? 'mb-4 !bg-transparent !shadow-none !border-0 hover:!shadow-none hover:!translate-y-0' : 'mb-4'}>
+              <Card bare={onBookPage} className="mb-4">
                 <Card.Header className={onBookPage ? '!border-b-0 !px-0 !py-0' : ''}>
                   <Card.Title className={`flex items-center gap-2 ${onBookPage ? 'justify-center' : ''}`}>
                     <span>✍️</span>
@@ -1898,7 +2023,7 @@ export default function ChallengePage() {
         </ChallengeBookShell>
 
         {/* Ask About This Challenge button — shown when challenge is assigned to at least one class (Req 1.2, 1.3) */}
-        {assignedClassIds.length > 0 && (!challenge.challenge_date || challenge.challenge_date <= localDateString()) && (
+        {assignedClassIds.length > 0 && (!challenge.challenge_date || challenge.challenge_date <= schoolDateString()) && (
           <div className="mb-6 flex justify-center">
             <a
               href={`/bubble-room?challengeId=${challenge.id}`}
@@ -2136,7 +2261,76 @@ export default function ChallengePage() {
 
                           {/* TA suggestion panel — shown after loading */}
                           {isTeacher && taGrades[submission.id] && !taGrades[submission.id]?.loading && (
-                            <div className={`mb-3 rounded-xl border-2 text-sm overflow-hidden ${taGrades[submission.id].confidence >= 0.85 ? 'border-indigo-200' : 'border-amber-200'}`}>
+                            <div className={`mb-3 rounded-xl border-2 text-sm overflow-hidden ${
+                              taGrades[submission.id].flag_reason === 'image_unreadable'
+                                ? 'border-red-300'
+                                : taGrades[submission.id].parse_quality === 'partial'
+                                ? 'border-amber-300'
+                                : taGrades[submission.id].confidence >= 0.85
+                                ? 'border-indigo-200'
+                                : 'border-amber-200'
+                            }`}>
+                              {/* Image Transcription Panel (Node 0 output) */}
+                              {taGrades[submission.id].image_transcription && (
+                                <div className={`px-3 py-2 border-b ${
+                                  taGrades[submission.id].flag_reason === 'image_unreadable'
+                                    ? 'bg-red-50 border-red-200'
+                                    : taGrades[submission.id].parse_quality === 'partial'
+                                    ? 'bg-amber-50 border-amber-200'
+                                    : 'bg-gray-50 border-gray-100'
+                                }`}>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide">🤖 AI read this as:</span>
+                                    {taGrades[submission.id].parse_quality && (
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                        taGrades[submission.id].flag_reason === 'image_unreadable'
+                                          ? 'bg-red-100 text-red-700'
+                                          : taGrades[submission.id].parse_quality === 'partial'
+                                          ? 'bg-amber-100 text-amber-700'
+                                          : 'bg-green-100 text-green-700'
+                                      }`}>
+                                        {taGrades[submission.id].flag_reason === 'image_unreadable'
+                                          ? 'unreadable ✗'
+                                          : taGrades[submission.id].parse_quality === 'partial'
+                                          ? 'partial ⚠️'
+                                          : 'good ✓'
+                                        }
+                                      </span>
+                                    )}
+                                    {taGrades[submission.id].parse_confidence != null && (
+                                      <span className="text-[10px] text-gray-400">{Math.round((taGrades[submission.id].parse_confidence ?? 0) * 100)}% legible</span>
+                                    )}
+                                  </div>
+                                  {taGrades[submission.id].image_transcription ? (
+                                    <p className="text-xs text-gray-700 whitespace-pre-wrap font-mono bg-white rounded p-2 border border-gray-100">
+                                      {taGrades[submission.id].image_transcription}
+                                    </p>
+                                  ) : null}
+                                  {taGrades[submission.id].flag_reason === 'image_unreadable' && (
+                                    <p className="text-xs text-red-600 font-medium mt-1">
+                                      Image too unclear to grade automatically — please grade manually.
+                                    </p>
+                                  )}
+                                  {taGrades[submission.id].parse_quality === 'partial' && (
+                                    <p className="text-xs text-amber-700 mt-1">
+                                      ⚠️ Some regions were unclear — review carefully before accepting.
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* If image is unreadable, skip showing score — just show the flag */}
+                              {taGrades[submission.id].flag_reason === 'image_unreadable' ? (
+                                <div className="px-3 py-3 bg-white flex gap-2">
+                                  <button
+                                    onClick={() => setTaGrades(prev => { const n = { ...prev }; delete n[submission.id]; return n })}
+                                    className="px-3 py-1.5 bg-white text-gray-500 text-xs font-medium rounded-lg border hover:bg-gray-50"
+                                  >
+                                    Dismiss
+                                  </button>
+                                </div>
+                              ) : (
+                              <>
                               {/* Header */}
                               <div className={`px-3 py-2 flex items-center justify-between ${taGrades[submission.id].confidence >= 0.85 ? 'bg-indigo-50' : 'bg-amber-50'}`}>
                                 <span className="font-semibold text-indigo-800">
@@ -2275,6 +2469,8 @@ export default function ChallengePage() {
                                   </div>
                                 )}
                               </div>
+                              </>
+                              )}
                             </div>
                           )}
                           {/* Show points to students */}
@@ -2380,5 +2576,6 @@ export default function ChallengePage() {
         </div>
       )}
     </div>
+    </>
   )
 }

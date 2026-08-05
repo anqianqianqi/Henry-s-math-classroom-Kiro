@@ -121,7 +121,7 @@ export async function POST(request: Request) {
         changePrompt.trim(),
         '',
         'Preserve exactly: the 3:2 canvas, the downward 40–45 degree camera pitch,',
-        'the centered arched window, the broad tabletop across the lower 45%,',
+        'the centered aperture, the broad tabletop across the lower 45%,',
         'and the completely empty central placement zone (no book, paper, cloth,',
         'or ornament in the middle of the table). No text or lettering anywhere.',
       ].join('\n')

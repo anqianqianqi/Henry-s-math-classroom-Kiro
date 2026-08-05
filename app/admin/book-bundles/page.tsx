@@ -17,19 +17,35 @@ export const dynamic = 'force-dynamic'
  * frame, same palette, with the corner clusters only on the cover.
  */
 
+import { ART_STYLES } from '@/lib/art-styles'
 import { useCallback, useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { BOOK_THEMES, randomBookSpec } from '@/lib/challengeRoom/bookThemes'
+import { BOOK_THEMES, randomBookSpec, type BookTheme } from '@/lib/challengeRoom/bookThemes'
+import { AxisChips } from '@/components/challenge-room/AxisChips'
 import { validateBookSpec } from '@/lib/challengeRoom/bookPrompt'
-import type { BookSpec, BookTexturePackage } from '@/lib/types/challengeRoom'
+import type {
+  AxisVector,
+  BookSpec,
+  BookTexturePackage,
+  RoomSpec,
+} from '@/lib/types/challengeRoom'
 
 type Half = 'cover' | 'inner'
 
+/** Just enough of a challenge_rooms row to offer it as a match. */
+interface RoomOption {
+  id: string
+  name: string
+  recipe: RoomSpec | null
+}
+
 export default function BookBundlesAdminPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const supabase = createClient()
 
@@ -37,6 +53,27 @@ export default function BookBundlesAdminPage() {
   const [isAdmin, setIsAdmin] = useState(false)
 
   const [spec, setSpec] = useState<BookSpec>(() => randomBookSpec())
+
+  /*
+    Inventing, and the room this bundle is being written to sit in.
+
+    A bundle and a room are chosen independently by students, so any pairing can
+    happen — but a bundle written AGAINST a specific room is the one that reads
+    as designed rather than shuffled, and that is worth an optional control.
+  */
+  const [vector, setVector] = useState<AxisVector | null>(null)
+  const [recentVectors, setRecentVectors] = useState<AxisVector[]>([])
+  const [inventing, setInventing] = useState(false)
+  const [rooms, setRooms] = useState<RoomOption[]>([])
+  const [matchRoomId, setMatchRoomId] = useState('')
+
+  /* The library: constants plus promoted rows. See the note on the rooms page. */
+  const [themes, setThemes] = useState<BookTheme[]>(BOOK_THEMES)
+  const [seenVectors, setSeenVectors] = useState<AxisVector[]>([])
+  const [cellCount, setCellCount] = useState(0)
+  const [canPromote, setCanPromote] = useState(false)
+  const [savingTheme, setSavingTheme] = useState(false)
+
   const [coverUrl, setCoverUrl] = useState<string | null>(null)
   const [innerUrl, setInnerUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState<Half | null>(null)
@@ -77,7 +114,110 @@ export default function BookBundlesAdminPage() {
     if (data) setPackages(data as BookTexturePackage[])
   }, [supabase])
 
-  useEffect(() => { if (isAdmin) loadPackages() }, [isAdmin, loadPackages])
+  /** Rooms an invented bundle can be written to match. Recipe-less ones cannot. */
+  const loadRooms = useCallback(async () => {
+    const { data } = await supabase
+      .from('challenge_rooms')
+      .select('id, name, recipe')
+      .order('created_at', { ascending: false })
+    if (data) setRooms((data as RoomOption[]).filter(r => r.recipe))
+  }, [supabase])
+
+  const loadThemes = useCallback(async () => {
+    try {
+      const res = await fetch('/api/themes')
+      if (!res.ok) return
+      const payload = await res.json()
+      if (Array.isArray(payload.books) && payload.books.length > 0) setThemes(payload.books)
+      if (Array.isArray(payload.seenVectors)) setSeenVectors(payload.seenVectors)
+      if (typeof payload.cellCount === 'number') setCellCount(payload.cellCount)
+      setCanPromote(payload.promotable === true)
+    } catch {
+      // The constants are the fallback; nothing to report.
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isAdmin) return
+    loadPackages()
+    loadRooms()
+    loadThemes()
+  }, [isAdmin, loadPackages, loadRooms, loadThemes])
+
+  /** Fold the recipe on screen into the theme library. */
+  async function saveTheme() {
+    setError(null)
+    setSuccess(null)
+    setSavingTheme(true)
+    try {
+      const res = await fetch('/api/themes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'book', spec }),
+      })
+      const payload = await res.json()
+      if (!res.ok) {
+        setError(payload.error || t('design.themeSaveFailed'))
+        return
+      }
+      setSuccess(
+        payload.created
+          ? t('design.themeCreated', { name: spec.name })
+          : t('design.themeExtended', { name: spec.name }),
+      )
+      await loadThemes()
+    } catch (err: any) {
+      setError(err.message || t('design.themeSaveFailed'))
+    } finally {
+      setSavingTheme(false)
+    }
+  }
+
+  /**
+   * Roll a cell, have the small model write a bundle recipe into it.
+   *
+   * When a room is selected its recipe travels with the request, and the model
+   * is told the paper and frame have to look at home on that table.
+   */
+  async function invent() {
+    setError(null)
+    setSuccess(null)
+    setInventing(true)
+    try {
+      const companion = rooms.find(r => r.id === matchRoomId)?.recipe ?? undefined
+      const res = await fetch('/api/invent-recipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'book',
+          avoidVectors: recentVectors,
+          seenVectors,
+          avoidNames: [spec.name, ...themes.map(x => x.name)],
+          ...(companion ? { companionRoom: companion } : {}),
+        }),
+      })
+      const payload = await res.json()
+      if (!res.ok) {
+        setError(payload.error || t('design.inventFailed'))
+        return
+      }
+
+      if (payload.book) setSpec(payload.book)
+      if (payload.vector) {
+        setVector(payload.vector)
+        setRecentVectors(prev => [payload.vector, ...prev].slice(0, 6))
+      }
+      if (payload.source === 'fallback') {
+        console.warn('[invent-recipe]', payload.note)
+        setSuccess(t('design.inventFellBack'))
+      }
+      if (payload.adjusted?.length) console.info('[invent-recipe] adjusted:', payload.adjusted)
+    } catch (err: any) {
+      setError(err.message || t('design.inventFailed'))
+    } finally {
+      setInventing(false)
+    }
+  }
 
   async function generate(kind: Half, refine: boolean) {
     setError(null)
@@ -88,7 +228,7 @@ export default function BookBundlesAdminPage() {
 
     const source = kind === 'cover' ? coverUrl : innerUrl
     if (refine && !changePrompt[kind].trim()) {
-      setError('Describe what to change before refining.')
+      setError(t('design.describeChange'))
       return
     }
 
@@ -122,7 +262,7 @@ export default function BookBundlesAdminPage() {
     setError(null)
     setSuccess(null)
     if (!coverUrl || !innerUrl) {
-      setError('Generate both the cover and the inner page before saving — a bundle is the pair.')
+      setError(t('bundle.needBoth'))
       return
     }
     if (!name.trim()) { setError('Give the bundle a name.'); return }
@@ -167,6 +307,8 @@ export default function BookBundlesAdminPage() {
     setCoverUrl(pkg.cover_url)
     setInnerUrl(pkg.inner_url)
     if (pkg.recipe) setSpec(pkg.recipe)
+    // Bundles saved before Invent existed, and preset rolls, have no cell.
+    setVector(pkg.recipe?.axes ?? null)
     setName(pkg.name)
     setDescription(pkg.description ?? '')
     setVisibility(pkg.visibility)
@@ -180,14 +322,14 @@ export default function BookBundlesAdminPage() {
       {multiline ? (
         <textarea
           rows={2}
-          value={spec[key] as string}
+          value={(spec[key] as string) ?? ''}
           onChange={e => setSpec({ ...spec, [key]: e.target.value })}
           className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-400"
         />
       ) : (
         <input
           type="text"
-          value={spec[key] as string}
+          value={(spec[key] as string) ?? ''}
           onChange={e => setSpec({ ...spec, [key]: e.target.value })}
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-400"
         />
@@ -238,7 +380,7 @@ export default function BookBundlesAdminPage() {
         disabled={busy !== null}
         className="w-full"
       >
-        {url ? 'Regenerate' : `Generate ${label.toLowerCase()}`}
+        {url ? t('design.regenerate') : t('bundle.generateLabel', { what: label.toLowerCase() })}
       </Button>
 
       {url && (
@@ -247,7 +389,7 @@ export default function BookBundlesAdminPage() {
             rows={2}
             value={changePrompt[kind]}
             onChange={e => setChangePrompt(prev => ({ ...prev, [kind]: e.target.value }))}
-            placeholder="Refine — e.g. warmer paper, finer gold linework"
+            placeholder={t('bundle.refinePlaceholder')}
             className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-400"
           />
           <Button
@@ -258,7 +400,7 @@ export default function BookBundlesAdminPage() {
             disabled={busy !== null || !changePrompt[kind].trim()}
             className="w-full"
           >
-            Refine
+            {t('design.refine')}
           </Button>
         </div>
       )}
@@ -276,10 +418,10 @@ export default function BookBundlesAdminPage() {
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <PageHeader breadcrumbs={[{ label: 'Decorations', href: '/decorations' }, { label: 'Book Bundles' }]} />
+        <PageHeader breadcrumbs={[{ label: t('nav.decorations'), href: '/decorations' }, { label: t('bundle.pageTitle') }]} />
         <main className="mx-auto max-w-2xl px-4 py-12">
           <Card><Card.Body>
-            <p className="text-sm text-gray-600">This page is for teachers and administrators.</p>
+            <p className="text-sm text-gray-600">{t('design.teachersOnly')}</p>
           </Card.Body></Card>
         </main>
       </div>
@@ -288,7 +430,7 @@ export default function BookBundlesAdminPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
-      <PageHeader breadcrumbs={[{ label: 'Decorations', href: '/decorations' }, { label: 'Book Bundles' }]} />
+      <PageHeader breadcrumbs={[{ label: t('nav.decorations'), href: '/decorations' }, { label: t('bundle.pageTitle') }]} />
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
@@ -296,7 +438,7 @@ export default function BookBundlesAdminPage() {
             <strong>These are ChallengeRoom textures, not book skins.</strong> They wrap the
             3D book edge to edge, so they only appear for students who have a challenge room
             selected. For the flat book on the normal challenge page, use{' '}
-            <a href="/admin/book-skins" className="underline">Upload Book Skins</a> instead.
+            <a href="/admin/book-skins" className="underline">{t('bundle.uploadInstead')}</a>.
           </p>
         </div>
 
@@ -312,18 +454,113 @@ export default function BookBundlesAdminPage() {
           <Card>
             <Card.Body className="space-y-4">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-bold text-gray-900">Bundle recipe</h2>
-                <Button variant="secondary" size="sm" onClick={() => setSpec(randomBookSpec())}>
-                  🎲 Randomise
-                </Button>
+                <h2 className="text-lg font-bold text-gray-900">{t('bundle.recipe')}</h2>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    /* avoid: re-rolling the theme already on screen is the one
+                       outcome that reads as a broken button. */
+                    onClick={() => {
+                      // Roll across the whole library, promoted themes included.
+                      const pool = themes.filter(x => x.name !== spec.name)
+                      const from = pool.length > 0 ? pool : themes
+                      setSpec(randomBookSpec(from[Math.floor(Math.random() * from.length)]))
+                      setVector(null)
+                    }}
+                    disabled={inventing}
+                  >
+                    🎲 {t('design.randomise')}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={invent}
+                    isLoading={inventing}
+                    disabled={inventing}
+                  >
+                    ✨ {inventing ? t('design.inventing') : t('design.invent')}
+                  </Button>
+                </div>
+              </div>
+
+              <AxisChips vector={vector} />
+
+              {canPromote && (
+                <div className="flex items-center justify-between gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={saveTheme}
+                    isLoading={savingTheme}
+                    disabled={savingTheme || !spec.name.trim()}
+                  >
+                    {savingTheme ? t('design.savingTheme') : t('design.saveTheme')}
+                  </Button>
+                  {cellCount > 0 && (
+                    <span className="text-[11px] text-gray-400">
+                      {t('design.coverage', { used: seenVectors.length, total: cellCount })}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Optional. A bundle written against a real room is the pairing
+                  that reads as designed rather than shuffled. */}
+              {rooms.length > 0 && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600" htmlFor="match-room">
+                    {t('design.matchRoom')}
+                  </label>
+                  <select
+                    id="match-room"
+                    value={matchRoomId}
+                    onChange={e => setMatchRoomId(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+                  >
+                    <option value="">{t('design.matchRoomNone')}</option>
+                    {rooms.map(room => (
+                      <option key={room.id} value={room.id}>{room.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-gray-400">{t('design.matchRoomHint')}</p>
+                </div>
+              )}
+
+              {/* Style is a real axis now — the prompt no longer forces
+                  watercolour on everything. */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-gray-500">{t('design.artStyle')}</span>
+                {ART_STYLES.map(style => (
+                  <button
+                    key={style.id}
+                    type="button"
+                    onClick={() => {
+                      const theme = themes.find(x => x.name === spec.name)
+                      if (!theme) {
+                        setSpec(prev => ({ ...prev, artStyle: style.id }))
+                        return
+                      }
+                      setSpec(randomBookSpec(theme, { style: style.id }))
+                      setVector(null)
+                    }}
+                    className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                      spec.artStyle === style.id
+                        ? 'border-primary-400 bg-primary-50 font-semibold text-primary-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    {style.emoji} {style.label}
+                  </button>
+                ))}
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {BOOK_THEMES.map(theme => (
+                {themes.map(theme => (
                   <button
                     key={theme.name}
                     type="button"
-                    onClick={() => setSpec(randomBookSpec(theme))}
+                    onClick={() => { setSpec(randomBookSpec(theme)); setVector(null) }}
                     className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                       spec.name === theme.name
                         ? 'border-primary-400 bg-primary-50 font-semibold text-primary-700'
@@ -336,23 +573,24 @@ export default function BookBundlesAdminPage() {
               </div>
 
               <div className="space-y-3">
-                {field('Collection name', 'name')}
-                {field('Mood', 'mood')}
-                {field('Palette', 'palette')}
-                {field('Paper', 'paper')}
-                {field('Frame', 'frame')}
+                {field(t('bundle.collectionName'), 'name')}
+                {field(t('design.mood'), 'mood')}
+                {field(t('design.palette'), 'palette')}
+                {field(t('bundle.paper'), 'paper')}
+                {field(t('bundle.frame'), 'frame')}
+                {field(t('bundle.innerAccent'), 'innerAccent')}
 
                 <p className="pt-1 text-xs font-medium text-gray-500">
                   Corner clusters — cover only; the inner page stays clear of them
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  {clusterField('Top left', 0)}
-                  {clusterField('Top right', 1)}
-                  {clusterField('Bottom left', 2)}
-                  {clusterField('Bottom right', 3)}
+                  {clusterField(t('bundle.topLeft'), 0)}
+                  {clusterField(t('bundle.topRight'), 1)}
+                  {clusterField(t('bundle.bottomLeft'), 2)}
+                  {clusterField(t('bundle.bottomRight'), 3)}
                 </div>
 
-                {field('Extra art direction (optional)', 'notes', true)}
+                {field(t('bundle.extraArt'), 'notes', true)}
               </div>
             </Card.Body>
           </Card>
@@ -360,7 +598,7 @@ export default function BookBundlesAdminPage() {
           {/* ── The pair ───────────────────────────────────────────────── */}
           <Card>
             <Card.Body className="space-y-4">
-              <h2 className="text-lg font-bold text-gray-900">Cover &amp; inner page</h2>
+              <h2 className="text-lg font-bold text-gray-900">{t('bundle.coverAndInner')}</h2>
               <div className="grid grid-cols-2 gap-4">
                 {half('cover', coverUrl, 'Cover', 'Shows on the closed book. Four corner clusters, empty centre.')}
                 {half('inner', innerUrl, 'Inner page', 'Both open pages. Must stay ~75% blank — the problem is printed onto it.')}
@@ -373,29 +611,29 @@ export default function BookBundlesAdminPage() {
         {(coverUrl || innerUrl) && (
           <Card>
             <Card.Body className="space-y-4">
-              <h2 className="text-lg font-bold text-gray-900">Save bundle</h2>
+              <h2 className="text-lg font-bold text-gray-900">{t('bundle.save')}</h2>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Name</label>
+                  <label className="text-xs font-medium text-gray-600">{t('design.name')}</label>
                   <input type="text" value={name} onChange={e => setName(e.target.value)}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Description (optional)</label>
+                  <label className="text-xs font-medium text-gray-600">{t('design.descriptionOptional')}</label>
                   <input type="text" value={description} onChange={e => setDescription(e.target.value)}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Visibility</label>
+                  <label className="text-xs font-medium text-gray-600">{t('design.visibility')}</label>
                   <select value={visibility} onChange={e => setVisibility(e.target.value as 'admin_only' | 'public')}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900">
-                    <option value="admin_only">Admin only</option>
-                    <option value="public">Public</option>
+                    <option value="admin_only">{t('design.adminOnly')}</option>
+                    <option value="public">{t('design.public')}</option>
                   </select>
                 </div>
               </div>
               <Button variant="primary" onClick={save} isLoading={saving} disabled={saving || !coverUrl || !innerUrl}>
-                Save bundle
+                {t('bundle.save')}
               </Button>
               {(!coverUrl || !innerUrl) && (
                 <p className="text-xs text-amber-700">
@@ -412,7 +650,7 @@ export default function BookBundlesAdminPage() {
           <Card.Body className="space-y-3">
             <h2 className="text-lg font-bold text-gray-900">Saved bundles ({packages.length})</h2>
             {packages.length === 0 ? (
-              <p className="text-sm text-gray-400">No bundles yet.</p>
+              <p className="text-sm text-gray-400">{t('bundle.none')}</p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {packages.map(pkg => (
@@ -434,7 +672,7 @@ export default function BookBundlesAdminPage() {
                         </span>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="secondary" size="sm" onClick={() => reopen(pkg)}>Reopen</Button>
+                        <Button variant="secondary" size="sm" onClick={() => reopen(pkg)}>{t('design.reopen')}</Button>
                         <Button variant="ghost" size="sm" onClick={() => toggleActive(pkg)}>
                           {pkg.is_active ? 'Deactivate' : 'Activate'}
                         </Button>

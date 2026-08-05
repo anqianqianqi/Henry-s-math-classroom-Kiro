@@ -1,0 +1,153 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>Welcome card</title><style>
+ body{margin:0;font:14px/1.5 system-ui,sans-serif;background:#e5e7eb;
+      display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}
+ .card{width:100%;max-width:512px;background:#fff;border-radius:16px;padding:24px;
+       box-shadow:0 25px 50px -12px rgb(0 0 0/.25)}
+ .t{font-size:16px;font-weight:700;color:#111827} .s{margin-top:12px;font-size:14px;color:#4b5563}
+ .m{margin-top:2px} p{margin:0}
+ .grid{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+ label{display:block;font-size:12px;font-weight:500;color:#374151;margin-bottom:4px}
+ select{width:100%;border:1px solid #e5e7eb;border-radius:12px;padding:8px 12px;font-size:14px;background:#fff}
+ .zone{margin-top:12px;font-size:12px;color:#6b7280}
+ .zone b{color:#374151}
+ .langs{display:flex;gap:8px;margin-top:6px}
+ .lang{flex:1;border:1px solid #e5e7eb;border-radius:12px;padding:10px;font-size:14px;
+       font-weight:600;color:#4b5563;background:#fff;cursor:pointer}
+ .lang.on{border-color:#22c55e;background:#f0fdf4;color:#15803d}
+ .note{margin-top:20px;font-size:12px;line-height:1.6;color:#6b7280}
+ .cta{margin-top:20px;width:100%;border:0;border-radius:12px;background:#22c55e;color:#fff;
+      padding:10px;font-size:14px;font-weight:600;cursor:pointer}
+</style></head><body><div class="card" id="c"></div>
+<script>
+const COUNTRIES = [
+  {
+    code: 'US', region: 'us', nameEn: 'United States', nameZh: '美国',
+    cities: [
+      { nameEn: 'New York', nameZh: '纽约', timezone: 'America/New_York' },
+      { nameEn: 'Boston', nameZh: '波士顿', timezone: 'America/New_York' },
+      { nameEn: 'Atlanta', nameZh: '亚特兰大', timezone: 'America/New_York' },
+      { nameEn: 'Chicago', nameZh: '芝加哥', timezone: 'America/Chicago' },
+      { nameEn: 'Houston', nameZh: '休斯顿', timezone: 'America/Chicago' },
+      { nameEn: 'Denver', nameZh: '丹佛', timezone: 'America/Denver' },
+      { nameEn: 'Phoenix', nameZh: '凤凰城', timezone: 'America/Phoenix' },
+      { nameEn: 'Los Angeles', nameZh: '洛杉矶', timezone: 'America/Los_Angeles' },
+      { nameEn: 'Seattle', nameZh: '西雅图', timezone: 'America/Los_Angeles' },
+      { nameEn: 'Honolulu', nameZh: '檀香山', timezone: 'Pacific/Honolulu' },
+    ],
+  },
+  {
+    // One clock nationwide, so the city is asked only so the answer feels
+    // like an address rather than a setting.
+    code: 'CN', region: 'cn', nameEn: 'China', nameZh: '中国',
+    cities: [
+      { nameEn: 'Beijing', nameZh: '北京', timezone: 'Asia/Shanghai' },
+      { nameEn: 'Shanghai', nameZh: '上海', timezone: 'Asia/Shanghai' },
+      { nameEn: 'Shenzhen', nameZh: '深圳', timezone: 'Asia/Shanghai' },
+      { nameEn: 'Guangzhou', nameZh: '广州', timezone: 'Asia/Shanghai' },
+      { nameEn: 'Chengdu', nameZh: '成都', timezone: 'Asia/Shanghai' },
+      { nameEn: 'Elsewhere in China', nameZh: '中国其他城市', timezone: 'Asia/Shanghai' },
+    ],
+  },
+  {
+    code: 'CA', region: 'other', nameEn: 'Canada', nameZh: '加拿大',
+    cities: [
+      { nameEn: 'Toronto', nameZh: '多伦多', timezone: 'America/Toronto' },
+      { nameEn: 'Vancouver', nameZh: '温哥华', timezone: 'America/Vancouver' },
+      { nameEn: 'Calgary', nameZh: '卡尔加里', timezone: 'America/Edmonton' },
+    ],
+  },
+  {
+    code: 'HK', region: 'other', nameEn: 'Hong Kong', nameZh: '香港',
+    cities: [{ nameEn: 'Hong Kong', nameZh: '香港', timezone: 'Asia/Hong_Kong' }],
+  },
+  {
+    code: 'TW', region: 'other', nameEn: 'Taiwan', nameZh: '台湾',
+    cities: [{ nameEn: 'Taipei', nameZh: '台北', timezone: 'Asia/Taipei' }],
+  },
+  {
+    code: 'SG', region: 'other', nameEn: 'Singapore', nameZh: '新加坡',
+    cities: [{ nameEn: 'Singapore', nameZh: '新加坡', timezone: 'Asia/Singapore' }],
+  },
+  {
+    code: 'JP', region: 'other', nameEn: 'Japan', nameZh: '日本',
+    cities: [{ nameEn: 'Tokyo', nameZh: '东京', timezone: 'Asia/Tokyo' }],
+  },
+  {
+    code: 'AU', region: 'other', nameEn: 'Australia', nameZh: '澳大利亚',
+    cities: [
+      { nameEn: 'Sydney', nameZh: '悉尼', timezone: 'Australia/Sydney' },
+      { nameEn: 'Melbourne', nameZh: '墨尔本', timezone: 'Australia/Melbourne' },
+      { nameEn: 'Perth', nameZh: '珀斯', timezone: 'Australia/Perth' },
+    ],
+  },
+  {
+    code: 'GB', region: 'other', nameEn: 'United Kingdom', nameZh: '英国',
+    cities: [{ nameEn: 'London', nameZh: '伦敦', timezone: 'Europe/London' }],
+  },
+]
+const K={
+ "welcome.title": {
+  "en": "Hello Students, website region/timezone logic is now online!",
+  "zh": "各位同学，网站的地区与时区功能现已上线！"
+ },
+ "welcome.choose": {
+  "en": "Please choose where you are from and your preferred language display",
+  "zh": "请选择您所在的地区及首选的显示语言。"
+ },
+ "welcome.later": {
+  "en": "In the future, you can change your region in the setting and your preferred language on the top right of the website",
+  "zh": "今后，您可以在“设置”中更改地区，并通过网站右上角切换首选语言。"
+ },
+ "welcome.country": {
+  "en": "Country / region",
+  "zh": "国家或地区"
+ },
+ "welcome.city": {
+  "en": "City",
+  "zh": "城市"
+ },
+ "welcome.detectedZone": {
+  "en": "Your timezone",
+  "zh": "您的时区"
+ },
+ "welcome.language": {
+  "en": "Display language",
+  "zh": "显示语言"
+ },
+ "welcome.confirm": {
+  "en": "Save and continue",
+  "zh": "保存并继续"
+ },
+ "welcome.saving": {
+  "en": "Saving…",
+  "zh": "正在保存……"
+ }
+};
+const both=k=>K[k]?K[k].en+' / '+K[k].zh:k;
+let cc='US', tz='America/New_York', lang='en';
+function zoneLabel(z){try{return new Intl.DateTimeFormat('en-US',{timeZone:z,timeZoneName:'short'})
+  .formatToParts(new Date()).find(p=>p.type==='timeZoneName').value}catch(e){return z}}
+function render(){
+  const c=COUNTRIES.find(x=>x.code===cc);
+  if(!c.cities.some(x=>x.timezone===tz)) tz=c.cities[0].timezone;
+  document.getElementById('c').innerHTML=
+  '<div class="t"><p>'+K['welcome.title'].en+'</p><p class="m">'+K['welcome.title'].zh+'</p></div>'+
+  '<div class="s"><p>'+K['welcome.choose'].en+'</p><p class="m">'+K['welcome.choose'].zh+'</p></div>'+
+  '<div class="grid"><div><label>'+both('welcome.country')+'</label><select id="co">'+
+   COUNTRIES.map(x=>'<option value="'+x.code+'"'+(x.code===cc?' selected':'')+'>'+x.nameEn+' / '+x.nameZh+'</option>').join('')+
+  '</select></div><div><label>'+both('welcome.city')+'</label><select id="ci">'+
+   c.cities.map(x=>'<option value="'+x.timezone+'"'+(x.timezone===tz?' selected':'')+'>'+x.nameEn+' / '+x.nameZh+'</option>').join('')+
+  '</select></div></div>'+
+  '<p class="zone">'+both('welcome.detectedZone')+': <b>'+tz.replace(/_/g,' ')+' &middot; '+zoneLabel(tz)+'</b></p>'+
+  '<div style="margin-top:20px"><label>'+both('welcome.language')+'</label><div class="langs">'+
+   '<button class="lang'+(lang==='en'?' on':'')+'" data-l="en">EN / 英文</button>'+
+   '<button class="lang'+(lang==='zh'?' on':'')+'" data-l="zh">CN / 简体中文</button></div></div>'+
+  '<div class="note"><p>'+K['welcome.later'].en+'</p><p class="m">'+K['welcome.later'].zh+'</p></div>'+
+  '<button class="cta">'+both('welcome.confirm')+'</button>';
+  co.onchange=e=>{cc=e.target.value;render()};
+  ci.onchange=e=>{tz=e.target.value;render()};
+  document.querySelectorAll('.lang').forEach(b=>b.onclick=()=>{lang=b.dataset.l;render()});
+}
+render();
+</script></body></html>

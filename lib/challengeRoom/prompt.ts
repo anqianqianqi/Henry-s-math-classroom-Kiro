@@ -9,10 +9,30 @@
  */
 
 import type { RoomSpec } from '@/lib/types/challengeRoom'
+import { roomRenderFor } from '@/lib/art-styles'
 
 const clean = (value: string) => value.trim().replace(/\s+/g, ' ')
 
+/**
+ * The aperture sentence, as written before a theme could choose its shape.
+ * Reproduced byte-identically when `aperture` is absent, so a recipe saved
+ * before this existed still compiles to exactly the prompt it always did.
+ */
+const LEGACY_APERTURE_BULLET =
+  '- A single large arched window occupies the central upper half. Its timber or stone reveal is visibly deep, with a broad sill and believable frame thickness.'
+
 export function compileRoomPrompt(spec: RoomSpec): string {
+  /*
+   * Only the noun phrase comes from the spec. "A single large", "occupies the
+   * central upper half", the deep reveal and the broad sill are fixed template
+   * text — a theme can pick a porthole over an arch, but it cannot ask for two
+   * windows, an off-centre one, or a shallow frame, all of which the
+   * compositing depends on.
+   */
+  const apertureBullet = spec.aperture?.trim()
+    ? `- A single large ${clean(spec.aperture)} occupies the central upper half. Its reveal is visibly deep, with a broad sill and believable frame thickness.`
+    : LEGACY_APERTURE_BULLET
+
   return [
     'Create one finished 3:2 landscape room-background illustration for a compositing workflow.',
     '',
@@ -27,8 +47,8 @@ export function compileRoomPrompt(spec: RoomSpec): string {
     '',
     'LOCKED COMPOSITION — follow exactly:',
     '- Camera is horizontally centered with zero Dutch roll, but raised above the desk and pitched downward about 40–45 degrees toward the tabletop. Use a high three-quarter tabletop view, not an eye-level view.',
-    '- Preserve a calm, symmetrical architectural composition: the arched window stays centered and visually frontal, and all vertical walls and window mullions remain vertical.',
-    '- A single large arched window occupies the central upper half. Its timber or stone reveal is visibly deep, with a broad sill and believable frame thickness.',
+    '- Preserve a calm, symmetrical architectural composition: the central aperture stays centered and visually frontal, and all vertical walls and window mullions remain vertical.',
+    apertureBullet,
     '- A broad uncluttered tabletop fills roughly the lower 45% of the canvas. Show a generous amount of its top surface; keep the front apron or vertical front edge to no more than 6% of the image height.',
     '- Preserve a completely empty central placement zone occupying roughly 52% of the table width and 45% of the lower image height.',
     '- The center must be suitable for compositing a flat book seen clearly from above. An imaginary portrait book placed there should read as a tall, easily visible quadrilateral with most of its cover or pages visible, never as a shallow horizontal sliver.',
@@ -40,7 +60,7 @@ export function compileRoomPrompt(spec: RoomSpec): string {
     '- Leave the tabletop center evenly lit and visually calm so a separate open or closed book can be composited there.',
     '',
     'STYLE AND OUTPUT:',
-    '- Richly detailed storybook environment illustration with tactile materials, elegant lighting, and polished cinematic depth.',
+    `- ${roomRenderFor(spec.artStyle)}`,
     '- No people, no animals in the room, no book on the table, no text, no lettering, no watermark, no logo.',
     "- No low camera, no eye-level tabletop, no edge-on desk surface, no extreme bird's-eye view, and no tilted horizon.",
     '- Do not create a collage, split screen, contact sheet, frame sequence, or alternate view.',

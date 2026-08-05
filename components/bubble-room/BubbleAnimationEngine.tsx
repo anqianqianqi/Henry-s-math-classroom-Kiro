@@ -41,10 +41,10 @@ const ANIMATION_BUFFER_MS = 500
 const MAX_ON_SCREEN = 15
 const MAX_PER_QUESTION_SMALL_POOL = 2
 
-const X_MIN = 5
-const X_MAX = 95
-const DRIFT_MAG_MIN = 10
-const DRIFT_MAG_MAX = 28
+const X_MIN = 15
+const X_MAX = 85
+const DRIFT_MAG_MIN = 5
+const DRIFT_MAG_MAX = 15
 /** Rise speed range — slower for a more relaxed floating feel */
 const SPEED_MIN = 14   // slower floor for gentle drifting
 const SPEED_MAX = 28
@@ -98,13 +98,13 @@ export function BubbleAnimationEngine({
     })
   }, [questions])
 
-  // Clean up dying instances after fade completes (300 ms)
+  // Clean up dying instances immediately — display:none already hides them
   useEffect(() => {
     const dying = visible.filter((b) => (b as any).dying)
     if (dying.length === 0) return
     const timer = setTimeout(() => {
       setVisible((prev) => prev.filter((b) => !(b as any).dying))
-    }, 350)
+    }, 50)
     return () => clearTimeout(timer)
   }, [visible])
 
@@ -157,10 +157,12 @@ export function BubbleAnimationEngine({
     }
 
     setVisible((prev) => [...prev, instance])
-
+    // Natural removal is handled by onAnimationEnd in QuestionBubble.
+    // We keep a fallback timer only as insurance (speed + 5s) in case
+    // the event never fires (e.g. element hidden, tab in background).
     setTimeout(() => {
       setVisible((prev) => prev.filter((b) => b.id !== instance.id))
-    }, speed * 1000 + ANIMATION_BUFFER_MS)
+    }, (speed + 5) * 1000)
   }, [isActive, questions])
 
   // ── Main interval loop ─────────────────────────────────────────────────────
@@ -258,9 +260,11 @@ export function BubbleAnimationEngine({
           instance={instance}
           dying={(instance as any).dying === true}
           searchQuery={searchQuery}
+          onNaturalEnd={() => {
+            // Animation completed naturally at top of screen — safe to remove
+            setVisible((prev) => prev.filter((b) => b.id !== instance.id))
+          }}
           onClick={() => {
-            // Immediately remove this instance so the count drops and
-            // the keepalive effect spawns a replacement from the bottom
             setVisible((prev) => prev.filter((b) => b.id !== instance.id))
             onBubbleClick(instance.question)
           }}

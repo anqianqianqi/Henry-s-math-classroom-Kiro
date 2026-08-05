@@ -15,6 +15,7 @@ import type {
   HenrySheetTheme,
 } from '@/lib/henry-theme'
 import { themeColor } from '@/lib/henry-theme'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 function Ornament({
   ornament,
@@ -96,6 +97,7 @@ function Ornament({
 }
 
 export function HenrySheetHeader({ theme }: { theme: HenrySheetTheme }) {
+  const { t, language } = useLanguage()
   const { palette, header } = theme
 
   return (
@@ -136,12 +138,18 @@ export function HenrySheetHeader({ theme }: { theme: HenrySheetTheme }) {
               fontSize: '1.12em',
             }}
           >
-            Henry&apos;s Math
-            {/* Dropped by container query when the strip itself is narrow —
+            {t('auth.appNameShort')}
+            {/* The worksheet lockup shows both scripts, so the Chinese half is
+                only worth printing when the title above it is English —
+                otherwise a Chinese reader gets 「Henry 数学（Henry's 数学）」.
+
+                Also dropped by container query when the strip itself is narrow;
                 see .henry-header-cn in globals.css */}
-            <span className="henry-header-cn font-semibold" style={{ fontSize: '0.88em' }}>
-              （Henry&apos;s 数学）
-            </span>
+            {language === 'en' && (
+              <span className="henry-header-cn font-semibold" style={{ fontSize: '0.88em' }}>
+                （Henry&apos;s 数学）
+              </span>
+            )}
           </span>
         </div>
 

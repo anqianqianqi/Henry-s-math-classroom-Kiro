@@ -15,7 +15,9 @@ export const dynamic = 'force-dynamic'
  *   4. save the plate + placement + animation to challenge_rooms
  */
 
+import { ART_STYLES } from '@/lib/art-styles'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import dynamicImport from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
@@ -42,16 +44,27 @@ const RoomPlacementStage = dynamicImport(
     ),
   },
 )
-import { ROOM_THEMES, randomRoomSpec } from '@/lib/challengeRoom/themes'
+import { ROOM_THEMES, randomRoomSpec, type RoomTheme } from '@/lib/challengeRoom/themes'
+import { AxisChips } from '@/components/challenge-room/AxisChips'
 import { validateRoomSpec } from '@/lib/challengeRoom/prompt'
 import { bookModelUrl, MODEL_SETUP_HINT } from '@/lib/challengeRoom/model'
+import {
+  DEFAULT_RADIO_PALETTE,
+  DEFAULT_RADIO_PLACEMENT,
+  RADIO_MODEL_URL,
+  RADIO_PALETTES,
+  radioPaletteUrl,
+} from '@/lib/challengeRoom/radio'
 import {
   BOOK_MODEL_KEY,
   DEFAULT_ANIMATION,
   DEFAULT_PLACEMENT,
+  DEFAULT_LIGHT_POSITION,
   SPREAD_FRAME,
   type AnimationConfig,
+  type AxisVector,
   type ChallengeRoom,
+  type LightPosition,
   type Placement,
   type RoomSpec,
 } from '@/lib/types/challengeRoom'
@@ -64,6 +77,7 @@ interface TexturePackageOption {
 }
 
 export default function ChallengeRoomsAdminPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const supabase = createClient()
 
@@ -71,6 +85,32 @@ export default function ChallengeRoomsAdminPage() {
   const [isAdmin, setIsAdmin] = useState(false)
 
   const [spec, setSpec] = useState<RoomSpec>(() => randomRoomSpec())
+
+  /*
+    The invented-recipe half of the recipe panel.
+
+    `recentVectors` is what makes repeated presses of Invent land somewhere
+    genuinely different: the roller is told to stay at least two axes away from
+    the last six cells. Six because that is roughly a sitting's worth of
+    re-rolls — beyond it the constraint starts fighting the roll itself.
+  */
+  const [vector, setVector] = useState<AxisVector | null>(null)
+  const [recentVectors, setRecentVectors] = useState<AxisVector[]>([])
+  const [inventing, setInventing] = useState(false)
+
+  /*
+    The theme library: the constants in themes.ts plus whatever admins have
+    promoted since. Fetched rather than imported, which is the price of the
+    library being able to grow — until it arrives the picker falls back to the
+    constants, so the page is usable on first paint and if the migration has
+    not been run yet.
+  */
+  const [themes, setThemes] = useState<RoomTheme[]>(ROOM_THEMES)
+  const [seenVectors, setSeenVectors] = useState<AxisVector[]>([])
+  const [cellCount, setCellCount] = useState(0)
+  const [canPromote, setCanPromote] = useState(false)
+  const [savingTheme, setSavingTheme] = useState(false)
+
   const [plateUrl, setPlateUrl] = useState<string | null>(null)
   const [compiledPrompt, setCompiledPrompt] = useState('')
   const [changePrompt, setChangePrompt] = useState('')
@@ -80,6 +120,33 @@ export default function ChallengeRoomsAdminPage() {
   const [animation, setAnimation] = useState<AnimationConfig>(DEFAULT_ANIMATION)
   const [frame, setFrame] = useState(SPREAD_FRAME)
   const [playing, setPlaying] = useState(false)
+
+  /**
+   * The room being retuned, or null when the next save creates a new one.
+   *
+   * Students' preferences point at a specific challenge_rooms row, so editing
+   * has to write back to that row — saving a copy would leave everyone who had
+   * chosen the original on the version without the change.
+   */
+  const [editingRoomId, setEditingRoomId] = useState<string | null>(null)
+
+  /** One key light for the whole room — see LightPosition. */
+  const [lightPosition, setLightPosition] = useState<LightPosition>(DEFAULT_LIGHT_POSITION)
+
+  /*
+    The radio on the sill.
+
+    null is a room WITHOUT one, and that is the default — so a room only gains
+    a radio when someone deliberately adds it here. The same six controls below
+    point at whichever object `target` names, rather than the form growing a
+    second copy of the whole placement rig.
+  */
+  const [radioPlacement, setRadioPlacement] = useState<Placement | null>(null)
+  const [target, setTarget] = useState<'book' | 'radio'>('book')
+  const [radioPaletteId, setRadioPaletteId] = useState(DEFAULT_RADIO_PALETTE)
+  const editing = target === 'radio' && radioPlacement ? radioPlacement : placement
+  const setEditing = (next: Placement) =>
+    target === 'radio' && radioPlacement ? setRadioPlacement(next) : setPlacement(next)
 
   const [packages, setPackages] = useState<TexturePackageOption[]>([])
   const [packageId, setPackageId] = useState<string>('')
@@ -139,11 +206,102 @@ export default function ChallengeRoomsAdminPage() {
     }
   }, [supabase])
 
+  const loadThemes = useCallback(async () => {
+    try {
+      const res = await fetch('/api/themes')
+      if (!res.ok) return
+      const payload = await res.json()
+      if (Array.isArray(payload.rooms) && payload.rooms.length > 0) setThemes(payload.rooms)
+      if (Array.isArray(payload.seenVectors)) setSeenVectors(payload.seenVectors)
+      if (typeof payload.cellCount === 'number') setCellCount(payload.cellCount)
+      setCanPromote(payload.promotable === true)
+    } catch {
+      // Keeping the constants is the whole fallback; nothing to report.
+    }
+  }, [])
+
   useEffect(() => {
     if (!isAdmin) return
     loadRooms()
     loadPackages()
-  }, [isAdmin, loadRooms, loadPackages])
+    loadThemes()
+  }, [isAdmin, loadRooms, loadPackages, loadThemes])
+
+  /** Fold the recipe on screen into the theme library so later rolls can use it. */
+  async function saveTheme() {
+    setError(null)
+    setSuccess(null)
+    setSavingTheme(true)
+    try {
+      const res = await fetch('/api/themes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'room', spec }),
+      })
+      const payload = await res.json()
+      if (!res.ok) {
+        setError(payload.error || t('design.themeSaveFailed'))
+        return
+      }
+      setSuccess(
+        payload.created
+          ? t('design.themeCreated', { name: spec.name })
+          : t('design.themeExtended', { name: spec.name }),
+      )
+      await loadThemes()
+    } catch (err: any) {
+      setError(err.message || t('design.themeSaveFailed'))
+    } finally {
+      setSavingTheme(false)
+    }
+  }
+
+  /**
+   * Roll a cell, have the small model write a recipe into it, drop the result
+   * in the form.
+   *
+   * Nothing is saved and nothing is generated — the fields stay editable, so a
+   * theme that is nearly right is a starting point rather than a commitment.
+   */
+  async function invent() {
+    setError(null)
+    setSuccess(null)
+    setInventing(true)
+    try {
+      const res = await fetch('/api/invent-recipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'room',
+          avoidVectors: recentVectors,
+          seenVectors,
+          avoidNames: [spec.name, ...themes.map(x => x.name)],
+        }),
+      })
+      const payload = await res.json()
+      if (!res.ok) {
+        setError(payload.error || t('design.inventFailed'))
+        return
+      }
+
+      if (payload.room) setSpec(payload.room)
+      if (payload.vector) {
+        setVector(payload.vector)
+        setRecentVectors(prev => [payload.vector, ...prev].slice(0, 6))
+      }
+      // The note is diagnostic English from the route; the admin gets the
+      // translated sentence and the detail goes to the console.
+      if (payload.source === 'fallback') {
+        console.warn('[invent-recipe]', payload.note)
+        setSuccess(t('design.inventFellBack'))
+      }
+      if (payload.adjusted?.length) console.info('[invent-recipe] adjusted:', payload.adjusted)
+    } catch (err: any) {
+      setError(err.message || t('design.inventFailed'))
+    } finally {
+      setInventing(false)
+    }
+  }
 
   // ── Generate / refine ─────────────────────────────────────────────────────
   async function generate(refine: boolean) {
@@ -156,7 +314,7 @@ export default function ChallengeRoomsAdminPage() {
       return
     }
     if (refine && !changePrompt.trim()) {
-      setError('Describe what to change before refining.')
+      setError(t('design.describeChange'))
       return
     }
 
@@ -195,7 +353,7 @@ export default function ChallengeRoomsAdminPage() {
     setSuccess(null)
 
     if (!plateUrl) {
-      setError('Generate a room plate first.')
+      setError(t('roomAdmin.needPlate'))
       return
     }
     if (!roomName.trim()) {
@@ -211,26 +369,42 @@ export default function ChallengeRoomsAdminPage() {
         return
       }
 
-      const { error: insertErr } = await supabase.from('challenge_rooms').insert({
+      const fields = {
         name: roomName.trim(),
         description: roomDescription.trim() || null,
         room_url: plateUrl,
         recipe: spec,
         placement,
+        radio_placement: radioPlacement,
+        light_position: lightPosition,
         animation,
         model_key: BOOK_MODEL_KEY,
         visibility,
-        is_active: true,
-        created_by: user.id,
-      })
+      }
 
-      if (insertErr) {
-        setError('Failed to save: ' + insertErr.message)
+      /*
+        Retuning UPDATES the room it was loaded from.
+
+        It used to insert unconditionally, so the only way to adjust a saved
+        room's placement was to save a second copy of it and deactivate the
+        first — which is not retuning, and is how a list of near-duplicate rooms
+        happens. Students hold challenge_room_id against a specific row, so a
+        duplicate also silently leaves everyone who chose the old one on the
+        untouched version.
+      */
+      const { error: saveErr } = editingRoomId
+        ? await supabase.from('challenge_rooms').update(fields).eq('id', editingRoomId)
+        : await supabase.from('challenge_rooms').insert({ ...fields, is_active: true, created_by: user.id })
+
+      if (saveErr) {
+        setError('Failed to save: ' + saveErr.message)
         return
       }
 
-      setSuccess(`"${roomName.trim()}" saved.`)
-      setRoomDescription('')
+      setSuccess(editingRoomId
+        ? t('roomAdmin.roomUpdated', { name: roomName.trim() })
+        : t('roomAdmin.roomSaved', { name: roomName.trim() }))
+      if (!editingRoomId) setRoomDescription('')
       await loadRooms()
     } catch (err: any) {
       setError(err.message || 'Failed to save.')
@@ -252,15 +426,27 @@ export default function ChallengeRoomsAdminPage() {
   function editRoom(room: ChallengeRoom) {
     setPlateUrl(room.room_url)
     if (room.recipe) setSpec(room.recipe)
+    // Rooms saved before Invent existed, and every preset roll, have no cell.
+    setVector(room.recipe?.axes ?? null)
     setPlacement(room.placement ?? DEFAULT_PLACEMENT)
+    setRadioPlacement((room as any).radio_placement ?? null)
+    setLightPosition((room as any).light_position ?? DEFAULT_LIGHT_POSITION)
+    setTarget('book')
     setAnimation(room.animation ?? DEFAULT_ANIMATION)
     setRoomName(room.name)
     setRoomDescription(room.description ?? '')
     setVisibility(room.visibility)
     setFrame(room.animation?.endFrame ?? SPREAD_FRAME)
     setPlaying(false)
-    setSuccess(`Loaded "${room.name}" — saving creates a new room.`)
+    setEditingRoomId(room.id)
+    setSuccess(t('roomAdmin.loadedForRetune', { name: room.name }))
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  /** Drop the link to the loaded room, so the next save makes a new one. */
+  function stopEditing() {
+    setEditingRoomId(null)
+    setSuccess(null)
   }
 
   const field = (label: string, key: keyof RoomSpec, multiline = false) => (
@@ -269,14 +455,14 @@ export default function ChallengeRoomsAdminPage() {
       {multiline ? (
         <textarea
           rows={2}
-          value={spec[key] as string}
+          value={(spec[key] as string) ?? ''}
           onChange={e => setSpec({ ...spec, [key]: e.target.value })}
           className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-400"
         />
       ) : (
         <input
           type="text"
-          value={spec[key] as string}
+          value={(spec[key] as string) ?? ''}
           onChange={e => setSpec({ ...spec, [key]: e.target.value })}
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-400"
         />
@@ -315,11 +501,11 @@ export default function ChallengeRoomsAdminPage() {
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <PageHeader breadcrumbs={[{ label: 'Decorations', href: '/decorations' }, { label: 'Challenge Rooms' }]} />
+        <PageHeader breadcrumbs={[{ label: t('nav.decorations'), href: '/decorations' }, { label: t('roomAdmin.pageTitle') }]} />
         <main className="mx-auto max-w-2xl px-4 py-12">
           <Card>
             <Card.Body>
-              <p className="text-sm text-gray-600">This page is for teachers and administrators.</p>
+              <p className="text-sm text-gray-600">{t('design.teachersOnly')}</p>
             </Card.Body>
           </Card>
         </main>
@@ -330,17 +516,24 @@ export default function ChallengeRoomsAdminPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       <PageHeader
-        breadcrumbs={[{ label: 'Decorations', href: '/decorations' }, { label: 'Challenge Rooms' }]}
+        breadcrumbs={[{ label: t('nav.decorations'), href: '/decorations' }, { label: t('roomAdmin.pageTitle') }]}
       />
 
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+      {/*
+        Wide on purpose. Placing a book and a radio against a painted plate is
+        judged by eye, and the stage used to be half of a max-w-6xl — about
+        550px, a third of the size a student sees it at. Details that decide
+        whether an object sits ON the sill or floats in front of it are simply
+        not visible at that scale.
+      */}
+      <main className="mx-auto max-w-[1800px] space-y-6 px-4 py-8 sm:px-6 lg:px-8">
         <p className="text-sm text-gray-500">
           Design the 3D challenge room: generate a background plate, then position the animated book on it.
         </p>
 
         {!modelUrl && (
           <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
-            <p className="text-sm font-semibold text-amber-800">Book model not configured</p>
+            <p className="text-sm font-semibold text-amber-800">{t('roomAdmin.modelMissing')}</p>
             <p className="mt-1 text-xs text-amber-700">{MODEL_SETUP_HINT}</p>
           </div>
         )}
@@ -356,23 +549,103 @@ export default function ChallengeRoomsAdminPage() {
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        {/* Recipe narrow on the left, everything visual to the right of it. */}
+        <div className="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
           {/* ── Spec form ──────────────────────────────────────────────── */}
           <Card>
             <Card.Body className="space-y-4">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-bold text-gray-900">Room recipe</h2>
-                <Button variant="secondary" size="sm" onClick={() => setSpec(randomRoomSpec())}>
-                  🎲 Randomise
-                </Button>
+                <h2 className="text-lg font-bold text-gray-900">{t('roomAdmin.recipe')}</h2>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    /* avoid: the dice landing on the theme already on screen is
+                       the one outcome that reads as a broken button. */
+                    onClick={() => {
+                      // Roll across the whole library, promoted themes included.
+                      const pool = themes.filter(x => x.name !== spec.name)
+                      const from = pool.length > 0 ? pool : themes
+                      setSpec(randomRoomSpec(from[Math.floor(Math.random() * from.length)]))
+                      // The preset came from the library, not from a cell.
+                      setVector(null)
+                    }}
+                    disabled={inventing}
+                  >
+                    🎲 {t('design.randomise')}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={invent}
+                    isLoading={inventing}
+                    disabled={inventing}
+                  >
+                    ✨ {inventing ? t('design.inventing') : t('design.invent')}
+                  </Button>
+                </div>
+              </div>
+
+              <AxisChips vector={vector} />
+
+              {/* Promotion is what makes the library grow instead of discarding
+                  every good roll. Hidden until the migration has been run. */}
+              {canPromote && (
+                <div className="flex items-center justify-between gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={saveTheme}
+                    isLoading={savingTheme}
+                    disabled={savingTheme || !spec.name.trim()}
+                  >
+                    {savingTheme ? t('design.savingTheme') : t('design.saveTheme')}
+                  </Button>
+                  {cellCount > 0 && (
+                    <span className="text-[11px] text-gray-400">
+                      {t('design.coverage', { used: seenVectors.length, total: cellCount })}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Style is its own axis now, so it gets its own row. Picking one
+                  re-rolls the current theme with that style forced. */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-gray-500">{t('design.artStyle')}</span>
+                {ART_STYLES.map(style => (
+                  <button
+                    key={style.id}
+                    type="button"
+                    onClick={() => {
+                      const theme = themes.find(x => x.name === spec.name)
+                      if (!theme) {
+                        // An invented theme is not in the library; just restyle it.
+                        setSpec(prev => ({ ...prev, artStyle: style.id }))
+                        return
+                      }
+                      // A preset re-roll replaces the recipe wholesale, so the
+                      // cell on screen would no longer describe what is there.
+                      setSpec(randomRoomSpec(theme, { style: style.id }))
+                      setVector(null)
+                    }}
+                    className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                      spec.artStyle === style.id
+                        ? 'border-primary-400 bg-primary-50 font-semibold text-primary-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    {style.emoji} {style.label}
+                  </button>
+                ))}
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {ROOM_THEMES.map(theme => (
+                {themes.map(theme => (
                   <button
                     key={theme.name}
                     type="button"
-                    onClick={() => setSpec(randomRoomSpec(theme))}
+                    onClick={() => { setSpec(randomRoomSpec(theme)); setVector(null) }}
                     className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                       spec.name === theme.name
                         ? 'border-primary-400 bg-primary-50 font-semibold text-primary-700'
@@ -385,20 +658,21 @@ export default function ChallengeRoomsAdminPage() {
               </div>
 
               <div className="space-y-3">
-                {field('Theme name', 'name')}
-                {field('Mood', 'mood')}
-                {field('Palette', 'palette')}
-                {field('Architecture', 'architecture', true)}
-                {field('Materials', 'materials')}
-                {field('Lighting', 'lighting')}
-                {field('Outside the window', 'outsideView')}
-                {field('Decorative accent', 'accent')}
+                {field(t('roomAdmin.themeName'), 'name')}
+                {field(t('design.mood'), 'mood')}
+                {field(t('design.palette'), 'palette')}
+                {field(t('roomAdmin.architecture'), 'architecture', true)}
+                {field(t('roomAdmin.materials'), 'materials')}
+                {field(t('roomAdmin.aperture'), 'aperture')}
+                {field(t('roomAdmin.lighting'), 'lighting')}
+                {field(t('roomAdmin.outsideView'), 'outsideView')}
+                {field(t('roomAdmin.accent'), 'accent')}
 
                 <div className="grid grid-cols-2 gap-3">
-                  {objectField('Left object 1', 'leftObjects', 0)}
-                  {objectField('Left object 2', 'leftObjects', 1)}
-                  {objectField('Right object 1', 'rightObjects', 0)}
-                  {objectField('Right object 2', 'rightObjects', 1)}
+                  {objectField(t('roomAdmin.leftObject', { n: 1 }), 'leftObjects', 0)}
+                  {objectField(t('roomAdmin.leftObject', { n: 2 }), 'leftObjects', 1)}
+                  {objectField(t('roomAdmin.rightObject', { n: 1 }), 'rightObjects', 0)}
+                  {objectField(t('roomAdmin.rightObject', { n: 2 }), 'rightObjects', 1)}
                 </div>
 
                 {field('Extra art direction (optional)', 'notes', true)}
@@ -411,7 +685,7 @@ export default function ChallengeRoomsAdminPage() {
                 disabled={generating}
                 className="w-full"
               >
-                {plateUrl ? 'Generate a new plate' : 'Generate room plate'}
+                {plateUrl ? t('roomAdmin.generateNewPlate') : t('roomAdmin.generatePlate')}
               </Button>
 
               {plateUrl && (
@@ -423,7 +697,7 @@ export default function ChallengeRoomsAdminPage() {
                     rows={2}
                     value={changePrompt}
                     onChange={e => setChangePrompt(e.target.value)}
-                    placeholder="e.g. make the lamp warmer and add more depth to the window reveal"
+                    placeholder={t('roomAdmin.refinePlaceholder')}
                     className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-400"
                   />
                   <Button
@@ -434,18 +708,23 @@ export default function ChallengeRoomsAdminPage() {
                     disabled={generating || !changePrompt.trim()}
                     className="w-full"
                   >
-                    Refine
+                    {t('design.refine')}
                   </Button>
                 </div>
               )}
             </Card.Body>
           </Card>
 
-          {/* ── Stage + placement ──────────────────────────────────────── */}
-          <div className="space-y-4">
+          {/*
+            ── Stage + placement ────────────────────────────────────────
+            Stage takes the room it needs; the controls become a rail beside
+            it once there is width for both. `items-start` so the short rail
+            does not stretch to the stage's height.
+          */}
+          <div className="grid gap-4 items-start 2xl:grid-cols-[minmax(0,1fr)_21rem]">
             <Card>
               <Card.Body className="space-y-3">
-                <h2 className="text-lg font-bold text-gray-900">Book placement</h2>
+                <h2 className="text-lg font-bold text-gray-900">{t('roomAdmin.placement')}</h2>
 
                 {!plateUrl ? (
                   <div
@@ -478,22 +757,84 @@ export default function ChallengeRoomsAdminPage() {
                       onFrameChange={setFrame}
                       playing={playing}
                       onPlayingChange={setPlaying}
+                      // Dragging moves whichever object is selected below.
+                      interactive={target === 'book'}
+                      radioInteractive={target === 'radio'}
+                      radioUrl={radioPlacement ? RADIO_MODEL_URL : null}
+                      radioTextureUrl={radioPaletteUrl(radioPaletteId)}
+                      radioPlacement={radioPlacement}
+                      lightPosition={lightPosition}
+                      onRadioPlacementChange={setRadioPlacement}
                     />
                     <p className="text-xs text-gray-400">
-                      Drag the book to move it · scroll to scale
+                      {t('roomAdmin.dragHint')}
                     </p>
+
+                    {/* ── What the sliders and the drag act on ─────────── */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTarget('book')}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          target === 'book'
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        📖 {t('roomAdmin.targetBook')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // First click on an empty room both adds the radio and
+                          // selects it — otherwise the toggle would appear to do
+                          // nothing at all.
+                          if (!radioPlacement) setRadioPlacement(DEFAULT_RADIO_PLACEMENT)
+                          setTarget('radio')
+                        }}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          target === 'radio'
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        📻 {radioPlacement ? t('roomAdmin.targetRadio') : t('roomAdmin.addRadio')}
+                      </button>
+                      {radioPlacement && (
+                        <>
+                          <select
+                            value={radioPaletteId}
+                            onChange={e => setRadioPaletteId(e.target.value)}
+                            className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs text-gray-900"
+                            aria-label={t('radio.palette')}
+                          >
+                            {RADIO_PALETTES.map(p => (
+                              <option key={p.id} value={p.id}>{t(p.labelKey)}</option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => { setRadioPlacement(null); setTarget('book') }}
+                            className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
+                          >
+                            {t('roomAdmin.removeRadio')}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400">{t('roomAdmin.radioPaletteHint')}</p>
                   </>
                 )}
 
                 {packages.length > 0 && plateUrl && modelUrl && (
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600">Preview with book package</label>
+                    <label className="text-xs font-medium text-gray-600">{t('roomAdmin.previewWithPackage')}</label>
                     <select
                       value={packageId}
                       onChange={e => setPackageId(e.target.value)}
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
                     >
-                      <option value="">Plain pages (no package)</option>
+                      <option value="">{t('roomAdmin.plainPages')}</option>
                       {packages.map(p => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
@@ -524,9 +865,23 @@ export default function ChallengeRoomsAdminPage() {
                     >
                       ⏭ Open spread
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setPlacement(DEFAULT_PLACEMENT)}>
-                      Reset placement
+                    {/* Resets whatever is selected, not always the book. */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditing(
+                        target === 'radio' ? DEFAULT_RADIO_PLACEMENT : DEFAULT_PLACEMENT,
+                      )}
+                    >
+                      {t('roomAdmin.resetPlacement')}
                     </Button>
+                  </div>
+
+                  {/* Which object every control below moves. The sliders live in
+                      a different card from the toggle, so without this it is not
+                      obvious that they follow it. */}
+                  <div className="rounded-lg bg-primary-50 px-3 py-2 text-xs font-semibold text-primary-700">
+                    {target === 'radio' ? `📻 ${t('roomAdmin.targetRadio')}` : `📖 ${t('roomAdmin.targetBook')}`}
                   </div>
 
                   <div className="space-y-1">
@@ -547,19 +902,50 @@ export default function ChallengeRoomsAdminPage() {
                     </p>
                   </div>
 
+                  {/* One rig, pointed at whichever object the toggle above selected. */}
                   <div className="grid grid-cols-2 gap-3">
-                    <Slider label="X" value={placement.x} min={-3} max={3} step={0.01}
-                      onChange={v => setPlacement({ ...placement, x: v })} />
-                    <Slider label="Y" value={placement.y} min={-3} max={3} step={0.01}
-                      onChange={v => setPlacement({ ...placement, y: v })} />
-                    <Slider label="Scale" value={placement.scale} min={0.2} max={4} step={0.01}
-                      onChange={v => setPlacement({ ...placement, scale: v })} />
-                    <Slider label="Tilt°" value={placement.tilt} min={-90} max={90} step={1}
-                      onChange={v => setPlacement({ ...placement, tilt: v })} />
-                    <Slider label="Turn°" value={placement.turn} min={-180} max={180} step={1}
-                      onChange={v => setPlacement({ ...placement, turn: v })} />
-                    <Slider label="Roll°" value={placement.roll} min={-180} max={180} step={1}
-                      onChange={v => setPlacement({ ...placement, roll: v })} />
+                    <Slider label="X" value={editing.x} min={-3} max={3} step={0.01}
+                      onChange={v => setEditing({ ...editing, x: v })} />
+                    <Slider label="Y" value={editing.y} min={-3} max={3} step={0.01}
+                      onChange={v => setEditing({ ...editing, y: v })} />
+                    <Slider label="Scale" value={editing.scale} min={0.2} max={4} step={0.01}
+                      onChange={v => setEditing({ ...editing, scale: v })} />
+                    <Slider label="Tilt°" value={editing.tilt} min={-90} max={90} step={1}
+                      onChange={v => setEditing({ ...editing, tilt: v })} />
+                    <Slider label="Turn°" value={editing.turn} min={-180} max={180} step={1}
+                      onChange={v => setEditing({ ...editing, turn: v })} />
+                    <Slider label="Roll°" value={editing.roll} min={-180} max={180} step={1}
+                      onChange={v => setEditing({ ...editing, roll: v })} />
+                  </div>
+
+                  {/*
+                    One lamp, lighting both objects and casting both shadows —
+                    which is what a room has. Replaces a "shadow depth" number
+                    that had no physical meaning and could only be dialled in by
+                    trial and error.
+                  */}
+                  <div className="space-y-2 border-t border-gray-100 pt-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-600">
+                        💡 {t('roomAdmin.lightHeading')}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setLightPosition(DEFAULT_LIGHT_POSITION)}
+                      >
+                        {t('roomAdmin.resetLight')}
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <Slider label={t('roomAdmin.lightX')} value={lightPosition.x} min={-12} max={12} step={0.1}
+                        onChange={v => setLightPosition({ ...lightPosition, x: v })} />
+                      <Slider label={t('roomAdmin.lightY')} value={lightPosition.y} min={-12} max={12} step={0.1}
+                        onChange={v => setLightPosition({ ...lightPosition, y: v })} />
+                      <Slider label={t('roomAdmin.lightZ')} value={lightPosition.z} min={1} max={20} step={0.1}
+                        onChange={v => setLightPosition({ ...lightPosition, z: v })} />
+                    </div>
+                    <p className="text-xs text-gray-400">{t('roomAdmin.lightHint')}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-3">
@@ -586,10 +972,10 @@ export default function ChallengeRoomsAdminPage() {
         {plateUrl && (
           <Card>
             <Card.Body className="space-y-4">
-              <h2 className="text-lg font-bold text-gray-900">Save room</h2>
+              <h2 className="text-lg font-bold text-gray-900">{t('roomAdmin.save')}</h2>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Name</label>
+                  <label className="text-xs font-medium text-gray-600">{t('design.name')}</label>
                   <input
                     type="text"
                     value={roomName}
@@ -598,7 +984,7 @@ export default function ChallengeRoomsAdminPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Description (optional)</label>
+                  <label className="text-xs font-medium text-gray-600">{t('design.descriptionOptional')}</label>
                   <input
                     type="text"
                     value={roomDescription}
@@ -607,20 +993,32 @@ export default function ChallengeRoomsAdminPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">Visibility</label>
+                  <label className="text-xs font-medium text-gray-600">{t('design.visibility')}</label>
                   <select
                     value={visibility}
                     onChange={e => setVisibility(e.target.value as 'admin_only' | 'public')}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
                   >
-                    <option value="admin_only">Admin only</option>
-                    <option value="public">Public</option>
+                    <option value="admin_only">{t('design.adminOnly')}</option>
+                    <option value="public">{t('design.public')}</option>
                   </select>
                 </div>
               </div>
-              <Button variant="primary" onClick={save} isLoading={saving} disabled={saving}>
-                Save challenge room
-              </Button>
+              {/* The button says which of the two things it will do, because
+                  "Save" over a loaded room used to quietly mean "duplicate". */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="primary" onClick={save} isLoading={saving} disabled={saving}>
+                  {editingRoomId ? t('roomAdmin.updateRoom') : t('roomAdmin.save')}
+                </Button>
+                {editingRoomId && (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={stopEditing} disabled={saving}>
+                      {t('roomAdmin.saveAsNew')}
+                    </Button>
+                    <span className="text-xs text-gray-400">{t('roomAdmin.editingHint')}</span>
+                  </>
+                )}
+              </div>
               {compiledPrompt && (
                 <details className="text-xs text-gray-500">
                   <summary className="cursor-pointer">View compiled prompt</summary>
@@ -638,7 +1036,7 @@ export default function ChallengeRoomsAdminPage() {
           <Card.Body className="space-y-3">
             <h2 className="text-lg font-bold text-gray-900">Saved rooms ({rooms.length})</h2>
             {rooms.length === 0 ? (
-              <p className="text-sm text-gray-400">No challenge rooms yet.</p>
+              <p className="text-sm text-gray-400">{t('roomAdmin.none')}</p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {rooms.map(room => (
@@ -656,7 +1054,7 @@ export default function ChallengeRoomsAdminPage() {
                         </span>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="secondary" size="sm" onClick={() => editRoom(room)}>Retune</Button>
+                        <Button variant="secondary" size="sm" onClick={() => editRoom(room)}>{t('roomAdmin.retune')}</Button>
                         <Button variant="ghost" size="sm" onClick={() => toggleActive(room)}>
                           {room.is_active ? 'Deactivate' : 'Activate'}
                         </Button>

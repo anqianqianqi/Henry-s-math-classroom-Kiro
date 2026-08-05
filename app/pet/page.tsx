@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useRef, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -24,24 +25,36 @@ interface PendingFeeding {
   created_at: string
 }
 
-/** Human-readable label for each evolution stage + species combination. */
-function getStageLabel(species: Species | null, stage: string): string {
+/**
+ * Human-readable label for each evolution stage + species combination.
+ *
+ * Takes `t` rather than calling the hook, because it is a plain function and
+ * both call sites are inside the component that has one. The stage names
+ * interpolate the species instead of joining two translated words: English
+ * needs the space, Chinese must not have it.
+ */
+function getStageLabel(
+  species: Species | null,
+  stage: string,
+  t: (key: any, params?: Record<string, string | number>) => string,
+): string {
   const speciesName =
-    species === 'dragon' ? 'Dragon'
-    : species === 'fox'    ? 'Fox'
-    : species === 'cat'    ? 'Cat'
-    : 'Pet'
+    species === 'dragon' ? t('pet.speciesDragon')
+    : species === 'fox'    ? t('pet.speciesFox')
+    : species === 'cat'    ? t('pet.speciesCat')
+    : t('pet.speciesGeneric')
 
   switch (stage) {
-    case 'baby':      return `Baby ${speciesName}`
-    case 'teen':      return `Teen ${speciesName}`
-    case 'adult':     return `Adult ${speciesName}`
-    case 'legendary': return `Legendary ${speciesName}`
+    case 'baby':      return t('pet.stageBaby', { species: speciesName })
+    case 'teen':      return t('pet.stageTeen', { species: speciesName })
+    case 'adult':     return t('pet.stageAdult', { species: speciesName })
+    case 'legendary': return t('pet.stageLegendary', { species: speciesName })
     default:          return speciesName
   }
 }
 
 export default function PetPage() {
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [pet, setPet] = useState<StudentPet | null>(null)
   const [accessories, setAccessories] = useState<AccessoryItem[]>([])
@@ -307,7 +320,7 @@ export default function PetPage() {
 
     if (error) {
       console.error('Error selecting species:', error)
-      setSpeciesError('Failed to select species. Please try again.')
+      setSpeciesError(t('pet.errSpecies'))
       return
     }
 
@@ -324,9 +337,9 @@ export default function PetPage() {
   async function handleSaveName() {
     if (!pet) return
     const trimmed = nameInput.trim()
-    if (!trimmed) { setNameError('Name cannot be empty'); return }
-    if (trimmed.length > 20) { setNameError('Max 20 characters'); return }
-    if (!/^[a-zA-Z0-9 \-]+$/.test(trimmed)) { setNameError('Letters, numbers, spaces and hyphens only'); return }
+    if (!trimmed) { setNameError(t('pet.errNameEmpty')); return }
+    if (trimmed.length > 20) { setNameError(t('pet.errNameTooLong')); return }
+    if (!/^[a-zA-Z0-9 \-]+$/.test(trimmed)) { setNameError(t('pet.errNameChars')); return }
     setNameError(null)
     setSavingName(true)
     const { error } = await supabase
@@ -334,7 +347,7 @@ export default function PetPage() {
       .update({ pet_name: trimmed })
       .eq('id', pet.id)
     setSavingName(false)
-    if (error) { setNameError('Failed to save name'); return }
+    if (error) { setNameError(t('pet.errSaveName')); return }
     setPetName(trimmed)
     setEditingName(false)
     if (typeof window !== 'undefined') sessionStorage.removeItem('pet_status_cache')
@@ -357,7 +370,7 @@ export default function PetPage() {
 
     if (error) {
       console.error('Error restarting pet:', error)
-      setRestartError('Failed to restart. Please try again.')
+      setRestartError(t('pet.errRestart'))
       setRestarting(false)
       return
     }
@@ -392,7 +405,7 @@ export default function PetPage() {
       console.error('Error equipping accessory:', error)
       // Revert optimistic update
       setPet({ ...pet, equipped_accessories: previousEquipped })
-      setAccessoryError('Failed to equip accessory. Please try again.')
+      setAccessoryError(t('pet.errEquip'))
     }
   }
 
@@ -415,7 +428,7 @@ export default function PetPage() {
       console.error('Error unequipping accessory:', error)
       // Revert optimistic update
       setPet({ ...pet, equipped_accessories: previousEquipped })
-      setAccessoryError('Failed to unequip accessory. Please try again.')
+      setAccessoryError(t('pet.errUnequip'))
     }
   }
 
@@ -424,7 +437,7 @@ export default function PetPage() {
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">🥚</div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">{t('pet.loading')}</p>
         </div>
       </div>
     )
@@ -439,9 +452,9 @@ export default function PetPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center">
             <div className="text-5xl mb-4">🥚</div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Start Over?</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">{t('pet.startOverTitle')}</h2>
             <p className="text-gray-500 text-sm mb-6">
-              This will reset your pet back to an egg. Your XP, species, and equipped accessories will be cleared. This cannot be undone.
+              {t('pet.startOverBody')}
             </p>
             {restartError && (
               <p className="text-red-600 text-sm mb-4" role="alert">{restartError}</p>
@@ -451,14 +464,14 @@ export default function PetPage() {
                 onClick={() => { setShowRestartConfirm(false); setRestartError(null) }}
                 className="flex-1 bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-200 transition-colors"
               >
-                Cancel
+                {t('action.cancel')}
               </button>
               <button
                 onClick={handleRestart}
                 disabled={restarting}
                 className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
               >
-                {restarting ? 'Resetting…' : 'Yes, Start Over'}
+                {restarting ? t('pet.resetting') : t('pet.yesStartOver')}
               </button>
             </div>
           </div>
@@ -469,7 +482,7 @@ export default function PetPage() {
         {/* Header row: back button + title */}
         <div className="flex items-center gap-3 mb-4">
           <HomeButton />
-          <h1 className="text-2xl font-bold text-gray-900">My Pet 🐾</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('pet.title')} 🐾</h1>
         </div>
 
         {/* Balance + Shop link — visible regardless of evolution stage */}
@@ -477,7 +490,7 @@ export default function PetPage() {
           <div className="flex items-center gap-2">
             <span className="text-xl">⭐</span>
             <div>
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Balance</p>
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{t('pet.balance')}</p>
               <p className="text-2xl font-bold text-primary-600">{balance} <span className="text-sm font-normal text-gray-400">pts</span></p>
             </div>
           </div>
@@ -485,7 +498,7 @@ export default function PetPage() {
             href="/shop"
             className="bg-primary-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-primary-700 transition-colors"
           >
-            Go to Shop 🛍️
+            {t('pet.goToShop')} 🛍️
           </Link>
         </div>
 
@@ -630,29 +643,29 @@ export default function PetPage() {
                         onChange={e => setNameInput(e.target.value)}
                         maxLength={20}
                         className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 w-32"
-                        placeholder="Name your pet"
+                        placeholder={t('pet.namePlaceholder')}
                         autoFocus
                         onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false) }}
                       />
                       <button onClick={handleSaveName} disabled={savingName} className="text-xs font-semibold text-primary-600 hover:text-primary-800">
                         {savingName ? '…' : 'Save'}
                       </button>
-                      <button onClick={() => setEditingName(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                      <button onClick={() => setEditingName(false)} className="text-xs text-gray-400 hover:text-gray-600">{t('action.cancel')}</button>
                     </div>
                   ) : (
                     <button
                       onClick={() => { setNameInput(petName); setEditingName(true); setNameError(null) }}
                       className="flex items-center gap-1 text-sm font-bold text-gray-800 hover:text-primary-600 transition-colors group"
-                      title="Click to rename"
+                      title={t('pet.clickToRename')}
                     >
-                      {petName || 'Unnamed Pet'}
+                      {petName || t('pet.unnamed')}
                       <span className="text-gray-300 group-hover:text-primary-400 text-xs">✏️</span>
                     </button>
                   )}
                 </div>
                 {nameError && <p className="text-center text-xs text-red-500 mb-1">{nameError}</p>}
                 <p className="text-center text-xs text-gray-500">
-                  {getStageLabel(pet?.species ?? null, pet?.evolution_stage ?? 'baby')}
+                  {getStageLabel(pet?.species ?? null, pet?.evolution_stage ?? 'baby', t)}
                 </p>
               </div>
             </div>
@@ -704,9 +717,9 @@ export default function PetPage() {
                     {pet.evolution_stage === 'legendary' ? '🌟 Legendary!' : '🎉 Evolved!'}
                   </h2>
                   <p className="text-gray-600 text-sm mb-4">
-                    {petName || 'Your pet'} is now a{' '}
+                    {t('pet.isNowA', { name: petName || t('pet.yourPet') })}{' '}
                     <span className="font-bold text-primary-600">
-                      {getStageLabel(pet.species ?? null, pet.evolution_stage)}
+                      {getStageLabel(pet.species ?? null, pet.evolution_stage, t)}
                     </span>!
                   </p>
                   <div className="flex justify-center mb-5">
@@ -716,7 +729,7 @@ export default function PetPage() {
                     onClick={() => setShowEvolutionCelebration(false)}
                     className="w-full bg-primary-600 text-white font-semibold py-2.5 rounded-xl hover:bg-primary-700 transition-colors"
                   >
-                    Amazing! 🐾
+                    {t('pet.amazing')}
                   </button>
                 </div>
               </div>
@@ -728,7 +741,7 @@ export default function PetPage() {
                 id="accessories-heading"
                 className="text-lg font-semibold text-gray-800 mb-3"
               >
-                Accessories
+                {t('pet.accessories')}
               </h2>
               {accessoryError && (
                 <p className="text-sm text-red-600 mb-3" role="alert">
@@ -751,7 +764,7 @@ export default function PetPage() {
             onClick={() => setShowRestartConfirm(true)}
             className="text-sm text-gray-400 hover:text-gray-600 transition-colors underline underline-offset-2"
           >
-            Start over from egg
+            {t('pet.startOverFromEgg')}
           </button>
         </div>
       </main>

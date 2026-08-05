@@ -7,11 +7,11 @@
  */
 
 export const challenges = {
-  'challenge.yourSolution': { en: 'Your Solution', zh: '你的解答' },
-  'challenge.editSolution': { en: 'Edit Your Solution', zh: '修改你的解答' },
+  'challenge.yourSolution': { en: 'Your Solution', zh: '您的解答' },
+  'challenge.editSolution': { en: 'Edit Your Solution', zh: '修改您的解答' },
   'challenge.solutionPlaceholder': {
     en: 'Write your solution here... Show your work!',
-    zh: '在这里写下你的解答……请写出解题过程！',
+    zh: '在这里写下您的解答……请写出解题过程！',
   },
   'challenge.attachImage': { en: '📷 Attach Image (Optional)', zh: '📷 添加图片（可选）' },
   'challenge.submitSolution': { en: 'Submit Solution', zh: '提交解答' },
@@ -68,13 +68,19 @@ export const challenges = {
 
   // ── Detail page ──────────────────────────────────────────
   'challenge.loadingDetail': { en: 'Loading challenge...', zh: '挑战题加载中…' },
+  // The preload screen. "Getting your book ready" rather than "Loading",
+  // because the wait is a real one — the book model alone is 2.63 MiB — and
+  // naming what is happening beats a spinner that says nothing.
+  'challenge.preparingRoom': { en: 'Getting your book ready…', zh: '正在准备您的书本…' },
+  'challenge.preparingPct': { en: '{pct}%', zh: '{pct}%' },
+  'challenge.loadingBook': { en: 'Loading book…', zh: '书本加载中…' },
   'challenge.label': { en: 'Challenge', zh: '挑战题' },
   'challenge.copy': { en: 'Copy', zh: '复制' },
   'challenge.saveAsTemplate': { en: 'Save as Template', zh: '保存为模板' },
   'challenge.greatJob': { en: 'Great job!', zh: '做得好！' },
   'challenge.canSeeOthers': {
     en: 'You can now see what others wrote',
-    zh: '现在你可以看到其他同学的解答了',
+    zh: '现在您可以看到其他同学的解答了',
   },
   'challenge.hintPlaceholder': {
     en: 'Add a hint for students...',
@@ -98,4 +104,23 @@ export const challenges = {
     en: 'The book model could not be loaded. Check the model URL.',
     zh: '无法加载书本模型，请检查模型链接。',
   },
+
+  // The radio on the window sill. It replaces the floating pill inside a
+  // challenge, so every control the pill has needs a label here too.
+  'radio.title': { en: 'Radio', zh: '收音机' },
+  'radio.close': { en: 'Close the radio', zh: '关闭收音机' },
+  'radio.play': { en: 'Play', zh: '播放' },
+  'radio.pause': { en: 'Pause', zh: '暂停' },
+  'radio.next': { en: 'Next track', zh: '下一首' },
+  'radio.previous': { en: 'Previous track', zh: '上一首' },
+  'radio.volume': { en: 'Volume', zh: '音量' },
+  'radio.choosePlaylist': { en: 'Choose a song', zh: '选择歌曲' },
+  'radio.hidePlaylist': { en: 'Hide playlist', zh: '收起列表' },
+  'radio.noTracks': { en: 'No music yet', zh: '还没有音乐' },
+  'radio.palette': { en: 'Radio colour', zh: '收音机配色' },
+  'radio.paletteOriginalWalnut': { en: 'Original walnut', zh: '原色胡桃木' },
+  'radio.paletteForestRoom': { en: 'Forest room', zh: '森林绿' },
+  'radio.paletteAtlanticBlue': { en: 'Atlantic blue', zh: '大西洋蓝' },
+  'radio.paletteBordeaux': { en: 'Bordeaux', zh: '波尔多红' },
+  'radio.palettePistachio': { en: 'Pistachio', zh: '开心果绿' },
 } as const

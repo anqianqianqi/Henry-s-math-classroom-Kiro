@@ -12,8 +12,21 @@
  */
 
 import type { BookSpec } from '@/lib/types/challengeRoom'
+import { textureRenderFor } from '@/lib/art-styles'
 
 const clean = (value: string) => value.trim().replace(/\s+/g, ' ')
+
+/**
+ * The inner-page motif used before a theme could name its own.
+ *
+ * These prompts used to state the theme's paper and frame and then override
+ * both three lines later — "warm-ivory bleed", "antique-gold botanical frame",
+ * "delicate hand-painted watercolor" — so half of every theme was declared and
+ * ignored. The overrides are gone; this is the only default left, and it only
+ * applies when a spec does not say.
+ */
+const LEGACY_INNER_ACCENT =
+  'a few leaves, meadow stems, pinhead blossoms, or subtle theme motifs'
 
 export function compileCoverPrompt(spec: BookSpec): string {
   const [topLeft, topRight, bottomLeft, bottomRight] = spec.cornerClusters
@@ -29,11 +42,11 @@ export function compileCoverPrompt(spec: BookSpec): string {
     'LOCKED LAYOUT — follow exactly:',
     '- Exact 3:4 portrait canvas, shown perfectly flat and orthographic, like a UV texture or print file.',
     '- No book mockup, no perspective, no spine, no page block, no drop shadow, no background surface outside the artwork.',
-    '- A very narrow warm-ivory bleed touches every canvas edge.',
-    '- Place a single thin continuous antique-gold botanical frame approximately 2% inward from every edge.',
+    '- A very narrow bleed of that same paper touches every canvas edge.',
+    '- Place a single thin continuous frame exactly as described above, approximately 2% inward from every edge.',
     '- Keep the frame close to the canvas edges. Do not leave a wide exterior margin.',
     '- The framed interior is the same paper color and grain as the bleed.',
-    '- Four small watercolor vignette clusters sit inside the frame, one in each corner:',
+    '- Four small vignette clusters sit inside the frame, one in each corner:',
     `  top left: ${clean(topLeft)};`,
     `  top right: ${clean(topRight)};`,
     `  bottom left: ${clean(bottomLeft)};`,
@@ -42,7 +55,7 @@ export function compileCoverPrompt(spec: BookSpec): string {
     '- Preserve a large, quiet, uncluttered central field. No title or center object.',
     '',
     'STYLE AND OUTPUT:',
-    '- Delicate hand-painted watercolor, subtle pigment blooms, soft edges, gentle paper grain, fine antique-gold linework.',
+    `- ${textureRenderFor(spec.artStyle)}`,
     '- Balanced decorative density with no oversized corner cluster.',
     '- No words, letters, numbers, symbols, logo, watermark, mockup, hands, ribbons across the center, or extra border.',
     spec.notes ? `Additional art direction: ${clean(spec.notes)}.` : '',
@@ -64,17 +77,17 @@ export function compileInnerPrompt(spec: BookSpec): string {
     'LOCKED LAYOUT — follow exactly:',
     '- Exact 3:4 portrait canvas, shown perfectly flat and orthographic, like a UV texture or print file.',
     '- No book mockup, no perspective, no spine, no page block, no drop shadow, no background surface outside the artwork.',
-    '- A very narrow warm-ivory bleed touches every canvas edge.',
+    '- A very narrow bleed of that same paper touches every canvas edge.',
     '- Reuse the same single thin continuous frame approximately 2% inward from every edge.',
     '- Keep the frame close to the canvas edges. Do not leave a wide exterior margin.',
     '- The page background inside and outside the frame uses the same paper color and grain.',
-    '- Use only a very small, sparse watercolor botanical accent around the frame: a few leaves, meadow stems, pinhead blossoms, or subtle theme motifs.',
+    `- Use only a very small, sparse accent around the frame: ${clean(spec.innerAccent?.trim() || LEGACY_INNER_ACCENT)}.`,
     "- Do not include any of the cover's four object clusters. No animals, food, cups, books, gadgets, or large ornaments.",
     '- At least 75% of the framed interior must remain completely blank, evenly colored, and usable for later story text or illustration.',
     '- Keep the entire center empty and quiet.',
     '',
     'STYLE AND OUTPUT:',
-    '- Delicate hand-painted watercolor with subtle pigment blooms, soft edges, gentle paper grain, and fine antique-gold linework.',
+    `- ${textureRenderFor(spec.artStyle)}`,
     '- No words, letters, numbers, symbols, ruled lines, logo, watermark, page number, mockup, or extra border.',
     spec.notes ? `Additional art direction: ${clean(spec.notes)}.` : '',
   ]

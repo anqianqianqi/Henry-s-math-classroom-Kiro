@@ -361,7 +361,7 @@ export function BubbleRoomPage({
           <button
             type="button"
             onClick={() => setShowMyBubbles(true)}
-            title="My Bubbles"
+            title={t('myBubbles.mine')}
             className="
               shrink-0 flex items-center gap-1
               px-3 py-2 rounded-xl
@@ -370,7 +370,7 @@ export function BubbleRoomPage({
               focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2
             "
           >
-            🫧 <span className="hidden sm:inline">My Bubbles</span>
+            🫧 <span className="hidden sm:inline">{t('myBubbles.mine')}</span>
           </button>
 
           {/* Assigned-to-me button — visible for teachers and TAs only */}
@@ -451,7 +451,7 @@ export function BubbleRoomPage({
       </div>
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
-      <div className="relative" style={{ height: 'calc(100vh - 112px)' }}>
+      <div className="relative overflow-hidden" style={{ height: 'calc(100vh - 112px)' }}>
         {isAnimationActive ? (
           /* Animation mode */
           <BubbleAnimationEngine
@@ -559,6 +559,7 @@ export function BubbleRoomPage({
           question={selectedQuestion}
           currentUserId={currentUserId}
           currentUserRole={currentUserRole}
+          currentUserIsTA={isTA}
           currentUserDisplayName={currentUserDisplayName}
           onClose={() => {
             setSelectedQuestion(null)

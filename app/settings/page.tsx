@@ -11,6 +11,9 @@ import { Card } from '@/components/ui/Card'
 import NotificationPreferences from '@/components/NotificationPreferences'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { SCHOOL_TIMEZONE, detectTimeZone, isValidTimeZone } from '@/lib/utils/timezone'
+import { placeFromTimeZone } from '@/lib/utils/places'
+import { PlacePicker, type PlaceSelection } from '@/components/ui/PlacePicker'
 
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null)
@@ -21,6 +24,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
   const [loading, setLoading] = useState(true)
+  // One answer, not two: the country decides the region, the city the zone.
+  const [place, setPlace] = useState<PlaceSelection>(() => placeFromTimeZone(SCHOOL_TIMEZONE))
   const [isTeacher, setIsTeacher] = useState(false)
   const [scoreStats, setScoreStats] = useState<{
     totalScore: number
@@ -48,7 +53,7 @@ export default function SettingsPage() {
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, full_name, first_name, last_name, email, avatar_url')
+      .select('id, full_name, first_name, last_name, email, avatar_url, timezone, region')
       .eq('id', user.id)
       .single()
 
@@ -62,6 +67,11 @@ export default function SettingsPage() {
         .eq('id', user.id)
         .single()
       setNickname((nicknameData as any)?.nickname || '')
+      // A stored zone is what the person said; detection is only a guess, so
+      // it fills the field solely when nothing has been stored — or when what
+      // was stored is a name this browser no longer recognises.
+      const stored = (profile as any).timezone as string | null
+      setPlace(placeFromTimeZone(isValidTimeZone(stored) ? (stored as string) : detectTimeZone()))
     }
 
     // Check role
@@ -117,6 +127,8 @@ export default function SettingsPage() {
     const { error } = await supabase
       .from('profiles')
       .update({
+        timezone: place.timezone,
+        region: place.region,
         first_name: firstName.trim() || '',
         last_name: lastName.trim() || '',
         nickname: nickname.trim() || null
@@ -177,6 +189,24 @@ export default function SettingsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-700">{t('settings.email')}</p>
                 <p className="text-gray-900">{profile?.email}</p>
+              </div>
+
+              {/* The same control as the welcome card, so the question is asked
+                  the same way in both places. Detection is right for almost
+                  everyone and wrong for anyone travelling, behind a VPN, or on a
+                  borrowed machine — this is where being wrong gets fixed. */}
+              <div>
+                <PlacePicker
+                  countryCode={place.countryCode}
+                  cityName={place.cityName}
+                  onChange={setPlace}
+                  countryLabel={t('welcome.country')}
+                  cityLabel={t('welcome.city')}
+                  zoneCaption={t('settings.timezone')}
+                  idPrefix="settings"
+                />
+                <p className="mt-1 text-xs text-gray-500">{t('settings.timezoneHint')}</p>
+                <p className="mt-0.5 text-xs text-gray-500">{t('settings.regionHint')}</p>
               </div>
               <FormField
                 label={t('settings.nickname')}

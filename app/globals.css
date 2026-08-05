@@ -243,3 +243,86 @@ body {
     display: inline;
   }
 }
+
+/**
+ * Announcement button — the rainbow shine.
+ *
+ * A moving gradient behind the label rather than a border animation, so the
+ * button's own size never changes and it cannot nudge the header layout as it
+ * animates. The gradient is 300% wide and slid across; animating
+ * background-position is compositor-friendly, where animating a border colour
+ * would repaint on every frame on every page.
+ *
+ * Anyone who has asked their system to reduce motion gets the colour and none
+ * of the movement. A permanently animating element in a sticky header is
+ * exactly the case that setting exists for — and this one runs on every page
+ * for three days.
+ */
+@keyframes announcement-rainbow {
+  0%   { background-position:   0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+.announcement-shine {
+  background-image: linear-gradient(
+    90deg,
+    #f87171, #fbbf24, #34d399, #60a5fa, #a78bfa, #f472b6, #f87171
+  );
+  background-size: 300% 100%;
+  animation: announcement-rainbow 4s linear infinite;
+  color: #fff;
+  border-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announcement-shine {
+    animation: none;
+    /* Still visibly different from the resting state — the point is to draw
+       the eye, and that must not depend on movement. */
+    background-position: 50% 50%;
+  }
+}
+
+/* ── Painted-paper cards ────────────────────────────────────────────────────
+   The wash, grain, mask and resting pool are set inline from lib/ui/paperCard
+   so they can be shared with anything else that wants the treatment. Only the
+   hover state needs to live here, because an inline style cannot express one.
+
+   A masked card cannot lift with a drop shadow — a mask clips box-shadow — so
+   the rim darkens instead, as though more pigment had settled there. */
+.paper-card:hover {
+  box-shadow: inset 0 0 30px 8px rgba(176, 138, 88, 0.30);
+}
+
+/* ── Notes drifting out of the challenge room's radio ────────────────────────
+   Pure CSS, on a loop, with each note offset by an animation-delay. No timers
+   and no state, so a playing radio costs nothing per frame and nothing
+   re-renders — the notes simply exist while the element is mounted.
+
+   --drift and --tilt are set per note so the three do not move in lockstep. */
+@keyframes radio-note {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.6) rotate(0deg);
+  }
+  15% { opacity: 0.85; }
+  70% { opacity: 0.55; }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--drift, 0px)), -58px) scale(1.05) rotate(var(--tilt, 12deg));
+  }
+}
+
+.radio-note {
+  position: absolute;
+  animation: radio-note 2.7s ease-out infinite;
+  /* Decoration only — it must never eat a click meant for the radio. */
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Someone who asked for less motion should not get a perpetual animation in
+   the corner of a page they are trying to work on. */
+@media (prefers-reduced-motion: reduce) {
+  .radio-note { display: none; }
+}

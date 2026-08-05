@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -21,6 +22,7 @@ interface JoinRequest {
 }
 
 export default function JoinRequestsDashboard() {
+  const { t } = useLanguage()
   const [requests, setRequests] = useState<JoinRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState<string | null>(null)
@@ -105,7 +107,7 @@ export default function JoinRequestsDashboard() {
       await loadRequests()
     } catch (err) {
       console.error('Failed to update request:', err)
-      alert('Failed to update request')
+      alert(t('joinReq.updateFailed'))
     } finally {
       setProcessing(null)
     }
@@ -117,7 +119,7 @@ export default function JoinRequestsDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
-        <p className="text-gray-600">Loading...</p>
+        <p className="text-gray-600">{t('status.loading')}</p>
       </div>
     )
   }
@@ -125,7 +127,7 @@ export default function JoinRequestsDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10">
       <PageHeader
-        breadcrumbs={[{ label: 'Join Requests' }]}
+        breadcrumbs={[{ label: t('joinReq.title') }]}
         actions={pending.length > 0 ? (
           <span className="px-2 py-1 bg-orange-500 text-white text-sm rounded-full font-medium">
             {pending.length} pending
@@ -137,11 +139,11 @@ export default function JoinRequestsDashboard() {
         {/* Pending */}
         <Card>
           <Card.Header>
-            <h2 className="text-lg font-semibold"><span className="hidden sm:inline">⏳ </span>Pending Requests</h2>
+            <h2 className="text-lg font-semibold"><span className="hidden sm:inline">⏳ </span>{t('joinReq.pending')}</h2>
           </Card.Header>
           <Card.Body>
             {pending.length === 0 ? (
-              <p className="text-center text-gray-500 py-6">No pending requests 🎉</p>
+              <p className="text-center text-gray-500 py-6">{t('joinReq.none')}</p>
             ) : (
               <div className="space-y-3">
                 {pending.map(req => (
@@ -165,7 +167,7 @@ export default function JoinRequestsDashboard() {
                           disabled={processing === req.id}
                           className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-none"
                         >
-                          {processing === req.id ? '...' : '✓ Approve'}
+                          {processing === req.id ? '...' : `✓ ${t('joinReq.approve')}`}
                         </Button>
                         <Button
                           size="sm"
@@ -174,7 +176,7 @@ export default function JoinRequestsDashboard() {
                           disabled={processing === req.id}
                           className="flex-1 sm:flex-none"
                         >
-                          ✗ Deny
+                          ✗ {t('joinReq.deny')}
                         </Button>
                       </div>
                     </div>
@@ -189,7 +191,7 @@ export default function JoinRequestsDashboard() {
         {processed.length > 0 && (
           <Card>
             <Card.Header>
-              <h2 className="text-lg font-semibold"><span className="hidden sm:inline">📜 </span>History</h2>
+              <h2 className="text-lg font-semibold"><span className="hidden sm:inline">📜 </span>{t('joinReq.history')}</h2>
             </Card.Header>
             <Card.Body>
               <div className="space-y-2">

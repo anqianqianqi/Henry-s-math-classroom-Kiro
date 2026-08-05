@@ -16,10 +16,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { renderPageCanvas, type PageContent } from '@/lib/challengeRoom/pageTexture'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import {
   BOOK_MATERIALS,
+  DEFAULT_LIGHT_POSITION,
+  DEFAULT_SHADOW_DEPTH,
   MIRRORED_U_MATERIALS,
   type AnimationConfig,
+  type LightPosition,
   type Placement,
 } from '@/lib/types/challengeRoom'
 
@@ -55,12 +59,70 @@ export interface RoomPlacementStageProps {
    * anchoring to the book (labels, hints) has to use this instead.
    */
   onBookRect?: (rect: { xPct: number; yPct: number; wPct: number; hPct: number }) => void
+  /**
+   * Fired once the book is fully DRESSED — model loaded AND cover and page
+   * textures applied.
+   *
+   * Deliberately not the same moment as the internal `loading` flag, which
+   * clears on modelReady. The texture effect does not even start until then, so
+   * anything keying off `loading` reveals a bare white book that puts its cover
+   * on a beat later. That is the pop this exists to close.
+   */
+  onReady?: () => void
+
+  // ── The radio on the window sill ─────────────────────────────────────────
+  /** Stripped GLB. Absent means no radio, which is the default for a room. */
+  radioUrl?: string | null
+  /** Baked palette to paint every region with. */
+  radioTextureUrl?: string | null
+  /** Where it stands, tuned per room against that room's plate. */
+  radioPlacement?: Placement | null
+  /**
+   * Which part was clicked, by material name — `region_knobs`, `region_dial_face`
+   * and so on. The mesh arrives as one primitive per region, so this costs a
+   * raycast and nothing else.
+   */
+  /**
+   * The key light both objects are lit by and cast from. Absent keeps the
+   * position every room was built against.
+   */
+  lightPosition?: LightPosition | null
+  /**
+   * Where the radio landed on screen, in percent of the stage — so the caller
+   * can anchor things to it. Same contract as onBookRect.
+   */
+  onRadioRect?: (rect: { xPct: number; yPct: number; wPct: number; hPct: number }) => void
+  onRadioClick?: (region: string) => void
+  /** Drag the radio rather than the book. Admin placement only. */
+  radioInteractive?: boolean
+  onRadioPlacementChange?: (next: Placement) => void
 }
 
 const deg = (value: number) => THREE.MathUtils.degToRad(value)
 
 /** Normalised longest-side length, so any re-bake lands at the same size. */
 const MODEL_TARGET_SIZE = 2.35
+
+/**
+ * The radio's normalised size, in the same units.
+ *
+ * Roughly a third of the book, which is about right for a mantel radio next to
+ * an open folio. The per-room placement scales from here, so this only has to
+ * put it in the right ballpark for an admin's first drag.
+ */
+const RADIO_TARGET_SIZE = 0.8
+
+/**
+ * How much slack a click gets around the radio, as a fraction of its own
+ * on-screen size.
+ *
+ * The radio renders about 150px wide on a sill, and a mantel radio is not a
+ * rectangle: between the knobs, around the dial and past the rounded cabinet
+ * corners there are gaps where an exact triangle hit misses. A click landing in
+ * one of those used to fall through to the room behind and open the book, which
+ * is the opposite of what pointing at a radio should do.
+ */
+const RADIO_HIT_PADDING = 0.18
 
 /**
  * A page's own corners, from the baked mesh bounds: X 0..2, Z -1.333..1.333,
@@ -90,7 +152,17 @@ export function RoomPlacementStage({
   hideRoom = false,
   pagePreview,
   onBookRect,
+  onReady,
+  radioUrl,
+  radioTextureUrl,
+  radioPlacement,
+  lightPosition,
+  onRadioRect,
+  onRadioClick,
+  radioInteractive = false,
+  onRadioPlacementChange,
 }: RoomPlacementStageProps) {
+  const { t } = useLanguage()
   const stageRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -109,6 +181,21 @@ export function RoomPlacementStage({
   const lastReportRef = useRef(0)
   const pageNodesRef = useRef<THREE.Object3D[]>([])
   const onBookRectRef = useRef(onBookRect)
+  const onReadyRef = useRef(onReady)
+  /** Latched: the page reveals once, and a texture swap must not re-fire it. */
+  const readyFiredRef = useRef(false)
+
+  const shadowPlaneRef = useRef<THREE.Mesh | null>(null)
+  const keyLightRef = useRef<THREE.DirectionalLight | null>(null)
+  const radioGroupRef = useRef<THREE.Group | null>(null)
+  const radioTextureRef = useRef<THREE.Texture | null>(null)
+  const onRadioClickRef = useRef(onRadioClick)
+  const onRadioRectRef = useRef(onRadioRect)
+  const prevRadioRectRef = useRef<{ xPct: number; yPct: number; wPct: number; hPct: number } | null>(null)
+  const lastRadioRectRef = useRef(0)
+  const [radioReady, setRadioReady] = useState(false)
+  /** Reused across clicks — allocating a raycaster per pointer event is waste. */
+  const raycasterRef = useRef(new THREE.Raycaster())
   const lastRectRef = useRef(0)
   const prevRectRef = useRef<{ xPct: number; yPct: number; wPct: number; hPct: number } | null>(null)
 
@@ -121,6 +208,9 @@ export function RoomPlacementStage({
   useEffect(() => { playingRef.current = playing }, [playing])
   useEffect(() => { frameRef.current = frame }, [frame])
   useEffect(() => { onBookRectRef.current = onBookRect }, [onBookRect])
+  useEffect(() => { onReadyRef.current = onReady }, [onReady])
+  useEffect(() => { onRadioClickRef.current = onRadioClick }, [onRadioClick])
+  useEffect(() => { onRadioRectRef.current = onRadioRect }, [onRadioRect])
 
   // ── Scene setup (once) ────────────────────────────────────────────────────
   useEffect(() => {
@@ -153,22 +243,27 @@ export function RoomPlacementStage({
 
     scene.add(new THREE.HemisphereLight(0xfff4dd, 0x263d45, 2.35))
     const keyLight = new THREE.DirectionalLight(0xffe4bc, 3.2)
-    keyLight.position.set(-4, 6, 8)
+    keyLight.position.set(
+      DEFAULT_LIGHT_POSITION.x, DEFAULT_LIGHT_POSITION.y, DEFAULT_LIGHT_POSITION.z,
+    )
     keyLight.castShadow = true
     keyLight.shadow.mapSize.set(1024, 1024)
     scene.add(keyLight)
+    keyLightRef.current = keyLight
     const fillLight = new THREE.DirectionalLight(0x9ac8e8, 1.25)
     fillLight.position.set(5, 1, 6)
     scene.add(fillLight)
 
-    // Catches the book's shadow so it sits on the painted tabletop
+    // Catches the book's shadow so it sits on the painted tabletop. Its depth
+    // is tunable per room — see DEFAULT_SHADOW_DEPTH.
     const shadowPlane = new THREE.Mesh(
       new THREE.PlaneGeometry(9, 6),
       new THREE.ShadowMaterial({ color: 0x172d29, opacity: 0.26 }),
     )
-    shadowPlane.position.z = -1.2
+    shadowPlane.position.z = DEFAULT_SHADOW_DEPTH
     shadowPlane.receiveShadow = true
     scene.add(shadowPlane)
+    shadowPlaneRef.current = shadowPlane
 
     const resize = () => {
       const rect = stage.getBoundingClientRect()
@@ -255,6 +350,51 @@ export function RoomPlacementStage({
         ) {
           prevRectRef.current = rect
           onBookRectRef.current(rect)
+        }
+      }
+
+      /*
+        Same for the radio, so notes can be floated out of it.
+
+        Its bounding box is enough — unlike the book, the radio has no animated
+        geometry and no off-centre origin. Computed in the loop rather than in a
+        placement effect purely so a resize fixes itself: the rect is a share of
+        the stage, and the frustum changes with the stage's aspect.
+
+        Throttled hard because it never moves on its own. Half a second is
+        imperceptible for something that only changes when the window does.
+      */
+      if (onRadioRectRef.current && radioGroupRef.current
+          && time - lastRadioRectRef.current > 500) {
+        lastRadioRectRef.current = time
+        const box = new THREE.Box3().setFromObject(radioGroupRef.current)
+        if (!box.isEmpty()) {
+          const corner = new THREE.Vector3()
+          let rMinX = Infinity, rMinY = Infinity, rMaxX = -Infinity, rMaxY = -Infinity
+          for (const sx of [box.min.x, box.max.x]) {
+            for (const sy of [box.min.y, box.max.y]) {
+              for (const sz of [box.min.z, box.max.z]) {
+                corner.set(sx, sy, sz).project(camera)
+                const x = (corner.x * 0.5 + 0.5) * 100
+                const y = (-corner.y * 0.5 + 0.5) * 100
+                if (x < rMinX) rMinX = x
+                if (x > rMaxX) rMaxX = x
+                if (y < rMinY) rMinY = y
+                if (y > rMaxY) rMaxY = y
+              }
+            }
+          }
+          const rect = {
+            xPct: (rMinX + rMaxX) / 2,
+            yPct: (rMinY + rMaxY) / 2,
+            wPct: rMaxX - rMinX,
+            hPct: rMaxY - rMinY,
+          }
+          const prev = prevRadioRectRef.current
+          if (!prev || Math.abs(prev.xPct - rect.xPct) > 0.4 || Math.abs(prev.yPct - rect.yPct) > 0.4) {
+            prevRadioRectRef.current = rect
+            onRadioRectRef.current(rect)
+          }
         }
       }
 
@@ -346,6 +486,17 @@ export function RoomPlacementStage({
         console.error('[RoomPlacementStage] model load failed:', loadError)
         setError('The book model could not be loaded. Check the model URL.')
         setLoading(false)
+        /*
+          Report ready even on failure. The texture effect is gated on
+          modelReady, so on this path it never runs and never announces — which
+          would leave the page sitting on its loading screen until the ceiling
+          for a room that is never going to arrive. Revealing shows the error
+          message below, which is the useful outcome.
+        */
+        if (!readyFiredRef.current) {
+          readyFiredRef.current = true
+          onReadyRef.current?.()
+        }
       },
     )
 
@@ -380,6 +531,136 @@ export function RoomPlacementStage({
     group.scale.setScalar(placement.scale)
     group.rotation.set(deg(placement.tilt), deg(placement.turn), deg(placement.roll))
   }, [placement, modelReady])
+
+  // ── Where the shadow lands ───────────────────────────────────────────────
+  useEffect(() => {
+    const plane = shadowPlaneRef.current
+    if (!plane) return
+    plane.position.z = placement.shadowDepth ?? DEFAULT_SHADOW_DEPTH
+  }, [placement.shadowDepth])
+
+  // ── Where the light is ───────────────────────────────────────────────────
+  useEffect(() => {
+    const light = keyLightRef.current
+    if (!light) return
+    const p = lightPosition ?? DEFAULT_LIGHT_POSITION
+    light.position.set(p.x, p.y, p.z)
+    // The shadow camera follows the light; without this the map is still
+    // rendered from where the light used to be and the shadow does not move.
+    light.shadow.camera.updateProjectionMatrix()
+    light.updateMatrixWorld(true)
+  }, [lightPosition])
+
+  // ── Load the radio ───────────────────────────────────────────────────────
+  /*
+    A second object in the same scene, camera and lighting as the book — the
+    room stays a flat <img> behind both.
+
+    Normalised the same way the book is: centred on its own bounds and scaled to
+    a fixed longest side, so the saved placement means the same thing no matter
+    what the source model's units were.
+  */
+  useEffect(() => {
+    if (!radioUrl || !sceneRef.current) return
+    let cancelled = false
+
+    new GLTFLoader().load(
+      radioUrl,
+      gltf => {
+        if (cancelled || !sceneRef.current) return
+
+        const model = gltf.scene
+        model.updateMatrixWorld(true)
+        const bounds = new THREE.Box3().setFromObject(model)
+        const center = bounds.getCenter(new THREE.Vector3())
+        const size = bounds.getSize(new THREE.Vector3())
+        const longest = Math.max(size.x, size.y, size.z) || 1
+        model.position.sub(center)
+        model.scale.setScalar(RADIO_TARGET_SIZE / longest)
+
+        model.traverse(object => {
+          if (!(object instanceof THREE.Mesh)) return
+          object.castShadow = true
+          object.receiveShadow = true
+          // Cloned before anything is changed on it. GLTFLoader caches
+          // materials across loads, and painting a palette onto a shared
+          // instance would repaint every other radio using it — the handoff's
+          // AGENTS.md calls this out for the same reason.
+          object.material = (object.material as THREE.Material).clone()
+        })
+
+        const group = new THREE.Group()
+        group.add(model)
+        sceneRef.current.add(group)
+        radioGroupRef.current = group
+        setRadioReady(true)
+      },
+      undefined,
+      loadError => {
+        // A missing radio is a room without one, not a broken room. The book is
+        // the point of the page and must not be held hostage to a prop.
+        if (!cancelled) console.error('[RoomPlacementStage] radio load failed:', loadError)
+      },
+    )
+
+    return () => {
+      cancelled = true
+      const group = radioGroupRef.current
+      if (group && sceneRef.current) {
+        sceneRef.current.remove(group)
+        group.traverse(object => {
+          if (object instanceof THREE.Mesh) {
+            object.geometry.dispose()
+            const list = Array.isArray(object.material) ? object.material : [object.material]
+            for (const material of list) material?.dispose()
+          }
+        })
+      }
+      radioGroupRef.current = null
+      radioTextureRef.current?.dispose()
+      radioTextureRef.current = null
+      setRadioReady(false)
+    }
+  }, [radioUrl])
+
+  // ── Paint the radio with the chosen palette ──────────────────────────────
+  useEffect(() => {
+    if (!radioReady || !radioTextureUrl) return
+    let cancelled = false
+
+    new THREE.TextureLoader().load(radioTextureUrl, texture => {
+      if (cancelled || !radioGroupRef.current) { texture.dispose(); return }
+      texture.colorSpace = THREE.SRGBColorSpace
+      // glTF UV convention, same as the book's pages.
+      texture.flipY = false
+      texture.wrapS = THREE.ClampToEdgeWrapping
+      texture.wrapT = THREE.ClampToEdgeWrapping
+      texture.anisotropy = rendererRef.current?.capabilities.getMaxAnisotropy() ?? 1
+
+      radioTextureRef.current?.dispose()
+      radioTextureRef.current = texture
+
+      // Every region shares the one baked image: the palette was baked as a
+      // single texture covering all seven UV islands at once.
+      radioGroupRef.current.traverse(object => {
+        if (!(object instanceof THREE.Mesh)) return
+        const material = object.material as THREE.MeshStandardMaterial
+        material.map = texture
+        material.needsUpdate = true
+      })
+    })
+
+    return () => { cancelled = true }
+  }, [radioReady, radioTextureUrl])
+
+  // ── Apply the radio's placement ──────────────────────────────────────────
+  useEffect(() => {
+    const group = radioGroupRef.current
+    if (!group || !radioPlacement) return
+    group.position.set(radioPlacement.x, radioPlacement.y, 0)
+    group.scale.setScalar(radioPlacement.scale)
+    group.rotation.set(deg(radioPlacement.tilt), deg(radioPlacement.turn), deg(radioPlacement.roll))
+  }, [radioPlacement, radioReady])
 
   // ── Scrub to a frame when not playing ────────────────────────────────────
   useEffect(() => {
@@ -509,6 +790,20 @@ export function RoomPlacementStage({
       // they must live until the next swap rather than being disposed here.
       if (cover) appliedTexturesRef.current.push(cover)
       if (inner) appliedTexturesRef.current.push(inner)
+
+      /*
+        The book is dressed. Announced from HERE and nowhere earlier: this is
+        the first instant at which what the student would see is the finished
+        book rather than a bare one.
+
+        One frame of grace so the renderer has actually drawn with the new maps
+        before the page cross-fades in — announcing on the same tick reveals the
+        frame before the upload lands.
+      */
+      if (!readyFiredRef.current) {
+        readyFiredRef.current = true
+        requestAnimationFrame(() => onReadyRef.current?.())
+      }
     })
 
     return () => { cancelled = true }
@@ -517,17 +812,28 @@ export function RoomPlacementStage({
   // ── Drag to move, wheel to scale ─────────────────────────────────────────
   const dragRef = useRef<{ id: number; x: number; y: number; startX: number; startY: number } | null>(null)
 
+  /*
+    Which placement the drag and wheel act on. The admin tool points the same
+    six controls at either object rather than growing a second editor, so the
+    stage has to know which one is live.
+  */
+  const dragTarget = radioInteractive && radioPlacement ? radioPlacement : placement
+  const emitTarget = radioInteractive && radioPlacement
+    ? (onRadioPlacementChange ?? (() => {}))
+    : onPlacementChange
+  const dragEnabled = interactive || (radioInteractive && !!radioPlacement)
+
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!interactive) return
+    if (!dragEnabled) return
     event.currentTarget.setPointerCapture(event.pointerId)
     dragRef.current = {
       id: event.pointerId,
       x: event.clientX,
       y: event.clientY,
-      startX: placement.x,
-      startY: placement.y,
+      startX: dragTarget.x,
+      startY: dragTarget.y,
     }
-  }, [interactive, placement.x, placement.y])
+  }, [dragEnabled, dragTarget.x, dragTarget.y])
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
     const drag = dragRef.current
@@ -539,17 +845,85 @@ export function RoomPlacementStage({
     // Convert pixel delta into world units via the orthographic frustum
     const dx = ((event.clientX - drag.x) / rect.width) * viewWidth
     const dy = -((event.clientY - drag.y) / rect.height) * viewHeight
-    onPlacementChange({ ...placement, x: drag.startX + dx, y: drag.startY + dy })
-  }, [onPlacementChange, placement])
+    emitTarget({ ...dragTarget, x: drag.startX + dx, y: drag.startY + dy })
+  }, [emitTarget, dragTarget])
 
   const endDrag = useCallback(() => { dragRef.current = null }, [])
 
   const handleWheel = useCallback((event: React.WheelEvent<HTMLCanvasElement>) => {
-    if (!interactive) return
+    if (!dragEnabled) return
     event.preventDefault()
-    const next = placement.scale * (event.deltaY > 0 ? 0.96 : 1.04)
-    onPlacementChange({ ...placement, scale: Math.min(4, Math.max(0.2, next)) })
-  }, [interactive, onPlacementChange, placement])
+    const next = dragTarget.scale * (event.deltaY > 0 ? 0.96 : 1.04)
+    emitTarget({ ...dragTarget, scale: Math.min(4, Math.max(0.2, next)) })
+  }, [dragEnabled, emitTarget, dragTarget])
+
+  /**
+   * Which region of the radio is under the pointer, or null.
+   *
+   * The stripped GLB is one mesh per region material, so the intersected
+   * object's material name IS the region — no lookup table, no extra data.
+   */
+  const pickRadioRegion = useCallback((clientX: number, clientY: number): string | null => {
+    const group = radioGroupRef.current
+    const camera = cameraRef.current
+    const stage = stageRef.current
+    if (!group || !camera || !stage) return null
+
+    const rect = stage.getBoundingClientRect()
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1,
+    )
+    raycasterRef.current.setFromCamera(ndc, camera)
+    const hit = raycasterRef.current.intersectObject(group, true)[0]
+    if (hit) {
+      const material = (hit.object as THREE.Mesh).material as THREE.Material
+      return material?.name || 'region_cabinet'
+    }
+
+    /*
+      Missed the geometry, but is the pointer near enough to have MEANT the
+      radio? A padded projected bounding box says yes, and the caller treats
+      that as a plain "the radio" click.
+
+      Without this, a click in one of the gaps in the silhouette — between the
+      knobs, past a rounded corner — sails through to the room and opens the
+      book. At this size those gaps are only a few pixels wide, but they are
+      exactly where a finger aiming at a knob lands.
+    */
+    const box = new THREE.Box3().setFromObject(group)
+    if (box.isEmpty()) return null
+    const min = box.min.clone().project(camera)
+    const max = box.max.clone().project(camera)
+    const left = Math.min(min.x, max.x)
+    const right = Math.max(min.x, max.x)
+    const bottom = Math.min(min.y, max.y)
+    const top = Math.max(min.y, max.y)
+    const padX = (right - left) * RADIO_HIT_PADDING
+    const padY = (top - bottom) * RADIO_HIT_PADDING
+    const near = ndc.x >= left - padX && ndc.x <= right + padX
+      && ndc.y >= bottom - padY && ndc.y <= top + padY
+    return near ? 'region_cabinet' : null
+  }, [])
+
+  const [radioHover, setRadioHover] = useState(false)
+
+  const handleCanvasPointerMove = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
+    handlePointerMove(event)
+    // Only worth a raycast when something can respond to it.
+    if (!onRadioClickRef.current || !radioReady) return
+    setRadioHover(pickRadioRegion(event.clientX, event.clientY) !== null)
+  }, [handlePointerMove, pickRadioRegion, radioReady])
+
+  const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    // The radio gets first refusal. Without this the click falls through to the
+    // book and opens it, which is not what clicking a radio should do.
+    if (onRadioClickRef.current && radioReady) {
+      const region = pickRadioRegion(event.clientX, event.clientY)
+      if (region) { onRadioClickRef.current(region); return }
+    }
+    onCanvasClick?.()
+  }, [onCanvasClick, pickRadioRegion, radioReady])
 
   return (
     <div
@@ -558,10 +932,17 @@ export function RoomPlacementStage({
       style={{ aspectRatio: '3 / 2' }}
     >
       {!hideRoom && (
+        /*
+          crossOrigin matches useAdaptiveInk, which loads this same URL with
+          crossOrigin='anonymous' to sample the edge band. CORS mode is part of
+          the HTTP cache key, so without this the room plate is fetched TWICE —
+          once for the picture and once for the ink.
+        */
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={roomUrl}
           alt="Challenge room background"
+          crossOrigin="anonymous"
           className="absolute inset-0 h-full w-full object-cover"
         />
       )}
@@ -569,21 +950,22 @@ export function RoomPlacementStage({
       <canvas
         ref={canvasRef}
         className={`absolute inset-0 h-full w-full ${
-          interactive ? 'cursor-move' : onCanvasClick ? 'cursor-pointer' : ''
+          dragEnabled ? 'cursor-move' : radioHover || onCanvasClick ? 'cursor-pointer' : ''
         }`}
         onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
+        onPointerMove={handleCanvasPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        onPointerLeave={() => setRadioHover(false)}
         onWheel={handleWheel}
-        onClick={onCanvasClick}
+        onClick={handleCanvasClick}
       />
 
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/40">
           <div className="flex items-center gap-3 rounded-xl bg-white/90 px-4 py-2">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
-            <span className="text-sm font-medium text-gray-700">Loading book…</span>
+            <span className="text-sm font-medium text-gray-700">{t('challenge.loadingBook')}</span>
           </div>
         </div>
       )}

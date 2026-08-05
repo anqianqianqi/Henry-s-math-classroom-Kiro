@@ -3,8 +3,10 @@
 import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 
 function CallbackHandler() {
+  const { t } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -22,13 +24,14 @@ function CallbackHandler() {
     }
   }, [])
 
-  return <p className="text-gray-600">Signing in...</p>
+  return <p className="text-gray-600">{t('auth.signingIn')}</p>
 }
 
 export default function AuthCallback() {
+  const { t } = useLanguage()
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <Suspense fallback={<p className="text-gray-600">Loading...</p>}>
+      <Suspense fallback={<p className="text-gray-600">{t('status.loading')}</p>}>
         <CallbackHandler />
       </Suspense>
     </div>

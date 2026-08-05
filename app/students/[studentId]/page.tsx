@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -37,6 +38,7 @@ interface ChallengeSubmission {
 }
 
 export default function StudentHistoryPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const params = useParams()
   const studentId = params.studentId as string
@@ -117,7 +119,7 @@ export default function StudentHistoryPage() {
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-blue/10 flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">📊</div>
-          <p className="text-gray-600">Loading history...</p>
+          <p className="text-gray-600">{t('students.loadingHistory')}</p>
         </div>
       </div>
     )
@@ -159,17 +161,17 @@ export default function StudentHistoryPage() {
         <div className="grid grid-cols-3 gap-4 mb-6">
           <Card className="text-center p-4">
             <div className="text-3xl font-bold text-primary-600">{totalSubmissions}</div>
-            <div className="text-sm text-gray-500 mt-1">Challenges Submitted</div>
+            <div className="text-sm text-gray-500 mt-1">{t('students.submitted')}</div>
           </Card>
           <Card className="text-center p-4">
             <div className="text-3xl font-bold text-green-600">{gradedSubmissions.length}</div>
-            <div className="text-sm text-gray-500 mt-1">Graded</div>
+            <div className="text-sm text-gray-500 mt-1">{t('students.graded')}</div>
           </Card>
           <Card className="text-center p-4">
             <div className="text-3xl font-bold text-blue-600">
               {avgScore != null ? avgScore : '—'}
             </div>
-            <div className="text-sm text-gray-500 mt-1">Avg Score</div>
+            <div className="text-sm text-gray-500 mt-1">{t('students.avgScore')}</div>
           </Card>
         </div>
 
@@ -178,7 +180,7 @@ export default function StudentHistoryPage() {
           <div className="mb-8">
             <div className="mb-3">
               <h2 className="text-lg font-bold text-gray-900">📊 Study Curve</h2>
-              <p className="text-sm text-gray-500">Score &amp; completion breakdown by topic</p>
+              <p className="text-sm text-gray-500">{t('students.byTopic')}</p>
             </div>
             <StudentStudyCurve userId={studentId} />
           </div>
@@ -188,8 +190,8 @@ export default function StudentHistoryPage() {
         {submissions.length === 0 ? (
           <Card className="text-center py-16">
             <div className="text-5xl mb-4">📭</div>
-            <h3 className="text-lg font-semibold text-gray-700">No submissions yet</h3>
-            <p className="text-gray-500 mt-2">This student hasn't submitted any challenges.</p>
+            <h3 className="text-lg font-semibold text-gray-700">{t('students.noSubmissions')}</h3>
+            <p className="text-gray-500 mt-2">{t('students.noSubmissionsBody')}</p>
           </Card>
         ) : (
           <div className="space-y-3">
@@ -229,10 +231,10 @@ export default function StudentHistoryPage() {
                             {sub.points}/{maxPts}
                           </div>
                         ) : (
-                          <div className="text-sm text-gray-400 font-medium">Not graded</div>
+                          <div className="text-sm text-gray-400 font-medium">{t('students.notGraded')}</div>
                         )}
                         <div className="text-xs text-primary-500 mt-0.5">
-                          View →
+                          {t('students.view')}
                         </div>
                       </div>
                     </div>

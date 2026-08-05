@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
@@ -45,6 +46,7 @@ interface Row {
 }
 
 export default function BatchImportPage() {
+  const { t, language } = useLanguage()
   const router = useRouter()
   const supabase = createClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -66,7 +68,8 @@ export default function BatchImportPage() {
 
   const [availableTags, setAvailableTags] = useState<any[]>([])
   const [tagGroups, setTagGroups] = useState<Array<{ id: string; name: string; tag_ids: string[] }>>([])
-  const [tagLang, setTagLang] = useState<'en' | 'zh'>('en')
+  // Follows the site-wide switcher; there is no second language control.
+  const tagLang = language
   const [existingTitles, setExistingTitles] = useState<Set<string>>(new Set())
   const [previewKey, setPreviewKey] = useState<string | null>(null)
 
@@ -408,14 +411,6 @@ export default function BatchImportPage() {
 
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">Existing tags</label>
-                  <select
-                    value={tagLang}
-                    onChange={e => setTagLang(e.target.value as 'en' | 'zh')}
-                    className="text-xs px-2 py-1 border border-gray-200 rounded-lg"
-                  >
-                    <option value="en">EN</option>
-                    <option value="zh">CN</option>
-                  </select>
                 </div>
                 <TagInput
                   selectedTagIds={universalTagIds}

@@ -3,10 +3,12 @@
 export const dynamic = 'force-dynamic'
 
 import { useRouter } from 'next/navigation'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { Button } from '@/components/ui/Button'
 import ChallengeTemplates from '@/components/ChallengeTemplates'
 
 export default function TemplatesPage() {
+  const { t } = useLanguage()
   const router = useRouter()
 
   return (
@@ -19,7 +21,7 @@ export default function TemplatesPage() {
               ←
             </Button>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Templates</h1>
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">{t('templates.title')}</h1>
             </div>
           </div>
         </div>

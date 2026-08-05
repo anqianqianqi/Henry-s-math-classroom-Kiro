@@ -29,8 +29,14 @@ import dynamicImport from 'next/dynamic'
 import {
   DEFAULT_PLACEMENT,
   type AnimationConfig,
+  type LightPosition,
   type Placement,
 } from '@/lib/types/challengeRoom'
+import { DreamSketchBoundary } from '@/components/ui/DreamSketchBoundary'
+import { useAdaptiveInk } from '@/components/ui/useAdaptiveInk'
+import { RadioPanel } from './RadioPanel'
+import { radioActionFor } from '@/lib/challengeRoom/radio'
+import { getState, nextTrack, subscribe } from '@/lib/music/audioStore'
 
 const RoomPlacementStage = dynamicImport(
   () => import('./RoomPlacementStage').then(m => m.RoomPlacementStage),
@@ -57,6 +63,15 @@ export interface Book3DRevealProps {
    * — the working copy lives in the zoomed DOM pages.
    */
   problemPreview?: { title: string; body: string }
+  /** Fired once the book is on screen WITH its cover and pages — see the stage. */
+  onReady?: () => void
+
+  /** The radio on the sill. All three, or none — a placement is what turns it on. */
+  radioUrl?: string | null
+  radioTextureUrl?: string | null
+  radioPlacement?: Placement | null
+  /** Room key light, shared with the radio. */
+  lightPosition?: LightPosition | null
 }
 
 type Phase = 'closed' | 'opening' | 'open' | 'zoomed'
@@ -74,6 +89,19 @@ const ZOOM_MS = 700
  */
 const SOLUTION_TOP_OFFSET = '7.3rem'
 
+/**
+ * The notes that drift off a playing radio.
+ *
+ * Three, fixed rather than spawned: each one loops with its own delay, drift
+ * and tilt, which reads as a continuous stream without a timer, without state,
+ * and without re-rendering anything while the music plays.
+ */
+const RADIO_NOTES = [
+  { glyph: '♪', drift: -9, tilt: -14 },
+  { glyph: '♫', drift: 11, tilt: 16 },
+  { glyph: '♬', drift: -4, tilt: 9 },
+]
+
 const easeInOut = (t: number) =>
   t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
 
@@ -89,10 +117,54 @@ export function Book3DReveal({
   placement,
   animation,
   problemPreview,
+  onReady,
+  radioUrl,
+  radioTextureUrl,
+  radioPlacement,
+  lightPosition,
 }: Book3DRevealProps) {
   const [phase, setPhase] = useState<Phase>('closed')
+  const [radioPanelOpen, setRadioPanelOpen] = useState(false)
+  const [radioPlaylistOpen, setRadioPlaylistOpen] = useState(false)
+  const [radioRect, setRadioRect] = useState<{ xPct: number; yPct: number; wPct: number; hPct: number } | null>(null)
+
+  /*
+    Whether the notes should be drifting.
+
+    Subscribed rather than passed in, because the pill on another page, the
+    panel here and a track ending on its own can all change it. Only the one
+    boolean is read, so a progress tick does not re-render the room.
+  */
+  const [musicPlaying, setMusicPlaying] = useState(false)
+  useEffect(() => {
+    const sync = () => setMusicPlaying(getState().isPlaying)
+    sync()
+    return subscribe(sync)
+  }, [])
+
+  /**
+   * Clicking the radio.
+   *
+   * The knobs and the dial are the two parts a hand would actually reach for,
+   * so they do the thing that part does. Everything else opens the panel, which
+   * is where the controls a mesh cannot offer — seek, volume, the full list —
+   * actually live.
+   */
+  const handleRadioClick = useCallback((region: string) => {
+    const action = radioActionFor(region)
+    if (action === 'next') { nextTrack(); return }
+    if (action === 'playlist') {
+      setRadioPanelOpen(true)
+      setRadioPlaylistOpen(open => !open)
+      return
+    }
+    setRadioPanelOpen(open => !open)
+  }, [])
   const [frame, setFrame] = useState(animation.startFrame)
   const [playing, setPlaying] = useState(false)
+
+  /** Sketch-boundary ink, read off this room's own edges. */
+  const ink = useAdaptiveInk(roomUrl)
 
   // Placement is animated during the zoom, so the stage reads this rather than
   // the prop. The saved room placement stays untouched.
@@ -252,10 +324,32 @@ export function Book3DReveal({
           marginLeft: 'calc(50% - 48vw)',
         }}
       >
-        <div
-          className="relative mx-auto overflow-hidden bg-gray-950"
+        {/* Wraps only the room block. Must not enclose the zoomed reader below
+            — see the note on that element, and on DreamSketchBoundary itself.
+
+            The letterbox width lives HERE rather than on the box below, so the
+            boundary and the picture are sized by the same declaration. When
+            they each had their own, the effect was drawn around the 96vw
+            breakout while the room sat centred and narrower inside it. */}
+        <DreamSketchBoundary
+          /* The wrapper is narrower than this breakout div, so it has to be
+             centred here — the component stays layout-neutral rather than
+             imposing a margin its consumers might not want. */
+          className="mx-auto"
+          /* A drawn frame rather than generated strokes — see the note on the
+             prop. It is 3:2, which is what this box always is. */
+          edgeTexture="/sketch-frame.png"
+          /* Pulled back so the marks lie ON the room rather than hovering
+             outside it against the page. */
+          edgeTextureBleed={0.025}
+          inkStrength={0.7}
+          /* Read off this room's own edges rather than fixed: students choose
+             their room, and one graphite cannot suit both a cream room and a
+             near-black one. See lib/ui/adaptiveInk.ts. */
+          lineColor={ink}
           style={{ width: 'min(100%, 132vh)' }}
         >
+        <div className="relative w-full overflow-hidden bg-gray-950">
         <div
           aria-hidden="true"
           className="absolute inset-0 scale-110 blur-2xl"
@@ -293,7 +387,60 @@ export function Book3DReveal({
             // airborne and the text would tumble through the air with it.
             pagePreview={phase === 'open' || zoomed ? pagePreview : undefined}
             onBookRect={setBookRect}
+            onReady={onReady}
+            radioUrl={radioUrl}
+            radioTextureUrl={radioTextureUrl}
+            radioPlacement={radioPlacement}
+            lightPosition={lightPosition}
+            onRadioRect={setRadioRect}
+            onRadioClick={handleRadioClick}
           />
+
+          {/*
+            Sits over the stage, inside the same box, so it reads as belonging
+            to the room rather than floating above the page. Hidden once zoomed
+            — at that point the student is working on the pages, and the room
+            behind them is blurred out of the way.
+          */}
+          {/*
+            Notes drifting off the radio while it plays.
+
+            Anchored to the radio's own reported rect rather than a fixed
+            corner, so they keep coming out of the radio wherever an admin put
+            it. Only while it is actually playing — that is the whole signal.
+          */}
+          {radioRect && musicPlaying && !zoomed && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute"
+              style={{ left: `${radioRect.xPct}%`, top: `${radioRect.yPct - radioRect.hPct / 2}%` }}
+            >
+              {RADIO_NOTES.map((note, i) => (
+                <span
+                  key={i}
+                  className="radio-note select-none text-white/90"
+                  style={{
+                    fontSize: 15,
+                    textShadow: '0 1px 3px rgba(0,0,0,0.45)',
+                    animationDelay: `${i * 0.9}s`,
+                    ['--drift' as any]: `${note.drift}px`,
+                    ['--tilt' as any]: `${note.tilt}deg`,
+                  }}
+                >
+                  {note.glyph}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {radioUrl && radioPlacement && !zoomed && (
+            <RadioPanel
+              open={radioPanelOpen}
+              onClose={() => setRadioPanelOpen(false)}
+              playlistOpen={radioPlaylistOpen}
+              onPlaylistOpenChange={setRadioPlaylistOpen}
+            />
+          )}
         </div>
 
         {/* ── Affordances ─────────────────────────────────────────────── */}
@@ -325,6 +472,7 @@ export function Book3DReveal({
         )}
 
         </div>
+        </DreamSketchBoundary>
       </div>
 
       {/*

@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
@@ -35,6 +36,7 @@ interface Member {
 }
 
 export default function ClassDetailPage() {
+  const { t } = useLanguage()
   const [classData, setClassData] = useState<Class | null>(null)
   const [members, setMembers] = useState<Member[]>([])
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
@@ -95,11 +97,11 @@ export default function ClassDetailPage() {
       if (error) throw error
       setClassData({
         ...data,
-        teacher_name: (data.profiles as any)?.full_name || 'Unknown Teacher',
+        teacher_name: (data.profiles as any)?.full_name || t('class.unknownTeacher'),
         teacher_email: (data.profiles as any)?.email || ''
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load class')
+      setError(err instanceof Error ? err.message : t('class.loadOneFailed'))
     } finally {
       setLoading(false)
     }
@@ -202,7 +204,7 @@ export default function ClassDetailPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        alert('Please log in to request to join this class')
+        alert(t('class.loginToJoin'))
         return
       }
 
@@ -259,7 +261,7 @@ export default function ClassDetailPage() {
       if (err?.code === 'PGRST205' || err?.code === '42P01') {
         alert('Join requests are not yet set up. Please ask the teacher to add you directly.')
       } else {
-        alert('Failed to send join request. Please try again.')
+        alert(t('class.joinRequestFailed'))
       }
     } finally {
       setRequestingJoin(false)
@@ -330,7 +332,7 @@ export default function ClassDetailPage() {
       if (error) throw error
       router.push('/classes')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete class')
+      setError(err instanceof Error ? err.message : t('class.deleteFailed'))
     }
   }
 
@@ -352,10 +354,10 @@ export default function ClassDetailPage() {
       <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
         <div className="max-w-4xl mx-auto">
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-            {error || 'Class not found'}
+            {error || t('class.notFound')}
           </div>
           <Button onClick={() => router.push('/classes')} className="mt-4">
-            Back to Classes
+            {t('class.backToClasses')}
           </Button>
         </div>
       </div>
@@ -435,7 +437,7 @@ export default function ClassDetailPage() {
                     disabled={requestingJoin}
                     className="bg-green-600 hover:bg-green-700"
                   >
-                    {requestingJoin ? 'Sending...' : <><span className="hidden sm:inline">📝 </span>Request to Join</>}
+                    {requestingJoin ? t('class.sending') : <><span className="hidden sm:inline">📝 </span>{t('class.requestToJoin')}</>}
                   </Button>
                 )}
                 {joinRequestStatus === 'pending' && (
@@ -455,7 +457,7 @@ export default function ClassDetailPage() {
                       onClick={handleRequestJoin}
                       className="w-full px-3 py-1.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
                     >
-                      Submit New Request
+                      {t('class.submitNewRequest')}
                     </button>
                   </div>
                 )}
@@ -467,24 +469,24 @@ export default function ClassDetailPage() {
         <div className="grid gap-6">
           <Card>
             <Card.Header>
-              <Card.Title>Class Information</Card.Title>
+              <Card.Title>{t('class.information')}</Card.Title>
             </Card.Header>
             <Card.Body>
               <dl className="space-y-4">
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Teacher</dt>
+                  <dt className="text-sm font-medium text-gray-500">{t('class.teacher')}</dt>
                   <dd className="mt-1 text-gray-900 font-medium">{classData.teacher_name}</dd>
                   <dd className="text-sm text-gray-500">{classData.teacher_email}</dd>
                 </div>
                 {classData.description && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Description</dt>
+                    <dt className="text-sm font-medium text-gray-500">{t('class.description')}</dt>
                     <dd className="mt-1 text-gray-900">{classData.description}</dd>
                   </div>
                 )}
                 {classData.schedule && classData.schedule.length > 0 && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Meeting Times</dt>
+                    <dt className="text-sm font-medium text-gray-500">{t('class.meetingTimes')}</dt>
                     <dd className="mt-1 space-y-2">
                       {classData.schedule.map((slot, index) => (
                         <div key={index} className="flex items-center gap-2 text-gray-900">
@@ -498,14 +500,14 @@ export default function ClassDetailPage() {
                   </div>
                 )}
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Start Date</dt>
+                  <dt className="text-sm font-medium text-gray-500">{t('class.startDate')}</dt>
                   <dd className="mt-1 text-gray-900">
                     {new Date(classData.start_date).toLocaleDateString()}
                   </dd>
                 </div>
                 {classData.end_date && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">End Date</dt>
+                    <dt className="text-sm font-medium text-gray-500">{t('class.endDate')}</dt>
                     <dd className="mt-1 text-gray-900">
                       {new Date(classData.end_date).toLocaleDateString()}
                     </dd>
@@ -534,7 +536,7 @@ export default function ClassDetailPage() {
               </Card.Header>
               <Card.Body>
                 {members.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No members yet</p>
+                  <p className="text-gray-500 text-center py-8">{t('class.noMembers')}</p>
                 ) : (
                   <div className="space-y-3">
                     {members.map(member => (
@@ -567,7 +569,7 @@ export default function ClassDetailPage() {
               </Card.Header>
               <Card.Body>
                 {publishedChallenges.length === 0 ? (
-                  <p className="text-gray-400 text-sm text-center py-4">No challenges published to this class yet.</p>
+                  <p className="text-gray-400 text-sm text-center py-4">{t('class.noChallenges')}</p>
                 ) : (
                   <>
                     <div className="divide-y divide-gray-100">
@@ -600,7 +602,7 @@ export default function ClassDetailPage() {
                         className="mt-3 w-full py-2 text-sm text-primary-600 hover:text-primary-700 font-medium border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors"
                       >
                         {showAllChallenges
-                          ? 'Show less'
+                          ? t('class.showLess')
                           : `Show all ${publishedChallenges.length} challenges`}
                       </button>
                     )}

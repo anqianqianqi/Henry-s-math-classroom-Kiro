@@ -1,0 +1,25 @@
+# Line endings and binary safety.
+#
+# core.autocrlf is true here, so git stores LF and hands the working tree CRLF
+# on Windows. That is fine for almost everything and NOT fine for one case.
+
+# vitest runs .mjs through vite-node, which passes the source to vm.Script
+# largely as-is. With CRLF that throws "SyntaxError: Invalid or unexpected
+# token" on the first line of the module, and vitest reports it against the
+# importing test rather than the script — so it reads as a broken test file.
+#
+# It hid for a while because a freshly written file keeps its LF until git
+# next materialises it; the failure only appeared on a branch switch, and would
+# have appeared on any clean clone or in CI.
+*.mjs text eol=lf
+
+# Never line-ending convert these. Git's binary heuristics already get it
+# right, but a mangled GLB or PNG fails in ways that are painful to trace back
+# to whitespace, so say it explicitly.
+*.glb binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.mp3 binary
+*.blend binary
+*.zip binary
