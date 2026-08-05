@@ -66,21 +66,39 @@ describe('paper is feel, not colour', () => {
   })
 })
 
-describe('the two halves tint the same stock differently', () => {
+describe('one colour, two values', () => {
   const spec = randomBookSpec(BOOK_THEMES[0], { rng: seeded(4) })
 
-  it('gives the cover the palette deepest tone', () => {
-    expect(compileCoverPrompt(spec)).toContain('DEEPEST colour named in the palette')
+  it('gives every theme a ground to draw from', () => {
+    for (const theme of BOOK_THEMES) {
+      expect(theme.grounds.length, `${theme.name} has no grounds`).toBeGreaterThanOrEqual(2)
+      for (const g of theme.grounds) expect(g.trim()).not.toBe('')
+    }
   })
 
-  it('gives the inner page the lightest, and says why it must stay bright', () => {
+  it('puts the SAME colour name on both halves', () => {
+    // The whole point of one field: the pair reads as one book rather than two
+    // that happen to share a recipe.
+    expect(spec.ground).toBeTruthy()
+    expect(compileCoverPrompt(spec)).toContain(spec.ground!)
+    expect(compileInnerPrompt(spec)).toContain(spec.ground!)
+  })
+
+  it('takes it at full strength on the cover', () => {
+    const cover = compileCoverPrompt(spec)
+    expect(cover).toContain(`evenly to ${spec.ground}`)
+    expect(cover).not.toContain('PALE, WASHED-OUT TINT')
+  })
+
+  it('takes a pale tint of it on the inner page, and says why', () => {
     /*
      * Load-bearing, not art direction: Book3DReveal prints the challenge
      * problem over this texture in #2d1a00 and nothing samples the artwork to
-     * adapt that ink, so a dark inner page is simply unreadable.
+     * adapt that ink, so a mid-tone inner page is simply unreadable.
      */
     const inner = compileInnerPrompt(spec)
-    expect(inner).toContain('LIGHTEST colour named in the palette')
+    expect(inner).toContain('PALE, WASHED-OUT TINT')
+    expect(inner).toContain('the same hue as the cover')
     expect(inner).toContain('The page must stay bright')
     expect(inner).toContain('At least 75% of the framed interior must remain completely blank')
   })
@@ -92,5 +110,27 @@ describe('the two halves tint the same stock differently', () => {
 
   it('never tells the cover to stay bright — only the inner page is constrained', () => {
     expect(compileCoverPrompt(spec)).not.toContain('must stay bright')
+  })
+})
+
+describe('a recipe saved before `ground` existed', () => {
+  /*
+   * Optional on the type for exactly this: challenge_rooms and
+   * book_texture_packages store the recipe as JSONB, so every bundle saved
+   * before today has no ground. Regenerating one must still produce a sane
+   * prompt rather than the literal word "undefined".
+   */
+  const legacy = { ...randomBookSpec(BOOK_THEMES[2], { rng: seeded(9) }), ground: undefined }
+
+  it('falls back to the palette rather than emitting undefined', () => {
+    for (const prompt of [compileCoverPrompt(legacy), compileInnerPrompt(legacy)]) {
+      expect(prompt).not.toContain('undefined')
+      expect(prompt).toContain('the deepest colour named in the palette')
+    }
+  })
+
+  it('still keeps the inner page bright', () => {
+    expect(compileInnerPrompt(legacy)).toContain('PALE, WASHED-OUT TINT')
+    expect(compileInnerPrompt(legacy)).toContain('The page must stay bright')
   })
 })

@@ -13,19 +13,18 @@
  * something other than cream paper with gold filigree — and why the sci-fi and
  * indigo worlds below can exist at all.
  *
- * ── PAPERS NAME FEEL, NEVER COLOUR ──────────────────────────
- * Tooth, fibre, deckle, weave, finish — how the sheet would feel in the hand.
- * The palette supplies the colour, and bookPrompt.ts tints this stock per half
- * (deepest tone on the cover, lightest on the inner page).
+ * ── THREE FIELDS, THREE JOBS ────────────────────────────────
+ *   papers   how the sheet FEELS — tooth, fibre, deckle, weave. Never a colour.
+ *   grounds  what colour the sheet IS. One name, carried by both halves.
+ *   palettes what the four corner clusters are coloured with.
  *
- * They used to name colour too, and 23 of 24 did. Since the stock covers most
+ * Papers used to name colour too, and 23 of 24 did. Since the stock covers most
  * of the canvas, that made paper the real colour authority and left the palette
- * with nothing to tint but four small corner vignettes — so every cover came
- * out the colour of the paper, which is to say pale. Splitting feel from colour
- * is what gives the palette a surface.
+ * with nothing to tint but four small vignettes — so every cover came out the
+ * colour of the paper, which is to say pale.
  *
- * A colour word here silently takes the ground back. bookBundleThemes.test.ts
- * fails the build if one appears.
+ * A colour word in `papers` silently takes the ground back from `grounds`.
+ * bookBundleThemes.test.ts fails the build if one appears.
  *
  * randomBookSpec() deals four distinct clusters into the corners.
  */
@@ -41,6 +40,15 @@ export interface BookTheme {
   palettes: string[]
   moods: string[]
   papers: string[]
+  /**
+   * The sheet's colour — one name per entry, not a list of colours.
+   *
+   * Distinct from `palettes`, which colours the corner clusters. This is the
+   * ground both halves carry: full strength on the cover, a pale tint of the
+   * same hue on the inner page. Mid-to-deep tones work best — a ground that is
+   * already pale gives a cover and an inner page that look identical.
+   */
+  grounds: string[]
   frames: string[]
   /** Sparse motif edging the inner page — must stay quiet, text prints there. */
   innerAccents: string[]
@@ -68,6 +76,7 @@ export const BOOK_THEMES: BookTheme[] = [
       'handmade sheet with a feathered deckle edge and visible pulp flecks',
       'lightly sized paper with a fine even weave',
     ],
+    grounds: ['soft meadow green', 'warm rose', 'honeyed straw'],
     frames: [
       'thin antique-gold botanical filigree',
       'slender pressed-flower border in soft green ink',
@@ -111,6 +120,7 @@ export const BOOK_THEMES: BookTheme[] = [
       'calendered stock with a faint powdery surface bloom',
       'thin sheet with a silky, almost translucent finish',
     ],
+    grounds: ['moonstone blue', 'dusty lavender', 'deep periwinkle'],
     frames: [
       'fine pale-gold vines with tiny stars and crescent details',
       'slender silver rule dotted with pinhead constellations',
@@ -154,6 +164,7 @@ export const BOOK_THEMES: BookTheme[] = [
       'heavy rag paper with a pronounced torn deckle',
       'matte cartridge with a slight drag under the hand',
     ],
+    grounds: ['moss green', 'warm russet', 'chestnut brown'],
     frames: [
       'narrow antique-gold oak-leaf and berry border',
       'thin russet rule with small acorn corner marks',
@@ -197,6 +208,7 @@ export const BOOK_THEMES: BookTheme[] = [
       'softly cockled sheet that has been damp and dried flat again',
       'dense board with a faintly waxed, close surface',
     ],
+    grounds: ['sea-glass aqua', 'storm slate', 'weathered driftwood grey'],
     frames: [
       'slender antique-gold seaweed filigree',
       'narrow pewter rope-twist border',
@@ -240,6 +252,7 @@ export const BOOK_THEMES: BookTheme[] = [
       'vellum-finish sheet with a faint mottled cloud in the pulp',
       'herbarium laid paper with fine visible chain lines',
     ],
+    grounds: ['deep indigo', 'antique olive', 'damson wine'],
     frames: [
       'precise antique-gold botanical linework dotted with tiny constellations',
       'fine indigo rule with small engraved star points',
@@ -290,6 +303,7 @@ export const BOOK_THEMES: BookTheme[] = [
       'synthetic stock with a barely visible embossed grid',
       'brushed panel with a fine directional satin sheen',
     ],
+    grounds: ['vacuum black', 'deep navy', 'graphite'],
     frames: [
       'hairline cyan circuit-trace border with small node dots',
       'thin brushed-aluminium rule with machined corner ticks',
@@ -333,6 +347,7 @@ export const BOOK_THEMES: BookTheme[] = [
       'soft absorbent stock with a slightly furred cut edge',
       'thin ribbed paper with a fine regular corrugation',
     ],
+    grounds: ['lantern red', 'ink black', 'deep persimmon'],
     frames: [
       'thin cinnabar rule with small square corner seals',
       'fine ink border of bamboo leaves and knots',
@@ -376,6 +391,7 @@ export const BOOK_THEMES: BookTheme[] = [
       'smooth board with a very fine even matte tooth',
       'dense pressed sheet with a slight satin surface',
     ],
+    grounds: ['cobalt', 'mustard ochre', 'terracotta'],
     frames: [
       'a single bold rule in flat cobalt with square corners',
       'two thin parallel lines in warm black, evenly spaced',
@@ -437,6 +453,7 @@ export function randomBookSpec(theme?: BookTheme, opts: RandomBookOpts = {}): Bo
     mood: pick(t.moods, rng),
     palette: pick(t.palettes, rng),
     paper: pick(t.papers, rng),
+    ground: pick(t.grounds, rng),
     frame: pick(t.frames, rng),
     cornerClusters: [c[0], c[1], c[2], c[3]],
     notes: '',

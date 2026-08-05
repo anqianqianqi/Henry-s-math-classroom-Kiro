@@ -76,7 +76,15 @@ CREATE TABLE IF NOT EXISTS book_bundle_themes (
   styles        JSONB NOT NULL DEFAULT '[]'::jsonb,
   palettes      JSONB NOT NULL DEFAULT '[]'::jsonb,
   moods         JSONB NOT NULL DEFAULT '[]'::jsonb,
+
+  -- How the sheet FEELS: tooth, fibre, deckle, weave. Never a colour — a
+  -- colour word here takes the ground back from `grounds` below.
   papers        JSONB NOT NULL DEFAULT '[]'::jsonb,
+
+  -- What colour the sheet IS. One name per entry, carried by both halves:
+  -- full strength on the cover, a pale tint of the same hue on the inner page.
+  grounds       JSONB NOT NULL DEFAULT '[]'::jsonb,
+
   frames        JSONB NOT NULL DEFAULT '[]'::jsonb,
 
   -- Must stay quiet: problem text is printed over the inner page.
@@ -94,6 +102,13 @@ CREATE TABLE IF NOT EXISTS book_bundle_themes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_bbt_active ON book_bundle_themes(is_active);
+
+-- `grounds` was added after this file had already been applied once, and
+-- CREATE TABLE IF NOT EXISTS will not add a column to a table that exists.
+-- Themes promoted before it are left with an empty list, which the prompt
+-- compiler handles by falling back to the palette's deepest tone.
+ALTER TABLE book_bundle_themes
+  ADD COLUMN IF NOT EXISTS grounds JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 -- ============================================================
 -- RLS
