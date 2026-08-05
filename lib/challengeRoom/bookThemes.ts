@@ -13,6 +13,20 @@
  * something other than cream paper with gold filigree — and why the sci-fi and
  * indigo worlds below can exist at all.
  *
+ * ── PAPERS NAME FEEL, NEVER COLOUR ──────────────────────────
+ * Tooth, fibre, deckle, weave, finish — how the sheet would feel in the hand.
+ * The palette supplies the colour, and bookPrompt.ts tints this stock per half
+ * (deepest tone on the cover, lightest on the inner page).
+ *
+ * They used to name colour too, and 23 of 24 did. Since the stock covers most
+ * of the canvas, that made paper the real colour authority and left the palette
+ * with nothing to tint but four small corner vignettes — so every cover came
+ * out the colour of the paper, which is to say pale. Splitting feel from colour
+ * is what gives the palette a surface.
+ *
+ * A colour word here silently takes the ground back. bookBundleThemes.test.ts
+ * fails the build if one appears.
+ *
  * randomBookSpec() deals four distinct clusters into the corners.
  */
 
@@ -50,9 +64,9 @@ export const BOOK_THEMES: BookTheme[] = [
       'gentle, hopeful, a little sleepy',
     ],
     papers: [
-      'warm ivory watercolor paper with gentle handmade grain',
-      'soft cream cold-press stock with a fine tooth',
-      'pale oat paper with a faint deckled texture',
+      'cold-press stock with a soft open tooth',
+      'handmade sheet with a feathered deckle edge and visible pulp flecks',
+      'lightly sized paper with a fine even weave',
     ],
     frames: [
       'thin antique-gold botanical filigree',
@@ -93,9 +107,9 @@ export const BOOK_THEMES: BookTheme[] = [
       'wistful, clear, faintly enchanted',
     ],
     papers: [
-      'soft moon-ivory watercolor paper with visible cold-press grain',
-      'cool bone laid paper with a fine chain-line grain',
-      'pale grey-blue stock with a smooth chalky surface',
+      'laid paper with distinct chain lines and a close smooth surface',
+      'calendered stock with a faint powdery surface bloom',
+      'thin sheet with a silky, almost translucent finish',
     ],
     frames: [
       'fine pale-gold vines with tiny stars and crescent details',
@@ -136,9 +150,9 @@ export const BOOK_THEMES: BookTheme[] = [
       'warm, unhurried, well-fed',
     ],
     papers: [
-      'creamy fibrous watercolor paper with subtle deckled texture',
-      'warm oat stock with visible flecks of pulp',
-      'soft buff paper with a light woven grain',
+      'coarse fibrous stock with visible pulp inclusions',
+      'heavy rag paper with a pronounced torn deckle',
+      'matte cartridge with a slight drag under the hand',
     ],
     frames: [
       'narrow antique-gold oak-leaf and berry border',
@@ -179,9 +193,9 @@ export const BOOK_THEMES: BookTheme[] = [
       'grey-day, tender, unhurried',
     ],
     papers: [
-      'sun-warmed ivory watercolor stock with a fine salt-paper grain',
-      'salt-flecked cream paper with a coarse cold-press tooth',
-      'cool bone stock with faint tide-line staining',
+      'rough cold-press stock with a pronounced granular tooth',
+      'softly cockled sheet that has been damp and dried flat again',
+      'dense board with a faintly waxed, close surface',
     ],
     frames: [
       'slender antique-gold seaweed filigree',
@@ -222,9 +236,9 @@ export const BOOK_THEMES: BookTheme[] = [
       'studious, warm, orderly',
     ],
     papers: [
-      'warm vellum-toned watercolor paper with restrained botanical grain',
-      'smooth parchment stock with a faint mottled tone',
-      'pale bone paper with fine visible laid lines',
+      'smooth hot-press stock with almost no tooth',
+      'vellum-finish sheet with a faint mottled cloud in the pulp',
+      'herbarium laid paper with fine visible chain lines',
     ],
     frames: [
       'precise antique-gold botanical linework dotted with tiny constellations',
@@ -272,9 +286,9 @@ export const BOOK_THEMES: BookTheme[] = [
       'remote, luminous, orderly',
     ],
     papers: [
-      'smooth matte composite sheet with a faint hexagonal weave',
-      'cool bone-white synthetic stock with a barely-visible grid emboss',
-      'soft charcoal panel with a fine brushed-metal sheen',
+      'matte composite sheet with a faint hexagonal weave',
+      'synthetic stock with a barely visible embossed grid',
+      'brushed panel with a fine directional satin sheen',
     ],
     frames: [
       'hairline cyan circuit-trace border with small node dots',
@@ -315,9 +329,9 @@ export const BOOK_THEMES: BookTheme[] = [
       'late, unhurried, softly lit',
     ],
     papers: [
-      'warm bamboo paper with a visible long-fibre grain',
-      'aged tea-toned stock with soft mottling',
-      'pale straw paper with a fine ribbed texture',
+      'long-fibre bamboo paper with visible strands in the sheet',
+      'soft absorbent stock with a slightly furred cut edge',
+      'thin ribbed paper with a fine regular corrugation',
     ],
     frames: [
       'thin cinnabar rule with small square corner seals',
@@ -358,9 +372,9 @@ export const BOOK_THEMES: BookTheme[] = [
       'bold, calm, faintly retro',
     ],
     papers: [
-      'flat chalk-white stock with no visible grain',
-      'smooth bone card with a very fine matte tooth',
-      'warm off-white board with a soft even surface',
+      'flat card with no perceptible grain',
+      'smooth board with a very fine even matte tooth',
+      'dense pressed sheet with a slight satin surface',
     ],
     frames: [
       'a single bold rule in flat cobalt with square corners',

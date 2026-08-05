@@ -9,6 +9,29 @@
  *
  * The two are generated from one spec so the pair matches — same paper, same
  * frame, same palette — with the clusters appearing only on the cover.
+ *
+ * ── PAPER IS FEEL; THE PALETTE IS COLOUR ────────────────────
+ * `paper` names tooth, fibre, deckle and finish, never a colour. The two halves
+ * then tint that one stock differently, and this is the only place they are
+ * allowed to diverge:
+ *
+ *   cover  → the palette's DEEPEST colour
+ *   inner  → the palette's LIGHTEST colour
+ *
+ * Not symmetry for its own sake. The inner page is a DOM background with the
+ * challenge problem printed over it in #2d1a00 (Book3DReveal), and nothing
+ * samples the artwork to adapt that ink — so a dark inner page is unreadable,
+ * full stop. The cover has nothing composited over it at all, so it is free.
+ *
+ * Before this split, `paper` carried the colour and both halves inherited the
+ * inner page's brightness requirement. That is why every cover came out pale:
+ * not a choice anyone made, but a legibility constraint leaking through a
+ * shared field. The palette named four or five colours and could reach none of
+ * them, because paper had already claimed the ground and frame had claimed the
+ * line.
+ *
+ * To put covers back to the old pale look, change DEEPEST to LIGHTEST in
+ * compileCoverPrompt. That one word is the whole difference.
  */
 
 import type { BookSpec } from '@/lib/types/challengeRoom'
@@ -45,7 +68,7 @@ export function compileCoverPrompt(spec: BookSpec): string {
     '- A very narrow bleed of that same paper touches every canvas edge.',
     '- Place a single thin continuous frame exactly as described above, approximately 2% inward from every edge.',
     '- Keep the frame close to the canvas edges. Do not leave a wide exterior margin.',
-    '- The framed interior is the same paper color and grain as the bleed.',
+    '- The paper above describes FEEL, not colour. Tint the whole sheet — bleed and framed interior alike — to the DEEPEST colour named in the palette, evenly, keeping that stock’s grain visible through it.',
     '- Four small vignette clusters sit inside the frame, one in each corner:',
     `  top left: ${clean(topLeft)};`,
     `  top right: ${clean(topRight)};`,
@@ -80,7 +103,8 @@ export function compileInnerPrompt(spec: BookSpec): string {
     '- A very narrow bleed of that same paper touches every canvas edge.',
     '- Reuse the same single thin continuous frame approximately 2% inward from every edge.',
     '- Keep the frame close to the canvas edges. Do not leave a wide exterior margin.',
-    '- The page background inside and outside the frame uses the same paper color and grain.',
+    '- The paper above describes FEEL, not colour. Tint the whole page — inside and outside the frame — to the LIGHTEST colour named in the palette, evenly, keeping that stock’s grain visible through it.',
+    '- The page must stay bright. Dark ink is printed onto it later, so a dark or heavily saturated ground is a failure however well it suits the theme.',
     `- Use only a very small, sparse accent around the frame: ${clean(spec.innerAccent?.trim() || LEGACY_INNER_ACCENT)}.`,
     "- Do not include any of the cover's four object clusters. No animals, food, cups, books, gadgets, or large ornaments.",
     '- At least 75% of the framed interior must remain completely blank, evenly colored, and usable for later story text or illustration.',
