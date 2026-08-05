@@ -508,6 +508,13 @@ export function randomBookSpec(theme?: BookTheme, opts: RandomBookOpts = {}): Bo
     mood: pick(t.moods, rng),
     palette: pick(t.palettes, rng),
     coverSurface: pick(t.coverSurfaces, rng),
+    /*
+      On for a fresh roll, because a bound cover is the look the library is
+      after. Not rolled: a coin flip would make half a collection read as
+      boards and half as printed sheets, which is worse than either. The admin
+      toggles it off per bundle.
+    */
+    coverRelief: true,
     paper: pick(t.papers, rng),
     ground: pick(t.grounds, rng),
     frame: pick(t.frames, rng),

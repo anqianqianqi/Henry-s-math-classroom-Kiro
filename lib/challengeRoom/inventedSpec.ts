@@ -305,6 +305,10 @@ export function parseInventedBook(raw: unknown, opts: ParseOpts): InventResult<B
       notes: '',
       ...(artStyle ? { artStyle } : {}),
       ...(innerAccent ? { innerAccent } : {}),
+      // Matches a fresh dice roll. Not asked of the model: whether a cover
+      // looks bound is a house decision, not a per-theme one, and letting it
+      // choose would make the setting flicker between invents.
+      coverRelief: true,
       ...(opts.vector ? { axes: opts.vector } : {}),
     },
   }

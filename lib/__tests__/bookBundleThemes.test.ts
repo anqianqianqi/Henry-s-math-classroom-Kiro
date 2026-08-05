@@ -163,6 +163,52 @@ describe('one colour, two values', () => {
   })
 })
 
+describe('the embossed-cover toggle', () => {
+  const base = randomBookSpec(BOOK_THEMES[0], { rng: seeded(77) })
+
+  it('adds weight to the cover when on', () => {
+    const cover = compileCoverPrompt({ ...base, coverRelief: true })
+    expect(cover).toContain('embossed and slightly raised near the edges')
+    expect(cover).toContain('darkening around the outer rim')
+  })
+
+  it('says nothing at all when off', () => {
+    const cover = compileCoverPrompt({ ...base, coverRelief: false })
+    expect(cover).not.toContain('embossed and slightly raised')
+    expect(cover).not.toContain('outer rim')
+  })
+
+  it('treats an absent flag as off, so old recipes are untouched', () => {
+    const { coverRelief, ...withoutFlag } = base
+    expect(compileCoverPrompt(withoutFlag)).not.toContain('embossed and slightly raised')
+  })
+
+  it('never reaches the inner page, however it is set', () => {
+    /*
+     * The page has to stay evenly coloured: dark ink prints on it and the
+     * layout demands 75% flat blank, so a rim vignette would fight both.
+     */
+    for (const coverRelief of [true, false]) {
+      const inner = compileInnerPrompt({ ...base, coverRelief })
+      expect(inner).not.toContain('embossed and slightly raised')
+      expect(inner).not.toContain('outer rim')
+      expect(inner).toContain('At least 75% of the framed interior must remain completely blank')
+    }
+  })
+
+  it('keeps the flat-swatch guard even with relief on', () => {
+    // "Raised boards" is an invitation to draw an actual book, and this texture
+    // is mapped onto a flat page in the GLB.
+    const cover = compileCoverPrompt({ ...base, coverRelief: true })
+    expect(cover).toContain('no spine')
+    expect(cover).toContain('remains a flat swatch seen straight on')
+  })
+
+  it('is on for a fresh roll', () => {
+    expect(randomBookSpec(BOOK_THEMES[3], { rng: seeded(5) }).coverRelief).toBe(true)
+  })
+})
+
 describe('a recipe saved before `ground` existed', () => {
   /*
    * Optional on the type for exactly this: challenge_rooms and

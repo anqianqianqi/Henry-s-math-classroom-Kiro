@@ -190,6 +190,11 @@ export const admin = {
     en: 'What the cover is bound in — cloth, leather, lacquer, veneer, metal. Texture only.',
     zh: '封面的装帧材质，如布面、皮革、漆面、木皮、金属。只写质感，不写颜色。',
   },
+  'bundle.coverRelief': { en: 'Embossed, bound cover', zh: '封面压纹质感' },
+  'bundle.coverReliefHint': {
+    en: 'Raised, darkened edges so the cover reads as a bound board. Cover only — the inner page stays flat and even so the problem text prints cleanly.',
+    zh: '边缘压纹并压暗，使封面更像硬壳装帧。仅作用于封面：内页保持平整均匀，以便清晰印出题目。',
+  },
   'bundle.paper': { en: 'Inner-page paper', zh: '内页纸张' },
   'bundle.paperHint': {
     en: 'The pages are always paper, and may differ from the cover. Texture only.',

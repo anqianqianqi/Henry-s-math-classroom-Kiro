@@ -578,6 +578,20 @@ export default function BookBundlesAdminPage() {
                 {field(t('design.palette'), 'palette')}
                 {field(t('bundle.coverSurface'), 'coverSurface')}
                 <p className="-mt-1 text-[11px] text-gray-400">{t('bundle.coverSurfaceHint')}</p>
+
+                {/* Cover only — see the note on BookSpec.coverRelief. */}
+                <div className="space-y-1">
+                  <label className="flex items-center gap-2 text-xs font-medium text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={spec.coverRelief ?? false}
+                      onChange={e => setSpec({ ...spec, coverRelief: e.target.checked })}
+                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-400"
+                    />
+                    {t('bundle.coverRelief')}
+                  </label>
+                  <p className="text-[11px] text-gray-400">{t('bundle.coverReliefHint')}</p>
+                </div>
                 {field(t('bundle.paper'), 'paper')}
                 <p className="-mt-1 text-[11px] text-gray-400">{t('bundle.paperHint')}</p>
                 {field(t('bundle.ground'), 'ground')}

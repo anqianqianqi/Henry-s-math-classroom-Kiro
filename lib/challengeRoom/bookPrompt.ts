@@ -124,6 +124,21 @@ export function compileCoverPrompt(spec: BookSpec): string {
     `  bottom right: ${clean(bottomRight)}.`,
     '- Corner clusters are compact, fully inside the frame, and do not touch the edge.',
     '- Preserve a large, quiet, uncluttered central field. No title or center object.',
+    /*
+      Optional weight, off by default.
+
+      Lifted from what the older /admin/book-skins prompt actually does to make
+      a cover feel bound — it has no spine either, and gets its physical weight
+      from embossing and a rim vignette. The second line is the guard: "raised
+      boards" is an invitation to draw an actual book, and this texture is
+      mapped onto a flat page in the GLB.
+    */
+    ...(spec.coverRelief
+      ? [
+        '- Give the material physical weight: embossed and slightly raised near the edges, smoothing towards the centre, with a gentle darkening around the outer rim as if it catches less light there.',
+        '- That weight comes from the material alone. Still no perspective, no tilt, no spine, no page block and no visible edge of a book — the canvas remains a flat swatch seen straight on.',
+      ]
+      : []),
     '',
     'STYLE AND OUTPUT:',
     `- ${textureRenderFor(spec.artStyle)}`,

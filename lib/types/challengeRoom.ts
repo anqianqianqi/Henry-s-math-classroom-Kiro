@@ -109,6 +109,18 @@ export interface BookSpec {
   coverSurface?: string
 
   /**
+   * Emboss the cover and darken its rim, so it reads as a bound board rather
+   * than a printed sheet.
+   *
+   * Cover only. The inner page must stay evenly coloured — dark ink prints on
+   * it and the layout demands 75% flat blank — so relief there would fight both.
+   *
+   * Absent means off, which is what every recipe saved before this existed
+   * gets, and what the compiler produced for all of them.
+   */
+  coverRelief?: boolean
+
+  /**
    * The sheet's colour — ONE colour name, carried by both halves.
    *
    * The cover takes it at full strength and the inner page takes a pale tint of
