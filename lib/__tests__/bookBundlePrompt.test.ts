@@ -54,10 +54,28 @@ describe('the flat-texture contract', () => {
     // shadow baked in would fight the 3D geometry.
     for (const prompt of [compileCoverPrompt(SCI_FI), compileInnerPrompt(SCI_FI)]) {
       expect(prompt).toContain('Exact 3:4 portrait canvas, shown perfectly flat and orthographic')
-      expect(prompt).toContain('No book mockup, no perspective, no spine, no page block, no drop shadow')
+      expect(prompt).toContain('No book mockup, no perspective, no spine, no page block')
       expect(prompt).toContain('approximately 2% inward from every edge')
       expect(prompt).toContain('Keep the frame close to the canvas edges')
     }
+  })
+
+  it('bans shadow differently on each half, which is deliberate', () => {
+    /*
+     * The cover scopes it to BENEATH OR BEHIND the artwork, so shading ON the
+     * material is still available for coverRelief — unqualified, that ban was
+     * cancelling the relief lines outright. What actually fights the GLB is a
+     * shadow baked under the book, since the scene throws its own from a real
+     * light with a per-room position.
+     *
+     * The inner page keeps the unqualified ban, and should: it has to stay
+     * evenly coloured for the 75%-blank rule and for the #2d1a00 problem text
+     * printed over it, so no shading of any kind belongs there.
+     */
+    expect(compileCoverPrompt(SCI_FI))
+      .toContain('no drop shadow beneath or behind the artwork')
+    expect(compileInnerPrompt(SCI_FI))
+      .toContain('no page block, no drop shadow, no background surface')
   })
 })
 
@@ -81,11 +99,29 @@ describe('the prompt no longer contradicts its own spec', () => {
     expect(prompt).toContain('Four small vignette clusters')
   })
 
-  it('states paper and frame in both halves, so the pair matches', () => {
+  it('states the frame in both halves, which is what now holds the pair together', () => {
+    /*
+     * The halves used to share one `paper`. They no longer do: a bound book has
+     * cloth or hide on the boards and paper inside, so each half names its own
+     * material and the pair matches on frame, palette and ground instead.
+     *
+     * SCI_FI predates coverSurface, so its cover falls back to `paper` — which
+     * is exactly the old behaviour, and the next test pins it.
+     */
     for (const prompt of [compileCoverPrompt(SCI_FI), compileInnerPrompt(SCI_FI)]) {
-      expect(prompt).toContain(`Paper: ${SCI_FI.paper}.`)
       expect(prompt).toContain(`Frame: ${SCI_FI.frame}.`)
+      expect(prompt).toContain(`Palette: ${SCI_FI.palette}.`)
     }
+    expect(compileCoverPrompt(SCI_FI)).toContain(`Surface: ${SCI_FI.paper}.`)
+    expect(compileInnerPrompt(SCI_FI)).toContain(`Paper: ${SCI_FI.paper}.`)
+  })
+
+  it('lets a cover name a material the inner page never could', () => {
+    const bound = { ...SCI_FI, coverSurface: 'anodised metal panel with a fine directional brush' }
+    expect(compileCoverPrompt(bound)).toContain('Surface: anodised metal panel with a fine directional brush.')
+    // The page stays paper regardless of what the boards are bound in.
+    expect(compileInnerPrompt(bound)).toContain(`Paper: ${SCI_FI.paper}.`)
+    expect(compileInnerPrompt(bound)).not.toContain('anodised metal')
   })
 })
 

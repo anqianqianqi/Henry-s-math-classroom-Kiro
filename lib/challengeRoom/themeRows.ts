@@ -53,6 +53,7 @@ export interface BookThemeRow {
   styles: unknown
   palettes: unknown
   moods: unknown
+  cover_surfaces: unknown
   papers: unknown
   grounds: unknown
   frames: unknown
@@ -122,6 +123,7 @@ export function rowToBookTheme(row: BookThemeRow): BookTheme {
     styles: asList(row.styles),
     palettes: asList(row.palettes),
     moods: asList(row.moods),
+    coverSurfaces: asList(row.cover_surfaces),
     papers: asList(row.papers),
     grounds: asList(row.grounds),
     frames: asList(row.frames),
@@ -176,6 +178,7 @@ export function mergeBookTheme(existing: BookTheme | null, spec: BookSpec): Book
     styles: [],
     palettes: [],
     moods: [],
+    coverSurfaces: [],
     papers: [],
     grounds: [],
     frames: [],
@@ -189,6 +192,7 @@ export function mergeBookTheme(existing: BookTheme | null, spec: BookSpec): Book
     styles: union(base.styles, [spec.artStyle]),
     palettes: union(base.palettes, [spec.palette]),
     moods: union(base.moods, [spec.mood]),
+    coverSurfaces: union(base.coverSurfaces, [spec.coverSurface]),
     papers: union(base.papers, [spec.paper]),
     grounds: union(base.grounds, [spec.ground]),
     frames: union(base.frames, [spec.frame]),
@@ -222,6 +226,7 @@ export function bookThemeToRow(theme: BookTheme, axes?: AxisVector): Omit<BookTh
     styles: theme.styles,
     palettes: theme.palettes,
     moods: theme.moods,
+    cover_surfaces: theme.coverSurfaces,
     papers: theme.papers,
     grounds: theme.grounds,
     frames: theme.frames,

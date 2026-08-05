@@ -97,8 +97,9 @@ Return ONLY a JSON object with exactly these keys:
   "name":           "the collection's name, 2-4 words, title case",
   "mood":           "three adjectives, comma separated",
   "palette":        "4-5 named colours, comma separated",
-  "paper":          "how the stock FEELS — tooth, fibre, deckle, weave, finish. Never a colour",
-  "ground":         "ONE colour name for the sheet itself, mid-tone to deep, e.g. 'deep indigo'",
+  "coverSurface":   "what the COVER is bound in — cloth, leather, lacquer, veneer, metal, canvas. Material and feel, never a colour",
+  "paper":          "what the INNER PAGE is — a paper, named by TYPE (laid, wove, cartridge, rag, blotting, tracing). Never a colour",
+  "ground":         "ONE colour name for the whole book, mid-tone to deep, e.g. 'deep indigo'",
   "frame":          "a single thin border running just inside the cover edge, one fragment",
   "innerAccent":    "a very sparse motif for the inner page, one fragment",
   "cornerClusters": ["four", "distinct", "small", "vignettes"],
@@ -106,7 +107,9 @@ Return ONLY a JSON object with exactly these keys:
 }
 
 BOOK RULES:
-- "paper" is texture only. Write what the sheet feels like, never what colour it is: "coarse fibrous stock with visible pulp inclusions", not "warm ivory paper".
+- "coverSurface" and "paper" are DIFFERENT MATERIALS, and should be. A bound book has cloth or hide on the boards and paper inside. Reach well beyond paper for the cover: book-cloth, buckram, calf leather, raw silk, waxed canvas, lacquered panel, wood veneer, anodised metal, moulded polymer. Do not write a paper for the cover.
+- Both are texture only. Write what the material feels like, never what colour it is: "coarse buckram over board with a pronounced weave", not "warm ivory cloth".
+- Vary the KIND of paper, not just its adjectives — laid, wove, cartridge, rag, blotting, tracing, glassine, xuan. Avoid opening every one with "stock" or "sheet".
 - "ground" is a single colour, and it is the colour of the whole book: the cover takes it at full strength, the inner page takes a pale tint of the same hue. Choose something mid-tone or deep — a ground that is already pale gives a cover and an inner page that look identical. One colour name only, never a list.
 - "palette" colours the four corner clusters. It is not the ground, so it may range freely.
 - Each corner cluster is a compact group of 2-3 small objects, under 110 characters.
@@ -210,7 +213,8 @@ function exampleFor(kind: 'room' | 'book', vector: AxisVector): string {
       const s = randomBookSpec(t)
       return JSON.stringify({
         name: s.name, mood: s.mood, palette: s.palette,
-        paper: s.paper, ground: s.ground, frame: s.frame,
+        coverSurface: s.coverSurface, paper: s.paper,
+        ground: s.ground, frame: s.frame,
         innerAccent: s.innerAccent,
         cornerClusters: s.cornerClusters, artStyle: s.artStyle,
       }, null, 2)
