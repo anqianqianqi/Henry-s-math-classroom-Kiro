@@ -564,93 +564,150 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Hero row: Welcome + Today's Challenges on left half, pet area on right half */}
-        <div className="flex gap-4 mb-8">
-          {/* Left half: combined welcome + challenges card */}
-          <div className="flex-1 min-w-0 bg-gradient-to-br from-primary-500 to-accent-blue rounded-3xl shadow-lg overflow-hidden">
-            <div className="flex flex-col px-6 py-5 h-full">
-              {/* Welcome text — centered at top */}
-              <div className="text-center mb-4">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <span className="text-2xl">👋</span>
-                  <h2 className="text-xl font-bold text-white">Welcome back, {firstName}!</h2>
-                </div>
-                <p className="text-white/75 text-sm">
-                  {isTeacher ? "Let's inspire some students today! 👨‍🏫" : "Let's have fun with math today! 🎉"}
-                </p>
-              </div>
+        {/* The welcome card runs the full width of the page.
 
-              {/* Today's challenges — full width within outer padding */}
-              <div className="flex flex-col gap-2">
-                {todayChallenges.length > 0 ? (
-                  <>
-                    {(expandedChallenges ? todayChallenges : todayChallenges.slice(0, CHALLENGES_COLLAPSED)).map(challenge => (
-                      <button
-                        key={challenge.id}
-                        onClick={() => {
-                          // Mark comment as seen
-                          if (challenge.submissionId) {
-                            try { localStorage.setItem(`comment_seen_${challenge.submissionId}`, new Date().toISOString()) } catch (_) {}
-                          }
-                          router.push(`/challenges/${challenge.id}`)
-                        }}
-                        className="text-left bg-white/15 hover:bg-white/25 rounded-xl px-4 py-2.5 group flex items-center justify-between transition-all"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
-                              {challenge.challenge_date === new Date().toISOString().split('T')[0] ? '🎯 Today' : `📅 ${challenge.challenge_date}`}
-                            </span>
-                            {!isTeacher && (
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                                challenge.submitted ? 'bg-green-400/30 text-green-100' : 'bg-yellow-400/30 text-yellow-100'
-                              }`}>
-                                {challenge.submitted ? '✓ Done' : '⏳'}
-                              </span>
-                            )}
-                            {!isTeacher && challenge.hasNewTeacherComment && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-blue-400/40 text-blue-100">
-                                💬 New comment
-                              </span>
-                            )}
-                          </div>
-                          <p className="font-semibold text-white text-sm truncate">
-                            {challenge.title}
-                          </p>
-                        </div>
-                        <span className="text-white/50 group-hover:text-white ml-2 shrink-0 transition-colors">→</span>
-                      </button>
-                    ))}
-                    {todayChallenges.length > CHALLENGES_COLLAPSED && (
-                      <button
-                        onClick={() => setExpandedChallenges(v => !v)}
-                        className="text-[11px] text-white/60 hover:text-white text-left pl-1 transition-colors"
-                      >
-                        {expandedChallenges
-                          ? '▲ Show less'
-                          : `▼ +${todayChallenges.length - CHALLENGES_COLLAPSED} more`}
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-white/60 text-sm pl-1">
-                    <span className="text-2xl block mb-1">🎯</span>
-                    No challenge today
-                    {isTeacher && (
-                      <button onClick={() => router.push('/challenges/new')} className="block text-xs text-white/80 hover:text-white mt-1 underline">
-                        Create one →
-                      </button>
-                    )}
-                  </div>
-                )}
+            It used to be one half of a flex row, with the pet room in the
+            other; being a flex child it stretched to the room's 400px, which
+            is where the empty band under the challenge list came from. The
+            room now lives in the grid below, so there is no neighbour left to
+            match and the card is as tall as what is in it. */}
+        <div className="mb-8 bg-gradient-to-br from-primary-500 to-accent-blue rounded-3xl shadow-lg overflow-hidden">
+          <div className="flex flex-col px-6 py-5">
+            {/* Welcome text — centered at top */}
+            <div className="text-center mb-4">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <span className="text-2xl">👋</span>
+                <h2 className="text-xl font-bold text-white">Welcome back, {firstName}!</h2>
               </div>
+              <p className="text-white/75 text-sm">
+                {isTeacher ? "Let's inspire some students today! 👨‍🏫" : "Let's have fun with math today! 🎉"}
+              </p>
+            </div>
+
+            {/* Today's challenges — full width within outer padding */}
+            <div className="flex flex-col gap-2">
+              {todayChallenges.length > 0 ? (
+                <>
+                  {(expandedChallenges ? todayChallenges : todayChallenges.slice(0, CHALLENGES_COLLAPSED)).map(challenge => (
+                    <button
+                      key={challenge.id}
+                      onClick={() => {
+                        // Mark comment as seen
+                        if (challenge.submissionId) {
+                          try { localStorage.setItem(`comment_seen_${challenge.submissionId}`, new Date().toISOString()) } catch (_) {}
+                        }
+                        router.push(`/challenges/${challenge.id}`)
+                      }}
+                      className="text-left bg-white/15 hover:bg-white/25 rounded-xl px-4 py-2.5 group flex items-center justify-between transition-all"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
+                            {challenge.challenge_date === new Date().toISOString().split('T')[0] ? '🎯 Today' : `📅 ${challenge.challenge_date}`}
+                          </span>
+                          {!isTeacher && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                              challenge.submitted ? 'bg-green-400/30 text-green-100' : 'bg-yellow-400/30 text-yellow-100'
+                            }`}>
+                              {challenge.submitted ? '✓ Done' : '⏳'}
+                            </span>
+                          )}
+                          {!isTeacher && challenge.hasNewTeacherComment && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-blue-400/40 text-blue-100">
+                              💬 New comment
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-semibold text-white text-sm truncate">
+                          {challenge.title}
+                        </p>
+                      </div>
+                      <span className="text-white/50 group-hover:text-white ml-2 shrink-0 transition-colors">→</span>
+                    </button>
+                  ))}
+                  {todayChallenges.length > CHALLENGES_COLLAPSED && (
+                    <button
+                      onClick={() => setExpandedChallenges(v => !v)}
+                      className="text-[11px] text-white/60 hover:text-white text-left pl-1 transition-colors"
+                    >
+                      {expandedChallenges
+                        ? '▲ Show less'
+                        : `▼ +${todayChallenges.length - CHALLENGES_COLLAPSED} more`}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div className="text-white/60 text-sm pl-1">
+                  <span className="text-2xl block mb-1">🎯</span>
+                  No challenge today
+                  {isTeacher && (
+                    <button onClick={() => router.push('/challenges/new')} className="block text-xs text-white/80 hover:text-white mt-1 underline">
+                      Create one →
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Right half: pet area — room+frame baked into background, user photo in frame_slot */}
+        {/* Stats Cards.
+
+            The pet room is one of them now — a 2×2 block with the day's tiles
+            above it, the reader's own numbers down its right, and navigation
+            beneath, so it is surrounded rather than parked beside the greeting.
+
+            The order below is one sequence for both roles, which is what keeps
+            the top row identical whoever is reading: a teacher opening the page
+            should not find it rearranged. Compared against the alternatives in
+            docs/dashboard-layout-preview.html. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
+          <Card 
+            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => router.push('/challenges')}
+          >
+            <Card.Body>
+              <div className="text-5xl mb-3 hidden sm:block">🎯</div>
+              <div className="text-3xl font-bold text-gray-900 mb-1">{stats.challengesCount}</div>
+              <div className="text-gray-600 font-medium">{t('nav.challenges')}</div>
+            </Card.Body>
+          </Card>
+
+          {/* Bubble Room — links to the user's first class bubble room, or /classes to pick */}
+          <Card
+            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={async () => {
+              // Find the user's first enrolled class and navigate to its bubble room
+              const supabaseClient = createClient()
+              const { data: { user: u } } = await supabaseClient.auth.getUser()
+              if (!u) { router.push('/classes'); return }
+              router.push('/bubble-room')
+            }}
+          >
+            <Card.Body>
+              <div className="text-5xl mb-3 hidden sm:block">💬</div>
+              <div className="text-2xl font-bold text-gray-900 mb-1">{t('nav.bubbleRoom')}</div>
+              <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Q&amp;A</div>
+            </Card.Body>
+          </Card>
+
+          {/* Decorations hub — book skins, pet room, etc. */}
+          <Card
+            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => router.push('/decorations')}
+          >
+            <Card.Body>
+              <div className="text-5xl mb-3 hidden sm:block">🎨</div>
+              <div className="text-3xl font-bold text-gray-900 mb-1">{t('nav.decorations')}</div>
+              <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Book &amp; Room</div>
+            </Card.Body>
+          </Card>
+
+          {/* Admin: Book Skins managed via Decorations hub */}
+
           <div
             id="pet-area"
-            className="flex-1 min-w-0 self-start rounded-3xl overflow-hidden relative"
+            className="col-span-2 sm:row-span-2 rounded-3xl overflow-hidden relative"
             style={{
               minHeight: '400px',
               backgroundImage: petRoomBgUrl ? `url(${petRoomBgUrl})` : undefined,
@@ -689,31 +746,6 @@ export default function DashboardPage() {
 
             <InlinePet />
           </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
-          <Card 
-            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => router.push('/classes')}
-          >
-            <Card.Body>
-              <div className="text-5xl mb-3 hidden sm:block">📚</div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">{stats.classesCount}</div>
-              <div className="text-gray-600 font-medium">{t('nav.classes')}</div>
-            </Card.Body>
-          </Card>
-
-          <Card 
-            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => router.push('/challenges')}
-          >
-            <Card.Body>
-              <div className="text-5xl mb-3 hidden sm:block">🎯</div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">{stats.challengesCount}</div>
-              <div className="text-gray-600 font-medium">{t('nav.challenges')}</div>
-            </Card.Body>
-          </Card>
 
           {!isTeacher && !isAdmin && (
             <Card className="text-center hover:shadow-lg transition-shadow">
@@ -749,6 +781,48 @@ export default function DashboardPage() {
             </Card>
           )}
 
+          {(isTeacher || isAdmin) && (
+            <Card 
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow relative"
+              onClick={() => router.push('/grading')}
+            >
+              <Card.Body>
+                <div className="text-5xl mb-3 hidden sm:block">📝</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.grade')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.homework')}</div>
+                {ungradedCount > 0 && (
+                  <span className="absolute top-3 right-3 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {ungradedCount}
+                  </span>
+                )}
+              </Card.Body>
+            </Card>
+          )}
+
+          {(isTeacher || isAdmin) && (
+            <Card 
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/students')}
+            >
+              <Card.Body>
+                <div className="text-5xl mb-3 hidden sm:block">📊</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.students')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.history')}</div>
+              </Card.Body>
+            </Card>
+          )}
+
+          <Card 
+            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => router.push('/classes')}
+          >
+            <Card.Body>
+              <div className="text-5xl mb-3 hidden sm:block">📚</div>
+              <div className="text-3xl font-bold text-gray-900 mb-1">{stats.classesCount}</div>
+              <div className="text-gray-600 font-medium">{t('nav.classes')}</div>
+            </Card.Body>
+          </Card>
+
           <Card 
             className="text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/classes/explore')}
@@ -760,71 +834,14 @@ export default function DashboardPage() {
             </Card.Body>
           </Card>
 
-          {/* Bubble Room — links to the user's first class bubble room, or /classes to pick */}
-          <Card
-            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={async () => {
-              // Find the user's first enrolled class and navigate to its bubble room
-              const supabaseClient = createClient()
-              const { data: { user: u } } = await supabaseClient.auth.getUser()
-              if (!u) { router.push('/classes'); return }
-              router.push('/bubble-room')
-            }}
-          >
-            <Card.Body>
-              <div className="text-5xl mb-3 hidden sm:block">💬</div>
-              <div className="text-2xl font-bold text-gray-900 mb-1">{t('nav.bubbleRoom')}</div>
-              <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Q&amp;A</div>
-            </Card.Body>
-          </Card>
-
-          {/* Decorations hub — book skins, pet room, etc. */}
-          <Card
-            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => router.push('/decorations')}
-          >
-            <Card.Body>
-              <div className="text-5xl mb-3 hidden sm:block">🎨</div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">{t('nav.decorations')}</div>
-              <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Book &amp; Room</div>
-            </Card.Body>
-          </Card>
           {(isTeacher || isAdmin) && (
             <Card 
               className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => router.push('/admin/shop')}
+              onClick={() => router.push('/admin/challenge-bank')}
             >
               <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">🛍️</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{t('nav.shop')}</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
-              </Card.Body>
-            </Card>
-          )}
-
-          {/* Admin: Book Skins managed via Decorations hub */}
-
-          {(isTeacher || isAdmin) && (
-            <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => router.push('/admin/roles')}
-            >
-              <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">👥</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.userRoles')}</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
-              </Card.Body>
-            </Card>
-          )}
-
-          {(isTeacher || isAdmin) && (
-            <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => router.push('/admin/tags')}
-            >
-              <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">🏷️</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.tags')}</div>
+                <div className="text-5xl mb-3 hidden sm:block">🏦</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.challengeBank')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
               </Card.Body>
             </Card>
@@ -846,11 +863,11 @@ export default function DashboardPage() {
           {(isTeacher || isAdmin) && (
             <Card 
               className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => router.push('/admin/challenge-bank')}
+              onClick={() => router.push('/admin/tags')}
             >
               <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">🏦</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.challengeBank')}</div>
+                <div className="text-5xl mb-3 hidden sm:block">🏷️</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.tags')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
               </Card.Body>
             </Card>
@@ -859,30 +876,25 @@ export default function DashboardPage() {
           {(isTeacher || isAdmin) && (
             <Card 
               className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => router.push('/students')}
+              onClick={() => router.push('/admin/roles')}
             >
               <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">📊</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.students')}</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.history')}</div>
+                <div className="text-5xl mb-3 hidden sm:block">👥</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.userRoles')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
               </Card.Body>
             </Card>
           )}
 
           {(isTeacher || isAdmin) && (
             <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow relative"
-              onClick={() => router.push('/grading')}
+              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/admin/shop')}
             >
               <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">📝</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.grade')}</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.homework')}</div>
-                {ungradedCount > 0 && (
-                  <span className="absolute top-3 right-3 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                    {ungradedCount}
-                  </span>
-                )}
+                <div className="text-5xl mb-3 hidden sm:block">🛍️</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('nav.shop')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
               </Card.Body>
             </Card>
           )}
