@@ -89,6 +89,23 @@ export const challenges = {
   'challenge.studentStatus': { en: 'Student Status', zh: '学生完成情况' },
   'challenge.gap': { en: 'Gap: ', zh: '差距：' },
 
+  // The right-hand page of the book. A student is asked for an answer; a
+  // teacher is handed the class's answers to mark, so the page announces
+  // itself differently for each and the count comes with the heading.
+  'challenge.bookYourAnswer': { en: 'Your Answer', zh: '你的答案' },
+  'challenge.allStudentSubmissions': {
+    en: 'All Student Submissions ({count})',
+    zh: '全部学生提交（{count}）',
+  },
+  'challenge.noSubmissionsYetTeacher': {
+    en: 'No one has submitted yet.',
+    zh: '还没有学生提交。',
+  },
+  'challenge.otherStudentsSolutions': {
+    en: "Other Students' Solutions ({count})",
+    zh: '其他同学的解答（{count}）',
+  },
+
   // TA grading review — teacher-facing
   'challenge.taWasCorrect': { en: 'TA was correct actually', zh: '助教其实是对的' },
   'challenge.wrongRule': { en: 'Wrong grading rule applied', zh: '套用了错误的评分规则' },

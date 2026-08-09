@@ -1495,6 +1495,13 @@ export default function ChallengePage() {
    * otherwise paint its own card has to go transparent.
    */
   const onBookPage = !!challengeScene && isDesktop
+  /**
+   * True where the flat book's two-page spread prints its own heading over the
+   * right-hand page. The 3D spread prints none, and the flat book on mobile
+   * drops the slot below the page with none either — in both of those the slot
+   * has to title itself.
+   */
+  const spreadPrintsLabel = isDesktop && !onBookPage
 
   const hasSubmitted = !!userSubmission
   const canSeeOthers = (hasSubmitted && userSubmission?.is_locked) || isTeacher
@@ -1502,6 +1509,325 @@ export default function ChallengePage() {
   // For students, otherSubmissions excludes their own, so we add 1 if they submitted
   const submissionCount = isTeacher ? otherSubmissions.length : otherSubmissions.length + (hasSubmitted ? 1 : 0)
   const completionRate = totalStudents > 0 ? Math.round((submissionCount / totalStudents) * 100) : 0
+
+  /*
+    The class's submissions, each with its grading controls attached.
+
+    A variable because this now has two homes: the book's right-hand page for
+    a teacher, who has no answer of their own to write there, and the card
+    below the book for a student who has unlocked the class's work. The markup
+    is the same in both — only the frame around it differs.
+  */
+  const submissionsList = otherSubmissions.length > 0 ? (
+    <div className="space-y-4">
+      {otherSubmissions.map(submission => (
+        <div
+          key={submission.id}
+          id={`submission-${submission.id}`}
+          /* Grey on white below the book, warm on the book's own paper — a
+             grey card is a hole punched in parchment. */
+          className={`p-4 rounded-2xl transition-shadow duration-700 ${
+            onBookPage
+              ? 'bg-[rgba(255,245,220,0.5)] border border-[rgba(180,120,40,0.3)]'
+              : 'bg-gray-50'
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <div className="text-2xl">👤</div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-semibold text-gray-900">
+                  <UserNameWithBadges
+                    name={submission.profiles.nickname || submission.profiles.full_name}
+                    badges={submitterBadgeMap.get(submission.user_id)}
+                  />
+                </p>
+                <p className="text-sm text-gray-500">
+                  {formatTimeAgo(submission.submitted_at)}
+                </p>
+              </div>
+              <TranslatedContent
+                kind="submission"
+                id={submission.id}
+                content={submission.content}
+                contentEn={submission.content_en}
+                contentZh={submission.content_zh}
+                className="text-gray-700 whitespace-pre-wrap mb-3"
+              />
+              {submission.image_url && (
+                <img src={submission.image_url} alt="Solution" className="max-w-full max-h-64 rounded-lg border mb-3" />
+              )}
+              
+              {/* Grading - Teacher only */}
+              {isTeacher && (
+                submission.is_locked ? (
+                  <div className="flex items-center gap-2 mb-3 p-3 bg-gray-100 rounded-lg border-2 border-gray-300 flex-wrap">
+                    <span className="text-sm font-bold text-gray-700">📝 Grade:</span>
+                    <span className="text-sm font-bold">{submission.points ?? '—'}/{challenge?.max_points || 100}</span>
+                    <span className="text-xs text-orange-600 font-medium">🔒 Student locked their grade</span>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleUnlockSubmission(submission.id)}
+                        className="ml-auto px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg hover:bg-orange-200 transition-colors border border-orange-300"
+                      >
+                        🔓 Unlock
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                <div className="flex items-center gap-2 mb-3 p-3 bg-yellow-50 rounded-lg border-2 border-yellow-200 flex-wrap">
+                  <span className="text-sm font-bold text-gray-700">📝 Grade:</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={challenge?.max_points || 100}
+                    defaultValue={submission.points ?? undefined}
+                    id={`grade-${submission.id}`}
+                    className="w-20 px-3 py-2 border-2 border-gray-300 rounded-lg text-center text-sm font-bold focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                    placeholder="0"
+                  />
+                  <span className="text-sm font-medium text-gray-500">/ {challenge?.max_points || 100}</span>
+                  <button
+                    onClick={() => {
+                      const input = document.getElementById(`grade-${submission.id}`) as HTMLInputElement
+                      const val = input?.value
+                      if (val === '') return alert('Enter a score first')
+                      const maxPts = challenge?.max_points || 100
+                      const num = Math.min(maxPts, Math.max(0, parseInt(val)))
+                      handleGradeSubmission(submission.id, num)
+                      alert(`✅ Grade saved: ${num}/${challenge?.max_points || 100}`)
+                    }}
+                    className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Publish Grade
+                  </button>
+                  <button
+                    onClick={() => askTA(submission.id)}
+                    disabled={taGrades[submission.id]?.loading}
+                    className="px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                    title="Ask the AI TA to suggest a grade"
+                  >
+                    {taGrades[submission.id]?.loading ? '⟳ Thinking...' : '🤖 Ask TA'}
+                  </button>                              {submission.points != null && (
+                    <span className="text-xs text-green-600 font-medium">Current: {submission.points}/{challenge?.max_points || 100}</span>
+                  )}
+                </div>
+                )
+              )}
+              {/* TA progress bar while loading */}
+              {isTeacher && taGrades[submission.id]?.loading && (
+                <div className="mb-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-semibold text-indigo-700 animate-pulse">🤖 TA is thinking...</span>
+                    <span className="text-xs text-indigo-500 ml-auto">{taGrades[submission.id].progress?.pct ?? 0}%</span>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="h-2 bg-indigo-100 rounded-full overflow-hidden mb-2">
+                    <div
+                      className="h-full bg-indigo-500 rounded-full transition-all duration-700"
+                      style={{ width: `${taGrades[submission.id].progress?.pct ?? 2}%` }}
+                    />
+                  </div>
+                  {/* Step indicators */}
+                  <div className="flex gap-1.5 text-[10px] text-indigo-500">
+                    {['Topic', 'TA grades', 'Grade Reviewer', 'Pedagogy Reviewer'].map((label, i) => {
+                      const step = taGrades[submission.id].progress?.step ?? 0
+                      const done = i + 1 < step
+                      const active = i + 1 === step
+                      return (
+                        <span key={i} className={`flex-1 text-center py-0.5 rounded transition-all ${done ? 'bg-indigo-200 text-indigo-700 font-medium' : active ? 'bg-indigo-500 text-white font-bold' : 'bg-indigo-50 text-indigo-300'}`}>
+                          {done ? '✓ ' : active ? '⟳ ' : ''}{label}
+                        </span>
+                      )
+                    })}
+                  </div>
+                  <p className="text-[10px] text-indigo-400 mt-1.5 text-center italic">{taGrades[submission.id].progress?.label}</p>
+                </div>
+              )}
+
+              {/* TA suggestion panel — shown after loading */}
+              {isTeacher && taGrades[submission.id] && !taGrades[submission.id]?.loading && (
+                <div className={`mb-3 rounded-xl border-2 text-sm overflow-hidden ${taGrades[submission.id].confidence >= 0.85 ? 'border-indigo-200' : 'border-amber-200'}`}>
+                  {/* Header */}
+                  <div className={`px-3 py-2 flex items-center justify-between ${taGrades[submission.id].confidence >= 0.85 ? 'bg-indigo-50' : 'bg-amber-50'}`}>
+                    <span className="font-semibold text-indigo-800">
+                      🤖 TA: {taGrades[submission.id].suggested_score}/{taGrades[submission.id].max_score}
+                    </span>
+                  <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${taGrades[submission.id].confidence >= 0.85 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {Math.round(taGrades[submission.id].confidence * 100)}% conf
+                      </span>
+                      {taGrades[submission.id].topic_module_used && (
+                        <span className="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full">{taGrades[submission.id].topic_module_used}</span>
+                      )}
+                      {/* Language toggle */}
+                      <button
+                        onClick={() => translateTAGrade(submission.id)}
+                        disabled={taGrades[submission.id].zhTranslation?.translating}
+                        className="text-[10px] px-2 py-0.5 rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 font-medium disabled:opacity-50"
+                      >
+                        {taGrades[submission.id].zhTranslation?.translating ? '翻譯中...' : taGrades[submission.id].lang === 'zh' ? 'EN' : '中文'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="px-3 py-2 space-y-2 bg-white">
+                    {/* Suggested solution */}
+                    {taGrades[submission.id].suggested_solution && (
+                      <div className="p-2 bg-gray-50 rounded-lg border border-gray-100">
+                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">💡 TA&apos;s suggested solution</p>
+                        <p className="text-xs text-gray-700">{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.suggested_solution ? taGrades[submission.id].zhTranslation!.suggested_solution : taGrades[submission.id].suggested_solution}</p>
+                      </div>
+                    )}
+
+                    {/* Grade Reviewer badge */}
+                    {taGrades[submission.id].critic?.grade_changed && (
+                      <div className="p-2 bg-orange-50 border border-orange-200 rounded-lg text-xs">
+                        <span className="font-semibold text-orange-700">🔁 Grade Reviewer revised: </span>
+                        <span className="text-orange-700">{taGrades[submission.id].critic!.draft_score} → {taGrades[submission.id].critic!.final_score} — {taGrades[submission.id].critic!.reasoning}</span>
+                      </div>
+                    )}
+
+                    {/* Reasoning */}
+                    <div className="space-y-1 text-xs text-gray-600">
+                      {taGrades[submission.id].reasoning?.step3_deviation && (
+                        <p><span className="font-medium text-gray-700">Gap: </span>{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.gap ? taGrades[submission.id].zhTranslation!.gap : taGrades[submission.id].reasoning.step3_deviation}</p>
+                      )}
+                      {taGrades[submission.id].reasoning?.step4_henry_perspective && (
+                        <p><span className="font-medium text-gray-700">Henry&apos;s view: </span>{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.henry_view ? taGrades[submission.id].zhTranslation!.henry_view : taGrades[submission.id].reasoning.step4_henry_perspective}</p>
+                      )}
+                    </div>
+
+                    {/* Suggested comment */}
+                    <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+                      <p className="text-[10px] font-semibold text-indigo-600 mb-1">💬 Suggested comment</p>
+                      <p className="text-xs italic text-gray-700">{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.comment ? taGrades[submission.id].zhTranslation!.comment : taGrades[submission.id].comment}</p>
+                    </div>
+
+                    {/* Pedagogy Reviewer deeper question */}
+                    {taGrades[submission.id].anqi?.anqi_question && (
+                      <div className="p-2 bg-purple-50 rounded-lg border border-purple-100">
+                        <p className="text-[10px] font-semibold text-purple-600 mb-1">🧠 Pedagogy Reviewer: deeper question (optional)</p>
+                        <p className="text-xs italic text-gray-700">{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.anqi_question ? taGrades[submission.id].zhTranslation!.anqi_question : taGrades[submission.id].anqi!.anqi_question}</p>
+                      </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        onClick={() => {
+                          const ta = taGrades[submission.id]
+                          handleGradeSubmission(submission.id, ta.suggested_score)
+                          if (ta.comment) setNewComment(prev => ({ ...prev, [submission.id]: ta.comment }))
+                          sendTAFeedback(submission.id, 'accepted', ta.suggested_score, ta.comment)
+                          setTaGrades(prev => { const n = { ...prev }; delete n[submission.id]; return n })
+                        }}
+                        className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700"
+                      >
+                        ✓ Accept TA grade
+                      </button>
+                      <button
+                        onClick={() => setTaGrades(prev => ({ ...prev, [submission.id]: { ...prev[submission.id], feedbackOpen: !prev[submission.id]?.feedbackOpen } as any }))}
+                        className="px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-medium rounded-lg border border-amber-200 hover:bg-amber-100"
+                      >
+                        ✏️ Override + feedback
+                      </button>
+                      <button
+                        onClick={() => setTaGrades(prev => { const n = { ...prev }; delete n[submission.id]; return n })}
+                        className="px-3 py-1.5 bg-white text-gray-500 text-xs font-medium rounded-lg border hover:bg-gray-50"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+
+                    {/* Feedback form — shown when Override is clicked */}
+                    {taGrades[submission.id]?.feedbackOpen && (
+                      <div className="mt-2 p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
+                        <p className="text-xs font-semibold text-amber-700">Tell the TA what it got wrong (helps it improve):</p>
+                        <textarea
+                          value={taGrades[submission.id]?.whatTAMissed || ''}
+                          onChange={e => setTaGrades(prev => ({ ...prev, [submission.id]: { ...prev[submission.id], whatTAMissed: e.target.value } as any }))}
+                          placeholder="e.g. The student's method is correct — just unusual notation"
+                          rows={2}
+                          className="w-full text-xs px-2 py-1.5 border border-amber-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
+                        />
+                        <select
+                          value={taGrades[submission.id]?.lessonType || 'correct'}
+                          onChange={e => setTaGrades(prev => ({ ...prev, [submission.id]: { ...prev[submission.id], lessonType: e.target.value } as any }))}
+                          className="w-full text-xs px-2 py-1.5 border border-amber-200 rounded-lg bg-white"
+                        >
+                          <option value="correct">{t('challenge.taWasCorrect')}</option>
+                          <option value="grading-rules">{t('challenge.wrongRule')}</option>
+                          <option value="math-knowledge">{t('challenge.taMisunderstood')}</option>
+                          <option value="grading-style">{t('challenge.wrongCommentStyle')}</option>
+                        </select>
+                        <button
+                          disabled={taGrades[submission.id]?.feedbackSending}
+                          onClick={() => {
+                            const ta = taGrades[submission.id]
+                            const input = document.getElementById(`grade-${submission.id}`) as HTMLInputElement
+                            const score = parseInt(input?.value || String(ta.suggested_score))
+                            handleGradeSubmission(submission.id, score)
+                            sendTAFeedback(submission.id, 'overridden', score, newComment[submission.id] || ta.comment)
+                            setTaGrades(prev => { const n = { ...prev }; delete n[submission.id]; return n })
+                          }}
+                          className="px-3 py-1.5 bg-amber-600 text-white text-xs font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                        >
+                          {taGrades[submission.id]?.feedbackSending ? 'Saving...' : 'Override + Send feedback'}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* KB update notification — shown after override/flag when rules were patched */}
+                    {(taGrades[submission.id] as any)?.kbUpdateReason && (
+                      <div className="p-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
+                        <span className="font-semibold">📚 Knowledge base updated: </span>
+                        {(taGrades[submission.id] as any).kbUpdateReason}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* Show points to students */}
+              {!isTeacher && submission.points != null && (
+                <div className="mb-3 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm font-medium inline-block">
+                  Score: {submission.points}/{challenge?.max_points || 100}
+                </div>
+              )}
+
+              <CommentThread
+                submissionId={submission.id}
+                comments={comments[submission.id] || []}
+                visibleCount={visibleComments[submission.id] || COMMENTS_INCREMENT}
+                onShowMore={() => handleShowMoreComments(submission.id)}
+                newComment={newComment[submission.id] || ''}
+                onCommentChange={(value) => setNewComment(prev => ({ ...prev, [submission.id]: value }))}
+                onSubmitComment={(img?: File | null) => handleSubmitComment(submission.id, img)}
+                onEditComment={handleEditComment}
+                onDeleteComment={handleDeleteComment}
+                isSubmitting={submittingComment[submission.id] || false}
+                formatTimeAgo={formatTimeAgo}
+                currentUserId={userId}
+                showTitle={false}
+                allowImage={true}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div className="text-center py-8">
+      <div className="text-4xl mb-3">🤔</div>
+      <p className="text-gray-600">
+        {/* "Be the first" is an invitation to answer, which is the one thing a
+            teacher looking at this list is not here to do. */}
+        {isTeacher
+          ? t('challenge.noSubmissionsYetTeacher')
+          : 'No other submissions yet. Be the first!'}
+      </p>
+    </div>
+  )
 
   return (
     <>
@@ -1649,7 +1975,38 @@ export default function ChallengePage() {
           coverLayout={defaultCoverLayout}
           coverFrameUrls={defaultCoverFrameUrls}
           coverOverlays={defaultCoverOverlays.length > 0 ? defaultCoverOverlays : undefined}
+          solutionLabel={
+            isTeacher
+              ? `💬 ${t('challenge.allStudentSubmissions', { count: otherSubmissions.length })}`
+              : `✍ ${t('challenge.bookYourAnswer')}`
+          }
           solutionSlot={
+            /*
+              The right-hand page is whatever this reader came to the book to
+              do. A student writes an answer on it. A teacher has none to write
+              — they are here to mark — so the page carries the class's work and
+              its grading controls instead, opposite the problem it answers.
+            */
+            isTeacher ? (
+              <Card bare={onBookPage} className={onBookPage ? 'rounded-2xl border-2 border-[rgba(100,60,10,0.3)]' : ''}>
+                {/* The flat book's desktop spread prints `solutionLabel` above
+                    the slot already, so titling it here too would stack the
+                    same line twice. Nowhere else prints one: the 3D spread has
+                    no such label, and the flat book on mobile drops the slot
+                    below the page bare. */}
+                {!spreadPrintsLabel && (
+                  <Card.Header>
+                    <Card.Title className="flex items-center gap-2">
+                      <span>💬</span>
+                      {t('challenge.allStudentSubmissions', { count: otherSubmissions.length })}
+                    </Card.Title>
+                  </Card.Header>
+                )}
+                <Card.Body className={onBookPage ? '!px-4' : ''}>
+                  {submissionsList}
+                </Card.Body>
+              </Card>
+            ) : (
             <>{hasSubmitted && !isEditing ? (
               <>
               {/* Show submitted solution */}
@@ -1810,6 +2167,7 @@ export default function ChallengePage() {
                 </Card.Body>
               </Card>
             )}</>
+            )
           }
         >
           {/* Tags — suppressed on the book page, where the worksheet prints its
@@ -2116,317 +2474,22 @@ export default function ChallengePage() {
           </Card>
         )}
 
-        {/* Other Submissions Section */}
-        {canSeeOthers ? (
+        {/* Other Submissions Section.
+
+            Teachers have no copy here: theirs is on the book's right-hand
+            page, where the submit form used to be, so the problem stays
+            beside the work being marked rather than a screen above it. */}
+        {canSeeOthers && !isTeacher ? (
           // Unlocked: Show other submissions
           <Card>
             <Card.Header>
               <Card.Title className="flex items-center gap-2">
                 <span>💬</span>
-                {isTeacher ? 'All Student Submissions' : 'Other Students\' Solutions'} ({otherSubmissions.length})
+                {t('challenge.otherStudentsSolutions', { count: otherSubmissions.length })}
               </Card.Title>
             </Card.Header>
             <Card.Body>
-              {otherSubmissions.length > 0 ? (
-                <div className="space-y-4">
-                  {otherSubmissions.map(submission => (
-                    <div
-                      key={submission.id}
-                      id={`submission-${submission.id}`}
-                      className="p-4 bg-gray-50 rounded-2xl transition-shadow duration-700"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="text-2xl">👤</div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="font-semibold text-gray-900">
-                              <UserNameWithBadges
-                                name={submission.profiles.nickname || submission.profiles.full_name}
-                                badges={submitterBadgeMap.get(submission.user_id)}
-                              />
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {formatTimeAgo(submission.submitted_at)}
-                            </p>
-                          </div>
-                          <TranslatedContent
-                            kind="submission"
-                            id={submission.id}
-                            content={submission.content}
-                            contentEn={submission.content_en}
-                            contentZh={submission.content_zh}
-                            className="text-gray-700 whitespace-pre-wrap mb-3"
-                          />
-                          {submission.image_url && (
-                            <img src={submission.image_url} alt="Solution" className="max-w-full max-h-64 rounded-lg border mb-3" />
-                          )}
-                          
-                          {/* Grading - Teacher only */}
-                          {isTeacher && (
-                            submission.is_locked ? (
-                              <div className="flex items-center gap-2 mb-3 p-3 bg-gray-100 rounded-lg border-2 border-gray-300 flex-wrap">
-                                <span className="text-sm font-bold text-gray-700">📝 Grade:</span>
-                                <span className="text-sm font-bold">{submission.points ?? '—'}/{challenge?.max_points || 100}</span>
-                                <span className="text-xs text-orange-600 font-medium">🔒 Student locked their grade</span>
-                                {isAdmin && (
-                                  <button
-                                    onClick={() => handleUnlockSubmission(submission.id)}
-                                    className="ml-auto px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-lg hover:bg-orange-200 transition-colors border border-orange-300"
-                                  >
-                                    🔓 Unlock
-                                  </button>
-                                )}
-                              </div>
-                            ) : (
-                            <div className="flex items-center gap-2 mb-3 p-3 bg-yellow-50 rounded-lg border-2 border-yellow-200 flex-wrap">
-                              <span className="text-sm font-bold text-gray-700">📝 Grade:</span>
-                              <input
-                                type="number"
-                                min={0}
-                                max={challenge?.max_points || 100}
-                                defaultValue={submission.points ?? undefined}
-                                id={`grade-${submission.id}`}
-                                className="w-20 px-3 py-2 border-2 border-gray-300 rounded-lg text-center text-sm font-bold focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                                placeholder="0"
-                              />
-                              <span className="text-sm font-medium text-gray-500">/ {challenge?.max_points || 100}</span>
-                              <button
-                                onClick={() => {
-                                  const input = document.getElementById(`grade-${submission.id}`) as HTMLInputElement
-                                  const val = input?.value
-                                  if (val === '') return alert('Enter a score first')
-                                  const maxPts = challenge?.max_points || 100
-                                  const num = Math.min(maxPts, Math.max(0, parseInt(val)))
-                                  handleGradeSubmission(submission.id, num)
-                                  alert(`✅ Grade saved: ${num}/${challenge?.max_points || 100}`)
-                                }}
-                                className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                              >
-                                Publish Grade
-                              </button>
-                              <button
-                                onClick={() => askTA(submission.id)}
-                                disabled={taGrades[submission.id]?.loading}
-                                className="px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                                title="Ask the AI TA to suggest a grade"
-                              >
-                                {taGrades[submission.id]?.loading ? '⟳ Thinking...' : '🤖 Ask TA'}
-                              </button>                              {submission.points != null && (
-                                <span className="text-xs text-green-600 font-medium">Current: {submission.points}/{challenge?.max_points || 100}</span>
-                              )}
-                            </div>
-                            )
-                          )}
-                          {/* TA progress bar while loading */}
-                          {isTeacher && taGrades[submission.id]?.loading && (
-                            <div className="mb-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="text-xs font-semibold text-indigo-700 animate-pulse">🤖 TA is thinking...</span>
-                                <span className="text-xs text-indigo-500 ml-auto">{taGrades[submission.id].progress?.pct ?? 0}%</span>
-                              </div>
-                              {/* Progress bar */}
-                              <div className="h-2 bg-indigo-100 rounded-full overflow-hidden mb-2">
-                                <div
-                                  className="h-full bg-indigo-500 rounded-full transition-all duration-700"
-                                  style={{ width: `${taGrades[submission.id].progress?.pct ?? 2}%` }}
-                                />
-                              </div>
-                              {/* Step indicators */}
-                              <div className="flex gap-1.5 text-[10px] text-indigo-500">
-                                {['Topic', 'TA grades', 'Grade Reviewer', 'Pedagogy Reviewer'].map((label, i) => {
-                                  const step = taGrades[submission.id].progress?.step ?? 0
-                                  const done = i + 1 < step
-                                  const active = i + 1 === step
-                                  return (
-                                    <span key={i} className={`flex-1 text-center py-0.5 rounded transition-all ${done ? 'bg-indigo-200 text-indigo-700 font-medium' : active ? 'bg-indigo-500 text-white font-bold' : 'bg-indigo-50 text-indigo-300'}`}>
-                                      {done ? '✓ ' : active ? '⟳ ' : ''}{label}
-                                    </span>
-                                  )
-                                })}
-                              </div>
-                              <p className="text-[10px] text-indigo-400 mt-1.5 text-center italic">{taGrades[submission.id].progress?.label}</p>
-                            </div>
-                          )}
-
-                          {/* TA suggestion panel — shown after loading */}
-                          {isTeacher && taGrades[submission.id] && !taGrades[submission.id]?.loading && (
-                            <div className={`mb-3 rounded-xl border-2 text-sm overflow-hidden ${taGrades[submission.id].confidence >= 0.85 ? 'border-indigo-200' : 'border-amber-200'}`}>
-                              {/* Header */}
-                              <div className={`px-3 py-2 flex items-center justify-between ${taGrades[submission.id].confidence >= 0.85 ? 'bg-indigo-50' : 'bg-amber-50'}`}>
-                                <span className="font-semibold text-indigo-800">
-                                  🤖 TA: {taGrades[submission.id].suggested_score}/{taGrades[submission.id].max_score}
-                                </span>
-                              <div className="flex items-center gap-2">
-                                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${taGrades[submission.id].confidence >= 0.85 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                                    {Math.round(taGrades[submission.id].confidence * 100)}% conf
-                                  </span>
-                                  {taGrades[submission.id].topic_module_used && (
-                                    <span className="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full">{taGrades[submission.id].topic_module_used}</span>
-                                  )}
-                                  {/* Language toggle */}
-                                  <button
-                                    onClick={() => translateTAGrade(submission.id)}
-                                    disabled={taGrades[submission.id].zhTranslation?.translating}
-                                    className="text-[10px] px-2 py-0.5 rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 font-medium disabled:opacity-50"
-                                  >
-                                    {taGrades[submission.id].zhTranslation?.translating ? '翻譯中...' : taGrades[submission.id].lang === 'zh' ? 'EN' : '中文'}
-                                  </button>
-                                </div>
-                              </div>
-
-                              <div className="px-3 py-2 space-y-2 bg-white">
-                                {/* Suggested solution */}
-                                {taGrades[submission.id].suggested_solution && (
-                                  <div className="p-2 bg-gray-50 rounded-lg border border-gray-100">
-                                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">💡 TA&apos;s suggested solution</p>
-                                    <p className="text-xs text-gray-700">{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.suggested_solution ? taGrades[submission.id].zhTranslation!.suggested_solution : taGrades[submission.id].suggested_solution}</p>
-                                  </div>
-                                )}
-
-                                {/* Grade Reviewer badge */}
-                                {taGrades[submission.id].critic?.grade_changed && (
-                                  <div className="p-2 bg-orange-50 border border-orange-200 rounded-lg text-xs">
-                                    <span className="font-semibold text-orange-700">🔁 Grade Reviewer revised: </span>
-                                    <span className="text-orange-700">{taGrades[submission.id].critic!.draft_score} → {taGrades[submission.id].critic!.final_score} — {taGrades[submission.id].critic!.reasoning}</span>
-                                  </div>
-                                )}
-
-                                {/* Reasoning */}
-                                <div className="space-y-1 text-xs text-gray-600">
-                                  {taGrades[submission.id].reasoning?.step3_deviation && (
-                                    <p><span className="font-medium text-gray-700">Gap: </span>{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.gap ? taGrades[submission.id].zhTranslation!.gap : taGrades[submission.id].reasoning.step3_deviation}</p>
-                                  )}
-                                  {taGrades[submission.id].reasoning?.step4_henry_perspective && (
-                                    <p><span className="font-medium text-gray-700">Henry&apos;s view: </span>{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.henry_view ? taGrades[submission.id].zhTranslation!.henry_view : taGrades[submission.id].reasoning.step4_henry_perspective}</p>
-                                  )}
-                                </div>
-
-                                {/* Suggested comment */}
-                                <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100">
-                                  <p className="text-[10px] font-semibold text-indigo-600 mb-1">💬 Suggested comment</p>
-                                  <p className="text-xs italic text-gray-700">{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.comment ? taGrades[submission.id].zhTranslation!.comment : taGrades[submission.id].comment}</p>
-                                </div>
-
-                                {/* Pedagogy Reviewer deeper question */}
-                                {taGrades[submission.id].anqi?.anqi_question && (
-                                  <div className="p-2 bg-purple-50 rounded-lg border border-purple-100">
-                                    <p className="text-[10px] font-semibold text-purple-600 mb-1">🧠 Pedagogy Reviewer: deeper question (optional)</p>
-                                    <p className="text-xs italic text-gray-700">{taGrades[submission.id].lang === 'zh' && taGrades[submission.id].zhTranslation?.anqi_question ? taGrades[submission.id].zhTranslation!.anqi_question : taGrades[submission.id].anqi!.anqi_question}</p>
-                                  </div>
-                                )}
-
-                                {/* Action buttons */}
-                                <div className="flex gap-2 flex-wrap">
-                                  <button
-                                    onClick={() => {
-                                      const ta = taGrades[submission.id]
-                                      handleGradeSubmission(submission.id, ta.suggested_score)
-                                      if (ta.comment) setNewComment(prev => ({ ...prev, [submission.id]: ta.comment }))
-                                      sendTAFeedback(submission.id, 'accepted', ta.suggested_score, ta.comment)
-                                      setTaGrades(prev => { const n = { ...prev }; delete n[submission.id]; return n })
-                                    }}
-                                    className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700"
-                                  >
-                                    ✓ Accept TA grade
-                                  </button>
-                                  <button
-                                    onClick={() => setTaGrades(prev => ({ ...prev, [submission.id]: { ...prev[submission.id], feedbackOpen: !prev[submission.id]?.feedbackOpen } as any }))}
-                                    className="px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-medium rounded-lg border border-amber-200 hover:bg-amber-100"
-                                  >
-                                    ✏️ Override + feedback
-                                  </button>
-                                  <button
-                                    onClick={() => setTaGrades(prev => { const n = { ...prev }; delete n[submission.id]; return n })}
-                                    className="px-3 py-1.5 bg-white text-gray-500 text-xs font-medium rounded-lg border hover:bg-gray-50"
-                                  >
-                                    Dismiss
-                                  </button>
-                                </div>
-
-                                {/* Feedback form — shown when Override is clicked */}
-                                {taGrades[submission.id]?.feedbackOpen && (
-                                  <div className="mt-2 p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
-                                    <p className="text-xs font-semibold text-amber-700">Tell the TA what it got wrong (helps it improve):</p>
-                                    <textarea
-                                      value={taGrades[submission.id]?.whatTAMissed || ''}
-                                      onChange={e => setTaGrades(prev => ({ ...prev, [submission.id]: { ...prev[submission.id], whatTAMissed: e.target.value } as any }))}
-                                      placeholder="e.g. The student's method is correct — just unusual notation"
-                                      rows={2}
-                                      className="w-full text-xs px-2 py-1.5 border border-amber-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
-                                    />
-                                    <select
-                                      value={taGrades[submission.id]?.lessonType || 'correct'}
-                                      onChange={e => setTaGrades(prev => ({ ...prev, [submission.id]: { ...prev[submission.id], lessonType: e.target.value } as any }))}
-                                      className="w-full text-xs px-2 py-1.5 border border-amber-200 rounded-lg bg-white"
-                                    >
-                                      <option value="correct">{t('challenge.taWasCorrect')}</option>
-                                      <option value="grading-rules">{t('challenge.wrongRule')}</option>
-                                      <option value="math-knowledge">{t('challenge.taMisunderstood')}</option>
-                                      <option value="grading-style">{t('challenge.wrongCommentStyle')}</option>
-                                    </select>
-                                    <button
-                                      disabled={taGrades[submission.id]?.feedbackSending}
-                                      onClick={() => {
-                                        const ta = taGrades[submission.id]
-                                        const input = document.getElementById(`grade-${submission.id}`) as HTMLInputElement
-                                        const score = parseInt(input?.value || String(ta.suggested_score))
-                                        handleGradeSubmission(submission.id, score)
-                                        sendTAFeedback(submission.id, 'overridden', score, newComment[submission.id] || ta.comment)
-                                        setTaGrades(prev => { const n = { ...prev }; delete n[submission.id]; return n })
-                                      }}
-                                      className="px-3 py-1.5 bg-amber-600 text-white text-xs font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50"
-                                    >
-                                      {taGrades[submission.id]?.feedbackSending ? 'Saving...' : 'Override + Send feedback'}
-                                    </button>
-                                  </div>
-                                )}
-
-                                {/* KB update notification — shown after override/flag when rules were patched */}
-                                {(taGrades[submission.id] as any)?.kbUpdateReason && (
-                                  <div className="p-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
-                                    <span className="font-semibold">📚 Knowledge base updated: </span>
-                                    {(taGrades[submission.id] as any).kbUpdateReason}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                          {/* Show points to students */}
-                          {!isTeacher && submission.points != null && (
-                            <div className="mb-3 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm font-medium inline-block">
-                              Score: {submission.points}/{challenge?.max_points || 100}
-                            </div>
-                          )}
-
-                          <CommentThread
-                            submissionId={submission.id}
-                            comments={comments[submission.id] || []}
-                            visibleCount={visibleComments[submission.id] || COMMENTS_INCREMENT}
-                            onShowMore={() => handleShowMoreComments(submission.id)}
-                            newComment={newComment[submission.id] || ''}
-                            onCommentChange={(value) => setNewComment(prev => ({ ...prev, [submission.id]: value }))}
-                            onSubmitComment={(img?: File | null) => handleSubmitComment(submission.id, img)}
-                            onEditComment={handleEditComment}
-                            onDeleteComment={handleDeleteComment}
-                            isSubmitting={submittingComment[submission.id] || false}
-                            formatTimeAgo={formatTimeAgo}
-                            currentUserId={userId}
-                            showTitle={false}
-                            allowImage={true}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="text-4xl mb-3">🤔</div>
-                  <p className="text-gray-600">
-                    No other submissions yet. Be the first!
-                  </p>
-                </div>
-              )}
+              {submissionsList}
             </Card.Body>
           </Card>
         ) : (!isTeacher && !hasSubmitted) ? (

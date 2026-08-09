@@ -17,6 +17,14 @@ interface MagicBookRevealProps {
    */
   solutionSlot?: React.ReactNode
   /**
+   * The small caps heading printed above `solutionSlot` on the desktop spread.
+   *
+   * Overridable because the right page is not always a place to write: a
+   * teacher gets the class's submissions there instead, and "Your Answer" over
+   * a list of other people's work names the wrong thing.
+   */
+  solutionLabel?: React.ReactNode
+  /**
    * URL for the book cover background image.
    * Defaults to the built-in treasure-map image at /book-cover-default.jpg.
    * Override with a shop-purchased skin URL to personalise the cover.
@@ -60,7 +68,7 @@ interface MagicBookRevealProps {
  * Mobile (< 768 px):
  *   Same cover/animation, single parchment page for the problem, solution slot below.
  */
-export function MagicBookReveal({ title, date, children, solutionSlot, coverImageUrl, pageImageUrl, coverLayout, coverFrameUrls, coverOverlays }: MagicBookRevealProps) {
+export function MagicBookReveal({ title, date, children, solutionSlot, solutionLabel, coverImageUrl, pageImageUrl, coverLayout, coverFrameUrls, coverOverlays }: MagicBookRevealProps) {
   const [phase, setPhase] = useState<'closed' | 'opening' | 'open'>('closed')
   const [particles, setParticles] = useState<
     { id: number; x: number; y: number; angle: number; delay: number }[]
@@ -803,7 +811,7 @@ export function MagicBookReveal({ title, date, children, solutionSlot, coverImag
                       className="text-sm font-semibold tracking-widest uppercase"
                       style={{ color: 'rgba(100,60,10,0.55)', fontFamily: 'Georgia, serif', letterSpacing: '0.15em' }}
                     >
-                      ✍ Your Answer
+                      {solutionLabel ?? '✍ Your Answer'}
                     </p>
                   </div>
                   {solutionSlot ? (
