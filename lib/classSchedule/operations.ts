@@ -256,6 +256,36 @@ export async function addOneOff(
   await renumberClass(supabase, classId)
 }
 
+/**
+ * Change one session's time.
+ *
+ * Editing a session that belongs to a repeating schedule DETACHES it — its
+ * series_id is cleared. That is the whole mechanism by which an individual
+ * change survives: the next time the schedule is edited it rebuilds its own
+ * future sessions, and anything still carrying its series_id is replaced. A
+ * session moved by hand has to stop being the schedule's business, or the
+ * change is silently undone the next time someone touches the series.
+ *
+ * Renumbered afterwards because moving a session earlier or later can reorder
+ * it against another on the same day.
+ */
+export async function updateOccurrenceTime(
+  supabase: SupabaseClient,
+  id: string, classId: string, startTime: string, endTime: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('class_occurrences')
+    .update({
+      start_time: toSqlTime(startTime),
+      end_time: toSqlTime(endTime),
+      series_id: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+  if (error) throw error
+  await renumberClass(supabase, classId)
+}
+
 /** Remove one session. Its homework and materials keep their class. */
 export async function deleteOccurrence(
   supabase: SupabaseClient, id: string, classId: string,

@@ -274,6 +274,11 @@ export const classes = {
   'sched.noSessions': { en: 'No classes this day.', zh: '当天没有课。' },
   'sched.addClass': { en: 'Add a class', zh: '添加一节课' },
   'sched.partOfSeries': { en: 'Part of a repeating schedule', zh: '属于某个重复安排' },
+  'sched.modify': { en: 'Change time', zh: '修改时间' },
+  'sched.modifyDetaches': {
+    en: 'Changing this one takes it out of the repeating schedule, so a later edit to that schedule will leave it alone.',
+    zh: '修改这一节会把它从重复安排中移出，之后再修改该安排也不会影响它。',
+  },
   'sched.removeThis': { en: 'Just this one', zh: '仅这一节' },
   'sched.removeSeries': { en: 'This and all future', zh: '这节及以后全部' },
   'sched.deleteOccurrenceConfirm': {

@@ -28,7 +28,9 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { classColour } from './MonthCalendar'
 import { fromSqlTime } from '@/lib/classSchedule/series'
-import { addOneOff, deleteOccurrence, deleteSeriesFrom } from '@/lib/classSchedule/operations'
+import {
+  addOneOff, deleteOccurrence, deleteSeriesFrom, updateOccurrenceTime,
+} from '@/lib/classSchedule/operations'
 
 export interface DaySession {
   id: string
@@ -62,6 +64,10 @@ export function DaySessionsModal({
   const [end, setEnd] = useState('17:00')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** Occurrence id whose time is being edited, and the fields for it. */
+  const [editing, setEditing] = useState<string | null>(null)
+  const [editStart, setEditStart] = useState('16:00')
+  const [editEnd, setEditEnd] = useState('17:00')
 
   if (!date) return null
 
@@ -122,24 +128,74 @@ export function DaySessionsModal({
                   {s.seriesId && (
                     <p className="text-[11px] text-gray-400 mb-1.5 pl-4">{t('sched.partOfSeries')}</p>
                   )}
-                  <div className="flex gap-2 pl-4">
-                    <Button variant="outline" size="sm" disabled={busy}
-                      onClick={() => {
-                        if (!confirm(t('sched.deleteOccurrenceConfirm'))) return
-                        run(() => deleteOccurrence(supabase, s.id, s.classId))
-                      }}>
-                      {t('sched.removeThis')}
-                    </Button>
-                    {s.seriesId && (
+
+                  {editing === s.id ? (
+                    <div className="pl-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                      <div className="grid grid-cols-2 gap-3 mb-2">
+                        <label className="text-xs font-medium text-gray-600">
+                          {t('sched.from')}
+                          <input type="time" className={field} value={editStart}
+                            onChange={e => setEditStart(e.target.value)} />
+                        </label>
+                        <label className="text-xs font-medium text-gray-600">
+                          {t('sched.to')}
+                          <input type="time" className={field} value={editEnd}
+                            onChange={e => setEditEnd(e.target.value)} />
+                        </label>
+                      </div>
+                      {/* Said before saving, not after: moving one sitting of a
+                          repeating class takes it out of that schedule for good,
+                          which is not obvious from a time field. */}
+                      {s.seriesId && (
+                        <p className="text-[11px] text-amber-700 mb-2">{t('sched.modifyDetaches')}</p>
+                      )}
+                      <div className="flex gap-2">
+                        <Button size="sm" disabled={busy || editEnd <= editStart}
+                          onClick={() => run(async () => {
+                            await updateOccurrenceTime(supabase, s.id, s.classId, editStart, editEnd)
+                            setEditing(null)
+                          })}>
+                          {busy ? t('status.saving') : t('action.save')}
+                        </Button>
+                        <Button variant="outline" size="sm" disabled={busy}
+                          onClick={() => setEditing(null)}>
+                          {t('action.cancel')}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2 pl-4">
+                      <Button variant="outline" size="sm" disabled={busy}
+                        onClick={() => {
+                          setEditing(s.id)
+                          setEditStart(fromSqlTime(s.startTime))
+                          setEditEnd(fromSqlTime(s.endTime))
+                        }}>
+                        {t('sched.modify')}
+                      </Button>
+                      {/*
+                        "Just this one" only means anything next to "this and all
+                        future". A session that belongs to no schedule has nothing
+                        to be contrasted with, so it just says Delete.
+                      */}
                       <Button variant="danger" size="sm" disabled={busy}
                         onClick={() => {
-                          if (!confirm(t('sched.deleteFromHereConfirm'))) return
-                          run(() => deleteSeriesFrom(supabase, s.seriesId!, s.classId, date!))
+                          if (!confirm(t('sched.deleteOccurrenceConfirm'))) return
+                          run(() => deleteOccurrence(supabase, s.id, s.classId))
                         }}>
-                        {t('sched.removeSeries')}
+                        {s.seriesId ? t('sched.removeThis') : t('action.delete')}
                       </Button>
-                    )}
-                  </div>
+                      {s.seriesId && (
+                        <Button variant="danger" size="sm" disabled={busy}
+                          onClick={() => {
+                            if (!confirm(t('sched.deleteFromHereConfirm'))) return
+                            run(() => deleteSeriesFrom(supabase, s.seriesId!, s.classId, date!))
+                          }}>
+                          {t('sched.removeSeries')}
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
