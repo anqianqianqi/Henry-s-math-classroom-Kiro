@@ -132,6 +132,14 @@ export default function DashboardPage() {
   const [petRoomFrameUrl, setPetRoomFrameUrl] = useState<string | null>(null)
   const [petRoomFrameSlot, setPetRoomFrameSlot] = useState<{ x: number; y: number; w: number; h: number; rotate?: number; rotateY?: number; rotateX?: number } | null>(null)
   const [petRoomAnimZones, setPetRoomAnimZones] = useState<any[]>([])
+  /**
+   * The room picture's own width/height, e.g. 1.5 for a 1536x1024 room.
+   *
+   * Read from the file rather than stored, so a room uploaded at any shape is
+   * shown at that shape without anyone recording its dimensions by hand. Null
+   * until the image reports; see the note on #pet-area for why it matters.
+   */
+  const [petRoomAspect, setPetRoomAspect] = useState<number | null>(null)
   const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null) // latest blindbox image this user owns
   const router = useRouter()
   const supabase = createClient()
@@ -595,6 +603,28 @@ export default function DashboardPage() {
     // session lands on, so the month has to be rebuilt when it resolves.
   }, [user?.id, isTeacher, assignedChallengeIds, calendarMonth, monthNonce, viewerTimezone])
 
+  /*
+    Ask the room picture how wide it is relative to its height.
+
+    Decoding the header is enough for naturalWidth — the browser has usually
+    already fetched the file for the background, so this is the cache rather
+    than a second download. A failure leaves the ratio null and the box keeps
+    its 400px floor, which is where it was before any of this.
+  */
+  useEffect(() => {
+    if (!petRoomBgUrl) { setPetRoomAspect(null); return }
+    let cancelled = false
+    const img = new Image()
+    img.onload = () => {
+      if (!cancelled && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        setPetRoomAspect(img.naturalWidth / img.naturalHeight)
+      }
+    }
+    img.onerror = () => { if (!cancelled) setPetRoomAspect(null) }
+    img.src = petRoomBgUrl
+    return () => { cancelled = true }
+  }, [petRoomBgUrl])
+
   // The class list for the two authoring dropdowns. Teachers see every class,
   // matching /classes; loaded once rather than per modal open.
   useEffect(() => {
@@ -919,7 +949,30 @@ export default function DashboardPage() {
             id="pet-area"
             className="col-span-2 sm:row-span-2 rounded-3xl overflow-hidden relative"
             style={{
-              minHeight: '400px',
+              /*
+                ── The room is shown at its own shape, and that is load-bearing ──
+                The background is painted with `cover`, but every overlay on top
+                of it — the photo in the wall frame, and each animated zone — is
+                positioned as a percentage of THIS BOX. Those two only agree when
+                the box has the same aspect as the picture. `cover` on a wider box
+                crops the top and bottom away and scales what is left, while the
+                overlays go on stretching across the full box: the room loses its
+                ceiling and its floor, and the animations drift off the things
+                they animate.
+
+                It matched by luck before. The old half-of-a-hero-row was about
+                600x400 and pet-room-bg.png is 1536x1024 — both exactly 3:2 — so
+                nothing was cropped and nothing drifted. Moving into the grid made
+                the box 2:1 and broke both at once.
+
+                Asking the image for its own ratio makes the agreement a rule
+                rather than a coincidence, and it holds for any room a student
+                picks, whatever shape it was drawn at.
+              */
+              aspectRatio: petRoomAspect ?? undefined,
+              // Only until the image reports back. A fixed height after that
+              // would fight the ratio and re-introduce the crop.
+              minHeight: petRoomAspect ? undefined : '400px',
               backgroundImage: petRoomBgUrl ? `url(${petRoomBgUrl})` : undefined,
               backgroundSize: 'cover',
               backgroundPosition: 'center bottom',
