@@ -37,7 +37,8 @@ import type { PaperPalette } from '@/lib/ui/paperCard'
 import { problemStatus, type ProblemStatus } from '@/lib/classSchedule/problemStatus'
 
 /** The wording, kept for the hover title — the cell itself has room for a mark. */
-const STATUS_KEY: Record<Exclude<ProblemStatus, 'todo'>, TranslationKey> = {
+const STATUS_KEY: Record<ProblemStatus, TranslationKey> = {
+  todo: 'dash.statusTodo',
   ungraded: 'dash.statusUngraded',
   done: 'dash.statusDone',
   partial: 'dash.statusPartial',
@@ -50,8 +51,16 @@ const STATUS_KEY: Record<Exclude<ProblemStatus, 'todo'>, TranslationKey> = {
  * beside a title it left one problem with literally zero pixels of name. The
  * name is how a student knows which problem it is, so the standing gives way to
  * a mark and the words move to the key underneath.
+ *
+ * ── WHY 'todo' HAS ONE AT ALL ───────────────────────────────
+ * It used to show nothing, which made the state a student most needs to act on
+ * the only one with no sign of itself — indistinguishable at a glance from a
+ * day with no problem set. An empty ring is the obvious partner to the tick,
+ * and the four together read as a progression: nothing done, waiting on the
+ * teacher, marked full, go and read something.
  */
-const STATUS_MARK: Record<Exclude<ProblemStatus, 'todo'>, string> = {
+const STATUS_MARK: Record<ProblemStatus, string> = {
+  todo: '○',
   ungraded: '⏳',
   done: '✓',
   partial: '💬',
@@ -437,9 +446,7 @@ export function MonthCalendar({
                        a mouse user gets it without consulting the key. */
                     title={locked
                       ? t('dash.statusLocked')
-                      : status === 'todo'
-                        ? p.title
-                        : `${p.title} — ${t(STATUS_KEY[status])}`}>
+                      : `${p.title} — ${t(STATUS_KEY[status])}`}>
                     <span className="shrink-0" style={{ color: palette.accent }}
                       aria-hidden="true">{locked ? '🔒' : PROBLEM_SHAPE}</span>
                     <span className="truncate flex-1 min-w-0" style={{
@@ -448,12 +455,15 @@ export function MonthCalendar({
                     }}>
                       {locked ? t('dash.statusLocked') : p.title}
                     </span>
-                    {!locked && status !== 'todo' && (
+                    {!locked && (
                       /* Not aria-hidden: this mark is the only thing carrying
                          the standing, so a screen reader has to read it as
                          words rather than skip a decorative glyph. */
                       <span className="shrink-0" aria-label={t(STATUS_KEY[status])}
-                        title={t(STATUS_KEY[status])}>
+                        title={t(STATUS_KEY[status])}
+                        /* The one that means "do this" gets the accent; the
+                           rest are already coloured by their own meaning. */
+                        style={status === 'todo' ? { color: palette.accent } : undefined}>
                         {STATUS_MARK[status]}
                       </span>
                     )}
@@ -499,6 +509,10 @@ export function MonthCalendar({
             <span className="flex items-center gap-1">
               <span style={{ color: palette.accent }} aria-hidden="true">{PROBLEM_SHAPE}</span>
               {t('dash.keyProblem')}
+            </span>
+            <span className="flex items-center gap-1" style={{ color: palette.accentInk }}>
+              <span style={{ color: palette.accent }} aria-hidden="true">{STATUS_MARK.todo}</span>
+              {t('dash.keyTodo')}
             </span>
             <span className="flex items-center gap-1">
               <span aria-hidden="true">{STATUS_MARK.ungraded}</span>

@@ -51,6 +51,7 @@ export const dashboard = {
   // ── Where a student stands on a problem ──────────────────
   // Parenthesised in both languages because it sits under the title as an
   // aside, not as a heading of its own.
+  'dash.statusTodo': { en: '(not started)', zh: '（未开始）' },
   'dash.statusUngraded': { en: '(submitted / not graded)', zh: '（已提交 / 待批改）' },
   'dash.statusDone': { en: '(done!)', zh: '（完成！）' },
   'dash.statusPartial': { en: '(check comment)', zh: '（请看评语）' },
@@ -63,6 +64,9 @@ export const dashboard = {
   // cell carries an icon and the words live here. That makes this key the only
   // place the meaning is written down — hence its own heading, and bold.
   'dash.keyHeading': { en: 'What the marks mean', zh: '符号说明' },
+  // First in the key because it is first in the order of doing: the one state
+  // that asks something of the student.
+  'dash.keyTodo': { en: 'not started — have a go', zh: '还没开始 — 来做做看' },
   'dash.keyUngraded': { en: 'handed in, not marked yet', zh: '已交，待批改' },
   'dash.keyDone': { en: 'full marks — done!', zh: '满分 — 完成！' },
   'dash.keyPartial': { en: 'read the comment', zh: '请看评语' },
