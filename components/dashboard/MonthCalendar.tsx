@@ -52,17 +52,24 @@ const STATUS_KEY: Record<ProblemStatus, TranslationKey> = {
  * name is how a student knows which problem it is, so the standing gives way to
  * a mark and the words move to the key underneath.
  *
- * ── WHY 'todo' HAS ONE AT ALL ───────────────────────────────
- * It used to show nothing, which made the state a student most needs to act on
- * the only one with no sign of itself — indistinguishable at a glance from a
- * day with no problem set. An empty ring is the obvious partner to the tick,
- * and the four together read as a progression: nothing done, waiting on the
- * teacher, marked full, go and read something.
+ * ── WHY ALL FOUR ARE EMOJI ──────────────────────────────────
+ * The first pass used text glyphs for two of them — ○ and ✓ — and at 9px on a
+ * pale wash they thinned to almost nothing, while the two emoji beside them
+ * stayed legible. A text glyph takes the ink colour of its row and gets no
+ * bolder as it shrinks; an emoji carries its own fill and reads at any size.
+ *
+ * So all four are emoji, chosen for distinct SILHOUETTE as much as colour — a
+ * flat disc, an hourglass, a boxed tick, a speech bubble — because the
+ * complaint that started this was that colour alone could not be told apart.
+ *
+ * Yellow rather than red for a problem not yet begun: it is a thing to do, not
+ * a thing gone wrong, and a child opening their dashboard to a row of red
+ * would be reading a rebuke rather than a list.
  */
 const STATUS_MARK: Record<ProblemStatus, string> = {
-  todo: '○',
+  todo: '🟡',
   ungraded: '⏳',
-  done: '✓',
+  done: '✅',
   partial: '💬',
 }
 
@@ -447,7 +454,10 @@ export function MonthCalendar({
                     title={locked
                       ? t('dash.statusLocked')
                       : `${p.title} — ${t(STATUS_KEY[status])}`}>
-                    <span className="shrink-0" style={{ color: palette.accent }}
+                    {/* On a locked day the lock IS the status, so it is sized
+                        like one. The pencil is only a bullet and stays small. */}
+                    <span className={`shrink-0 ${locked ? 'text-[12px] leading-none' : ''}`}
+                      style={locked ? undefined : { color: palette.accent }}
                       aria-hidden="true">{locked ? '🔒' : PROBLEM_SHAPE}</span>
                     <span className="truncate flex-1 min-w-0" style={{
                       color: locked ? palette.ink3 : palette.ink,
@@ -456,14 +466,17 @@ export function MonthCalendar({
                       {locked ? t('dash.statusLocked') : p.title}
                     </span>
                     {!locked && (
-                      /* Not aria-hidden: this mark is the only thing carrying
-                         the standing, so a screen reader has to read it as
-                         words rather than skip a decorative glyph. */
-                      <span className="shrink-0" aria-label={t(STATUS_KEY[status])}
-                        title={t(STATUS_KEY[status])}
-                        /* The one that means "do this" gets the accent; the
-                           rest are already coloured by their own meaning. */
-                        style={status === 'todo' ? { color: palette.accent } : undefined}>
+                      /* Bigger than the text it sits beside, deliberately. At
+                         the row's own 9px these were specks; the mark is the
+                         one part of the entry a student is meant to catch
+                         without reading, so it is sized to be caught.
+
+                         Not aria-hidden: it is the only thing carrying the
+                         standing, so a screen reader has to read it as words
+                         rather than skip a decorative glyph. */
+                      <span className="shrink-0 text-[12px] leading-none"
+                        aria-label={t(STATUS_KEY[status])}
+                        title={t(STATUS_KEY[status])}>
                         {STATUS_MARK[status]}
                       </span>
                     )}
@@ -510,24 +523,26 @@ export function MonthCalendar({
               <span style={{ color: palette.accent }} aria-hidden="true">{PROBLEM_SHAPE}</span>
               {t('dash.keyProblem')}
             </span>
-            <span className="flex items-center gap-1" style={{ color: palette.accentInk }}>
-              <span style={{ color: palette.accent }} aria-hidden="true">{STATUS_MARK.todo}</span>
+            {/* Same size as in the cells, so the key is showing the reader the
+                thing itself rather than a smaller relative of it. */}
+            <span className="flex items-center gap-1">
+              <span className="text-[12px] leading-none" aria-hidden="true">{STATUS_MARK.todo}</span>
               {t('dash.keyTodo')}
             </span>
             <span className="flex items-center gap-1">
-              <span aria-hidden="true">{STATUS_MARK.ungraded}</span>
+              <span className="text-[12px] leading-none" aria-hidden="true">{STATUS_MARK.ungraded}</span>
               {t('dash.keyUngraded')}
             </span>
-            <span className="flex items-center gap-1" style={{ color: palette.doneInk }}>
-              <span aria-hidden="true">{STATUS_MARK.done}</span>
+            <span className="flex items-center gap-1">
+              <span className="text-[12px] leading-none" aria-hidden="true">{STATUS_MARK.done}</span>
               {t('dash.keyDone')}
             </span>
-            <span className="flex items-center gap-1" style={{ color: palette.accentInk }}>
-              <span aria-hidden="true">{STATUS_MARK.partial}</span>
+            <span className="flex items-center gap-1">
+              <span className="text-[12px] leading-none" aria-hidden="true">{STATUS_MARK.partial}</span>
               {t('dash.keyPartial')}
             </span>
             <span className="flex items-center gap-1">
-              <span aria-hidden="true">🔒</span>
+              <span className="text-[12px] leading-none" aria-hidden="true">🔒</span>
               {t('dash.keyLocked')}
             </span>
           </div>
