@@ -159,9 +159,23 @@ export const paperCardStyle: React.CSSProperties = {
 */
 export interface PaperPalette {
   id: string
-  /** Swatch shown in the picker: the deep end, which is what the eye reads. */
+  /**
+   * Swatch shown in the picker.
+   *
+   * A flat colour, not a thumbnail of the painting. Five thumbnails would mean
+   * downloading all five paintings to draw a row of 16px dots, on every load,
+   * when only one of them is ever shown.
+   */
   swatch: string
-  /** The wash, top-left light → shallow → deep. */
+  /**
+   * The painting behind the card.
+   *
+   * Laid over the wash rather than replacing it: if the file is missing or has
+   * not arrived, the card falls back to exactly the gradient it used before,
+   * which is a complete design rather than a blank.
+   */
+  image: string
+  /** The wash, top-left light → shallow → deep. Also the fallback under `image`. */
   from: string
   mid: string
   deep: string
@@ -190,6 +204,7 @@ export interface PaperPalette {
 
 export const PAPER_PALETTES: readonly PaperPalette[] = [
   { id: 'meadow', swatch: '#d5e3bd',
+    image: '/welcome-card/meadow.jpg',
     from: '#f6faee', mid: '#e9f1da', deep: '#d5e3bd', pool: 'rgba(112,134,74,0.22)',
     ink: '#2b3720', ink2: '#4f6039', ink3: '#7d8c66', rule: 'rgba(112,134,74,0.30)',
     cell: 'rgba(250,253,244,0.45)', today: 'rgba(226,240,196,0.85)', hover: 'rgba(240,247,224,0.85)',
@@ -197,6 +212,7 @@ export const PAPER_PALETTES: readonly PaperPalette[] = [
     accent: '#6d8a45', accentInk: '#3f5427', done: '#4e8a53', doneInk: '#2f5c34' },
 
   { id: 'sky', swatch: '#c9dced',
+    image: '/welcome-card/sky.jpg',
     from: '#f4f9fc', mid: '#e4eff7', deep: '#c9dced', pool: 'rgba(94,131,163,0.22)',
     ink: '#22323f', ink2: '#425768', ink3: '#71889a', rule: 'rgba(94,131,163,0.28)',
     cell: 'rgba(248,252,255,0.45)', today: 'rgba(214,234,248,0.85)', hover: 'rgba(234,244,251,0.85)',
@@ -204,6 +220,7 @@ export const PAPER_PALETTES: readonly PaperPalette[] = [
     accent: '#4f7fa5', accentInk: '#2c4d67', done: '#3f8a7a', doneInk: '#245c50' },
 
   { id: 'dusk', swatch: '#f2d3a8',
+    image: '/welcome-card/dusk.jpg',
     from: '#fef6ea', mid: '#fbe9d2', deep: '#f2d3a8', pool: 'rgba(184,132,72,0.24)',
     ink: '#3d2a14', ink2: '#6b5334', ink3: '#9a8058', rule: 'rgba(184,132,72,0.30)',
     cell: 'rgba(255,250,240,0.45)', today: 'rgba(252,226,188,0.85)', hover: 'rgba(253,240,220,0.85)',
@@ -211,6 +228,7 @@ export const PAPER_PALETTES: readonly PaperPalette[] = [
     accent: '#b8843f', accentInk: '#7d5520', done: '#84903c', doneInk: '#5a6224' },
 
   { id: 'sea', swatch: '#bfdfd9',
+    image: '/welcome-card/sea.jpg',
     from: '#f1faf8', mid: '#dcefec', deep: '#bfdfd9', pool: 'rgba(80,140,132,0.22)',
     ink: '#1e3835', ink2: '#3e5d57', ink3: '#6b8c85', rule: 'rgba(80,140,132,0.28)',
     cell: 'rgba(246,253,251,0.45)', today: 'rgba(206,236,230,0.85)', hover: 'rgba(230,246,243,0.85)',
@@ -218,6 +236,7 @@ export const PAPER_PALETTES: readonly PaperPalette[] = [
     accent: '#43897e', accentInk: '#245a51', done: '#4a8f62', doneInk: '#28603c' },
 
   { id: 'rose', swatch: '#eecdc6',
+    image: '/welcome-card/rose.jpg',
     from: '#fdf5f3', mid: '#f9e7e3', deep: '#eecdc6', pool: 'rgba(178,124,116,0.22)',
     ink: '#3f2724', ink2: '#684a45', ink3: '#96736d', rule: 'rgba(178,124,116,0.28)',
     cell: 'rgba(255,250,249,0.45)', today: 'rgba(247,222,216,0.85)', hover: 'rgba(252,238,235,0.85)',
@@ -243,7 +262,27 @@ export function paletteById(id: string | null | undefined): PaperPalette {
  */
 export function paperSurfaceStyle(p: PaperPalette): React.CSSProperties {
   return {
-    backgroundImage: paperWash(p.from, p.mid, p.deep),
+    /*
+      The painting first, its own wash behind it.
+
+      Two layers rather than one so a missing or slow file degrades to the
+      gradient this card had before the paintings existed, rather than to
+      nothing. The grain inside paperWash is then invisible under an opaque
+      image, which is correct — these are painted on real stock and carry
+      their own tooth; a second synthetic grain over the top would be two
+      papers at once.
+    */
+    backgroundImage: `url("${p.image}"), ${paperWash(p.from, p.mid, p.deep)}`,
+    // cover on both layers: the paintings are about 1.75:1 and the card is
+    // wider than that, so the crop comes off the top and bottom, which is
+    // where these have the least in them.
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+
+    // Unchanged below this line. The pooling and the mask are what make it a
+    // card rather than a picture, and swapping the wash is not a reason to
+    // touch either.
     boxShadow: `inset 0 0 26px 6px ${p.pool}`,
     maskImage: PAPER_MASK,
     WebkitMaskImage: PAPER_MASK,
