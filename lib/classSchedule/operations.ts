@@ -88,7 +88,7 @@ export function horizonFrom(today: string): string {
 export async function listSeries(supabase: SupabaseClient): Promise<SeriesRow[]> {
   const { data, error } = await supabase
     .from('class_schedule_series')
-    .select('id, class_id, weekday, start_time, end_time, effective_from, effective_until, classes:class_id(name)')
+    .select('id, class_id, weekday, start_time, end_time, effective_from, effective_until, timezone, classes:class_id(name, timezone)')
     .order('weekday', { ascending: true })
     .order('start_time', { ascending: true })
   if (error) throw error
@@ -100,6 +100,9 @@ export async function listSeries(supabase: SupabaseClient): Promise<SeriesRow[]>
     end_time: r.end_time,
     effective_from: r.effective_from,
     effective_until: r.effective_until,
+    // Falling back to the class's zone covers rows written before
+    // add-session-timezone.sql, where that is exactly what the time meant.
+    timezone: r.timezone ?? r.classes?.timezone ?? null,
     className: r.classes?.name ?? '',
   }))
 }
@@ -153,7 +156,9 @@ async function generateFor(
     // session_number is NOT NULL, so the rows go in with a placeholder and
     // renumberClass immediately puts them in date order. Numbering them here
     // would mean guessing at the class's existing sequence.
-    rows.map(r => ({ ...r, session_number: 0 })),
+    // The series' zone travels onto every session it makes, so a session keeps
+    // its meaning even if the series is later edited from somewhere else.
+    rows.map(r => ({ ...r, session_number: 0, timezone: series.timezone ?? null })),
   )
   if (error) throw error
   await renumberClass(supabase, series.class_id)
@@ -162,6 +167,7 @@ async function generateFor(
 
 export async function createSeries(
   supabase: SupabaseClient, input: SeriesInput, userId: string, today: string,
+  authorTimezone: string,
 ): Promise<number> {
   const { data, error } = await supabase
     .from('class_schedule_series')
@@ -175,6 +181,7 @@ export async function createSeries(
       effective_from: input.effective_from > today ? input.effective_from : today,
       effective_until: input.effective_until,
       created_by: userId,
+      timezone: authorTimezone,
     })
     .select()
     .single()
@@ -191,6 +198,7 @@ export async function createSeries(
  */
 export async function updateSeries(
   supabase: SupabaseClient, id: string, input: SeriesInput, today: string,
+  authorTimezone: string,
 ): Promise<number> {
   const { data, error } = await supabase
     .from('class_schedule_series')
@@ -199,6 +207,9 @@ export async function updateSeries(
       start_time: toSqlTime(input.start_time),
       end_time: toSqlTime(input.end_time),
       effective_until: input.effective_until,
+      // The times were just retyped on THIS person's clock, so the schedule
+      // now means their zone, whoever wrote it originally.
+      timezone: authorTimezone,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
@@ -242,6 +253,7 @@ export async function deleteSeries(
 export async function addOneOff(
   supabase: SupabaseClient,
   classId: string, date: string, startTime: string, endTime: string,
+  authorTimezone: string,
 ): Promise<void> {
   const { error } = await supabase.from('class_occurrences').insert({
     class_id: classId,
@@ -251,6 +263,7 @@ export async function addOneOff(
     session_number: 0,
     status: 'upcoming',
     series_id: null,
+    timezone: authorTimezone,
   })
   if (error) throw error
   await renumberClass(supabase, classId)
@@ -272,6 +285,7 @@ export async function addOneOff(
 export async function updateOccurrenceTime(
   supabase: SupabaseClient,
   id: string, classId: string, startTime: string, endTime: string,
+  authorTimezone: string,
 ): Promise<void> {
   const { error } = await supabase
     .from('class_occurrences')
@@ -279,6 +293,8 @@ export async function updateOccurrenceTime(
       start_time: toSqlTime(startTime),
       end_time: toSqlTime(endTime),
       series_id: null,
+      // Retyped on this person's clock, so that is now what the time means.
+      timezone: authorTimezone,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

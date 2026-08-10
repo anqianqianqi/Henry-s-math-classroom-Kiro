@@ -25,6 +25,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { classColour } from './MonthCalendar'
 import { fromSqlTime } from '@/lib/classSchedule/series'
+import { zoneLabel } from '@/lib/utils/timezone'
 import {
   listSeries, createSeries, updateSeries, deleteSeries,
   type SeriesInput, type SeriesRow,
@@ -41,6 +42,14 @@ export interface ClassAssignmentModalProps {
   today: string
   /** Fired after any write, so the calendar behind can refetch. */
   onChanged: () => void
+  /**
+   * The clock these times mean — this teacher's own site setting.
+   *
+   * Stored with the schedule rather than inherited from the class, so a time
+   * typed here means the time this person is looking at, whichever class they
+   * are scheduling and wherever the teacher who owns it happens to be.
+   */
+  authorTimezone: string
 }
 
 interface Draft extends SeriesInput { id?: string }
@@ -50,7 +59,9 @@ const blankDraft = (today: string): Draft => ({
   effective_from: today, effective_until: null,
 })
 
-export function ClassAssignmentModal({ open, onClose, today, onChanged }: ClassAssignmentModalProps) {
+export function ClassAssignmentModal({
+  open, onClose, today, onChanged, authorTimezone,
+}: ClassAssignmentModalProps) {
   const { t } = useLanguage()
   const supabase = createClient()
 
@@ -95,8 +106,8 @@ export function ClassAssignmentModal({ open, onClose, today, onChanged }: ClassA
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not signed in')
       const made = draft.id
-        ? await updateSeries(supabase, draft.id, draft, today)
-        : await createSeries(supabase, draft, user.id, today)
+        ? await updateSeries(supabase, draft.id, draft, today, authorTimezone)
+        : await createSeries(supabase, draft, user.id, today, authorTimezone)
       setDraft(null)
       setNote(t('sched.generated', { count: made }))
       await refresh()
@@ -226,6 +237,15 @@ export function ClassAssignmentModal({ open, onClose, today, onChanged }: ClassA
                 </label>
               </div>
 
+              {/* Which clock these fields mean. A time field that does not say
+                  is worse than no conversion at all: the reader cannot tell
+                  whether it was meant for them and has to ask anyway. */}
+              <p className="text-[11px] text-gray-600 mb-1">
+                🕒 {t('sched.timesMean', {
+                  zone: zoneLabel(authorTimezone),
+                  place: authorTimezone.replace(/_/g, ' '),
+                })}
+              </p>
               <p className="text-[11px] text-gray-500 mb-3">{t('sched.untilHint')}</p>
 
               <div className="flex gap-2">

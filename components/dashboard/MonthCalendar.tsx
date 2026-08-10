@@ -23,6 +23,7 @@
 
 import { useMemo } from 'react'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { zoneLabel } from '@/lib/utils/timezone'
 import type { PaperPalette } from '@/lib/ui/paperCard'
 
 export interface CalendarClass {
@@ -64,6 +65,16 @@ export interface MonthCalendarProps {
   onDayClick?: (date: string) => void
   /** Sits at the top right of the calendar, beside the month arrows. */
   headerAction?: React.ReactNode
+  /**
+   * The zone every time on this calendar has been converted into — the
+   * reader's own.
+   *
+   * Stated rather than assumed, on the same reasoning ClassSchedule gives: a
+   * converted time that does not say which clock it is on is worse than an
+   * unconverted one, because the reader cannot tell whether it was translated
+   * for them and has to ask anyway.
+   */
+  viewerTimezone: string
 }
 
 /**
@@ -98,6 +109,7 @@ function endOfWeek(today: string): string {
 
 export function MonthCalendar({
   month, onMonthChange, days, today, isTeacher, palette, onDayClick, headerAction,
+  viewerTimezone,
 }: MonthCalendarProps) {
   const { t, language } = useLanguage()
 
@@ -193,6 +205,17 @@ export function MonthCalendar({
         </button>
         {headerAction}
       </div>
+
+      {/* Which clock this month is drawn on. The label is taken at the middle
+          of the month rather than at page load, so a month that straddles a
+          clock change is named by what it mostly is. */}
+      <p className="text-[10px] mb-2 flex items-center gap-1" style={{ color: palette.ink3 }}>
+        <span aria-hidden="true">🕒</span>
+        {t('dash.timesShownIn', {
+          zone: zoneLabel(viewerTimezone, new Date(year, monthIndex, 15)),
+          place: viewerTimezone.replace(/_/g, ' '),
+        })}
+      </p>
 
       <div className="grid grid-cols-7 gap-[3px] mb-[3px]">
         {dowKeys.map((k, i) => (

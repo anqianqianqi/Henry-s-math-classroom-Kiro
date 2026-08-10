@@ -253,6 +253,12 @@ export const classes = {
   'sched.none': { en: 'No repeating schedules yet.', zh: '还没有重复安排。' },
   'sched.addNew': { en: 'Add a repeating schedule', zh: '添加重复安排' },
   'sched.class': { en: 'Class', zh: '班级' },
+  // Which clock the times on the panel mean — both the ones shown and the ones
+  // typed. One key, because Chinese puts the place before the abbreviation.
+  'sched.timesMean': {
+    en: 'Times are {zone} · {place} — your own setting',
+    zh: '时间为 {place}（{zone}）— 你自己的设置',
+  },
   'sched.selectClass': { en: 'Choose a class', zh: '选择班级' },
   'sched.weekday': { en: 'Day of the week', zh: '星期' },
   'sched.from': { en: 'Starts', zh: '开始' },

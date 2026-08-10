@@ -54,6 +54,12 @@ export const dashboard = {
     zh: '当天上课的所有班级。',
   },
   'dash.cancelledClass': { en: 'cancelled', zh: '已取消' },
+  // Both halves in one key: English reads "Times shown in EDT (New York)" and
+  // Chinese puts the place first. A join in JSX would fix one order for both.
+  'dash.timesShownIn': {
+    en: 'Times shown in {zone} · {place}',
+    zh: '时间以 {place}（{zone}）显示',
+  },
 
   // ── The palette picker ───────────────────────────────────
   'dash.paletteLabel': { en: 'Card colour', zh: '卡片配色' },

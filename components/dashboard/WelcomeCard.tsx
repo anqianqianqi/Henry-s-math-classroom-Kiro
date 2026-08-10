@@ -60,6 +60,8 @@ export interface WelcomeCardProps {
   /** Teacher and admin only — absent leaves the grid read-only. */
   onDayClick?: (date: string) => void
   onOpenAssignment?: () => void
+  /** The reader's own clock. The calendar converts into it and says so. */
+  viewerTimezone: string
 }
 
 const PALETTE_LABEL: Record<string, TranslationKey> = {
@@ -74,7 +76,7 @@ export function WelcomeCard({
   firstName, isTeacher, palette, onPaletteChange,
   challenges, collapsedCount, expanded, onToggleExpanded,
   onOpenChallenge, onCreateChallenge,
-  month, onMonthChange, days, today, onDayClick, onOpenAssignment,
+  month, onMonthChange, days, today, onDayClick, onOpenAssignment, viewerTimezone,
 }: WelcomeCardProps) {
   const { t } = useLanguage()
   const shown = expanded ? challenges : challenges.slice(0, collapsedCount)
@@ -205,6 +207,7 @@ export function WelcomeCard({
           today={today}
           isTeacher={isTeacher}
           palette={palette}
+          viewerTimezone={viewerTimezone}
           onDayClick={onDayClick}
           headerAction={onOpenAssignment && (
             <button

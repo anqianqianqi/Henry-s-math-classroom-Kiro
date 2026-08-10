@@ -10,7 +10,8 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import NotificationBell from '@/components/NotificationBell'
 import { AnnouncementButton } from '@/components/AnnouncementButton'
-import { schoolDateString } from '@/lib/utils/timezone'
+import { schoolDateString, convertOccurrence, zoneLabel, SCHOOL_TIMEZONE } from '@/lib/utils/timezone'
+import { useViewerZone } from '@/components/ui/useViewerZone'
 import dynamicImport from 'next/dynamic'
 import StudentStudyCurve from '@/components/StudentStudyCurve'
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard'
@@ -135,6 +136,15 @@ export default function DashboardPage() {
   const router = useRouter()
   const supabase = createClient()
   const { t } = useLanguage()
+  /*
+    The reader's own clock, from their site setting.
+
+    It does both jobs here. Sessions are shown converted into it, and anything
+    a teacher schedules is stored as meaning it — so the time they type is the
+    time they see, whichever class they are scheduling and wherever the teacher
+    who owns that class happens to be.
+  */
+  const { timezone: viewerTimezone } = useViewerZone()
 
   useEffect(() => {
     loadUser()
@@ -489,23 +499,56 @@ export default function DashboardPage() {
         // A teacher's rows carry what the day editor needs to write against;
         // a student's would never be read, but one query for both beats two
         // that differ by three columns.
+        /*
+          Fetched a day wider on each side than the month being shown.
+
+          A session is stored on the date it happens in the zone it was written
+          in, and the reader may be somewhere else: a 21:00 New York class is
+          09:00 the NEXT morning in Shanghai. So the last session of the
+          previous month can belong on the 1st for this reader, and the last of
+          this month can leave it entirely. Fetching the exact month would drop
+          the first of those and no one would notice from New York.
+        */
+        const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n))
+        const asDate = (s: string, shift: number) => {
+          const d = new Date(`${s}T12:00:00`)
+          d.setDate(d.getDate() + shift)
+          return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+        }
+
         let q = supabase
           .from('class_occurrences')
-          .select('id, class_id, occurrence_date, status, series_id, start_time, end_time, classes:class_id(name)')
-          .gte('occurrence_date', from)
-          .lte('occurrence_date', to)
+          .select('id, class_id, occurrence_date, status, series_id, start_time, end_time, timezone, classes:class_id(name, timezone)')
+          .gte('occurrence_date', asDate(from, -1))
+          .lte('occurrence_date', asDate(to, 1))
           .order('start_time', { ascending: true })
         if (classIds) q = q.in('class_id', classIds)
         const { data: occ } = await q
+
         for (const o of (occ || []) as any[]) {
-          touch(o.occurrence_date).classes.push({
+          // The clock the time was written on. Falls back to the class's zone
+          // for rows predating add-session-timezone.sql, then to the school's.
+          const sourceZone = o.timezone ?? o.classes?.timezone ?? SCHOOL_TIMEZONE
+          const local = convertOccurrence(
+            o.occurrence_date, o.start_time, sourceZone, viewerTimezone,
+          )
+          // A conversion that fails leaves the session where it was stored
+          // rather than dropping it — a class on a slightly wrong day beats a
+          // class the reader never learns about.
+          const onDate = local?.date ?? o.occurrence_date
+          if (onDate < from || onDate > to) continue
+
+          const localEnd = convertOccurrence(
+            o.occurrence_date, o.end_time, sourceZone, viewerTimezone,
+          )
+          touch(onDate).classes.push({
             id: o.class_id,
             name: o.classes?.name ?? '',
             cancelled: o.status === 'cancelled',
             occurrenceId: o.id,
             seriesId: o.series_id ?? null,
-            startTime: o.start_time,
-            endTime: o.end_time,
+            startTime: local?.time ?? o.start_time,
+            endTime: localEnd?.time ?? o.end_time,
           })
         }
       }
@@ -538,7 +581,9 @@ export default function DashboardPage() {
     })()
 
     return () => { cancelled = true }
-  }, [user?.id, isTeacher, assignedChallengeIds, calendarMonth, monthNonce])
+    // viewerTimezone is a dependency, not a detail: it decides which day each
+    // session lands on, so the month has to be rebuilt when it resolves.
+  }, [user?.id, isTeacher, assignedChallengeIds, calendarMonth, monthNonce, viewerTimezone])
 
   // The class list for the two authoring dropdowns. Teachers see every class,
   // matching /classes; loaded once rather than per modal open.
@@ -762,6 +807,7 @@ export default function DashboardPage() {
           onMonthChange={setCalendarMonth}
           days={calendarDays}
           today={schoolToday}
+          viewerTimezone={viewerTimezone}
           onDayClick={isTeacher ? setEditingDay : undefined}
           onOpenAssignment={isTeacher ? () => setAssignmentOpen(true) : undefined}
         />
@@ -772,6 +818,7 @@ export default function DashboardPage() {
               open={assignmentOpen}
               onClose={() => setAssignmentOpen(false)}
               today={schoolToday}
+              authorTimezone={viewerTimezone}
               onChanged={() => setMonthNonce(n => n + 1)}
             />
             <DaySessionsModal
@@ -790,6 +837,7 @@ export default function DashboardPage() {
                 }))}
               classes={teacherClasses}
               today={schoolToday}
+              viewerTimezone={viewerTimezone}
               onClose={() => setEditingDay(null)}
               onChanged={() => setMonthNonce(n => n + 1)}
             />

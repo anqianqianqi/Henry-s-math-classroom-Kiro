@@ -28,6 +28,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { classColour } from './MonthCalendar'
 import { fromSqlTime } from '@/lib/classSchedule/series'
+import { zoneLabel } from '@/lib/utils/timezone'
 import {
   addOneOff, deleteOccurrence, deleteSeriesFrom, updateOccurrenceTime,
 } from '@/lib/classSchedule/operations'
@@ -50,10 +51,19 @@ export interface DaySessionsModalProps {
   today: string
   onClose: () => void
   onChanged: () => void
+  /**
+   * The reader's own clock.
+   *
+   * Doing both jobs: the times listed here have already been converted into it
+   * by the calendar, and anything typed here is stored as meaning it. Which is
+   * what makes the pair coherent — a teacher reads 19:00 and types 19:00 and
+   * both are their own 19:00.
+   */
+  viewerTimezone: string
 }
 
 export function DaySessionsModal({
-  date, sessions, classes, today, onClose, onChanged,
+  date, sessions, classes, today, onClose, onChanged, viewerTimezone,
 }: DaySessionsModalProps) {
   const { t } = useLanguage()
   const supabase = createClient()
@@ -106,9 +116,16 @@ export function DaySessionsModal({
             </div>
           )}
 
-          <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
+          <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">
             {t('sched.sessionsOn')}
           </h4>
+          {/* Every time on this panel — read or typed — is this clock. */}
+          <p className="text-[11px] text-gray-500 mb-2">
+            🕒 {t('sched.timesMean', {
+              zone: zoneLabel(viewerTimezone),
+              place: viewerTimezone.replace(/_/g, ' '),
+            })}
+          </p>
 
           {sessions.length === 0 ? (
             <p className="text-sm text-gray-500 italic mb-4">{t('sched.noSessions')}</p>
@@ -152,7 +169,7 @@ export function DaySessionsModal({
                       <div className="flex gap-2">
                         <Button size="sm" disabled={busy || editEnd <= editStart}
                           onClick={() => run(async () => {
-                            await updateOccurrenceTime(supabase, s.id, s.classId, editStart, editEnd)
+                            await updateOccurrenceTime(supabase, s.id, s.classId, editStart, editEnd, viewerTimezone)
                             setEditing(null)
                           })}>
                           {busy ? t('status.saving') : t('action.save')}
@@ -227,7 +244,7 @@ export function DaySessionsModal({
               </div>
               <div className="flex gap-2">
                 <Button size="sm" disabled={busy || !classId || end <= start}
-                  onClick={() => run(() => addOneOff(supabase, classId, date!, start, end))}>
+                  onClick={() => run(() => addOneOff(supabase, classId, date!, start, end, viewerTimezone))}>
                   {busy ? t('status.saving') : t('action.save')}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setAdding(false)} disabled={busy}>

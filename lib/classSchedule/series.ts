@@ -29,6 +29,13 @@ export interface ScheduleSeries {
   end_time: string
   effective_from: string
   effective_until: string | null
+  /**
+   * IANA zone the times above are written in — whoever scheduled it.
+   *
+   * Null on a row predating add-session-timezone.sql, where the reader falls
+   * back to the class's own zone, which is what it meant anyway.
+   */
+  timezone?: string | null
 }
 
 const pad = (n: number) => (n < 10 ? `0${n}` : String(n))
