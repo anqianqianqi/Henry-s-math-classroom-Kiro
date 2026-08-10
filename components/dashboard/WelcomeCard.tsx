@@ -78,9 +78,28 @@ export function WelcomeCard({
   onOpenChallenge, onCreateChallenge,
   month, onMonthChange, days, today, onDayClick, onOpenAssignment, viewerTimezone,
 }: WelcomeCardProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const shown = expanded ? challenges : challenges.slice(0, collapsedCount)
   const hidden = challenges.length - collapsedCount
+
+  /**
+   * A problem's date, short.
+   *
+   * Parsed at noon rather than midnight: 'YYYY-MM-DD' alone is read as UTC, and
+   * west of Greenwich that renders as the previous day — the exact off-by-one
+   * this label exists to remove.
+   *
+   * Not converted into the reader's zone, unlike a class session. A session
+   * happens at an instant and the reader may be elsewhere when it does; a
+   * problem's date is which school day it belongs to, and that is the same day
+   * everywhere.
+   */
+  function formatDate(ds: string): string {
+    return new Date(`${ds}T12:00:00`).toLocaleDateString(
+      language === 'zh' ? 'zh-CN' : 'en-US',
+      { month: 'short', day: 'numeric' },
+    )
+  }
 
   return (
     <div className="mb-8 px-6 pt-5 pb-6 relative" style={paperSurfaceStyle(palette)}>
@@ -131,10 +150,13 @@ export function WelcomeCard({
           would leave the calendar with ~40px cells, narrower than a two-digit
           date; stacked, it gets the full width instead. */}
       <div className="grid gap-8 items-start grid-cols-1 lg:grid-cols-[1fr_3fr]">
-        {/* ── Left: today's problems, with room for their titles ── */}
+        {/* ── Left: the reader's problems, with room for their titles ── */}
         <div>
+          {/* Not "Today" either. The heading sat over a list that is topped up
+              with recent problems whenever today is thin, so it made the same
+              claim the per-entry labels used to. */}
           <p className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: palette.ink3 }}>
-            {t('dash.today')}
+            {t('dash.yourProblems')}
           </p>
 
           {challenges.length > 0 ? (
@@ -149,9 +171,16 @@ export function WelcomeCard({
                   >
                     <span className="flex-1 min-w-0">
                       <span className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                        {/* The list is not only today's — loadTodayChallenge
+                            tops it up with recent problems when today is thin —
+                            so each entry carries its own date. Saying "today"
+                            over all of them made a problem set last week look
+                            due now. */}
                         <span className="text-[10px] font-bold uppercase tracking-widest"
                           style={{ color: palette.ink3 }}>
-                          🎯 {t('dash.today')}
+                          {c.challenge_date === today
+                            ? `🎯 ${t('dash.today')}`
+                            : `📅 ${formatDate(c.challenge_date)}`}
                         </span>
                         {!isTeacher && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"

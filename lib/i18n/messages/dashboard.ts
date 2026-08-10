@@ -28,6 +28,9 @@ export const dashboard = {
   'dash.welcomeStudent': { en: "Let's have fun with math today! 🎉", zh: '今天也一起快乐学数学吧！🎉' },
   'dash.welcomeTeacher': { en: "Let's inspire some students today! 👨‍🏫", zh: '今天也来启发学生吧！👨‍🏫' },
   'dash.today': { en: 'Today', zh: '今天' },
+  // Heads the left column. Deliberately not "Today": the list is topped up with
+  // recent problems whenever today has few, and each entry carries its own date.
+  'dash.yourProblems': { en: 'Your problems', zh: '你的题目' },
   'dash.done': { en: 'Done', zh: '已完成' },
   'dash.newComment': { en: 'New comment', zh: '新评论' },
   'dash.noChallengeToday': { en: 'No challenge today', zh: '今天没有挑战题' },
