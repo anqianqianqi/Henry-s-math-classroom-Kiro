@@ -240,4 +240,52 @@ export const classes = {
   'grade.comment': { en: 'Comment', zh: '评语' },
   'grade.save': { en: 'Save grade', zh: '保存评分' },
   'grade.noSubmissions': { en: 'No submissions to grade', zh: '暂无待批改的作业' },
+
+  // ── Authoring a timetable from the dashboard calendar ────
+  // A class no longer carries a weekly time; its sessions are written here.
+  'sched.assignClasses': { en: 'Class assignment', zh: '排课' },
+  'sched.title': { en: 'Class schedule', zh: '上课安排' },
+  'sched.forwardOnly': {
+    en: 'Sessions are only ever created from today onward. Past classes are never changed.',
+    zh: '只会从今天起创建课程，已上过的课不会被改动。',
+  },
+  'sched.existing': { en: 'Repeating schedules', zh: '重复安排' },
+  'sched.none': { en: 'No repeating schedules yet.', zh: '还没有重复安排。' },
+  'sched.addNew': { en: 'Add a repeating schedule', zh: '添加重复安排' },
+  'sched.class': { en: 'Class', zh: '班级' },
+  'sched.selectClass': { en: 'Choose a class', zh: '选择班级' },
+  'sched.weekday': { en: 'Day of the week', zh: '星期' },
+  'sched.from': { en: 'Starts', zh: '开始' },
+  'sched.to': { en: 'Ends', zh: '结束' },
+  'sched.until': { en: 'until', zh: '截至' },
+  'sched.untilOpen': { en: 'no end date', zh: '无截止日期' },
+  'sched.untilHint': {
+    en: 'Leave the end date empty to keep it running for a year.',
+    zh: '留空截止日期则会持续排课一年。',
+  },
+  'sched.generated': { en: '{count} sessions added', zh: '已添加 {count} 节课' },
+  'sched.deleteSeriesConfirm': {
+    en: 'Delete this repeating schedule and its upcoming sessions? Classes that already happened are kept.',
+    zh: '删除这个重复安排及其未来的课程？已经上过的课会保留。',
+  },
+
+  // ── One day ──────────────────────────────────────────────
+  'sched.sessionsOn': { en: 'Classes this day', zh: '当天的课' },
+  'sched.noSessions': { en: 'No classes this day.', zh: '当天没有课。' },
+  'sched.addClass': { en: 'Add a class', zh: '添加一节课' },
+  'sched.partOfSeries': { en: 'Part of a repeating schedule', zh: '属于某个重复安排' },
+  'sched.removeThis': { en: 'Just this one', zh: '仅这一节' },
+  'sched.removeSeries': { en: 'This and all future', zh: '这节及以后全部' },
+  'sched.deleteOccurrenceConfirm': {
+    en: 'Remove this class? Homework and materials for it are kept.',
+    zh: '删除这节课？相关的作业和资料会保留。',
+  },
+  'sched.deleteFromHereConfirm': {
+    en: 'Stop this repeating schedule from here on? This class and every later one in the series is removed; earlier ones are kept.',
+    zh: '从这一天起停止这个重复安排？这节课及之后的课会被删除，之前的会保留。',
+  },
+  'sched.pastDay': {
+    en: 'This day has passed, so no class can be added to it.',
+    zh: '这一天已经过去，不能再添加课程。',
+  },
 } as const

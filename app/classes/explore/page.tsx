@@ -6,7 +6,9 @@ import { useEffect, useState } from 'react'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { ClassSchedule } from '@/components/ui/ClassSchedule'
 import { useViewerZone } from '@/components/ui/useViewerZone'
-import { SCHOOL_TIMEZONE } from '@/lib/utils/timezone'
+import { SCHOOL_TIMEZONE, schoolDateString } from '@/lib/utils/timezone'
+import { meetingSlotsFor } from '@/lib/classSchedule/operations'
+import type { DerivedSlot } from '@/lib/classSchedule/derive'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
@@ -23,7 +25,6 @@ interface ClassData {
   location: string | null
   max_students: number | null
   current_students: number
-  schedule: Array<{ day: string; startTime: string; endTime: string }> | null
   timezone: string | null
   created_by: string
   teacher_name: string
@@ -34,6 +35,8 @@ export default function ExploreClassesPage() {
   const { t } = useLanguage()
   const { timezone: viewerTimezone } = useViewerZone()
   const [classes, setClasses] = useState<ClassData[]>([])
+  /** When each class meets, keyed by class id — see loadPublicClasses. */
+  const [meetings, setMeetings] = useState<Record<string, DerivedSlot[]>>({})
   const [filteredClasses, setFilteredClasses] = useState<ClassData[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -64,7 +67,6 @@ export default function ExploreClassesPage() {
           location,
           max_students,
           current_students,
-          schedule,
           created_by,
           target_audience,
           profiles!classes_created_by_fkey(full_name)
@@ -82,6 +84,22 @@ export default function ExploreClassesPage() {
 
       setClasses(classesWithTeacher)
       setFilteredClasses(classesWithTeacher)
+
+      /*
+        When each class meets, derived from its upcoming sessions. This page is
+        where someone decides whether to join, so "Mondays and Wednesdays at 4"
+        has to be right — and classes.schedule no longer says it, since sessions
+        are authored on the dashboard calendar now.
+
+        Failure is swallowed: a class without its meeting line still browses.
+      */
+      try {
+        setMeetings(await meetingSlotsFor(
+          supabase, classesWithTeacher.map((c: any) => c.id), schoolDateString(),
+        ))
+      } catch (e) {
+        console.error('Load meeting pattern error:', e)
+      }
     } catch (err) {
       console.error('Failed to load classes:', err)
     } finally {
@@ -422,7 +440,7 @@ export default function ExploreClassesPage() {
                       <div className="flex items-center gap-2.5 text-sm text-gray-600">
                         <span className="text-base">📅</span>
                         <ClassSchedule
-                          slots={cls.schedule}
+                          slots={meetings[cls.id]}
                           classTimezone={cls.timezone ?? SCHOOL_TIMEZONE}
                           viewerTimezone={viewerTimezone}
                           className="font-medium"

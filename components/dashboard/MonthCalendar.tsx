@@ -26,9 +26,19 @@ import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import type { PaperPalette } from '@/lib/ui/paperCard'
 
 export interface CalendarClass {
+  /** The CLASS id — what the colour and the legend key off, not the session. */
   id: string
   name: string
   cancelled: boolean
+  /*
+    The session itself. Only a teacher needs these — they are what the day
+    editor writes against — so they are optional rather than forcing a
+    student's query to fetch columns nothing will read.
+  */
+  occurrenceId?: string
+  seriesId?: string | null
+  startTime?: string
+  endTime?: string
 }
 
 export interface CalendarDay {
@@ -47,6 +57,13 @@ export interface MonthCalendarProps {
   today: string
   isTeacher: boolean
   palette: PaperPalette
+  /**
+   * Opens the day editor. Absent for a student, which is what makes the grid
+   * read-only for them — there is no disabled state to style around.
+   */
+  onDayClick?: (date: string) => void
+  /** Sits at the top right of the calendar, beside the month arrows. */
+  headerAction?: React.ReactNode
 }
 
 /**
@@ -80,7 +97,7 @@ function endOfWeek(today: string): string {
 }
 
 export function MonthCalendar({
-  month, onMonthChange, days, today, isTeacher, palette,
+  month, onMonthChange, days, today, isTeacher, palette, onDayClick, headerAction,
 }: MonthCalendarProps) {
   const { t, language } = useLanguage()
 
@@ -174,6 +191,7 @@ export function MonthCalendar({
         >
           ›
         </button>
+        {headerAction}
       </div>
 
       <div className="grid grid-cols-7 gap-[3px] mb-[3px]">
@@ -202,12 +220,21 @@ export function MonthCalendar({
           const isToday = cell.date === today
           const isNext = cell.date === nextClassDate
 
+          // A button only where there is something to do with it, so a student
+          // gets a grid with no dead affordances in it.
+          const Cell: any = onDayClick ? 'button' : 'div'
+
           return (
-            <div
+            <Cell
               key={cell.key}
-              className={`relative rounded-md px-1 py-0.5 min-h-[52px] flex flex-col gap-[2px] overflow-hidden ${
+              {...(onDayClick ? {
+                type: 'button',
+                onClick: () => onDayClick(cell.date!),
+                'aria-label': cell.date,
+              } : {})}
+              className={`relative rounded-md px-1 py-0.5 min-h-[52px] flex flex-col gap-[2px] overflow-hidden text-left ${
                 isNext ? 'dash-next-class' : ''
-              }`}
+              } ${onDayClick ? 'hover:brightness-95 transition-[filter]' : ''}`}
               style={{
                 border: `${isToday ? 2 : 1}px solid ${isToday ? palette.accent : palette.rule}`,
                 background: isToday ? palette.today : palette.cell,
@@ -249,7 +276,7 @@ export function MonthCalendar({
                   +{day.classes.length - 3}
                 </span>
               )}
-            </div>
+            </Cell>
           )
         })}
       </div>

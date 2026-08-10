@@ -57,6 +57,9 @@ export interface WelcomeCardProps {
   onMonthChange: (d: Date) => void
   days: Record<string, CalendarDay>
   today: string
+  /** Teacher and admin only — absent leaves the grid read-only. */
+  onDayClick?: (date: string) => void
+  onOpenAssignment?: () => void
 }
 
 const PALETTE_LABEL: Record<string, TranslationKey> = {
@@ -71,7 +74,7 @@ export function WelcomeCard({
   firstName, isTeacher, palette, onPaletteChange,
   challenges, collapsedCount, expanded, onToggleExpanded,
   onOpenChallenge, onCreateChallenge,
-  month, onMonthChange, days, today,
+  month, onMonthChange, days, today, onDayClick, onOpenAssignment,
 }: WelcomeCardProps) {
   const { t } = useLanguage()
   const shown = expanded ? challenges : challenges.slice(0, collapsedCount)
@@ -202,6 +205,17 @@ export function WelcomeCard({
           today={today}
           isTeacher={isTeacher}
           palette={palette}
+          onDayClick={onDayClick}
+          headerAction={onOpenAssignment && (
+            <button
+              type="button"
+              onClick={onOpenAssignment}
+              className="text-[11px] px-2.5 py-1 rounded-full border transition-colors whitespace-nowrap"
+              style={{ borderColor: palette.rule, color: palette.ink2 }}
+            >
+              🗓️ {t('sched.assignClasses')}
+            </button>
+          )}
         />
       </div>
 

@@ -15,6 +15,8 @@ import dynamicImport from 'next/dynamic'
 import StudentStudyCurve from '@/components/StudentStudyCurve'
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard'
 import type { CalendarDay } from '@/components/dashboard/MonthCalendar'
+import { ClassAssignmentModal } from '@/components/dashboard/ClassAssignmentModal'
+import { DaySessionsModal } from '@/components/dashboard/DaySessionsModal'
 import { DEFAULT_PALETTE_ID, paletteById } from '@/lib/ui/paperCard'
 
 // ── Study Curve section with lang toggle ────────────────────────────────────
@@ -114,6 +116,17 @@ export default function DashboardPage() {
   */
   const [assignedChallengeIds, setAssignedChallengeIds] = useState<string[] | null>(null)
   const palette = paletteById(paletteId)
+
+  /*
+    Authoring, teacher and admin only. `monthNonce` is bumped after any write so
+    the month effect refetches — the alternative is threading a reload callback
+    down through two components, and the effect already knows how to rebuild
+    itself from scratch.
+  */
+  const [assignmentOpen, setAssignmentOpen] = useState(false)
+  const [editingDay, setEditingDay] = useState<string | null>(null)
+  const [teacherClasses, setTeacherClasses] = useState<{ id: string; name: string }[]>([])
+  const [monthNonce, setMonthNonce] = useState(0)
   const [petRoomBgUrl, setPetRoomBgUrl] = useState<string | null>(null)
   const [petRoomFrameUrl, setPetRoomFrameUrl] = useState<string | null>(null)
   const [petRoomFrameSlot, setPetRoomFrameSlot] = useState<{ x: number; y: number; w: number; h: number; rotate?: number; rotateY?: number; rotateX?: number } | null>(null)
@@ -473,11 +486,15 @@ export default function DashboardPage() {
       }
 
       if (classIds === null || classIds.length > 0) {
+        // A teacher's rows carry what the day editor needs to write against;
+        // a student's would never be read, but one query for both beats two
+        // that differ by three columns.
         let q = supabase
           .from('class_occurrences')
-          .select('id, class_id, occurrence_date, status, classes:class_id(name)')
+          .select('id, class_id, occurrence_date, status, series_id, start_time, end_time, classes:class_id(name)')
           .gte('occurrence_date', from)
           .lte('occurrence_date', to)
+          .order('start_time', { ascending: true })
         if (classIds) q = q.in('class_id', classIds)
         const { data: occ } = await q
         for (const o of (occ || []) as any[]) {
@@ -485,6 +502,10 @@ export default function DashboardPage() {
             id: o.class_id,
             name: o.classes?.name ?? '',
             cancelled: o.status === 'cancelled',
+            occurrenceId: o.id,
+            seriesId: o.series_id ?? null,
+            startTime: o.start_time,
+            endTime: o.end_time,
           })
         }
       }
@@ -517,7 +538,20 @@ export default function DashboardPage() {
     })()
 
     return () => { cancelled = true }
-  }, [user?.id, isTeacher, assignedChallengeIds, calendarMonth])
+  }, [user?.id, isTeacher, assignedChallengeIds, calendarMonth, monthNonce])
+
+  // The class list for the two authoring dropdowns. Teachers see every class,
+  // matching /classes; loaded once rather than per modal open.
+  useEffect(() => {
+    if (!isTeacher || !user?.id) return
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase.from('classes').select('id, name').order('name', { ascending: true })
+      if (!cancelled) setTeacherClasses(data || [])
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTeacher, user?.id])
 
   async function loadTodayChallenge(userId: string, teacherRole: boolean) {
     try {
@@ -728,7 +762,39 @@ export default function DashboardPage() {
           onMonthChange={setCalendarMonth}
           days={calendarDays}
           today={schoolToday}
+          onDayClick={isTeacher ? setEditingDay : undefined}
+          onOpenAssignment={isTeacher ? () => setAssignmentOpen(true) : undefined}
         />
+
+        {isTeacher && (
+          <>
+            <ClassAssignmentModal
+              open={assignmentOpen}
+              onClose={() => setAssignmentOpen(false)}
+              today={schoolToday}
+              onChanged={() => setMonthNonce(n => n + 1)}
+            />
+            <DaySessionsModal
+              date={editingDay}
+              sessions={(calendarDays[editingDay ?? '']?.classes ?? [])
+                // Only rows that came back with an occurrence id can be edited.
+                .filter(c => c.occurrenceId)
+                .map(c => ({
+                  id: c.occurrenceId!,
+                  classId: c.id,
+                  className: c.name,
+                  seriesId: c.seriesId ?? null,
+                  startTime: c.startTime ?? '00:00:00',
+                  endTime: c.endTime ?? '00:00:00',
+                  cancelled: c.cancelled,
+                }))}
+              classes={teacherClasses}
+              today={schoolToday}
+              onClose={() => setEditingDay(null)}
+              onChanged={() => setMonthNonce(n => n + 1)}
+            />
+          </>
+        )}
 
         {/* Stats Cards.
 

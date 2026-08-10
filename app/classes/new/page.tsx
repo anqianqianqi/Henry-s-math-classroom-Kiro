@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { generateOccurrences } from '@/lib/utils/occurrences'
 import { useViewerZone } from '@/components/ui/useViewerZone'
 
 /** Weekday values as stored, paired with their catalog key. */
@@ -22,13 +21,6 @@ const DAY_KEYS = [
   ['Sunday', 'day.sunday'],
 ] as const
 
-
-interface ScheduleSlot {
-  id: string
-  day: string
-  startTime: string
-  endTime: string
-}
 
 export default function NewClassPage() {
   const { t } = useLanguage()
@@ -55,9 +47,6 @@ export default function NewClassPage() {
     price: '',
     location: ''
   })
-  const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([
-    { id: crypto.randomUUID(), day: '', startTime: '', endTime: '' }
-  ])
   const [coverImage, setCoverImage] = useState<File | null>(null)
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null)
   const [learningObjectives, setLearningObjectives] = useState<string[]>([''])
@@ -66,7 +55,6 @@ export default function NewClassPage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [validFields, setValidFields] = useState({
     name: false,
-    schedule: false,
     start_date: false
   })
   const [showValidationErrors, setShowValidationErrors] = useState(false)
@@ -91,36 +79,12 @@ export default function NewClassPage() {
   }, [])
 
   // Validate fields in real-time
-  function validateField(field: string, value: string | ScheduleSlot[]) {
+  function validateField(field: string, value: string) {
     if (field === 'name') {
-      setValidFields(prev => ({ ...prev, name: (value as string).trim().length >= 3 }))
-    } else if (field === 'schedule') {
-      const slots = value as ScheduleSlot[]
-      const hasValidSlot = slots.some(slot => slot.day && slot.startTime && slot.endTime)
-      setValidFields(prev => ({ ...prev, schedule: hasValidSlot }))
+      setValidFields(prev => ({ ...prev, name: value.trim().length >= 3 }))
     } else if (field === 'start_date') {
-      setValidFields(prev => ({ ...prev, start_date: (value as string) !== '' }))
+      setValidFields(prev => ({ ...prev, start_date: value !== '' }))
     }
-  }
-
-  function addScheduleSlot() {
-    setScheduleSlots([...scheduleSlots, { id: crypto.randomUUID(), day: '', startTime: '', endTime: '' }])
-  }
-
-  function removeScheduleSlot(id: string) {
-    if (scheduleSlots.length > 1) {
-      const newSlots = scheduleSlots.filter(slot => slot.id !== id)
-      setScheduleSlots(newSlots)
-      validateField('schedule', newSlots)
-    }
-  }
-
-  function updateScheduleSlot(id: string, field: 'day' | 'startTime' | 'endTime', value: string) {
-    const newSlots = scheduleSlots.map(slot =>
-      slot.id === id ? { ...slot, [field]: value } : slot
-    )
-    setScheduleSlots(newSlots)
-    validateField('schedule', newSlots)
   }
 
   function handleCoverImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -196,15 +160,6 @@ export default function NewClassPage() {
         coverImageUrl = publicUrl
       }
 
-      // Filter out empty schedule slots and format them
-      const validSlots = scheduleSlots
-        .filter(slot => slot.day && slot.startTime && slot.endTime)
-        .map(slot => ({
-          day: slot.day,
-          startTime: slot.startTime,
-          endTime: slot.endTime
-        }))
-
       // Filter out empty learning objectives
       const validObjectives = learningObjectives.filter(obj => obj.trim() !== '')
 
@@ -214,7 +169,6 @@ export default function NewClassPage() {
         .insert({
           name: formData.name,
           description: formData.description || null,
-          schedule: validSlots.length > 0 ? validSlots : null,
           /*
             Classes are virtual, so "where the class runs" is the teacher's own
             clock: the times above were typed while looking at it. Students
@@ -270,27 +224,9 @@ export default function NewClassPage() {
       // Show success animation
       setShowSuccess(true)
       
-      // Auto-generate sessions if schedule and start date exist
-      if (validSlots.length > 0 && formData.start_date) {
-        try {
-          const endDate = formData.end_date
-            ? new Date(formData.end_date)
-            : new Date(new Date(formData.start_date).getTime() + 8 * 7 * 24 * 60 * 60 * 1000) // 8 weeks
-
-          const occurrences = generateOccurrences(
-            newClass.id,
-            validSlots.map(s => ({ day: s.day, startTime: s.startTime, endTime: s.endTime })),
-            new Date(formData.start_date),
-            endDate
-          )
-
-          if (occurrences.length > 0) {
-            await supabase.from('class_occurrences').insert(occurrences)
-          }
-        } catch (err) {
-          console.error('Failed to generate sessions:', err)
-        }
-      }
+      // No sessions are generated here. A new class starts empty and its
+      // timetable is written on the dashboard calendar, so there is one place
+      // that decides when a class meets rather than two that can disagree.
       
       // Redirect after animation
       setTimeout(() => {
@@ -303,7 +239,7 @@ export default function NewClassPage() {
     }
   }
 
-  const isFormValid = validFields.name && validFields.schedule && validFields.start_date
+  const isFormValid = validFields.name && validFields.start_date
   const descriptionLength = formData.description.length
 
   return (
@@ -410,108 +346,10 @@ export default function NewClassPage() {
                 </div>
               </div>
 
-              {/* Schedule */}
-              <div>
-                <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
-                  <span>📅</span>
-                  <span>{t('classForm.schedule')}</span>
-                  <span className="text-red-500">*</span>
-                  {validFields.schedule && <span className="text-primary-500">✅</span>}
-                </label>
-                <p className="text-sm text-gray-600 mb-4">
-                  Add one or more meeting times for your class
-                </p>
-                
-                {showValidationErrors && !validFields.schedule && (
-                  <div className="mb-4 p-3 bg-red-50 border-2 border-red-200 rounded-xl flex items-center gap-2">
-                    <span>⚠️</span>
-                    <span className="text-sm text-red-700 font-medium">
-                      Please add at least one complete meeting time (day, start time, and end time)
-                    </span>
-                  </div>
-                )}
-                
-                <div className="space-y-3">
-                  {scheduleSlots.map((slot, index) => (
-                    <div key={slot.id} className="flex gap-3 items-start">
-                      <div className="flex-1 space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Day of Week
-                          </label>
-                          <select
-                            value={slot.day}
-                            onChange={(e) => updateScheduleSlot(slot.id, 'day', e.target.value)}
-                            className="w-full p-3 border-2 border-gray-200 rounded-xl 
-                                     focus:border-primary-500 focus:ring-4 focus:ring-primary-100
-                                     transition-all duration-200 bg-white"
-                          >
-                            <option value="">{t('classForm.selectDay')}</option>
-                            {DAY_KEYS.map(([value, key]) => (
-                              <option key={value} value={value}>{t(key)}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Start Time
-                            </label>
-                            <input
-                              type="time"
-                              value={slot.startTime}
-                              onChange={(e) => updateScheduleSlot(slot.id, 'startTime', e.target.value)}
-                              className="w-full p-3 border-2 border-gray-200 rounded-xl 
-                                       focus:border-primary-500 focus:ring-4 focus:ring-primary-100
-                                       transition-all duration-200"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              End Time
-                            </label>
-                            <input
-                              type="time"
-                              value={slot.endTime}
-                              onChange={(e) => updateScheduleSlot(slot.id, 'endTime', e.target.value)}
-                              className="w-full p-3 border-2 border-gray-200 rounded-xl 
-                                       focus:border-primary-500 focus:ring-4 focus:ring-primary-100
-                                       transition-all duration-200"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      {scheduleSlots.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeScheduleSlot(slot.id)}
-                          className="mt-8 p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-                          title="Remove this time slot"
-                        >
-                          🗑️
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={addScheduleSlot}
-                  className="mt-4 flex items-center gap-2 px-4 py-2 text-primary-600 hover:bg-primary-50 
-                           rounded-xl transition-colors font-medium"
-                >
-                  <span>➕</span>
-                  <span>{t('classForm.addMeeting')}</span>
-                </button>
-
-                {!validFields.schedule && scheduleSlots.every(s => !s.day && !s.startTime && !s.endTime) && (
-                  <p className="mt-2 text-sm text-gray-500 flex items-center gap-2">
-                    <span>💡</span>
-                    <span>{t('classForm.needMeeting')}</span>
-                  </p>
-                )}
-              </div>
+              {/* The weekly schedule field is gone. A class no longer carries
+                  a time — its sessions are put on the calendar from the
+                  dashboard, one or a repeating run at a time, which is also the
+                  only place they can be changed afterwards. */}
 
               {/* Dates */}
               <div>
