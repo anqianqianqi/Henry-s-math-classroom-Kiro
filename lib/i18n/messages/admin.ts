@@ -528,4 +528,36 @@ export const admin = {
   'axis.motif.mechanical': { en: 'mechanical', zh: '机械' },
   'axis.motif.geometric': { en: 'geometric', zh: '几何' },
   'axis.motif.culinary': { en: 'culinary', zh: '饮食' },
+
+  // ── Solution editor lab ──────────────────────────────────
+  // A review window for the solution editor: type on the left, watch what
+  // gets stored, what the translator is handed, and what a reader sees.
+  'lab.solutionTitle': { en: 'Solution Editor Lab', zh: '解答编辑器实验室' },
+  'lab.solutionSubtitle': {
+    en: 'Type a solution the way a student would. Nothing here is saved.',
+    zh: '像学生一样写一份解答。此页不会保存任何内容。',
+  },
+  'lab.editor': { en: 'The editor', zh: '编辑器' },
+  'lab.stored': { en: 'What gets stored', zh: '实际存储的内容' },
+  'lab.storedWhy': {
+    en: 'Plain text, unchanged format. No migration, and every existing reader still works.',
+    zh: '仍是纯文本，格式未变。无需迁移，现有的读取逻辑都照常工作。',
+  },
+  'lab.translator': { en: 'What the translator sees', zh: '翻译引擎看到的内容' },
+  'lab.translatorWhy': {
+    en: 'Every equation is masked before the engine is called, so the words translate and the maths cannot be touched.',
+    zh: '调用引擎前每个算式都会被遮蔽，因此文字照常翻译，算式不会被改动。',
+  },
+  'lab.reader': { en: 'What a reader sees', zh: '读者看到的效果' },
+  'lab.reopened': { en: 'Reopened for editing', zh: '重新打开编辑' },
+  'lab.reopenedWhy': {
+    en: 'What the student would see coming back to edit — shorthand, never LaTeX.',
+    zh: '学生回来修改时看到的内容——只有简写，绝不会是 LaTeX。',
+  },
+  'lab.samples': { en: 'Try one', zh: '试试这些' },
+  'lab.sampleWorked': { en: 'A worked solution', zh: '完整解答' },
+  'lab.sampleMoney': { en: 'The money trap', zh: '金额陷阱' },
+  'lab.sampleOld': { en: 'An old submission', zh: '旧的提交' },
+  'lab.sampleGeometry': { en: 'Geometry', zh: '几何' },
+  'lab.empty': { en: 'Nothing yet.', zh: '暂无内容。' },
 } as const

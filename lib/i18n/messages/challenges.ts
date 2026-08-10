@@ -13,6 +13,39 @@ export const challenges = {
     en: 'Write your solution here... Show your work!',
     zh: '在这里写下您的解答……请写出解题过程！',
   },
+  // ── The solution editor ─────────────────────────────────────
+  // A student writes a solution as a list of steps: some prose, some
+  // equations. Nothing here names LaTeX, because a student never meets it —
+  // they type 1/2 and x^2 and the editor does the rest.
+  'solution.addNote': { en: 'Add a note', zh: '添加文字' },
+  'solution.addEquation': { en: 'Add an equation', zh: '添加算式' },
+  'solution.notePlaceholder': { en: 'Explain your thinking...', zh: '写下你的想法……' },
+  'solution.equationPlaceholder': { en: 'Type 1/2, x^2, sqrt9 ...', zh: '输入 1/2、x^2、sqrt9……' },
+  'solution.removeStep': { en: 'Remove this step', zh: '删除这一步' },
+  'solution.moveUp': { en: 'Move up', zh: '上移' },
+  'solution.moveDown': { en: 'Move down', zh: '下移' },
+  'solution.symbols': { en: 'Symbols', zh: '符号' },
+  'solution.preview': { en: 'How it will look', zh: '显示效果' },
+  'solution.empty': { en: 'Add a note or an equation to begin.', zh: '添加文字或算式即可开始。' },
+
+  // Palette buttons. The label is what the button shows; the hint is its
+  // tooltip, and says what to type instead — the palette is a reminder of
+  // the shorthand, not a replacement for learning it.
+  'solution.symFraction': { en: 'Fraction', zh: '分数' },
+  'solution.symPower': { en: 'Power', zh: '乘方' },
+  'solution.symRoot': { en: 'Square root', zh: '平方根' },
+  'solution.symSubscript': { en: 'Subscript', zh: '下标' },
+  'solution.symLeq': { en: 'Less or equal', zh: '小于等于' },
+  'solution.symGeq': { en: 'Greater or equal', zh: '大于等于' },
+  'solution.symNeq': { en: 'Not equal', zh: '不等于' },
+  'solution.symTimes': { en: 'Times', zh: '乘' },
+  'solution.symDiv': { en: 'Divided by', zh: '除' },
+  'solution.symPm': { en: 'Plus or minus', zh: '正负' },
+  'solution.symPi': { en: 'Pi', zh: '圆周率' },
+  'solution.symAngle': { en: 'Angle', zh: '角' },
+  'solution.symTriangle': { en: 'Triangle', zh: '三角形' },
+  'solution.symDegree': { en: 'Degrees', zh: '度' },
+
   'challenge.attachImage': { en: '📷 Attach Image (Optional)', zh: '📷 添加图片（可选）' },
   'challenge.submitSolution': { en: 'Submit Solution', zh: '提交解答' },
   'challenge.resubmit': { en: 'Resubmit', zh: '重新提交' },
