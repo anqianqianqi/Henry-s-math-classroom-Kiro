@@ -1,0 +1,437 @@
+<!--
+  What an occurrence is — and what deleting one costs today.
+
+  Open this file directly in a browser; it needs no server and no assets.
+
+  ── WHY THIS EXISTS ─────────────────────────────────────────
+  Four claims were put to me about the model. All four hold, and the sources
+  are cited beside each. But the fourth — that a session is independent of
+  student work — is true of the INTENT and false of the SCHEMA as it stands,
+  which is the whole reason the decoupling migration exists.
+
+  The sandbox below is the argument: run the same delete under today's cascade
+  and under the proposed one, and watch what goes missing.
+
+  ── NOT A DECISION ──────────────────────────────────────────
+  Nothing here is implemented. Siblings: welcome-card-variants.html,
+  dashboard-layout-preview.html.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class, Series, Occurrence — what deleting costs</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --ground:#f4f5f6; --surface:#ffffff; --surface-2:#eceef0; --ink:#16181c;
+    --ink-2:#434a54; --ink-3:#737b85; --rule:#d9dde1; --rule-2:#b9c0c7;
+    --accent:#3d6a8b; --accent-wash:#e6eef4;
+    --bad:#a8402c; --bad-wash:#f8e8e4; --good:#2f6b46; --good-wash:#e4f0e9;
+    --mono: ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ground:#121418; --surface:#191c21; --surface-2:#22262c; --ink:#e7eaee;
+      --ink-2:#b0b8c1; --ink-3:#838c96; --rule:#2b3037; --rule-2:#3d444d;
+      --accent:#7fa9c8; --accent-wash:#1e2831; --bad:#e08a74; --bad-wash:#2e1e1a;
+      --good:#7fbd97; --good-wash:#1a2a20; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--sans);
+    line-height:1.6; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1000px; margin:0 auto; padding:3rem 1.5rem 6rem; }
+  h1 { font-family:var(--serif); font-weight:600; font-size:2rem; line-height:1.2; margin:0 0 .5rem; }
+  h2 { font-family:var(--serif); font-weight:600; font-size:1.3rem; margin:2.75rem 0 .5rem; }
+  .lede { color:var(--ink-2); max-width:40rem; margin:0 0 .4rem; }
+  .meta { color:var(--ink-3); font-family:var(--mono); font-size:.76rem; margin:0 0 2rem; }
+  code { font-family:var(--mono); font-size:.85em; background:var(--accent-wash);
+    padding:.08em .35em; border-radius:3px; }
+
+  /* ── Claims ───────────────────────────────────────────────── */
+  .claim { display:grid; grid-template-columns:auto 1fr; gap:.75rem 1rem;
+    border-bottom:1px solid var(--rule); padding:1rem 0; align-items:start; }
+  .claim:last-of-type { border-bottom:0; }
+  .verdict { font-family:var(--mono); font-size:.68rem; font-weight:700; letter-spacing:.06em;
+    padding:.15rem .5rem; border-radius:3px; white-space:nowrap; margin-top:.2rem; }
+  .verdict.yes { background:var(--good-wash); color:var(--good); }
+  .verdict.part { background:#f6efdc; color:#8a6414; }
+  @media (prefers-color-scheme: dark) { .verdict.part { background:#2b2415; color:#d9ab52; } }
+  .claim p { margin:0 0 .3rem; }
+  .claim .src { font-family:var(--mono); font-size:.72rem; color:var(--ink-3); }
+
+  /* ── Diagram ──────────────────────────────────────────────── */
+  .diagram { background:var(--surface); border:1px solid var(--rule); border-radius:10px;
+    padding:1.25rem; margin-top:.75rem; overflow-x:auto; }
+  .diagram svg { display:block; margin:0 auto; max-width:100%; height:auto; }
+  .b-fill { fill:var(--surface-2); }
+  .b-stroke { stroke:var(--rule-2); }
+  .t-main { fill:var(--ink); font:600 13px var(--sans); }
+  .t-sub  { fill:var(--ink-3); font:11px var(--mono); }
+  .t-edge { fill:var(--ink-3); font:10px var(--mono); }
+  .edge { stroke:var(--rule-2); stroke-width:1.5; fill:none; }
+  .edge.cascade { stroke:var(--bad); stroke-width:2; }
+  .edge.setnull { stroke:var(--good); stroke-width:2; stroke-dasharray:5 3; }
+  .t-edge.cascade { fill:var(--bad); font-weight:700; }
+  .t-edge.setnull { fill:var(--good); font-weight:700; }
+  .b-new { stroke-dasharray:5 3; }
+
+  /* ── Sandbox ──────────────────────────────────────────────── */
+  .controls { display:flex; flex-wrap:wrap; gap:1.25rem; align-items:center;
+    margin:1rem 0 1.25rem; }
+  .ctl-label { font-family:var(--mono); font-size:.7rem; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--ink-3); margin-right:.5rem; }
+  .seg { display:inline-flex; border:1px solid var(--rule); border-radius:6px; overflow:hidden; }
+  .seg button { font:inherit; font-size:.85rem; padding:.3rem .8rem; border:0; cursor:pointer;
+    background:var(--surface); color:var(--ink-2); white-space:nowrap; }
+  .seg button[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  .btn { font:inherit; font-size:.82rem; padding:.3rem .75rem; border:1px solid var(--rule-2);
+    border-radius:6px; background:var(--surface); color:var(--ink-2); cursor:pointer; }
+  .btn:hover { background:var(--surface-2); }
+
+  .sandbox { display:grid; grid-template-columns:1.15fr .85fr; gap:1.5rem; align-items:start; }
+  @media (max-width:820px) { .sandbox { grid-template-columns:1fr; } }
+  .panel { background:var(--surface); border:1px solid var(--rule); border-radius:10px; padding:1rem 1.1rem; }
+  .panel h3 { margin:0 0 .6rem; font-size:.72rem; font-family:var(--mono); letter-spacing:.08em;
+    text-transform:uppercase; color:var(--ink-3); font-weight:500; }
+
+  .series-row { display:flex; align-items:center; gap:.5rem; padding:.4rem 0;
+    border-bottom:1px solid var(--rule); font-size:.85rem; }
+  .series-row:last-child { border-bottom:0; }
+  .series-row .sw { width:.6rem; height:.6rem; border-radius:2px; flex:0 0 auto; }
+  .series-row .nm { flex:1; }
+
+  .occ { display:flex; align-items:center; gap:.5rem; padding:.32rem .45rem; border-radius:5px;
+    font-size:.82rem; border:1px solid transparent; }
+  .occ:hover { background:var(--surface-2); border-color:var(--rule); }
+  .occ .d { font-family:var(--mono); font-size:.76rem; color:var(--ink-2); width:5.4rem; flex:0 0 auto; }
+  .occ .sw { width:.55rem; height:.55rem; border-radius:2px; flex:0 0 auto; }
+  .occ .tag { font-size:.66rem; font-family:var(--mono); color:var(--ink-3); }
+  .occ .att { margin-left:auto; font-size:.68rem; color:var(--ink-3); font-family:var(--mono); }
+  .occ.cancelled .d { text-decoration:line-through; opacity:.55; }
+  .occ .x { border:0; background:none; color:var(--ink-3); cursor:pointer; font-size:.9rem;
+    padding:0 .25rem; border-radius:3px; }
+  .occ .x:hover { background:var(--bad-wash); color:var(--bad); }
+  .past { opacity:.62; }
+
+  .ledger { width:100%; border-collapse:collapse; font-size:.85rem; }
+  .ledger td { padding:.35rem .2rem; border-bottom:1px solid var(--rule); }
+  .ledger td:last-child { text-align:right; font-family:var(--mono); }
+  .ledger tr:last-child td { border-bottom:0; }
+  .lost { color:var(--bad); font-weight:700; }
+  .lost::after { content:' ▼'; font-size:.7em; }
+  .log { margin-top:.9rem; font-size:.78rem; color:var(--ink-2); min-height:3.2rem;
+    border-left:3px solid var(--rule); padding-left:.75rem; }
+  .log.bad { border-left-color:var(--bad); color:var(--bad); }
+  .log.good { border-left-color:var(--good); }
+
+  .note { border-left:3px solid var(--rule); padding:.1rem 0 .1rem 1rem; margin:1rem 0; max-width:44rem; }
+  .note.bad { border-left-color:var(--bad); }
+  .note h3 { margin:0 0 .2rem; font-size:.95rem; font-weight:600; }
+  .note p { margin:0; color:var(--ink-2); font-size:.9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>What an occurrence is</h1>
+  <p class="lede">
+    Four claims, checked against the schema. Then a sandbox: delete things, and watch what
+    else goes with them under today's foreign keys versus the proposed ones.
+  </p>
+  <p class="meta">supabase/schema.sql &middot; supabase/add-class-occurrences-system.sql</p>
+
+  <h2>The claims</h2>
+
+  <div class="claim">
+    <span class="verdict yes">HOLDS</span>
+    <div>
+      <p><strong>An occurrence just means there is a class that day.</strong></p>
+      <p class="src">class_occurrences( occurrence_date, start_time, end_time, session_number, topic,
+        status ∈ upcoming | completed | cancelled ). One row is one sitting, on one date.</p>
+    </div>
+  </div>
+
+  <div class="claim">
+    <span class="verdict yes">HOLDS</span>
+    <div>
+      <p><strong>It never means the class still exists.</strong></p>
+      <p class="src">Existence is <code>classes.is_active</code> and the row itself. Enrolment is
+        class_members( class_id, user_id ) — keyed on the CLASS, never on an occurrence. A class with
+        zero sessions still exists and still has every student in it.</p>
+    </div>
+  </div>
+
+  <div class="claim">
+    <span class="verdict yes">HOLDS</span>
+    <div>
+      <p><strong>A class can occur on several days a week.</strong></p>
+      <p class="src">There is no unique constraint on class_occurrences at all — not on
+        (class_id, occurrence_date), not on anything. Several days a week is fine; so is twice in
+        one day. generateOccurrences already loops over an array of slots.</p>
+    </div>
+  </div>
+
+  <div class="claim">
+    <span class="verdict part">INTENT ONLY</span>
+    <div>
+      <p><strong>There is no need to backfill, and a session is independent of student work.</strong></p>
+      <p class="src">Backfilling: correct, nothing requires it. Independence: correct as a design,
+        FALSE in the schema today. session_materials and homework_assignments both hang off
+        occurrence_id ON DELETE CASCADE. Run the sandbox.</p>
+    </div>
+  </div>
+
+  <h2>The model</h2>
+  <div class="controls">
+    <span class="ctl-label">Foreign keys</span>
+    <div class="seg" id="mode">
+      <button data-v="today" aria-pressed="true">As built today</button>
+      <button data-v="fixed" aria-pressed="false">After decoupling</button>
+    </div>
+    <button class="btn" id="reset">Reset sandbox</button>
+  </div>
+
+  <div class="diagram" id="diagram"></div>
+
+  <h2>Sandbox</h2>
+  <p class="lede" style="margin-bottom:1rem">
+    Algebra 1 — two series, one hand-added Friday, one cancelled Wednesday. Two past sessions
+    carry homework and materials. Delete a session with ✕, delete a whole series, or deactivate
+    the class.
+  </p>
+
+  <div class="sandbox">
+    <div class="panel">
+      <h3>Series</h3>
+      <div id="series"></div>
+      <h3 style="margin-top:1.1rem">Occurrences — August 2026</h3>
+      <div id="occs"></div>
+    </div>
+    <div class="panel">
+      <h3>What still exists</h3>
+      <table class="ledger"><tbody id="ledger"></tbody></table>
+      <div class="log" id="log">Nothing deleted yet.</div>
+    </div>
+  </div>
+
+  <div class="note bad" id="verdict-note"></div>
+
+</div>
+
+<script>
+var TODAY = '2026-08-09'
+var SERIES = [
+  { id:'s1', label:'Mondays, 16:00–17:00',   colour:'#c2703f' },
+  { id:'s2', label:'Wednesdays, 16:00–17:00', colour:'#5b8fa8' },
+]
+
+function seed () {
+  return {
+    classActive: true,
+    students: 3,
+    series: SERIES.map(function (s) { return { id:s.id } }),
+    occs: [
+      { d:'2026-08-03', s:'s1', status:'completed', hw:1, sub:3, grade:3, mat:2 },
+      { d:'2026-08-05', s:'s2', status:'completed', hw:1, sub:2, grade:0, mat:0 },
+      { d:'2026-08-10', s:'s1', status:'upcoming', hw:0, sub:0, grade:0, mat:0 },
+      { d:'2026-08-12', s:'s2', status:'upcoming', hw:0, sub:0, grade:0, mat:1 },
+      { d:'2026-08-14', s:null, status:'upcoming', hw:0, sub:0, grade:0, mat:0 },
+      { d:'2026-08-17', s:'s1', status:'upcoming', hw:0, sub:0, grade:0, mat:0 },
+      { d:'2026-08-19', s:'s2', status:'cancelled', hw:0, sub:0, grade:0, mat:0 },
+      { d:'2026-08-24', s:'s1', status:'upcoming', hw:0, sub:0, grade:0, mat:0 },
+      { d:'2026-08-26', s:'s2', status:'upcoming', hw:0, sub:0, grade:0, mat:0 },
+      { d:'2026-08-31', s:'s1', status:'upcoming', hw:0, sub:0, grade:0, mat:0 },
+    ],
+    /* Work that has been detached from a session but still belongs to the class.
+       Only reachable in the fixed model — today there is nowhere for it to go. */
+    orphanHw:0, orphanSub:0, orphanGrade:0, orphanMat:0,
+    log:'Nothing deleted yet.', logKind:'',
+  }
+}
+
+var S = seed()
+var mode = 'today'
+
+var BASE = (function () { var s = seed(); return totals(s) })()
+
+function totals (s) {
+  var t = { sessions:0, hw:s.orphanHw, sub:s.orphanSub, grade:s.orphanGrade, mat:s.orphanMat }
+  s.occs.forEach(function (o) { t.sessions++; t.hw+=o.hw; t.sub+=o.sub; t.grade+=o.grade; t.mat+=o.mat })
+  return t
+}
+
+/* Removing a session. Under today's keys the cascade takes the work with it;
+   under the proposed keys the work keeps its class and only loses the link. */
+function removeOccs (pred, what) {
+  var lostHw=0, lostSub=0, lostGrade=0, lostMat=0, n=0
+  S.occs = S.occs.filter(function (o) {
+    if (!pred(o)) return true
+    n++
+    if (mode === 'today') { lostHw+=o.hw; lostSub+=o.sub; lostGrade+=o.grade; lostMat+=o.mat }
+    else { S.orphanHw+=o.hw; S.orphanSub+=o.sub; S.orphanGrade+=o.grade; S.orphanMat+=o.mat }
+    return false
+  })
+  if (!n) return
+  if (mode === 'today' && (lostHw||lostSub||lostGrade||lostMat)) {
+    S.log = what + ' — removed ' + n + ' session' + (n>1?'s':'') + ', and with them ' +
+      lostHw + ' homework assignment' + (lostHw>1?'s':'') + ', ' + lostSub + ' student submission' +
+      (lostSub!==1?'s':'') + ', ' + lostGrade + ' grade' + (lostGrade!==1?'s':'') + ' and ' +
+      lostMat + ' material' + (lostMat!==1?'s':'') + '. Cascaded, silently, with no undo.'
+    S.logKind = 'bad'
+  } else if (mode === 'today') {
+    S.log = what + ' — removed ' + n + ' session' + (n>1?'s':'') + '. Nothing was attached to them.'
+    S.logKind = ''
+  } else {
+    S.log = what + ' — removed ' + n + ' session' + (n>1?'s':'') +
+      '. Any homework and materials kept their class and simply lost the session link.'
+    S.logKind = 'good'
+  }
+}
+
+function render () {
+  /* Series list */
+  document.getElementById('series').innerHTML = SERIES.map(function (s) {
+    var live = S.series.some(function (x) { return x.id===s.id })
+    var count = S.occs.filter(function (o) { return o.s===s.id }).length
+    return '<div class="series-row"><span class="sw" style="background:'+(live?s.colour:'var(--rule-2)')+'"></span>'+
+      '<span class="nm"'+(live?'':' style="opacity:.45;text-decoration:line-through"')+'>'+s.label+'</span>'+
+      '<span class="tag" style="font-size:.7rem;color:var(--ink-3)">'+count+' session'+(count!==1?'s':'')+'</span>'+
+      (live ? '<button class="btn" style="font-size:.72rem;padding:.15rem .5rem" data-del-series="'+s.id+'">Delete series</button>' : '')+
+      '</div>'
+  }).join('') +
+  '<div class="series-row"><span class="nm" style="color:var(--ink-3);font-size:.8rem">Class is ' +
+    (S.classActive ? 'active' : 'inactive') + ' &middot; ' + S.students + ' students enrolled</span>' +
+    '<button class="btn" style="font-size:.72rem;padding:.15rem .5rem" id="toggle-class">' +
+    (S.classActive ? 'Deactivate class' : 'Reactivate') + '</button></div>'
+
+  /* Occurrences */
+  document.getElementById('occs').innerHTML = S.occs.length ? S.occs.map(function (o) {
+    var s = SERIES.find(function (x) { return x.id===o.s })
+    var att = []
+    if (o.hw) att.push(o.hw+' hw')
+    if (o.sub) att.push(o.sub+' sub')
+    if (o.mat) att.push(o.mat+' mat')
+    return '<div class="occ'+(o.status==='cancelled'?' cancelled':'')+(o.d<TODAY?' past':'')+'">'+
+      '<span class="sw" style="background:'+(s?s.colour:'var(--rule-2)')+'"></span>'+
+      '<span class="d">'+o.d.slice(5)+'</span>'+
+      '<span class="tag">'+(s?o.s:'one-off')+(o.status==='cancelled'?' · cancelled':'')+'</span>'+
+      '<span class="att">'+att.join(' · ')+'</span>'+
+      '<button class="x" data-del-occ="'+o.d+'" title="Delete this session">✕</button></div>'
+  }).join('') : '<p style="font-size:.85rem;color:var(--ink-3);margin:0">No sessions. The class still exists.</p>'
+
+  /* Ledger */
+  var t = totals(S)
+  var rows = [
+    ['Class', S.classActive ? 'active' : 'inactive', false],
+    ['Students enrolled', S.students, S.students < BASE_STUDENTS],
+    ['Sessions', t.sessions, false],
+    ['Homework assignments', t.hw, t.hw < BASE.hw],
+    ['Student submissions', t.sub, t.sub < BASE.sub],
+    ['Grades', t.grade, t.grade < BASE.grade],
+    ['Session materials', t.mat, t.mat < BASE.mat],
+  ]
+  document.getElementById('ledger').innerHTML = rows.map(function (r) {
+    return '<tr><td>'+r[0]+'</td><td'+(r[2]?' class="lost"':'')+'>'+r[1]+'</td></tr>'
+  }).join('')
+
+  var log = document.getElementById('log')
+  log.textContent = S.log
+  log.className = 'log' + (S.logKind ? ' ' + S.logKind : '')
+
+  document.getElementById('verdict-note').innerHTML = mode === 'today'
+    ? '<h3>Today, a session is not independent of student work</h3><p>Delete the 08-03 session ' +
+      'above and three student submissions and their grades go with it. That is the schema, not a ' +
+      'UI choice — <code>ON DELETE CASCADE</code> on <code>homework_assignments.occurrence_id</code> ' +
+      'and <code>session_materials.occurrence_id</code>.</p>'
+    : '<h3>After decoupling, it behaves as you described</h3><p>Homework and materials carry their ' +
+      'own <code>class_id</code>, and <code>occurrence_id</code> becomes nullable ' +
+      '<code>ON DELETE SET NULL</code>. Deleting a session means no class was held that day, and ' +
+      'nothing else. The eight RLS policies that currently reach the class through the occurrence ' +
+      'have to move onto <code>class_id</code> in the same change, or the work survives but goes invisible.</p>'
+  document.getElementById('verdict-note').className = 'note' + (mode==='today' ? ' bad' : '')
+
+  drawDiagram()
+}
+var BASE_STUDENTS = 3
+
+function drawDiagram () {
+  var casc = mode === 'today'
+  document.getElementById('diagram').innerHTML =
+  '<svg viewBox="0 0 720 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Class, series, occurrence and student work">' +
+    box(280,10,160,44,'classes','is_active') +
+    box(60,100,170,44,'class_members','enrolment · class_id') +
+    box(470,100,190,44,'class_schedule_series','weekday · time · range', true) +
+    box(270,190,190,48,'class_occurrences','one date · one sitting') +
+    box(40,300,180,52,'session_materials', casc ? 'occurrence_id NOT NULL' : 'class_id + nullable link') +
+    box(390,300,230,52,'homework_assignments', casc ? 'occurrence_id NOT NULL' : 'class_id + nullable link') +
+
+    // classes → members / occurrences / series
+    line('M360,54 L360,72 L145,72 L145,100') +
+    line('M360,54 L360,190') +
+    line('M360,54 L360,72 L565,72 L565,100') +
+    // series → occurrences (generates)
+    line('M565,144 L565,166 L460,166 L460,200', 'edge b-new') +
+    txt(500,161,'generates','t-edge') +
+
+    // occurrences → work
+    line('M300,238 L300,268 L130,268 L130,300', casc ? 'edge cascade' : 'edge setnull') +
+    line('M420,238 L420,268 L505,268 L505,300', casc ? 'edge cascade' : 'edge setnull') +
+    txt(150,262, casc ? 'CASCADE' : 'SET NULL', casc ? 't-edge cascade' : 't-edge setnull') +
+    txt(525,262, casc ? 'CASCADE' : 'SET NULL', casc ? 't-edge cascade' : 't-edge setnull') +
+
+    // classes → work directly, only in fixed mode
+    (casc ? '' :
+      line('M280,32 L20,32 L20,326 L40,326', 'edge setnull') +
+      line('M440,32 L700,32 L700,326 L620,326', 'edge setnull') +
+      txt(30,300,'class_id','t-edge setnull') + txt(660,300,'class_id','t-edge setnull')) +
+
+    box(390,370,230,24,'submissions → grades → comments', '', false, true) +
+    line('M505,352 L505,370', casc ? 'edge cascade' : 'edge') +
+  '</svg>'
+}
+function box (x,y,w,h,title,sub,dashed,small) {
+  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="6" class="b-fill b-stroke'+(dashed?' b-new':'')+'"/>'+
+    '<text x="'+(x+w/2)+'" y="'+(y+(sub?19:16))+'" text-anchor="middle" class="'+(small?'t-sub':'t-main')+'">'+title+'</text>'+
+    (sub?'<text x="'+(x+w/2)+'" y="'+(y+34)+'" text-anchor="middle" class="t-sub">'+sub+'</text>':'')
+}
+function line (d, cls) { return '<path d="'+d+'" class="'+(cls||'edge')+'"/>' }
+function txt (x,y,s,cls) { return '<text x="'+x+'" y="'+y+'" class="'+cls+'">'+s+'</text>' }
+
+/* ── Events ───────────────────────────────────────────────────────────────── */
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return
+
+  if (b.dataset.delOcc) {
+    var d = b.dataset.delOcc
+    removeOccs(function (o) { return o.d===d }, 'Deleted the ' + d.slice(5) + ' session')
+  } else if (b.dataset.delSeries) {
+    var id = b.dataset.delSeries
+    S.series = S.series.filter(function (x) { return x.id!==id })
+    removeOccs(function (o) { return o.s===id }, 'Deleted series ' + id + ' and every session in it')
+  } else if (b.id === 'toggle-class') {
+    S.classActive = !S.classActive
+    S.log = S.classActive ? 'Class reactivated. Sessions were never touched.'
+      : 'Class deactivated. Every session, student and piece of homework is still there — ' +
+        'is_active is a flag on the class and nothing hangs off it.'
+    S.logKind = ''
+  } else if (b.id === 'reset') {
+    S = seed()
+  } else if (b.closest('#mode')) {
+    mode = b.dataset.v
+    document.querySelectorAll('#mode button').forEach(function (x) {
+      x.setAttribute('aria-pressed', String(x===b)) })
+    S = seed()
+    S.log = 'Sandbox reset for the ' + (mode==='today'?'current':'proposed') + ' foreign keys.'
+    S.logKind = ''
+  } else return
+
+  render()
+})
+
+render()
+</script>
+</body>
+</html>
