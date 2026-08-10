@@ -14,16 +14,20 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { PET_AREA_CONTEXT, PET_ROOM_IMAGE_SIZE } from '@/lib/petRoom/promptContext'
 
 export const dynamic = 'force-dynamic'
 
+// The shared context says where the room is shown and what shape it must be;
+// what follows is only what THIS step needs on top of it — an empty room with
+// a blank patch for the frame that step two paints on.
 const ROOM_CONTEXT = `
-STRICT RULES — follow exactly:
+${PET_AREA_CONTEXT}
+
+STRICT RULES for this step — follow exactly:
 1. NO animals, cats, pets, or any characters in the scene.
 2. On the upper-right wall area (roughly 60-80% from left, 5-38% from top), include a FLAT BLANK WALL SPACE — a uniform-coloured rectangle with ZERO decoration or texture variation. This will receive a picture frame in the next step.
 3. Lower-centre floor should be clear — no furniture blocking it.
-4. Landscape orientation, 3:2 aspect ratio, 1536x1024.
-5. Anime / Studio Ghibli cozy interior style.
 `.trim()
 
 const FRAME_EDIT_PROMPT = `Paint a decorative picture frame directly onto the blank wall space in the upper-right area of this room image.
@@ -37,7 +41,7 @@ async function callGenerations(apiKey: string, prompt: string): Promise<string> 
   const res = await fetch('https://api.openai.com/v1/images/generations', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'gpt-image-2', prompt, n: 1, size: '1536x1024', output_format: 'png', quality: 'high' }),
+    body: JSON.stringify({ model: 'gpt-image-2', prompt, n: 1, size: PET_ROOM_IMAGE_SIZE, output_format: 'png', quality: 'high' }),
   })
   if (!res.ok) throw new Error(`Generation failed (${res.status}): ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
@@ -55,7 +59,7 @@ async function callEdit(apiKey: string, imageUrl: string, editPrompt: string): P
   form.append('image', imgBlob, 'room.png')
   form.append('prompt', editPrompt)
   form.append('n', '1')
-  form.append('size', '1536x1024')
+  form.append('size', PET_ROOM_IMAGE_SIZE)
   const res = await fetch('https://api.openai.com/v1/images/edits', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}` },

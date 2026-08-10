@@ -4,9 +4,9 @@
 // uploads the result to Supabase storage, and inserts a row in
 // pet_room_backgrounds so it immediately appears in the pet room picker.
 //
-// The pet area on the dashboard is a flex-1 div (≈ half the page width)
-// with minHeight: 400px and backgroundSize: cover, landscape orientation.
-// The best GPT Image 2 size for this is 1536×1024 (landscape, 3:2).
+// Where the room is shown, and the size to ask for, both live in
+// lib/petRoom/promptContext.ts — see the note there on why they are not
+// written out here.
 //
 // POST body: { prompt: string, name: string, description?: string, setDefault?: boolean }
 // Returns:   { id, image_url, name }
@@ -14,20 +14,10 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { PET_AREA_CONTEXT, PET_ROOM_IMAGE_SIZE } from '@/lib/petRoom/promptContext'
 
 export const dynamic = 'force-dynamic'
 
-// Pet area dimensions / aspect ratio context injected into every prompt
-// so the image composition is optimised for a landscape room background.
-const PET_AREA_CONTEXT = `
-The image will be used as a background for a pet area on a web dashboard.
-The area is landscape-oriented (wider than tall, roughly 3:2 aspect ratio).
-Composition rules:
-- Leave the lower-centre portion clear — that is where the pet (a small cat) sits.
-- The room should feel like a ground-level interior, with a visible floor and wall.
-- Wall art / picture frames on the upper walls should be clearly defined rectangular areas so they can be overlaid with user images later.
-- Style: anime / Studio Ghibli cozy interior.
-`.trim()
 
 export async function POST(request: Request) {
   try {
@@ -59,8 +49,7 @@ export async function POST(request: Request) {
     const fullPrompt = `${prompt.trim()}\n\n${PET_AREA_CONTEXT}`
 
     // ── Call GPT Image 2 via Responses API ───────────────────────────────────
-    // Size 1536x1024 = landscape 3:2 — the best fit for the pet area aspect ratio.
-    const imageRes = await fetch('https://api.openai.com/v1/images/generations', {
+        const imageRes = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -70,7 +59,7 @@ export async function POST(request: Request) {
         model: 'gpt-image-2',
         prompt: fullPrompt,
         n: 1,
-        size: '1536x1024',       // landscape — matches pet area aspect ratio
+        size: PET_ROOM_IMAGE_SIZE,
         output_format: 'png',
         quality: 'high',
       }),
