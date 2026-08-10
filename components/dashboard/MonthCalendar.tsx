@@ -3,28 +3,44 @@
 /**
  * A month of the reader's own timetable, on the right half of the welcome card.
  *
- * ── WHY A DAY HOLDS MARKS AND NOT WORDS ─────────────────────
- * The card is split 40/60 and the calendar gets the wider share, which still
- * only leaves about 88px a cell. No challenge title survives that in either
- * language, so a problem is a dot and the titles stay on the left half where
- * there is room for them.
+ * ── SHAPE FIRST, COLOUR SECOND ──────────────────────────────
+ * Six muted hues on a coloured wash were too close to tell apart, and for a
+ * reader who does not separate reds and greens they carried nothing at all. So
+ * every class has a shape as well as a colour, and a problem has a shape no
+ * class uses. The colour is now a redundant second channel rather than the only
+ * one — see classShape.
  *
- * That turns out to be the safe design as well as the only one that fits: a
- * student must not see a problem set for a future date — the challenge page
- * redirects them away from one — and a dot says something is set without saying
- * what. So the whole month can be shown honestly with no special case for
- * future days. Their own class schedule is not secret, so sessions show in full.
+ * ── WHY A FUTURE PROBLEM KEEPS ITS NAME BACK ────────────────
+ * The challenge page turns a student away from a problem dated after today.
+ * Printing its title on the calendar would hand over the one thing that
+ * redirect exists to withhold, so a future day shows a lock and "not open yet".
+ * That something is set is not secret; what it is, is.
+ *
+ * The card is split 25/75 to pay for the words: a name, a time and a status
+ * line need about 150px a cell, and the problem list on the left does not need
+ * half a card to show three titles.
  *
  * ── WHAT EACH ROLE GETS ─────────────────────────────────────
- * Student  problem dots, filled once submitted, plus their own class sessions.
- * Teacher  the classes running that day and nothing else. A teacher sets the
- *          problems; a timetable is what they do not otherwise have.
+ * Student  their problems by name, with where they stand on each — waiting on
+ *          a mark, full marks, or a comment to go and read — plus their own
+ *          classes with the exact local time.
+ * Teacher  the classes running that day and nothing else. They set the
+ *          problems and wrote the comments; a timetable is what they do not
+ *          otherwise have. None of the student status applies to them.
  */
 
 import { useMemo } from 'react'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import type { TranslationKey } from '@/lib/i18n/catalog'
 import { zoneLabel } from '@/lib/utils/timezone'
 import type { PaperPalette } from '@/lib/ui/paperCard'
+import { problemStatus, type ProblemStatus } from '@/lib/classSchedule/problemStatus'
+
+const STATUS_KEY: Record<Exclude<ProblemStatus, 'todo'>, TranslationKey> = {
+  ungraded: 'dash.statusUngraded',
+  done: 'dash.statusDone',
+  partial: 'dash.statusPartial',
+}
 
 export interface CalendarClass {
   /** The CLASS id — what the colour and the legend key off, not the session. */
@@ -42,9 +58,18 @@ export interface CalendarClass {
   endTime?: string
 }
 
+export interface CalendarProblem {
+  id: string
+  title: string
+  submitted: boolean
+  /** Null while ungraded. */
+  points?: number | null
+  maxPoints?: number | null
+}
+
 export interface CalendarDay {
-  /** Problems set that day. `submitted` is meaningless for a teacher. */
-  problems: { id: string; submitted: boolean }[]
+  /** Problems set that day. Everything but `id` is meaningless for a teacher. */
+  problems: CalendarProblem[]
   classes: CalendarClass[]
 }
 
@@ -88,13 +113,43 @@ export interface MonthCalendarProps {
  */
 const CLASS_HUES = ['#c2703f', '#5b8fa8', '#7a9a52', '#a1739c', '#c99a3f', '#5f8f81']
 
-export function classColour(id: string): string {
+/**
+ * A SHAPE per class, not only a hue.
+ *
+ * Six muted colours on a coloured wash are hard to tell apart, and impossible
+ * for a reader who does not separate reds and greens — roughly one boy in
+ * twelve. Shape carries the distinction on its own; the colour is now a second,
+ * redundant channel rather than the only one.
+ *
+ * Deliberately six blunt geometric forms rather than anything representational:
+ * these render at 7px, where a picture is a smudge and a square is still a
+ * square.
+ */
+const CLASS_SHAPES = ['●', '■', '▲', '◆', '★', '⬟']
+
+/** Distinct from every class shape, so a problem can never be read as a class. */
+export const PROBLEM_SHAPE = '✎'
+
+function hash(id: string): number {
   let h = 2166136261
   for (let i = 0; i < id.length; i++) {
     h ^= id.charCodeAt(i)
     h = Math.imul(h, 16777619)
   }
-  return CLASS_HUES[(h >>> 0) % CLASS_HUES.length]
+  return h >>> 0
+}
+
+export function classColour(id: string): string {
+  return CLASS_HUES[hash(id) % CLASS_HUES.length]
+}
+
+/**
+ * Paired with classColour by construction: both index the same hash, so a
+ * class that is the third colour is also the third shape everywhere it appears
+ * — cell, legend, modal — without either list being passed around.
+ */
+export function classShape(id: string): string {
+  return CLASS_SHAPES[hash(id) % CLASS_SHAPES.length]
 }
 
 const pad = (n: number) => (n < 10 ? `0${n}` : String(n))
@@ -232,7 +287,7 @@ export function MonthCalendar({
         {cells.map(cell => {
           if (!cell.date) {
             return (
-              <div key={cell.key} className="rounded-md border px-1 py-0.5 min-h-[52px] opacity-30"
+              <div key={cell.key} className="rounded-md border px-1 py-0.5 min-h-[68px] opacity-30"
                 style={{ borderColor: palette.rule, background: palette.cell }}>
                 <span className="text-[10px] font-bold" style={{ color: palette.ink3 }}>{cell.n}</span>
               </div>
@@ -242,6 +297,11 @@ export function MonthCalendar({
           const day = days[cell.date]
           const isToday = cell.date === today
           const isNext = cell.date === nextClassDate
+          // The first class rides on the date's line; the rest get their own.
+          // A teacher still caps at three, since a busy day is a timetable and
+          // not a reading list.
+          const shownClasses = day?.classes.slice(0, isTeacher ? 3 : undefined) ?? []
+          const [firstClass, ...restClasses] = shownClasses
 
           // A button only where there is something to do with it, so a student
           // gets a grid with no dead affordances in it.
@@ -255,7 +315,7 @@ export function MonthCalendar({
                 onClick: () => onDayClick(cell.date!),
                 'aria-label': cell.date,
               } : {})}
-              className={`relative rounded-md px-1 py-0.5 min-h-[52px] flex flex-col gap-[2px] overflow-hidden text-left ${
+              className={`relative rounded-md px-1 py-0.5 min-h-[68px] flex flex-col gap-[2px] overflow-hidden text-left ${
                 isNext ? 'dash-next-class' : ''
               } ${onDayClick ? 'hover:brightness-95 transition-[filter]' : ''}`}
               style={{
@@ -266,32 +326,50 @@ export function MonthCalendar({
                 ['--dash-accent' as string]: palette.accent,
               }}
             >
-              <span className="text-[10px] font-bold leading-tight"
-                style={{ color: isToday ? palette.accentInk : palette.ink2 }}>
-                {cell.n}
+              {/* The date shares its line with the day's first class, which is
+                  what makes room for the problems underneath. */}
+              <span className="flex items-baseline gap-1 overflow-hidden">
+                <span className="text-[10px] font-bold leading-tight shrink-0"
+                  style={{ color: isToday ? palette.accentInk : palette.ink2 }}>
+                  {cell.n}
+                </span>
+                {firstClass && (
+                  <span className="flex items-baseline gap-[3px] text-[9px] leading-tight min-w-0"
+                    title={`${firstClass.name}${firstClass.startTime ? ` · ${firstClass.startTime}` : ''}${
+                      firstClass.cancelled ? ` — ${t('dash.cancelledClass')}` : ''}`}>
+                    <span className="shrink-0" style={{ color: classColour(firstClass.id) }}
+                      aria-hidden="true">{classShape(firstClass.id)}</span>
+                    <span className="truncate" style={{
+                      color: isNext ? palette.accentInk : palette.ink2,
+                      textDecoration: firstClass.cancelled ? 'line-through' : undefined,
+                      opacity: firstClass.cancelled ? 0.55 : 1,
+                    }}>{firstClass.name}</span>
+                    {firstClass.startTime && (
+                      <span className="shrink-0 tabular-nums" style={{ color: palette.ink3 }}>
+                        {firstClass.startTime}
+                      </span>
+                    )}
+                  </span>
+                )}
               </span>
 
-              {!isTeacher && day?.problems.length ? (
-                <span className="flex gap-[2px] flex-wrap">
-                  {day.problems.map(p => (
-                    <span key={p.id} className="block w-[5px] h-[5px] rounded-full"
-                      style={{ background: p.submitted ? palette.done : palette.accent }} />
-                  ))}
-                </span>
-              ) : null}
-
-              {day?.classes.slice(0, isTeacher ? 3 : 2).map(c => (
-                <span key={c.id} className="flex items-center gap-[2px] text-[9px] leading-tight overflow-hidden"
-                  title={c.cancelled ? `${c.name} — ${t('dash.cancelledClass')}` : c.name}>
-                  <i className="w-[4px] h-[4px] rounded-[1px] shrink-0" style={{ background: classColour(c.id) }} />
-                  <span className="truncate"
-                    style={{
-                      color: isNext ? palette.accentInk : palette.ink2,
-                      textDecoration: c.cancelled ? 'line-through' : undefined,
-                      opacity: c.cancelled ? 0.55 : 1,
-                    }}>
-                    {c.name}
-                  </span>
+              {/* Any further classes get their own line. */}
+              {restClasses.map(c => (
+                <span key={c.occurrenceId ?? c.id}
+                  className="flex items-baseline gap-[3px] text-[9px] leading-tight overflow-hidden"
+                  title={`${c.name}${c.startTime ? ` · ${c.startTime}` : ''}`}>
+                  <span className="shrink-0" style={{ color: classColour(c.id) }}
+                    aria-hidden="true">{classShape(c.id)}</span>
+                  <span className="truncate" style={{
+                    color: palette.ink2,
+                    textDecoration: c.cancelled ? 'line-through' : undefined,
+                    opacity: c.cancelled ? 0.55 : 1,
+                  }}>{c.name}</span>
+                  {c.startTime && (
+                    <span className="shrink-0 tabular-nums" style={{ color: palette.ink3 }}>
+                      {c.startTime}
+                    </span>
+                  )}
                 </span>
               ))}
               {isTeacher && day && day.classes.length > 3 && (
@@ -299,6 +377,42 @@ export function MonthCalendar({
                   +{day.classes.length - 3}
                 </span>
               )}
+
+              {/*
+                A student's problems, by name — except on a day that has not
+                arrived. The challenge page turns a student away from a problem
+                dated after today, and printing its title here would hand over
+                the one thing that redirect exists to withhold. The fact that
+                something is set is not secret; what it is, is.
+              */}
+              {!isTeacher && day?.problems.map(p => {
+                const locked = cell.date! > today
+                const status = problemStatus(p)
+                return (
+                  <span key={p.id} className="block text-[9px] leading-tight overflow-hidden"
+                    title={locked ? t('dash.statusLocked') : p.title}>
+                    <span className="flex items-baseline gap-[3px]">
+                      <span className="shrink-0" style={{ color: palette.accent }}
+                        aria-hidden="true">{locked ? '🔒' : PROBLEM_SHAPE}</span>
+                      <span className="truncate" style={{
+                        color: locked ? palette.ink3 : palette.ink,
+                        fontStyle: locked ? 'italic' : undefined,
+                      }}>
+                        {locked ? t('dash.statusLocked') : p.title}
+                      </span>
+                    </span>
+                    {!locked && status !== 'todo' && (
+                      <span className="block truncate pl-[10px]" style={{
+                        color: status === 'done' ? palette.doneInk
+                          : status === 'partial' ? palette.accentInk
+                          : palette.ink3,
+                      }}>
+                        {t(STATUS_KEY[status])}
+                      </span>
+                    )}
+                  </span>
+                )
+              })}
             </Cell>
           )
         })}
@@ -308,19 +422,19 @@ export function MonthCalendar({
         style={{ color: palette.ink3 }}>
         {legend.map(([id, name]) => (
           <span key={id} className="flex items-center gap-1">
-            <i className="w-[6px] h-[6px] rounded-[2px]" style={{ background: classColour(id) }} />
+            <span style={{ color: classColour(id) }} aria-hidden="true">{classShape(id)}</span>
             {name}
           </span>
         ))}
         {!isTeacher && (
           <>
             <span className="flex items-center gap-1">
-              <i className="w-[6px] h-[6px] rounded-full" style={{ background: palette.accent }} />
+              <span style={{ color: palette.accent }} aria-hidden="true">{PROBLEM_SHAPE}</span>
               {t('dash.keyProblem')}
             </span>
             <span className="flex items-center gap-1">
-              <i className="w-[6px] h-[6px] rounded-full" style={{ background: palette.done }} />
-              {t('dash.keySubmitted')}
+              <span aria-hidden="true">🔒</span>
+              {t('dash.statusLocked')}
             </span>
           </>
         )}

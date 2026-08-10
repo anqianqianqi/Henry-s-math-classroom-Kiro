@@ -557,23 +557,33 @@ export default function DashboardPage() {
       if (!isTeacher && assignedChallengeIds && assignedChallengeIds.length > 0) {
         const { data: challenges } = await supabase
           .from('daily_challenges')
-          .select('id, challenge_date')
+          .select('id, title, challenge_date, max_points')
           .in('id', assignedChallengeIds)
           .gte('challenge_date', from)
           .lte('challenge_date', to)
 
         const ids = (challenges || []).map((c: any) => c.id)
-        let submitted = new Set<string>()
+        // challenge_id → points. A key with a null value is submitted-but-
+        // ungraded; an absent key is not submitted. The two are different
+        // states and collapsing them into a boolean would lose the one a
+        // student most wants to see.
+        const marks = new Map<string, number | null>()
         if (ids.length > 0) {
           const { data: subs } = await supabase
             .from('challenge_submissions')
-            .select('challenge_id')
+            .select('challenge_id, points')
             .eq('user_id', user.id)
             .in('challenge_id', ids)
-          submitted = new Set((subs || []).map((s: any) => s.challenge_id))
+          for (const s of (subs || []) as any[]) marks.set(s.challenge_id, s.points ?? null)
         }
         for (const c of (challenges || []) as any[]) {
-          touch(c.challenge_date).problems.push({ id: c.id, submitted: submitted.has(c.id) })
+          touch(c.challenge_date).problems.push({
+            id: c.id,
+            title: c.title ?? '',
+            submitted: marks.has(c.id),
+            points: marks.get(c.id) ?? null,
+            maxPoints: c.max_points ?? null,
+          })
         }
       }
 

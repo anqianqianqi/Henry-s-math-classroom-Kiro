@@ -127,10 +127,10 @@ export function WelcomeCard({
         </p>
       </div>
 
-      {/* 40/60 above 1024px, stacked below it. Two columns on a narrow window
+      {/* 25/75 above 1024px, stacked below it. Two columns on a narrow window
           would leave the calendar with ~40px cells, narrower than a two-digit
           date; stacked, it gets the full width instead. */}
-      <div className="grid gap-8 items-start grid-cols-1 lg:grid-cols-[2fr_3fr]">
+      <div className="grid gap-8 items-start grid-cols-1 lg:grid-cols-[1fr_3fr]">
         {/* ── Left: today's problems, with room for their titles ── */}
         <div>
           <p className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: palette.ink3 }}>

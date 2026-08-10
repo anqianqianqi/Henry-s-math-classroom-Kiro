@@ -44,6 +44,16 @@ export const dashboard = {
   'dash.monthYear': { en: '{month} {year}', zh: '{year}年{month}' },
   'dash.keyProblem': { en: 'problem', zh: '题目' },
   'dash.keySubmitted': { en: 'submitted', zh: '已提交' },
+
+  // ── Where a student stands on a problem ──────────────────
+  // Parenthesised in both languages because it sits under the title as an
+  // aside, not as a heading of its own.
+  'dash.statusUngraded': { en: '(submitted / not graded)', zh: '（已提交 / 待批改）' },
+  'dash.statusDone': { en: '(done!)', zh: '（完成！）' },
+  'dash.statusPartial': { en: '(check comment)', zh: '（请看评语）' },
+  // A problem set for a date that has not arrived. The title is withheld, not
+  // the fact — see the note in MonthCalendar.
+  'dash.statusLocked': { en: 'Not open yet', zh: '尚未开放' },
   'dash.keyNextClass': { en: 'next class', zh: '下节课' },
   'dash.calendarStudentHint': {
     en: 'Only what is assigned to you.',
