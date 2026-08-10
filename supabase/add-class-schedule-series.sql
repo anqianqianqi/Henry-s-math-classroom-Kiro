@@ -88,17 +88,41 @@ CREATE POLICY "Users can read schedule series"
 DROP POLICY IF EXISTS "Teachers can create schedule series" ON class_schedule_series;
 CREATE POLICY "Teachers can create schedule series"
   ON class_schedule_series FOR INSERT
-  WITH CHECK (user_has_permission(auth.uid(), 'occurrence:manage', class_id));
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON r.id = ur.role_id
+      WHERE ur.user_id = auth.uid()
+        AND r.name IN ('teacher', 'administrator')
+        AND ur.class_id IS NULL
+    )
+  );
 
 DROP POLICY IF EXISTS "Teachers can update schedule series" ON class_schedule_series;
 CREATE POLICY "Teachers can update schedule series"
   ON class_schedule_series FOR UPDATE
-  USING (user_has_permission(auth.uid(), 'occurrence:manage', class_id));
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON r.id = ur.role_id
+      WHERE ur.user_id = auth.uid()
+        AND r.name IN ('teacher', 'administrator')
+        AND ur.class_id IS NULL
+    )
+  );
 
 DROP POLICY IF EXISTS "Teachers can delete schedule series" ON class_schedule_series;
 CREATE POLICY "Teachers can delete schedule series"
   ON class_schedule_series FOR DELETE
-  USING (user_has_permission(auth.uid(), 'occurrence:manage', class_id));
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_roles ur
+      JOIN roles r ON r.id = ur.role_id
+      WHERE ur.user_id = auth.uid()
+        AND r.name IN ('teacher', 'administrator')
+        AND ur.class_id IS NULL
+    )
+  );
 
 COMMIT;
 
