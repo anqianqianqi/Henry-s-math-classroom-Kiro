@@ -901,12 +901,12 @@ export default function DashboardPage() {
             the top row identical whoever is reading: a teacher opening the page
             should not find it rearranged. Compared against the alternatives in
             docs/dashboard-layout-preview.html. */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 sm:auto-rows-fr mb-8">
           <Card 
-            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+            className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/challenges')}
           >
-            <Card.Body>
+            <Card.Body className="flex-1 flex flex-col items-center justify-center">
               <div className="text-5xl mb-3 hidden sm:block">🎯</div>
               <div className="text-3xl font-bold text-gray-900 mb-1">{stats.challengesCount}</div>
               <div className="text-gray-600 font-medium">{t('nav.challenges')}</div>
@@ -915,7 +915,7 @@ export default function DashboardPage() {
 
           {/* Bubble Room — links to the user's first class bubble room, or /classes to pick */}
           <Card
-            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+            className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={async () => {
               // Find the user's first enrolled class and navigate to its bubble room
               const supabaseClient = createClient()
@@ -924,7 +924,7 @@ export default function DashboardPage() {
               router.push('/bubble-room')
             }}
           >
-            <Card.Body>
+            <Card.Body className="flex-1 flex flex-col items-center justify-center">
               <div className="text-5xl mb-3 hidden sm:block">💬</div>
               <div className="text-2xl font-bold text-gray-900 mb-1">{t('nav.bubbleRoom')}</div>
               <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Q&amp;A</div>
@@ -933,10 +933,10 @@ export default function DashboardPage() {
 
           {/* Decorations hub — book skins, pet room, etc. */}
           <Card
-            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+            className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/decorations')}
           >
-            <Card.Body>
+            <Card.Body className="flex-1 flex flex-col items-center justify-center">
               <div className="text-5xl mb-3 hidden sm:block">🎨</div>
               <div className="text-3xl font-bold text-gray-900 mb-1">{t('nav.decorations')}</div>
               <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Book &amp; Room</div>
@@ -947,7 +947,21 @@ export default function DashboardPage() {
 
           <div
             id="pet-area"
-            className="col-span-2 sm:row-span-2 rounded-3xl overflow-hidden relative"
+            /*
+              Three rows on a wide screen, two below it, and `self-start` in
+              both cases.
+
+              `self-start` is the half that is easy to drop. The rows are equal
+              (auto-rows-fr) and sized by whatever the tiles need, so the room's
+              share of them is very nearly its own height but never exactly. A
+              stretched grid item has both dimensions decided for it, and a box
+              whose width and height are both already decided ignores
+              aspect-ratio entirely — which is the crop above, back again, this
+              time with no image ratio to blame. Starting the room instead lets
+              it take its width from the columns and its height from the ratio,
+              and leaves the remainder as a few pixels of gap.
+            */
+            className="col-span-2 sm:row-span-2 xl:row-span-3 self-start rounded-3xl overflow-hidden relative"
             style={{
               /*
                 ── The room is shown at its own shape, and that is load-bearing ──
@@ -1011,8 +1025,8 @@ export default function DashboardPage() {
           </div>
 
           {!isTeacher && !isAdmin && (
-            <Card className="text-center hover:shadow-lg transition-shadow">
-              <Card.Body>
+            <Card className="flex flex-col text-center hover:shadow-lg transition-shadow">
+              <Card.Body className="flex-1 flex flex-col items-center justify-center">
                 <div className="text-5xl mb-3 hidden sm:block">⭐</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">
                   {stats.totalScore} <span className="text-gray-300">/</span>{' '}
@@ -1028,10 +1042,10 @@ export default function DashboardPage() {
 
           {!isTeacher && !isAdmin && (
             <Card
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/shop')}
             >
-              <Card.Body>
+              <Card.Body className="flex-1 flex flex-col items-center justify-center">
                 <div className="text-5xl mb-3 hidden sm:block">🛍️</div>
                 <div className="text-3xl font-bold text-primary-600 mb-1">
                   {stats.spendableBalance} <span className="text-gray-300">/</span>{' '}
@@ -1046,10 +1060,10 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow relative"
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow relative"
               onClick={() => router.push('/grading')}
             >
-              <Card.Body>
+              <Card.Body className="flex-1 flex flex-col items-center justify-center">
                 <div className="text-5xl mb-3 hidden sm:block">📝</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.grade')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.homework')}</div>
@@ -1064,10 +1078,10 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/students')}
             >
-              <Card.Body>
+              <Card.Body className="flex-1 flex flex-col items-center justify-center">
                 <div className="text-5xl mb-3 hidden sm:block">📊</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.students')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.history')}</div>
@@ -1076,10 +1090,10 @@ export default function DashboardPage() {
           )}
 
           <Card 
-            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+            className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/classes')}
           >
-            <Card.Body>
+            <Card.Body className="flex-1 flex flex-col items-center justify-center">
               <div className="text-5xl mb-3 hidden sm:block">📚</div>
               <div className="text-3xl font-bold text-gray-900 mb-1">{stats.classesCount}</div>
               <div className="text-gray-600 font-medium">{t('nav.classes')}</div>
@@ -1087,10 +1101,10 @@ export default function DashboardPage() {
           </Card>
 
           <Card 
-            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+            className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/classes/explore')}
           >
-            <Card.Body>
+            <Card.Body className="flex-1 flex flex-col items-center justify-center">
               <div className="text-5xl mb-3 hidden sm:block">🌍</div>
               <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.explore')}</div>
               <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('nav.classes')}</div>
@@ -1099,10 +1113,10 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/challenge-bank')}
             >
-              <Card.Body>
+              <Card.Body className="flex-1 flex flex-col items-center justify-center">
                 <div className="text-5xl mb-3 hidden sm:block">🏦</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.challengeBank')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
@@ -1112,10 +1126,10 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/schedules')}
             >
-              <Card.Body>
+              <Card.Body className="flex-1 flex flex-col items-center justify-center">
                 <div className="text-5xl mb-3 hidden sm:block">📅</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.scheduler')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
@@ -1125,10 +1139,10 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/tags')}
             >
-              <Card.Body>
+              <Card.Body className="flex-1 flex flex-col items-center justify-center">
                 <div className="text-5xl mb-3 hidden sm:block">🏷️</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.tags')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
@@ -1138,10 +1152,10 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/roles')}
             >
-              <Card.Body>
+              <Card.Body className="flex-1 flex flex-col items-center justify-center">
                 <div className="text-5xl mb-3 hidden sm:block">👥</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.userRoles')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
@@ -1151,10 +1165,10 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/shop')}
             >
-              <Card.Body>
+              <Card.Body className="flex-1 flex flex-col items-center justify-center">
                 <div className="text-5xl mb-3 hidden sm:block">🛍️</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('nav.shop')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
