@@ -36,10 +36,25 @@ import { zoneLabel } from '@/lib/utils/timezone'
 import type { PaperPalette } from '@/lib/ui/paperCard'
 import { problemStatus, type ProblemStatus } from '@/lib/classSchedule/problemStatus'
 
+/** The wording, kept for the hover title — the cell itself has room for a mark. */
 const STATUS_KEY: Record<Exclude<ProblemStatus, 'todo'>, TranslationKey> = {
   ungraded: 'dash.statusUngraded',
   done: 'dash.statusDone',
   partial: 'dash.statusPartial',
+}
+
+/**
+ * A mark instead of a sentence.
+ *
+ * A cell is 124px, and "(submitted / not graded)" measures 94 of them — set
+ * beside a title it left one problem with literally zero pixels of name. The
+ * name is how a student knows which problem it is, so the standing gives way to
+ * a mark and the words move to the key underneath.
+ */
+const STATUS_MARK: Record<Exclude<ProblemStatus, 'todo'>, string> = {
+  ungraded: '⏳',
+  done: '✓',
+  partial: '💬',
 }
 
 export interface CalendarClass {
@@ -415,27 +430,31 @@ export function MonthCalendar({
                       type: 'button',
                       onClick: () => onProblemClick(p.id),
                     } : {})}
-                    className={`block w-full text-left text-[9px] leading-tight overflow-hidden ${
-                      onProblemClick && !locked ? 'hover:underline cursor-pointer' : ''
+                    className={`flex w-full items-center gap-[3px] text-left text-[9px] leading-tight rounded px-1 py-[1px] ${
+                      onProblemClick && !locked ? 'dash-problem-btn cursor-pointer' : ''
                     }`}
-                    title={locked ? t('dash.statusLocked') : p.title}>
-                    <span className="flex items-baseline gap-[3px]">
-                      <span className="shrink-0" style={{ color: palette.accent }}
-                        aria-hidden="true">{locked ? '🔒' : PROBLEM_SHAPE}</span>
-                      <span className="truncate" style={{
-                        color: locked ? palette.ink3 : palette.ink,
-                        fontStyle: locked ? 'italic' : undefined,
-                      }}>
-                        {locked ? t('dash.statusLocked') : p.title}
-                      </span>
+                    /* The full wording survives on hover. It is the only place
+                       a mouse user gets it without consulting the key. */
+                    title={locked
+                      ? t('dash.statusLocked')
+                      : status === 'todo'
+                        ? p.title
+                        : `${p.title} — ${t(STATUS_KEY[status])}`}>
+                    <span className="shrink-0" style={{ color: palette.accent }}
+                      aria-hidden="true">{locked ? '🔒' : PROBLEM_SHAPE}</span>
+                    <span className="truncate flex-1 min-w-0" style={{
+                      color: locked ? palette.ink3 : palette.ink,
+                      fontStyle: locked ? 'italic' : undefined,
+                    }}>
+                      {locked ? t('dash.statusLocked') : p.title}
                     </span>
                     {!locked && status !== 'todo' && (
-                      <span className="block truncate pl-[10px]" style={{
-                        color: status === 'done' ? palette.doneInk
-                          : status === 'partial' ? palette.accentInk
-                          : palette.ink3,
-                      }}>
-                        {t(STATUS_KEY[status])}
+                      /* Not aria-hidden: this mark is the only thing carrying
+                         the standing, so a screen reader has to read it as
+                         words rather than skip a decorative glyph. */
+                      <span className="shrink-0" aria-label={t(STATUS_KEY[status])}
+                        title={t(STATUS_KEY[status])}>
+                        {STATUS_MARK[status]}
                       </span>
                     )}
                   </Entry>
@@ -446,6 +465,8 @@ export function MonthCalendar({
         })}
       </div>
 
+      {/* Which class is which. Quiet, because the shapes are already beside the
+          names in the cells and this is only for confirming one. */}
       <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[10px] items-center"
         style={{ color: palette.ink3 }}>
         {legend.map(([id, name]) => (
@@ -454,20 +475,50 @@ export function MonthCalendar({
             {name}
           </span>
         ))}
-        {!isTeacher && (
-          <>
+        <span>{isTeacher ? t('dash.calendarTeacherHint') : t('dash.calendarStudentHint')}</span>
+      </div>
+
+      {/*
+        The key to the marks — students only.
+
+        Louder than the class legend above it on purpose. A cell has room for a
+        mark and not a sentence, so this is the ONLY place the meaning is
+        written down: a student who does not read it cannot tell a problem
+        waiting to be marked from one with a comment waiting to be read. Hence
+        its own heading, its own boxed row, and bold throughout.
+      */}
+      {!isTeacher && (
+        <div className="mt-2 rounded-lg border px-2 py-1.5"
+          style={{ borderColor: palette.rule, background: palette.cell }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-1"
+            style={{ color: palette.ink2 }}>
+            {t('dash.keyHeading')}
+          </p>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-bold"
+            style={{ color: palette.ink }}>
             <span className="flex items-center gap-1">
               <span style={{ color: palette.accent }} aria-hidden="true">{PROBLEM_SHAPE}</span>
               {t('dash.keyProblem')}
             </span>
             <span className="flex items-center gap-1">
-              <span aria-hidden="true">🔒</span>
-              {t('dash.statusLocked')}
+              <span aria-hidden="true">{STATUS_MARK.ungraded}</span>
+              {t('dash.keyUngraded')}
             </span>
-          </>
-        )}
-        <span>{isTeacher ? t('dash.calendarTeacherHint') : t('dash.calendarStudentHint')}</span>
-      </div>
+            <span className="flex items-center gap-1" style={{ color: palette.doneInk }}>
+              <span aria-hidden="true">{STATUS_MARK.done}</span>
+              {t('dash.keyDone')}
+            </span>
+            <span className="flex items-center gap-1" style={{ color: palette.accentInk }}>
+              <span aria-hidden="true">{STATUS_MARK.partial}</span>
+              {t('dash.keyPartial')}
+            </span>
+            <span className="flex items-center gap-1">
+              <span aria-hidden="true">🔒</span>
+              {t('dash.keyLocked')}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

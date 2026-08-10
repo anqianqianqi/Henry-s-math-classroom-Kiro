@@ -57,6 +57,16 @@ export const dashboard = {
   // A problem set for a date that has not arrived. The title is withheld, not
   // the fact — see the note in MonthCalendar.
   'dash.statusLocked': { en: 'Not open yet', zh: '尚未开放' },
+
+  // ── The key under the calendar ───────────────────────────
+  // A cell is 124px, which is not enough for a title AND its standing, so the
+  // cell carries an icon and the words live here. That makes this key the only
+  // place the meaning is written down — hence its own heading, and bold.
+  'dash.keyHeading': { en: 'What the marks mean', zh: '符号说明' },
+  'dash.keyUngraded': { en: 'handed in, not marked yet', zh: '已交，待批改' },
+  'dash.keyDone': { en: 'full marks — done!', zh: '满分 — 完成！' },
+  'dash.keyPartial': { en: 'read the comment', zh: '请看评语' },
+  'dash.keyLocked': { en: 'not open yet', zh: '尚未开放' },
   'dash.keyNextClass': { en: 'next class', zh: '下节课' },
   'dash.calendarStudentHint': {
     en: 'Only what is assigned to you.',
