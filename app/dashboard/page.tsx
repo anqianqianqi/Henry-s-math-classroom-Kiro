@@ -818,6 +818,13 @@ export default function DashboardPage() {
           days={calendarDays}
           today={schoolToday}
           viewerTimezone={viewerTimezone}
+          /*
+            No comment-seen bookkeeping here, unlike the left column. That badge
+            only exists on the list, and the challenge page marks the comment
+            read on load anyway — so a problem opened from the calendar settles
+            itself.
+          */
+          onOpenProblem={id => router.push(`/challenges/${id}`)}
           onDayClick={isTeacher ? setEditingDay : undefined}
           onOpenAssignment={isTeacher ? () => setAssignmentOpen(true) : undefined}
         />

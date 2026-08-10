@@ -62,6 +62,14 @@ export interface WelcomeCardProps {
   onOpenAssignment?: () => void
   /** The reader's own clock. The calendar converts into it and says so. */
   viewerTimezone: string
+  /**
+   * Opens a problem from inside a calendar cell.
+   *
+   * Takes an id rather than the WelcomeChallenge the left column passes,
+   * because a calendar problem is not one of those — it may be from any day of
+   * the month, and the list only ever holds a handful of recent ones.
+   */
+  onOpenProblem?: (problemId: string) => void
 }
 
 const PALETTE_LABEL: Record<string, TranslationKey> = {
@@ -77,6 +85,7 @@ export function WelcomeCard({
   challenges, collapsedCount, expanded, onToggleExpanded,
   onOpenChallenge, onCreateChallenge,
   month, onMonthChange, days, today, onDayClick, onOpenAssignment, viewerTimezone,
+  onOpenProblem,
 }: WelcomeCardProps) {
   const { t, language } = useLanguage()
   const shown = expanded ? challenges : challenges.slice(0, collapsedCount)
@@ -237,6 +246,7 @@ export function WelcomeCard({
           isTeacher={isTeacher}
           palette={palette}
           viewerTimezone={viewerTimezone}
+          onProblemClick={onOpenProblem}
           onDayClick={onDayClick}
           headerAction={onOpenAssignment && (
             <button

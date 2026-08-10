@@ -91,6 +91,13 @@ export interface MonthCalendarProps {
   /** Sits at the top right of the calendar, beside the month arrows. */
   headerAction?: React.ReactNode
   /**
+   * Opens a problem. Student-side: a teacher's cell carries no problems.
+   *
+   * Absent leaves the entries as plain text, which is also what a locked one
+   * stays regardless — see the note at the call site.
+   */
+  onProblemClick?: (problemId: string) => void
+  /**
    * The zone every time on this calendar has been converted into — the
    * reader's own.
    *
@@ -164,7 +171,7 @@ function endOfWeek(today: string): string {
 
 export function MonthCalendar({
   month, onMonthChange, days, today, isTeacher, palette, onDayClick, headerAction,
-  viewerTimezone,
+  viewerTimezone, onProblemClick,
 }: MonthCalendarProps) {
   const { t, language } = useLanguage()
 
@@ -388,8 +395,29 @@ export function MonthCalendar({
               {!isTeacher && day?.problems.map(p => {
                 const locked = cell.date! > today
                 const status = problemStatus(p)
+                /*
+                  Openable from here as well as from the list on the left —
+                  except when locked. The challenge page turns a student away
+                  from a problem dated after today, so a link that only bounces
+                  them back is worse than no link: it looks like the site is
+                  broken rather than like the problem is not open.
+
+                  A button here is safe because a student's cell is a div. The
+                  teacher's cell IS a button, and a button inside a button is
+                  invalid — but a teacher's cell carries no problems, so the two
+                  never meet.
+                */
+                const Entry: any = onProblemClick && !locked ? 'button' : 'span'
                 return (
-                  <span key={p.id} className="block text-[9px] leading-tight overflow-hidden"
+                  <Entry
+                    key={p.id}
+                    {...(onProblemClick && !locked ? {
+                      type: 'button',
+                      onClick: () => onProblemClick(p.id),
+                    } : {})}
+                    className={`block w-full text-left text-[9px] leading-tight overflow-hidden ${
+                      onProblemClick && !locked ? 'hover:underline cursor-pointer' : ''
+                    }`}
                     title={locked ? t('dash.statusLocked') : p.title}>
                     <span className="flex items-baseline gap-[3px]">
                       <span className="shrink-0" style={{ color: palette.accent }}
@@ -410,7 +438,7 @@ export function MonthCalendar({
                         {t(STATUS_KEY[status])}
                       </span>
                     )}
-                  </span>
+                  </Entry>
                 )
               })}
             </Cell>
