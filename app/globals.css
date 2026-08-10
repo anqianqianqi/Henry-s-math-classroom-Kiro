@@ -326,3 +326,31 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .radio-note { display: none; }
 }
+
+/* ── The next class still to come this week ──────────────────────────────────
+   A ring drawn just outside the day cell, breathing slowly. It has to be
+   findable at a glance in a grid of forty-two cells without pulling the eye off
+   the problem list beside it, so this is a 2.6s breath and not a blink.
+
+   ::after rather than a border on the cell itself: the cell already carries a
+   border for "today", and the two would fight over the same edge. */
+@keyframes dash-next-class {
+  0%, 100% { opacity: 0.18; transform: scale(1); }
+  50%      { opacity: 0.75; transform: scale(1.04); }
+}
+
+.dash-next-class::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 0.5rem;
+  border: 2px solid var(--dash-accent, currentColor);
+  pointer-events: none;
+  animation: dash-next-class 2.6s ease-in-out infinite;
+}
+
+/* Still marked, just not moving — the ring is the only thing saying which class
+   is next, so it has to stay visible rather than be switched off. */
+@media (prefers-reduced-motion: reduce) {
+  .dash-next-class::after { animation: none; opacity: 0.7; }
+}

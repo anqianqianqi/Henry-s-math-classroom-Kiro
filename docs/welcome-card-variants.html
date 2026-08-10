@@ -1,0 +1,531 @@
+<!--
+  Welcome card variants — the painted-paper boundary, a Ghibli palette, and a
+  month calendar sharing the card with the problem list.
+
+  Open this file directly in a browser; it needs no server and no assets.
+
+  ── THE SHAPE ───────────────────────────────────────────────
+  The card splits. Left is the problem list exactly as it is today. Right is a
+  month calendar, navigable backwards.
+
+  That split is what decides the calendar's design. Half of the 1216px content
+  column, less the card's padding and the gutter, leaves ~568px for seven
+  columns — about 78px a cell. No challenge title survives that, so the cell
+  carries marks rather than words, and the left half keeps the job of saying
+  what today's problems actually are.
+
+  ── WHAT A CELL HOLDS ───────────────────────────────────────
+  Student   dots for problems set that day (filled = submitted), plus their own
+            class sessions. The next session still to come this week carries a
+            soft pulse.
+  Teacher   the classes running that day, and nothing else. A teacher does not
+            need the problems here — they set them.
+
+  ── WHERE THE DATA IS ───────────────────────────────────────
+  Classes are real dated rows, not a recurring rule: class_occurrences has
+  occurrence_date, start_time, end_time, session_number, topic and a status of
+  upcoming | completed | cancelled. So a month of sessions is one range query,
+  and "cancelled" is something the calendar can show rather than having to
+  recompute a pattern.
+
+  ── NOT A DECISION ──────────────────────────────────────────
+  Nothing here is implemented. Siblings: dashboard-layout-preview.html (the
+  full-width layout, shipped), art-direction-audit.html, card-boundary-variants.html.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome Card Variants — List, Calendar, Palette</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --ground:#f4f5f6; --surface:#ffffff; --ink:#16181c; --ink-2:#434a54;
+    --ink-3:#737b85; --rule:#d9dde1; --accent:#3d6a8b; --accent-wash:#e6eef4;
+    --flag-warn:#8a6414; --flag-open:#a8402c;
+    --mono: ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ground:#121418; --surface:#191c21; --ink:#e7eaee; --ink-2:#b0b8c1;
+      --ink-3:#838c96; --rule:#2b3037; --accent:#7fa9c8; --accent-wash:#1e2831;
+      --flag-warn:#d9ab52; --flag-open:#e08a74; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--sans);
+    line-height:1.6; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1240px; margin:0 auto; padding:3rem 1.5rem 6rem; }
+  h1 { font-family:var(--serif); font-weight:600; font-size:2rem; line-height:1.2; margin:0 0 .5rem; }
+  h2 { font-family:var(--serif); font-weight:600; font-size:1.3rem; margin:3rem 0 .25rem; }
+  .lede { color:var(--ink-2); max-width:40rem; margin:0 0 .4rem; }
+  .meta { color:var(--ink-3); font-family:var(--mono); font-size:.76rem; margin:0 0 2rem; }
+  .caption { color:var(--ink-3); font-size:.84rem; margin:.1rem 0 1rem; max-width:46rem; }
+
+  .controls { position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap;
+    gap:1.25rem; align-items:center; background:var(--ground);
+    border-bottom:1px solid var(--rule); padding:.85rem 0; margin-bottom:.5rem; }
+  .ctl-group { display:flex; align-items:center; gap:.5rem; }
+  .ctl-label { font-family:var(--mono); font-size:.7rem; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--ink-3); }
+  .seg { display:flex; border:1px solid var(--rule); border-radius:6px; overflow:hidden; }
+  .seg button { font:inherit; font-size:.85rem; padding:.3rem .7rem; border:0;
+    cursor:pointer; background:var(--surface); color:var(--ink-2); white-space:nowrap; }
+  .seg button[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  .swatch { width:.7rem; height:.7rem; border-radius:2px; display:inline-block;
+    margin-right:.4rem; vertical-align:-1px; border:1px solid rgba(0,0,0,.15); }
+
+  .stage { background:linear-gradient(to bottom right,#f0fdf4 0%,#ffffff 50%,rgba(59,130,246,.1) 100%);
+    border:1px solid var(--rule); border-radius:10px; padding:1.5rem; overflow:hidden; }
+  .mock { max-width:1160px; margin:0 auto; font-family:Inter,system-ui,sans-serif; }
+
+  /* ── The hero, wearing the shared paper treatment ─────────── */
+  .hero {
+    background-image:var(--hero-bg); box-shadow:var(--hero-pool);
+    mask-image:var(--paper-mask); -webkit-mask-image:var(--paper-mask);
+    mask-size:100% 100%; -webkit-mask-size:100% 100%;
+    mask-repeat:no-repeat; -webkit-mask-repeat:no-repeat;
+    padding:1.75rem 1.5rem 1.5rem; margin-bottom:2rem; color:var(--hero-ink);
+  }
+  .hero-head { text-align:center; margin-bottom:1.25rem; }
+  .hero-title { display:flex; align-items:center; justify-content:center; gap:.5rem;
+    margin:0 0 .25rem; font-size:1.5rem; font-weight:600; font-family:Georgia,serif; }
+  .hero-sub { margin:0; color:var(--hero-ink-2); font-size:.875rem; }
+
+  .split { display:grid; grid-template-columns:var(--split); gap:2rem; align-items:start; }
+  .col-h { font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--hero-ink-3); margin:0 0 .6rem; }
+
+  /* ── Left: the problem list, unchanged in shape ───────────── */
+  .ch-list { display:flex; flex-direction:column; gap:.5rem; }
+  .ch { display:flex; align-items:center; justify-content:space-between; gap:.5rem;
+    background:var(--hero-chip); border:1px solid var(--hero-rule); border-radius:.75rem;
+    padding:.625rem .9rem; text-align:left; width:100%; }
+  .ch-tags { display:flex; align-items:center; gap:.375rem; flex-wrap:wrap; margin-bottom:.1rem; }
+  .ch-when { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em;
+    color:var(--hero-ink-3); }
+  .pill { font-size:10px; padding:.1rem .375rem; border-radius:9999px; font-weight:600; }
+  .pill.todo { background:var(--hero-todo); color:var(--hero-ink-2); }
+  .pill.done { background:var(--hero-chip-done); color:var(--hero-done-ink); }
+  .ch-title { margin:0; font-size:.875rem; font-weight:600; color:var(--hero-ink);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ch-arrow { color:var(--hero-ink-3); flex-shrink:0; }
+  .ch-more { font-size:11px; color:var(--hero-ink-3); background:none; border:0;
+    padding:.4rem 0 0 .25rem; text-align:left; cursor:pointer; display:block; }
+  .empty-note { font-size:.8rem; color:var(--hero-ink-3); font-style:italic; }
+
+  /* ── Right: the month ─────────────────────────────────────── */
+  .cal-bar { display:flex; align-items:center; gap:.5rem; margin-bottom:.6rem; }
+  .cal-month { font-family:Georgia,serif; font-size:.95rem; font-weight:600; flex:1; }
+  .cal-nav { background:none; border:1px solid var(--hero-rule); color:var(--hero-ink-2);
+    width:1.6rem; height:1.6rem; border-radius:9999px; cursor:pointer; font-size:.8rem;
+    line-height:1; display:flex; align-items:center; justify-content:center; }
+  .cal-nav:hover { background:var(--hero-hover); }
+  .cal-nav[disabled] { opacity:.3; cursor:default; }
+
+  .cal-dow { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:3px; }
+  .cal-dow span { text-align:center; font-size:.58rem; font-weight:700; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--hero-ink-3); }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+  .day { border:1px solid var(--hero-rule); border-radius:.4rem; padding:.2rem .25rem;
+    min-height:var(--day-h); background:var(--hero-cell); position:relative;
+    display:flex; flex-direction:column; gap:2px; overflow:hidden; }
+  .day.out { opacity:.3; }
+  .day.today { border-color:var(--hero-accent); border-width:2px; background:var(--hero-today); padding:calc(.2rem - 1px) calc(.25rem - 1px); }
+  .day-n { font-size:.62rem; font-weight:700; color:var(--hero-ink-2); line-height:1.1; }
+  .day.today .day-n { color:var(--hero-accent-ink); }
+
+  .dots { display:flex; gap:2px; flex-wrap:wrap; }
+  .dot { width:5px; height:5px; border-radius:9999px; background:var(--hero-accent); display:block; }
+  .dot.done { background:var(--hero-done); }
+
+  .cls { display:flex; align-items:center; gap:2px; font-size:.55rem; line-height:1.3;
+    border-radius:2px; padding:0 1px; overflow:hidden; }
+  .cls i { width:4px; height:4px; border-radius:1px; flex:0 0 auto; }
+  .cls span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--hero-ink-2); }
+  .cls.cancelled span { text-decoration:line-through; opacity:.55; }
+
+  /* The next session still to come this week. A slow breath rather than a
+     blink — it has to be findable at a glance without pulling the eye off the
+     problem list beside it. */
+  .day.next-class::after {
+    content:''; position:absolute; inset:-2px; border-radius:.5rem;
+    border:2px solid var(--hero-accent); pointer-events:none;
+    animation: next-class 2.6s ease-in-out infinite;
+  }
+  @keyframes next-class {
+    0%,100% { opacity:.15; transform:scale(1); }
+    50%     { opacity:.75; transform:scale(1.035); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .day.next-class::after { animation:none; opacity:.7; }
+  }
+  /* Colour only, no bolding. Bold made the same class name ellipsize here and
+     not in the cell beside it, which reads as two different classes. */
+  .day.next-class .cls span { color:var(--hero-accent-ink); }
+
+  .cal-key { display:flex; gap:.75rem; flex-wrap:wrap; margin-top:.6rem;
+    font-size:.62rem; color:var(--hero-ink-3); align-items:center; }
+  .cal-key i { width:6px; height:6px; border-radius:2px; display:inline-block; margin-right:3px; vertical-align:0; }
+
+  /* ── Tiles, for context ───────────────────────────────────── */
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem; }
+  .tile { background-image:var(--paper-bg); box-shadow:inset 0 0 26px 6px rgba(176,138,88,.20);
+    mask-image:var(--paper-mask); -webkit-mask-image:var(--paper-mask);
+    mask-size:100% 100%; -webkit-mask-size:100% 100%;
+    mask-repeat:no-repeat; -webkit-mask-repeat:no-repeat;
+    padding:1rem 1.5rem; text-align:center; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; min-height:156px; }
+  .tile .emoji { font-size:3rem; line-height:1; margin-bottom:.75rem; }
+  .tile .val { font-size:1.875rem; font-weight:700; color:#111827; margin-bottom:.25rem; line-height:1.2; }
+  .tile .val.sm { font-size:1.5rem; }
+  .tile .lbl { color:#4b5563; font-weight:500; font-size:.95rem; }
+  .tile .lbl.caps { color:#6b7280; font-size:.75rem; font-weight:500; text-transform:uppercase; letter-spacing:.05em; }
+
+  @media (max-width:820px) { .split { grid-template-columns:1fr; } .grid { grid-template-columns:repeat(2,1fr); } }
+
+  .notes { margin-top:1rem; }
+  .note { border-left:3px solid var(--rule); padding:.1rem 0 .1rem 1rem; margin:0 0 1.1rem; max-width:44rem; }
+  .note.warn { border-left-color:var(--flag-warn); }
+  .note.open { border-left-color:var(--flag-open); }
+  .note h3 { margin:0 0 .2rem; font-size:.95rem; font-weight:600; font-family:var(--sans); }
+  .note p { margin:0; color:var(--ink-2); font-size:.9rem; }
+  code { font-family:var(--mono); font-size:.85em; background:var(--accent-wash); padding:.08em .35em; border-radius:3px; }
+  .pal-table { width:100%; max-width:44rem; border-collapse:collapse; font-size:.82rem; margin-top:.6rem; }
+  .pal-table th,.pal-table td { text-align:left; padding:.35rem .5rem; border-bottom:1px solid var(--rule); }
+  .pal-table th { font-family:var(--mono); font-size:.7rem; text-transform:uppercase;
+    letter-spacing:.06em; color:var(--ink-3); font-weight:500; }
+  .chipsw { display:inline-block; width:2.6rem; height:1rem; border-radius:3px;
+    vertical-align:-3px; border:1px solid rgba(0,0,0,.12); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Welcome card: list beside calendar</h1>
+  <p class="lede">
+    The problem list keeps the left half and its full titles. The right half is a month
+    of marks — problems and class sessions for a student, classes alone for a teacher.
+  </p>
+  <p class="meta">app/dashboard/page.tsx:566&ndash;646 &middot; lib/ui/paperCard.ts &middot; class_occurrences &middot; not implemented</p>
+
+  <div class="controls">
+    <div class="ctl-group"><span class="ctl-label">Palette</span><div class="seg" id="pal"></div></div>
+    <div class="ctl-group"><span class="ctl-label">Role</span>
+      <div class="seg" id="role">
+        <button data-v="student" aria-pressed="true">Student</button>
+        <button data-v="teacher" aria-pressed="false">Teacher</button>
+      </div>
+    </div>
+    <div class="ctl-group"><span class="ctl-label">Split</span>
+      <div class="seg" id="split">
+        <button data-v="half" aria-pressed="true">50 / 50</button>
+        <button data-v="wide" aria-pressed="false">40 / 60</button>
+      </div>
+    </div>
+  </div>
+
+  <h2>The card</h2>
+  <p class="caption" id="cap"></p>
+  <div class="stage"><div class="mock" id="mock"></div></div>
+
+  <h2>Palettes</h2>
+  <table class="pal-table"><thead><tr><th>Name</th><th>Wash</th><th>Where it comes from</th></tr></thead>
+    <tbody id="pal-table"></tbody></table>
+
+  <h2>What this raises</h2>
+  <div class="notes" id="notes"></div>
+
+</div>
+
+<script>
+/* ── Shared paper treatment, from lib/ui/paperCard.ts ─────────────────────── */
+var GRAIN_URI
+;(function () {
+  var W=320,H=160,FADE=0.035
+  var band=Math.min(W,H)*FADE, inset=band*.5, blur=band*.15
+  var displace=band*.8*.5, radius=band*1.5, frequency=3.2/Math.min(W,H)
+  var MASK='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'+
+    '<filter id="m" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">'+
+    '<feGaussianBlur stdDeviation="'+blur.toFixed(2)+'" result="s"/>'+
+    '<feTurbulence type="fractalNoise" baseFrequency="'+frequency.toFixed(5)+'" numOctaves="2" seed="20260801" result="n"/>'+
+    '<feDisplacementMap in="s" in2="n" scale="'+displace.toFixed(2)+'" xChannelSelector="R" yChannelSelector="G"/>'+
+    '</filter><rect x="'+inset.toFixed(1)+'" y="'+inset.toFixed(1)+'" width="'+(W-inset*2).toFixed(1)+'" height="'+(H-inset*2).toFixed(1)+'" rx="'+radius.toFixed(1)+'" fill="#fff" filter="url(#m)"/></svg>'
+  var GRAIN='<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><filter id="g">'+
+    '<feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" seed="11"/>'+
+    '<feColorMatrix type="saturate" values="0"/>'+
+    '<feComponentTransfer><feFuncA type="linear" slope="0.10"/></feComponentTransfer>'+
+    '</filter><rect width="140" height="140" filter="url(#g)"/></svg>'
+  var uri=function(s){ return 'url("data:image/svg+xml;utf8,'+encodeURIComponent(s)+'")' }
+  GRAIN_URI = uri(GRAIN)
+  var r=document.documentElement.style
+  r.setProperty('--paper-mask', uri(MASK))
+  r.setProperty('--paper-bg',[GRAIN_URI,
+    'radial-gradient(120% 110% at 22% 0%, #fffdf4 0%, rgba(255,253,244,0) 62%)',
+    'linear-gradient(155deg, #fdf7e9 0%, #f4ecd6 100%)'].join(', '))
+})()
+
+var PALETTES = [
+  { id:'control', name:'Same as the cards', swatch:'#f4ecd6', from:'#fffdf4', a:'#fdf7e9', b:'#f4ecd6',
+    pool:'rgba(176,138,88,.20)', ink:'#2d1a00', ink2:'#6b5433', ink3:'#94805c',
+    rule:'rgba(176,138,88,.32)', cell:'rgba(255,253,244,.45)', today:'rgba(255,240,200,.8)',
+    hover:'rgba(255,248,225,.8)', chip:'rgba(180,120,40,.12)', chipDone:'rgba(120,150,80,.22)',
+    todo:'rgba(200,160,60,.20)', accent:'#b07d2e', accentInk:'#7a4a10', done:'#6f8b3f', doneInk:'#4a5e28',
+    note:'The control. No new colour at all — the hero is a very wide stat tile.' },
+  { id:'meadow', name:'Meadow', swatch:'#d5e3bd', from:'#f6faee', a:'#e9f1da', b:'#d5e3bd',
+    pool:'rgba(112,134,74,.22)', ink:'#2b3720', ink2:'#4f6039', ink3:'#7d8c66',
+    rule:'rgba(112,134,74,.30)', cell:'rgba(250,253,244,.45)', today:'rgba(226,240,196,.85)',
+    hover:'rgba(240,247,224,.85)', chip:'rgba(112,134,74,.13)', chipDone:'rgba(90,140,90,.24)',
+    todo:'rgba(150,150,70,.20)', accent:'#6d8a45', accentInk:'#3f5427', done:'#4e8a53', doneInk:'#2f5c34',
+    note:'The fields — the green everything in those films is filmed against.' },
+  { id:'sky', name:'Sky', swatch:'#c9dced', from:'#f4f9fc', a:'#e4eff7', b:'#c9dced',
+    pool:'rgba(94,131,163,.22)', ink:'#22323f', ink2:'#425768', ink3:'#71889a',
+    rule:'rgba(94,131,163,.28)', cell:'rgba(248,252,255,.45)', today:'rgba(214,234,248,.85)',
+    hover:'rgba(234,244,251,.85)', chip:'rgba(94,131,163,.13)', chipDone:'rgba(80,150,130,.22)',
+    todo:'rgba(120,140,170,.20)', accent:'#4f7fa5', accentInk:'#2c4d67', done:'#3f8a7a', doneInk:'#245c50',
+    note:'The cumulus skies. Coolest of the six and furthest from the tiles.' },
+  { id:'dusk', name:'Dusk', swatch:'#f2d3a8', from:'#fef6ea', a:'#fbe9d2', b:'#f2d3a8',
+    pool:'rgba(184,132,72,.24)', ink:'#3d2a14', ink2:'#6b5334', ink3:'#9a8058',
+    rule:'rgba(184,132,72,.30)', cell:'rgba(255,250,240,.45)', today:'rgba(252,226,188,.85)',
+    hover:'rgba(253,240,220,.85)', chip:'rgba(184,132,72,.13)', chipDone:'rgba(140,150,70,.24)',
+    todo:'rgba(200,160,80,.22)', accent:'#b8843f', accentInk:'#7d5520', done:'#84903c', doneInk:'#5a6224',
+    note:'The lamp in the pet room. Warmest, and closest to the tiles — check it still reads as the hero.' },
+  { id:'sea', name:'Sea', swatch:'#bfdfd9', from:'#f1faf8', a:'#dcefec', b:'#bfdfd9',
+    pool:'rgba(80,140,132,.22)', ink:'#1e3835', ink2:'#3e5d57', ink3:'#6b8c85',
+    rule:'rgba(80,140,132,.28)', cell:'rgba(246,253,251,.45)', today:'rgba(206,236,230,.85)',
+    hover:'rgba(230,246,243,.85)', chip:'rgba(80,140,132,.13)', chipDone:'rgba(90,150,110,.24)',
+    todo:'rgba(110,150,140,.20)', accent:'#43897e', accentInk:'#245a51', done:'#4a8f62', doneInk:'#28603c',
+    note:'Shallow water. Distinct from the tiles without going as cold as Sky.' },
+  { id:'rose', name:'Ash rose', swatch:'#eecdc6', from:'#fdf5f3', a:'#f9e7e3', b:'#eecdc6',
+    pool:'rgba(178,124,116,.22)', ink:'#3f2724', ink2:'#684a45', ink3:'#96736d',
+    rule:'rgba(178,124,116,.28)', cell:'rgba(255,250,249,.45)', today:'rgba(247,222,216,.85)',
+    hover:'rgba(252,238,235,.85)', chip:'rgba(178,124,116,.13)', chipDone:'rgba(140,150,90,.24)',
+    todo:'rgba(190,150,140,.22)', accent:'#b0736a', accentInk:'#7d4740', done:'#8a9350', doneInk:'#5c6231',
+    note:'The rug and the blanket in the room art — the one most obviously from the same picture.' },
+]
+
+/* ── Content ──────────────────────────────────────────────────────────────── */
+var TODAY = '2026-08-09'          // a Sunday; the school date
+var WEEK_END = '2026-08-15'
+var TITLES = ['Special Multiplication','换元方程 4','Cutting Square','Prime Ladders',
+  '几何证明 2','Fraction Towers','Modular Arithmetic','数列求和','Area of a Trapezoid']
+
+/* class_occurrences, stood in for. dow = weekday it runs. */
+var CLASSES = [
+  { id:'alg',  name:'Algebra 1',  colour:'#c2703f', dow:[1,3], mine:true  },
+  { id:'think',name:'数学思维',    colour:'#5b8fa8', dow:[4],   mine:true  },
+  { id:'geo',  name:'Geometry',   colour:'#7a9a52', dow:[2,5], mine:false },
+  { id:'pre',  name:'Precalc',    colour:'#a1739c', dow:[3],   mine:false },
+]
+
+function hash (s) { var h=2166136261; for (var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619) } return h>>>0 }
+
+function challengesOn (ds) {
+  var dow = new Date(ds+'T12:00:00').getDay()
+  if ((dow===0||dow===6) && ds!==TODAY) return []
+  var h = hash(ds), n = (h%10)<2 ? 0 : (h%10)<8 ? 1 : 2
+  if (ds===TODAY) n = Math.max(n,2)
+  var out=[]
+  for (var i=0;i<n;i++) out.push({ title:TITLES[(h>>(i*3))%TITLES.length], submitted:((h>>(i*5))%3)!==0 })
+  return out
+}
+
+function classesOn (ds, mineOnly) {
+  var dow = new Date(ds+'T12:00:00').getDay()
+  var h = hash('c'+ds)
+  return CLASSES.filter(function (c) { return c.dow.indexOf(dow) >= 0 && (!mineOnly || c.mine) })
+    .map(function (c, i) {
+      // A rare cancellation, so the status the table carries has something to show.
+      return { ref:c, cancelled: ((h>>(i*4)) % 23) === 0 }
+    })
+}
+
+/* The next session still to come this week — today included, past days not. */
+function nextClassDate (mineOnly) {
+  for (var d = new Date(TODAY+'T12:00:00'); ; d.setDate(d.getDate()+1)) {
+    var ds = d.toISOString().slice(0,10)
+    if (ds > WEEK_END) return null
+    var list = classesOn(ds, mineOnly).filter(function (c) { return !c.cancelled })
+    if (list.length) return ds
+  }
+}
+
+var TILES = [ {e:'🎯',v:'24',l:'Challenges'}, {e:'💬',v:'Bubble Room',l:'Q&A',c:1,s:1},
+  {e:'🎨',v:'Decorations',l:'Book & Room',c:1} ]
+
+var state = { pal:'meadow', role:'student', split:'half', month:new Date(2026,7,1) }
+function pal () { return PALETTES.find(function (p) { return p.id===state.pal }) }
+
+function applyPalette () {
+  var p = pal(), r = document.documentElement.style
+  r.setProperty('--hero-bg',[GRAIN_URI,
+    'radial-gradient(120% 110% at 22% 0%, '+p.from+' 0%, rgba(255,255,255,0) 62%)',
+    'linear-gradient(155deg, '+p.a+' 0%, '+p.b+' 100%)'].join(', '))
+  r.setProperty('--hero-pool','inset 0 0 26px 6px '+p.pool)
+  ;[['ink',p.ink],['ink-2',p.ink2],['ink-3',p.ink3],['rule',p.rule],['cell',p.cell],
+    ['today',p.today],['hover',p.hover],['chip',p.chip],['chip-done',p.chipDone],
+    ['todo',p.todo],['accent',p.accent],['accent-ink',p.accentInk],['done',p.done],
+    ['done-ink',p.doneInk]].forEach(function (kv) { r.setProperty('--hero-'+kv[0], kv[1]) })
+  r.setProperty('--split', state.split==='half' ? '1fr 1fr' : '2fr 3fr')
+  r.setProperty('--day-h', state.role==='teacher' ? '54px' : '52px')
+}
+
+function pad (n) { return (n<10?'0':'')+n }
+function iso (y,m,d) { return y+'-'+pad(m+1)+'-'+pad(d) }
+
+/* ── Left: the problem list ───────────────────────────────────────────────── */
+function listHTML () {
+  var teacher = state.role==='teacher'
+  var list = challengesOn(TODAY)
+  return '<p class="col-h">Today</p>' + (list.length
+    ? '<div class="ch-list">' + list.map(function (c) {
+        return '<div class="ch"><div style="flex:1;min-width:0">' +
+          '<div class="ch-tags"><span class="ch-when">🎯 Today</span>' +
+          (teacher ? '' : '<span class="pill '+(c.submitted?'done':'todo')+'">'+(c.submitted?'✓ Done':'⏳')+'</span>') +
+          '</div><p class="ch-title">'+c.title+'</p></div><span class="ch-arrow">→</span></div>'
+      }).join('') + '</div><button class="ch-more">▼ +2 more</button>'
+    : '<p class="empty-note">No challenge today</p>')
+}
+
+/* ── Right: the month ─────────────────────────────────────────────────────── */
+function calendarHTML () {
+  var teacher = state.role==='teacher'
+  var y=state.month.getFullYear(), m=state.month.getMonth()
+  var first=new Date(y,m,1), start=first.getDay()
+  var days=new Date(y,m+1,0).getDate(), prevDays=new Date(y,m,0).getDate()
+  var nextDs = nextClassDate(!teacher)
+
+  var cells=[]
+  for (var i=0;i<start;i++) cells.push({out:true,n:prevDays-start+1+i})
+  for (var d=1;d<=days;d++) cells.push({out:false,n:d,ds:iso(y,m,d)})
+  while (cells.length%7) cells.push({out:true,n:cells.length%7})
+
+  var body = cells.map(function (c) {
+    if (c.out) return '<div class="day out"><span class="day-n">'+c.n+'</span></div>'
+    var cls = classesOn(c.ds, !teacher)
+    var inner = '<span class="day-n">'+c.n+'</span>'
+
+    if (!teacher) {
+      // Problems as marks only. A title here would leak a future problem the
+      // challenge page redirects students away from, and would not fit anyway.
+      var probs = challengesOn(c.ds)
+      if (probs.length) inner += '<span class="dots">' + probs.map(function (x) {
+        return '<span class="dot'+(c.ds<=TODAY && x.submitted?' done':'')+'"></span>'
+      }).join('') + '</span>'
+    }
+    inner += cls.slice(0, teacher?3:2).map(function (x) {
+      return '<span class="cls'+(x.cancelled?' cancelled':'')+'"><i style="background:'+x.ref.colour+'"></i>' +
+        '<span>'+x.ref.name+'</span></span>'
+    }).join('')
+    if (teacher && cls.length>3) inner += '<span class="cls"><span>+'+(cls.length-3)+'</span></span>'
+
+    return '<div class="day'+(c.ds===TODAY?' today':'')+(c.ds===nextDs?' next-class':'')+'">'+inner+'</div>'
+  }).join('')
+
+  var atCurrent = (y===2026 && m===7)
+  return '<div class="cal-bar">' +
+      '<span class="cal-month">'+first.toLocaleDateString('en-US',{month:'long',year:'numeric'})+'</span>' +
+      '<button class="cal-nav" data-nav="-1">‹</button>' +
+      '<button class="cal-nav" data-nav="1"'+(atCurrent?' disabled':'')+'>›</button>' +
+    '</div>' +
+    '<div class="cal-dow">'+['S','M','T','W','T','F','S'].map(function(d){return '<span>'+d+'</span>'}).join('')+'</div>' +
+    '<div class="cal-grid">'+body+'</div>' +
+    '<div class="cal-key">' +
+      CLASSES.filter(function(c){ return teacher || c.mine })
+        .map(function(c){ return '<span><i style="background:'+c.colour+'"></i>'+c.name+'</span>' }).join('') +
+      (teacher ? '' : '<span><i style="background:var(--hero-accent)"></i>problem</span>' +
+        '<span><i style="background:var(--hero-done)"></i>submitted</span>') +
+      '<span style="opacity:.8">pulsing = next class</span>' +
+    '</div>'
+}
+
+function render () {
+  applyPalette()
+  var teacher = state.role==='teacher'
+  document.getElementById('mock').innerHTML =
+    '<div class="hero">' +
+      '<div class="hero-head">' +
+        '<div class="hero-title"><span>👋</span><span>Welcome back, Henry!</span></div>' +
+        '<p class="hero-sub">'+(teacher?"Let's inspire some students today! 👨‍🏫":"Let's have fun with math today! 🎉")+'</p>' +
+      '</div>' +
+      '<div class="split"><div>'+listHTML()+'</div><div>'+calendarHTML()+'</div></div>' +
+    '</div>' +
+    '<div class="grid">' + TILES.map(function (t) {
+      return '<div class="tile"><div class="emoji">'+t.e+'</div><div class="val'+(t.s?' sm':'')+'">'+t.v+
+        '</div><div class="lbl'+(t.c?' caps':'')+'">'+t.l+'</div></div>'
+    }).join('') + '</div>'
+
+  var h = Math.round(document.querySelector('.hero').getBoundingClientRect().height)
+  var cw = Math.round(document.querySelector('.day').getBoundingClientRect().width)
+  document.getElementById('cap').innerHTML =
+    'Hero <strong>'+h+'px</strong> tall, day cells <strong>'+cw+'px</strong> wide as rendered here. ' +
+    'Use ‹ › for earlier months.'
+  renderNotes(h, cw)
+}
+
+function renderNotes (heroH, cellW) {
+  var teacher = state.role==='teacher'
+  document.getElementById('notes').innerHTML = [
+    ['', 'Splitting the card is what makes the calendar affordable',
+      'A full-width month grid ran the hero to ~728px. Beside the list it is <strong>'+heroH+'px</strong> — ' +
+      'the calendar stops setting the card\'s height and the list, which was going to leave the left ' +
+      'side empty, now pays for itself.'],
+    ['warn', 'A cell is '+cellW+'px, so it holds marks and not words',
+      'No challenge title survives that width in either language, which is why problems are dots and the ' +
+      'titles stay on the left. Class names do fit, just — they ellipsize. Worth checking with your real ' +
+      'class names rather than these; "Algebra 1" is about the longest that reads.'],
+    ['', 'The dots also solve the leak',
+      'A student must not see a problem set for a future date — the challenge page redirects them. A dot ' +
+      'says something is set without saying what, so the calendar can show the whole month honestly with ' +
+      'no special case for future days. Their own class schedule is not secret, so sessions show in full.'],
+    ['', 'The pulse marks one day, not several',
+      'It lands on the next session still to come this week — today counts, cancelled ones are skipped, ' +
+      'and it stops at Saturday rather than running on into next month. A 2.6s breath rather than a blink, ' +
+      'and it holds still under <code>prefers-reduced-motion</code>.'],
+    ['', 'Classes are real rows, so this is one query',
+      '<code>class_occurrences</code> carries occurrence_date, start_time, session_number, topic and a ' +
+      'status of upcoming | completed | cancelled. A month is a <code>.gte/.lte</code> range on it — no ' +
+      'recomputing a weekly rule, and cancelled sessions can be struck through rather than vanishing.'],
+    [teacher ? '' : 'open', teacher ? 'A teacher sees classes only, as asked' : 'The student cell is carrying three things at once',
+      teacher
+        ? 'No problem marks at all — a teacher sets them, so the calendar is a timetable. Up to three ' +
+          'classes then "+n". If your real days run busier than three, say so and it becomes a count.'
+        : 'Day number, problem dots, and up to two class names in ' + cellW + 'px. It works at this size, ' +
+          'but it is the densest thing on the page. Worth a look at whether the class names earn their ' +
+          'place in a student\'s cell or whether a coloured edge would say it more quietly.'],
+    ['open', 'The wash belongs beside paperCardStyle',
+      'These palettes are the same three layers as the cards with different pigment. It should be a ' +
+      'function of a palette in <code>lib/ui/paperCard.ts</code>, not a fourth inline style — otherwise ' +
+      'the hero and the cards drift apart the first time either is touched.'],
+  ].map(function (x) {
+    return '<div class="note'+(x[0]?' '+x[0]:'')+'"><h3>'+x[1]+'</h3><p>'+x[2]+'</p></div>'
+  }).join('')
+}
+
+document.getElementById('pal').innerHTML = PALETTES.map(function (p) {
+  return '<button data-v="'+p.id+'" aria-pressed="'+(p.id===state.pal)+'">'+
+    '<span class="swatch" style="background:'+p.swatch+'"></span>'+p.name+'</button>'
+}).join('')
+document.getElementById('pal-table').innerHTML = PALETTES.map(function (p) {
+  return '<tr><td>'+p.name+'</td><td><span class="chipsw" style="background:linear-gradient(155deg,'+p.a+','+p.b+')"></span></td><td>'+p.note+'</td></tr>'
+}).join('')
+
+document.querySelectorAll('.seg').forEach(function (seg) {
+  seg.addEventListener('click', function (e) {
+    var b=e.target.closest('button'); if (!b) return
+    state[seg.id==='pal'?'pal':seg.id]=b.dataset.v
+    seg.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', String(x===b)) })
+    render()
+  })
+})
+document.getElementById('mock').addEventListener('click', function (e) {
+  var b=e.target.closest('[data-nav]'); if (!b||b.disabled) return
+  state.month=new Date(state.month.getFullYear(), state.month.getMonth()+(+b.dataset.nav), 1)
+  render()
+})
+
+render()
+</script>
+</body>
+</html>

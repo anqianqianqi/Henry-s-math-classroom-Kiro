@@ -13,6 +13,9 @@ import { AnnouncementButton } from '@/components/AnnouncementButton'
 import { schoolDateString } from '@/lib/utils/timezone'
 import dynamicImport from 'next/dynamic'
 import StudentStudyCurve from '@/components/StudentStudyCurve'
+import { WelcomeCard } from '@/components/dashboard/WelcomeCard'
+import type { CalendarDay } from '@/components/dashboard/MonthCalendar'
+import { DEFAULT_PALETTE_ID, paletteById } from '@/lib/ui/paperCard'
 
 // ── Study Curve section with lang toggle ────────────────────────────────────
 function StudyCurveSection({ userId }: { userId: string }) {
@@ -89,6 +92,28 @@ export default function DashboardPage() {
     taBalance: 0,
   })
   const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean; submissionId?: string; hasNewTeacherComment?: boolean }>>([])
+
+  /*
+    ── The welcome card's calendar ─────────────────────────────
+    schoolToday rather than the browser's date: the outline has to agree with
+    what the rest of the site calls today, which is the school's timezone.
+  */
+  const schoolToday = schoolDateString()
+  const [paletteId, setPaletteId] = useState<string>(DEFAULT_PALETTE_ID)
+  const [calendarMonth, setCalendarMonth] = useState<Date>(
+    () => new Date(Number(schoolToday.slice(0, 4)), Number(schoolToday.slice(5, 7)) - 1, 1),
+  )
+  const [calendarDays, setCalendarDays] = useState<Record<string, CalendarDay>>({})
+  /*
+    The challenge ids assigned to this student, hoisted out of loadTodayChallenge
+    so the month query can reuse them. Resolving them costs four round trips —
+    memberships, individual assignments, class assignments, roles — and they do
+    not change while the reader steps back through months.
+
+    null means "not resolved yet"; an empty array means "resolved, none".
+  */
+  const [assignedChallengeIds, setAssignedChallengeIds] = useState<string[] | null>(null)
+  const palette = paletteById(paletteId)
   const [petRoomBgUrl, setPetRoomBgUrl] = useState<string | null>(null)
   const [petRoomFrameUrl, setPetRoomFrameUrl] = useState<string | null>(null)
   const [petRoomFrameSlot, setPetRoomFrameSlot] = useState<{ x: number; y: number; w: number; h: number; rotate?: number; rotateY?: number; rotateX?: number } | null>(null)
@@ -112,13 +137,23 @@ export default function DashboardPage() {
 
     setUser(user)
 
-    // ── Parallel: profile + user_roles ────────────────────────────────────
-    const [{ data: profile }, { data: userRoles, error: rolesError }] = await Promise.all([
+    // ── Parallel: profile + user_roles + card pigment ─────────────────────
+    // The palette read is allowed to fail: add-dashboard-palette.sql may not
+    // have been run yet, and a missing colour preference is a default, not an
+    // error. Same shape as the other optional preference reads on this page.
+    const [{ data: profile }, { data: userRoles, error: rolesError }, paletteResult] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase.from('user_roles').select('role_id').eq('user_id', user.id).is('class_id', null),
+      Promise.resolve(
+        supabase.from('user_book_skin_preferences')
+          .select('dashboard_palette').eq('user_id', user.id).maybeSingle(),
+      ).catch(() => ({ data: null })),
     ])
 
     setProfile(profile)
+
+    const storedPalette = (paletteResult as any)?.data?.dashboard_palette
+    if (storedPalette) setPaletteId(storedPalette)
 
     console.log('User roles:', { userRoles, rolesError, userId: user.id })
 
@@ -387,6 +422,103 @@ export default function DashboardPage() {
   const [expandedChallenges, setExpandedChallenges] = useState(false)
   const CHALLENGES_COLLAPSED = 3
 
+  /**
+   * Persist the chosen pigment, and keep the card responsive while it saves.
+   *
+   * The column is added by supabase/add-dashboard-palette.sql. Until that has
+   * been run the write fails, and it is allowed to: the choice still applies for
+   * this session, and a colour preference is not worth an error dialog. Same
+   * shape as the other optional preference reads on this page.
+   */
+  async function handlePaletteChange(next: string) {
+    setPaletteId(next)
+    if (!user?.id) return
+    try {
+      await supabase.from('user_book_skin_preferences')
+        .upsert({ user_id: user.id, dashboard_palette: next }, { onConflict: 'user_id' })
+    } catch (_) { /* column not migrated yet — the choice still holds locally */ }
+  }
+
+  /*
+    ── The visible month ───────────────────────────────────────
+    Refetched when the reader steps back a month, and gated on the assignment
+    ids being resolved so a student's first paint does not query `.in('id', [])`
+    and then have to do it again.
+
+    A teacher's calendar is a timetable and carries no problems, so their path
+    skips the challenge queries entirely rather than fetching and discarding.
+  */
+  useEffect(() => {
+    if (!user?.id) return
+    if (!isTeacher && assignedChallengeIds === null) return
+
+    let cancelled = false
+    const y = calendarMonth.getFullYear()
+    const m = calendarMonth.getMonth()
+    const pad = (n: number) => (n < 10 ? `0${n}` : String(n))
+    const from = `${y}-${pad(m + 1)}-01`
+    const to = `${y}-${pad(m + 1)}-${pad(new Date(y, m + 1, 0).getDate())}`
+
+    ;(async () => {
+      const days: Record<string, CalendarDay> = {}
+      const touch = (d: string) => (days[d] ||= { problems: [], classes: [] })
+
+      // ── Classes ──────────────────────────────────────────
+      // A student sees their own; a teacher sees every class running that day.
+      let classIds: string[] | null = null
+      if (!isTeacher) {
+        const { data: memberships } = await supabase
+          .from('class_members').select('class_id').eq('user_id', user.id)
+        classIds = [...new Set((memberships || []).map((r: any) => r.class_id))]
+      }
+
+      if (classIds === null || classIds.length > 0) {
+        let q = supabase
+          .from('class_occurrences')
+          .select('id, class_id, occurrence_date, status, classes:class_id(name)')
+          .gte('occurrence_date', from)
+          .lte('occurrence_date', to)
+        if (classIds) q = q.in('class_id', classIds)
+        const { data: occ } = await q
+        for (const o of (occ || []) as any[]) {
+          touch(o.occurrence_date).classes.push({
+            id: o.class_id,
+            name: o.classes?.name ?? '',
+            cancelled: o.status === 'cancelled',
+          })
+        }
+      }
+
+      // ── Problems, students only ──────────────────────────
+      if (!isTeacher && assignedChallengeIds && assignedChallengeIds.length > 0) {
+        const { data: challenges } = await supabase
+          .from('daily_challenges')
+          .select('id, challenge_date')
+          .in('id', assignedChallengeIds)
+          .gte('challenge_date', from)
+          .lte('challenge_date', to)
+
+        const ids = (challenges || []).map((c: any) => c.id)
+        let submitted = new Set<string>()
+        if (ids.length > 0) {
+          const { data: subs } = await supabase
+            .from('challenge_submissions')
+            .select('challenge_id')
+            .eq('user_id', user.id)
+            .in('challenge_id', ids)
+          submitted = new Set((subs || []).map((s: any) => s.challenge_id))
+        }
+        for (const c of (challenges || []) as any[]) {
+          touch(c.challenge_date).problems.push({ id: c.id, submitted: submitted.has(c.id) })
+        }
+      }
+
+      if (!cancelled) setCalendarDays(days)
+    })()
+
+    return () => { cancelled = true }
+  }, [user?.id, isTeacher, assignedChallengeIds, calendarMonth])
+
   async function loadTodayChallenge(userId: string, teacherRole: boolean) {
     try {
       const today = schoolDateString()
@@ -435,6 +567,10 @@ export default function DashboardPage() {
 
       const individualIds = individualAssignments?.map((a: any) => a.challenge_id) || []
       const allAssignedIds = [...new Set([...classAssignedIds, ...individualIds])]
+      // Published before the early return below, so a student with nothing
+      // assigned still resolves to "none" rather than leaving the calendar
+      // waiting on an answer that never comes.
+      setAssignedChallengeIds(allAssignedIds)
       if (allAssignedIds.length === 0) return
 
       // 1. Submissions + today's challenges in parallel (both depend only on allAssignedIds)
@@ -564,92 +700,35 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* The welcome card runs the full width of the page.
+        {/* The welcome card.
 
-            It used to be one half of a flex row, with the pet room in the
-            other; being a flex child it stretched to the room's 400px, which
-            is where the empty band under the challenge list came from. The
-            room now lives in the grid below, so there is no neighbour left to
-            match and the card is as tall as what is in it. */}
-        <div className="mb-8 bg-gradient-to-br from-primary-500 to-accent-blue rounded-3xl shadow-lg overflow-hidden">
-          <div className="flex flex-col px-6 py-5">
-            {/* Welcome text — centered at top */}
-            <div className="text-center mb-4">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <span className="text-2xl">👋</span>
-                <h2 className="text-xl font-bold text-white">Welcome back, {firstName}!</h2>
-              </div>
-              <p className="text-white/75 text-sm">
-                {isTeacher ? "Let's inspire some students today! 👨‍🏫" : "Let's have fun with math today! 🎉"}
-              </p>
-            </div>
-
-            {/* Today's challenges — full width within outer padding */}
-            <div className="flex flex-col gap-2">
-              {todayChallenges.length > 0 ? (
-                <>
-                  {(expandedChallenges ? todayChallenges : todayChallenges.slice(0, CHALLENGES_COLLAPSED)).map(challenge => (
-                    <button
-                      key={challenge.id}
-                      onClick={() => {
-                        // Mark comment as seen
-                        if (challenge.submissionId) {
-                          try { localStorage.setItem(`comment_seen_${challenge.submissionId}`, new Date().toISOString()) } catch (_) {}
-                        }
-                        router.push(`/challenges/${challenge.id}`)
-                      }}
-                      className="text-left bg-white/15 hover:bg-white/25 rounded-xl px-4 py-2.5 group flex items-center justify-between transition-all"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
-                            {challenge.challenge_date === new Date().toISOString().split('T')[0] ? '🎯 Today' : `📅 ${challenge.challenge_date}`}
-                          </span>
-                          {!isTeacher && (
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                              challenge.submitted ? 'bg-green-400/30 text-green-100' : 'bg-yellow-400/30 text-yellow-100'
-                            }`}>
-                              {challenge.submitted ? '✓ Done' : '⏳'}
-                            </span>
-                          )}
-                          {!isTeacher && challenge.hasNewTeacherComment && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-blue-400/40 text-blue-100">
-                              💬 New comment
-                            </span>
-                          )}
-                        </div>
-                        <p className="font-semibold text-white text-sm truncate">
-                          {challenge.title}
-                        </p>
-                      </div>
-                      <span className="text-white/50 group-hover:text-white ml-2 shrink-0 transition-colors">→</span>
-                    </button>
-                  ))}
-                  {todayChallenges.length > CHALLENGES_COLLAPSED && (
-                    <button
-                      onClick={() => setExpandedChallenges(v => !v)}
-                      className="text-[11px] text-white/60 hover:text-white text-left pl-1 transition-colors"
-                    >
-                      {expandedChallenges
-                        ? '▲ Show less'
-                        : `▼ +${todayChallenges.length - CHALLENGES_COLLAPSED} more`}
-                    </button>
-                  )}
-                </>
-              ) : (
-                <div className="text-white/60 text-sm pl-1">
-                  <span className="text-2xl block mb-1">🎯</span>
-                  No challenge today
-                  {isTeacher && (
-                    <button onClick={() => router.push('/challenges/new')} className="block text-xs text-white/80 hover:text-white mt-1 underline">
-                      Create one →
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+            Its markup lives in components/dashboard/WelcomeCard, which is also
+            where the paper treatment, the pigment picker and the 40/60 split
+            are explained. What stays here is the data: this page already
+            resolves the reader, their role and their assigned challenges, and
+            the card should not go fetching any of it a second time. */}
+        <WelcomeCard
+          firstName={firstName}
+          isTeacher={isTeacher}
+          palette={palette}
+          onPaletteChange={handlePaletteChange}
+          challenges={todayChallenges}
+          collapsedCount={CHALLENGES_COLLAPSED}
+          expanded={expandedChallenges}
+          onToggleExpanded={() => setExpandedChallenges(v => !v)}
+          onOpenChallenge={c => {
+            // Opening a challenge is also the moment its comment stops being new.
+            if (c.submissionId) {
+              try { localStorage.setItem(`comment_seen_${c.submissionId}`, new Date().toISOString()) } catch (_) {}
+            }
+            router.push(`/challenges/${c.id}`)
+          }}
+          onCreateChallenge={() => router.push('/challenges/new')}
+          month={calendarMonth}
+          onMonthChange={setCalendarMonth}
+          days={calendarDays}
+          today={schoolToday}
+        />
 
         {/* Stats Cards.
 
