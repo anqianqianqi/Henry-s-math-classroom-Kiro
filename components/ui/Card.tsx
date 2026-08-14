@@ -16,8 +16,8 @@
  * </Card>
  */
 
-import { HTMLAttributes, ReactNode } from 'react'
-import { paperCardStyle } from '@/lib/ui/paperCard'
+import { CSSProperties, HTMLAttributes, ReactNode } from 'react'
+import { PAPER_BACKGROUND, paperCardStyle } from '@/lib/ui/paperCard'
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
@@ -32,6 +32,21 @@ interface RootCardProps extends CardProps {
    * of forty rows.
    */
   plain?: boolean
+
+  /**
+   * A painted background for this card, laid over the usual wash.
+   *
+   * A prop rather than a style override, for the same reason `bare` is one:
+   * the treatment is an inline style, and `{...props}` is spread AFTER
+   * `style={paperCardStyle}` — so a caller passing `style` replaces the whole
+   * thing and silently takes the mask, the grain and the pooling with it. The
+   * card would keep its picture and lose its soft edge, which is the one part
+   * nobody would think to check.
+   *
+   * The wash stays underneath rather than being replaced, so a missing file
+   * leaves today's plain card instead of a hole.
+   */
+  surfaceImage?: string
 
   /**
    * No card chrome at all: no wash, no grain, no mask, no pooling, no lift.
@@ -50,7 +65,14 @@ interface RootCardProps extends CardProps {
   bare?: boolean
 }
 
-export function Card({ children, className = '', plain = false, bare = false, ...props }: RootCardProps) {
+export function Card({
+  children,
+  className = '',
+  plain = false,
+  bare = false,
+  surfaceImage,
+  ...props
+}: RootCardProps) {
   if (bare) {
     return <div className={className} {...props}>{children}</div>
   }
@@ -73,10 +95,26 @@ export function Card({ children, className = '', plain = false, bare = false, ..
     its rim. Lift on hover is kept — a transform still works — and the pooling
     deepens to replace the shadow that used to do that job.
   */
+  /*
+    The picture sits on top of the wash, and `cover` keeps it filling the card
+    at whatever shape the grid gives it. Everything else — mask, mask sizing,
+    pooling — comes through untouched from paperCardStyle, so a painted card
+    dissolves along exactly the same contour as a plain one.
+  */
+  const style: CSSProperties = surfaceImage
+    ? {
+        ...paperCardStyle,
+        backgroundImage: `url("${surfaceImage}"), ${PAPER_BACKGROUND}`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }
+    : paperCardStyle
+
   return (
     <div
       className={`paper-card transition-all hover:-translate-y-0.5 ${className}`}
-      style={paperCardStyle}
+      style={style}
       {...props}
     >
       {children}
