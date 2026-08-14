@@ -1,0 +1,147 @@
+<meta charset="utf-8">
+<title>dashboard cards — meadow</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin:0; background:#f3efe4; font-family: ui-sans-serif, system-ui, sans-serif; }
+  .bar { position:sticky; top:0; z-index:5; background:#2a2018; color:#f6efe0;
+         padding:10px 20px; display:flex; gap:18px; align-items:center; flex-wrap:wrap; font-size:13px; }
+  .bar b { font-weight:700; letter-spacing:.04em; text-transform:uppercase; font-size:11px; opacity:.65; }
+  .bar button { font:inherit; padding:4px 12px; border-radius:999px; border:1px solid #6b5a44;
+                background:transparent; color:#f6efe0; cursor:pointer; }
+  .bar button[aria-pressed="true"] { background:#f6efe0; color:#2a2018; border-color:#f6efe0; }
+  .wrap { max-width:80rem; margin:0 auto; padding:24px; }
+  .note { max-width:80rem; margin:0 auto; padding:0 24px 20px; font-size:13px; color:#6b5a44; line-height:1.6; }
+
+  .grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:24px;
+          grid-auto-rows:minmax(0,1fr); margin-bottom:32px; }
+
+  /* The card treatment, straight from lib/ui/paperCard.ts. */
+  .card {
+    display:flex; flex-direction:column; text-align:center;
+    box-shadow:inset 0 0 26px 6px rgba(176,138,88,0.20);
+    -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22320%22%20height%3D%22160%22%20viewBox%3D%220%200%20320%20160%22%20preserveAspectRatio%3D%22none%22%3E%3Cfilter%20id%3D%22m%22%20x%3D%22-20%25%22%20y%3D%22-20%25%22%20width%3D%22140%25%22%20height%3D%22140%25%22%20color-interpolation-filters%3D%22sRGB%22%3E%3CfeGaussianBlur%20stdDeviation%3D%220.84%22%20result%3D%22s%22%2F%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.02000%22%20numOctaves%3D%222%22%20seed%3D%2220260801%22%20result%3D%22n%22%2F%3E%3CfeDisplacementMap%20in%3D%22s%22%20in2%3D%22n%22%20scale%3D%222.24%22%20xChannelSelector%3D%22R%22%20yChannelSelector%3D%22G%22%2F%3E%3C%2Ffilter%3E%3Crect%20x%3D%222.8%22%20y%3D%222.8%22%20width%3D%22314.4%22%20height%3D%22154.4%22%20rx%3D%228.4%22%20fill%3D%22%23fff%22%20filter%3D%22url(%23m)%22%2F%3E%3C%2Fsvg%3E"); mask-image:url("data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22320%22%20height%3D%22160%22%20viewBox%3D%220%200%20320%20160%22%20preserveAspectRatio%3D%22none%22%3E%3Cfilter%20id%3D%22m%22%20x%3D%22-20%25%22%20y%3D%22-20%25%22%20width%3D%22140%25%22%20height%3D%22140%25%22%20color-interpolation-filters%3D%22sRGB%22%3E%3CfeGaussianBlur%20stdDeviation%3D%220.84%22%20result%3D%22s%22%2F%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.02000%22%20numOctaves%3D%222%22%20seed%3D%2220260801%22%20result%3D%22n%22%2F%3E%3CfeDisplacementMap%20in%3D%22s%22%20in2%3D%22n%22%20scale%3D%222.24%22%20xChannelSelector%3D%22R%22%20yChannelSelector%3D%22G%22%2F%3E%3C%2Ffilter%3E%3Crect%20x%3D%222.8%22%20y%3D%222.8%22%20width%3D%22314.4%22%20height%3D%22154.4%22%20rx%3D%228.4%22%20fill%3D%22%23fff%22%20filter%3D%22url(%23m)%22%2F%3E%3C%2Fsvg%3E");
+    -webkit-mask-size:100% 100%; mask-size:100% 100%;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+    transition:transform .2s;
+  }
+  .card:hover { transform:translateY(-2px); }
+  .card .body { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+                padding:16px 24px; }
+  .emoji { font-size:2.4rem; margin-bottom:8px; line-height:1; }
+  .val { font-size:1.6rem; font-weight:700; color:#1f2937; margin-bottom:2px; }
+  .lbl { font-size:.7rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#6b7280; }
+
+  .room { grid-column:span 2; grid-row:span 3; align-self:start; aspect-ratio:1.5;
+          border-radius:24px; overflow:hidden;
+          background:linear-gradient(135deg,#c8b89a,#8fa88f); display:flex;
+          align-items:flex-end; justify-content:center; color:#3d3123; font-size:12px; padding-bottom:8px; }
+
+  .hero { margin-bottom:24px; min-height:150px; box-shadow:inset 0 0 26px 6px rgba(176,138,88,0.20);
+          -webkit-mask-image:url("data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22320%22%20height%3D%22160%22%20viewBox%3D%220%200%20320%20160%22%20preserveAspectRatio%3D%22none%22%3E%3Cfilter%20id%3D%22m%22%20x%3D%22-20%25%22%20y%3D%22-20%25%22%20width%3D%22140%25%22%20height%3D%22140%25%22%20color-interpolation-filters%3D%22sRGB%22%3E%3CfeGaussianBlur%20stdDeviation%3D%220.84%22%20result%3D%22s%22%2F%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.02000%22%20numOctaves%3D%222%22%20seed%3D%2220260801%22%20result%3D%22n%22%2F%3E%3CfeDisplacementMap%20in%3D%22s%22%20in2%3D%22n%22%20scale%3D%222.24%22%20xChannelSelector%3D%22R%22%20yChannelSelector%3D%22G%22%2F%3E%3C%2Ffilter%3E%3Crect%20x%3D%222.8%22%20y%3D%222.8%22%20width%3D%22314.4%22%20height%3D%22154.4%22%20rx%3D%228.4%22%20fill%3D%22%23fff%22%20filter%3D%22url(%23m)%22%2F%3E%3C%2Fsvg%3E"); mask-image:url("data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22320%22%20height%3D%22160%22%20viewBox%3D%220%200%20320%20160%22%20preserveAspectRatio%3D%22none%22%3E%3Cfilter%20id%3D%22m%22%20x%3D%22-20%25%22%20y%3D%22-20%25%22%20width%3D%22140%25%22%20height%3D%22140%25%22%20color-interpolation-filters%3D%22sRGB%22%3E%3CfeGaussianBlur%20stdDeviation%3D%220.84%22%20result%3D%22s%22%2F%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.02000%22%20numOctaves%3D%222%22%20seed%3D%2220260801%22%20result%3D%22n%22%2F%3E%3CfeDisplacementMap%20in%3D%22s%22%20in2%3D%22n%22%20scale%3D%222.24%22%20xChannelSelector%3D%22R%22%20yChannelSelector%3D%22G%22%2F%3E%3C%2Ffilter%3E%3Crect%20x%3D%222.8%22%20y%3D%222.8%22%20width%3D%22314.4%22%20height%3D%22154.4%22%20rx%3D%228.4%22%20fill%3D%22%23fff%22%20filter%3D%22url(%23m)%22%2F%3E%3C%2Fsvg%3E");
+          -webkit-mask-size:100% 100%; mask-size:100% 100%;
+          -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+          display:flex; align-items:center; padding:28px 36px; }
+  .hero h1 { margin:0; font-size:1.6rem; color:#3d3123; font-weight:700; }
+</style>
+<div class="bar">
+  <b>Role</b>
+  <button data-k="role" data-v="student" aria-pressed="true">Student</button>
+  <button data-k="role" data-v="teacher" aria-pressed="false">Teacher</button>
+  <b>Palette</b>
+  <button data-k="pal" data-v="meadow" aria-pressed="true">Meadow (new art)</button>
+  <button data-k="pal" data-v="other" aria-pressed="false">Sea (unchanged)</button>
+  <b>Language</b>
+  <button data-k="lang" data-v="en" aria-pressed="true">English</button>
+  <button data-k="lang" data-v="zh" aria-pressed="false">简体中文</button>
+  <b>Fit</b>
+  <button data-k="fit" data-v="cover" aria-pressed="true">Cover</button>
+  <button data-k="fit" data-v="fill" aria-pressed="false">Stretch</button>
+</div>
+<div class="wrap"><div id="mount"></div></div>
+<div class="note" id="note"></div>
+<script>
+const TILES = {"challenges":{"e":"🎯","v":"12","l":"Challenges","img":"challenges"},"bubble":{"e":"💬","v":"Bubble Room","l":"Q&amp;A","img":"bubble-room"},"decor":{"e":"🎨","v":"Decorations","l":"Book &amp; Room","img":"decorations"},"score":{"e":"⭐","v":"340 / 12","l":"Total Score","img":"total-score"},"shop":{"e":"🛍️","v":"120 / 8","l":"Shop Balance","img":"shop"},"grade":{"e":"📝","v":"Grade","l":"Homework","img":"grade"},"students":{"e":"📊","v":"Students","l":"History","img":"students"},"classes":{"e":"📚","v":"3","l":"Classes","img":"classes"},"explore":{"e":"🌍","v":"Explore","l":"Classes","img":"explore"},"bank":{"e":"🏦","v":"Bank","l":"Manage","img":"bank"},"sched":{"e":"📅","v":"Scheduler","l":"Manage","img":"scheduler"},"tags":{"e":"🏷️","v":"Tags","l":"Manage","img":"tags"},"roles":{"e":"👥","v":"Roles","l":"Manage","img":"user-roles"},"mshop":{"e":"🛍️","v":"Shop","l":"Manage","img":"shop"}};
+const ORDER = {"student":["challenges","bubble","decor","ROOM","score","shop","classes","explore"],"teacher":["challenges","bubble","decor","ROOM","grade","students","classes","explore","bank","sched","tags","roles","mshop"]};
+const WASH = {
+  meadow: "url(\"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22140%22%20height%3D%22140%22%3E%3Cfilter%20id%3D%22g%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.9%22%20numOctaves%3D%224%22%20seed%3D%2211%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3CfeComponentTransfer%3E%3CfeFuncA%20type%3D%22linear%22%20slope%3D%220.10%22%2F%3E%3C%2FfeComponentTransfer%3E%3C%2Ffilter%3E%3Crect%20width%3D%22140%22%20height%3D%22140%22%20filter%3D%22url(%23g)%22%2F%3E%3C%2Fsvg%3E\"), radial-gradient(120% 110% at 22% 0%, #f6faee 0%, rgba(255,255,255,0) 62%), linear-gradient(155deg, #e9f1da 0%, #d5e3bd 100%)",
+  other:  "url(\"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22140%22%20height%3D%22140%22%3E%3Cfilter%20id%3D%22g%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.9%22%20numOctaves%3D%224%22%20seed%3D%2211%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3CfeComponentTransfer%3E%3CfeFuncA%20type%3D%22linear%22%20slope%3D%220.10%22%2F%3E%3C%2FfeComponentTransfer%3E%3C%2Ffilter%3E%3Crect%20width%3D%22140%22%20height%3D%22140%22%20filter%3D%22url(%23g)%22%2F%3E%3C%2Fsvg%3E\"), radial-gradient(120% 110% at 22% 0%, #f1faf8 0%, rgba(255,255,255,0) 62%), linear-gradient(155deg, #dcefec 0%, #bfdfd9 100%)",
+};
+const HERO_IMG = { meadow: "/welcome-card/meadow.jpg", other: "/welcome-card/sea.jpg" };
+const PLAIN = "url(\"data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22140%22%20height%3D%22140%22%3E%3Cfilter%20id%3D%22g%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.9%22%20numOctaves%3D%224%22%20seed%3D%2211%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3CfeComponentTransfer%3E%3CfeFuncA%20type%3D%22linear%22%20slope%3D%220.10%22%2F%3E%3C%2FfeComponentTransfer%3E%3C%2Ffilter%3E%3Crect%20width%3D%22140%22%20height%3D%22140%22%20filter%3D%22url(%23g)%22%2F%3E%3C%2Fsvg%3E\"), radial-gradient(120% 110% at 22% 0%, #fffdf4 0%, rgba(255,253,244,0) 62%), linear-gradient(155deg, #fdf7e9 0%, #f4ecd6 100%)";
+const state = { role:'student', pal:'meadow', fit:'cover', lang:'en' };
+
+function surface(tile) {
+  // Meadow gets the painted art over its wash; every other palette keeps the
+  // plain card it has today, which is what "leave the other styles alone" means.
+  if (state.pal !== 'meadow' || !tile.img) return { bg: PLAIN, size: 'auto' };
+  // The word is painted into the picture, so the picture has to follow the
+  // reader's language — the same switch that changes the label on the card.
+  return {
+    bg: 'url("/dashboard-cards/' + state.lang + '/' + tile.img + '.jpg"), ' + WASH.meadow,
+    size: state.fit === 'cover' ? 'cover' : '100% 100%',
+  };
+}
+
+/*
+  Styles go on through the CSSOM, never through a style="..." attribute.
+  The wash and the mask are data URIs written as url("data:..."), and those
+  inner double quotes close the attribute early — the card then renders with
+  no background at all, which looks like the art failing to load rather than
+  like a quoting bug. Setting the property directly sidesteps the parser.
+*/
+function paint(el, bg, size) {
+  el.style.backgroundImage = bg;
+  el.style.backgroundSize = size;
+  el.style.backgroundPosition = 'center';
+  el.style.backgroundRepeat = 'no-repeat';
+}
+
+function render() {
+  const mount = document.getElementById('mount');
+  mount.innerHTML = '';
+
+  const hero = document.createElement('div');
+  hero.className = 'hero';
+  hero.innerHTML = '<h1>Good afternoon, Henry</h1>';
+  paint(hero,
+    'url("' + (state.pal === 'meadow' ? HERO_IMG.meadow : HERO_IMG.other) + '"), ' +
+    (state.pal === 'meadow' ? WASH.meadow : WASH.other), 'cover');
+  mount.appendChild(hero);
+
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  for (const key of ORDER[state.role]) {
+    if (key === 'ROOM') {
+      const room = document.createElement('div');
+      room.className = 'room';
+      room.textContent = 'pet room (unchanged)';
+      grid.appendChild(room);
+      continue;
+    }
+    const t = TILES[key];
+    const s = surface(t);
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = '<div class="body"><div class="emoji">' + t.e + '</div>' +
+                     '<div class="val">' + t.v + '</div><div class="lbl">' + t.l + '</div></div>';
+    paint(card, s.bg, s.size);
+    grid.appendChild(card);
+  }
+  mount.appendChild(grid);
+
+  document.getElementById('note').textContent = state.pal === 'meadow'
+    ? 'Meadow, ' + (state.lang === 'en' ? 'English' : '简体中文') +
+      ': 13 painted backgrounds per language, white mat cropped, irregular mask kept.'
+    : 'Sea: unchanged — every card is the flat wash it is today, in both languages.';
+}
+
+document.querySelectorAll('.bar button').forEach(b => {
+  b.addEventListener('click', () => {
+    state[b.dataset.k] = b.dataset.v;
+    document.querySelectorAll('.bar button[data-k="' + b.dataset.k + '"]')
+      .forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    render();
+  });
+});
+render();
+</script>
