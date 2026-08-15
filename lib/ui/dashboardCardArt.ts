@@ -60,3 +60,28 @@ export function dashboardCardArt(
   if (paletteId !== PAINTED_PALETTE) return undefined
   return `/dashboard-cards/${language}/${art}.jpg`
 }
+
+/**
+ * The same painting with no word on it, which the card shows while pointed at.
+ *
+ * ── WHY THERE ARE TWO ───────────────────────────────────────
+ * The set was painted on two different bamboo frames, and which card got
+ * which is not guessable from its name. It was measured: each empty frame was
+ * compared against every card across the half of the picture that carries no
+ * lettering, and the matches came back at a difference of exactly 0.00 — they
+ * are the same paintings with the word taken out.
+ *
+ * That is the whole trick. A card fades to ITS OWN frame, so the bamboo does
+ * not move and only the word lifts off. Pointing all of them at one frame
+ * would make eight of the thirteen visibly jump.
+ *
+ * Language plays no part: an empty frame has no word to translate.
+ */
+const LEAVES_FRAME: ReadonlySet<string> = new Set(['challenges', 'shop', 'students', 'bank'])
+
+export function dashboardCardFrame(art: DashboardCardArt, paletteId: string): string | undefined {
+  if (paletteId !== PAINTED_PALETTE) return undefined
+  return LEAVES_FRAME.has(art)
+    ? '/dashboard-cards/blank-leaves.jpg'
+    : '/dashboard-cards/blank-inkwash.jpg'
+}

@@ -49,6 +49,21 @@ interface RootCardProps extends CardProps {
   surfaceImage?: string
 
   /**
+   * The same painting with its word removed, revealed while the card is
+   * pointed at or focused.
+   *
+   * Supplying this turns the card into a reveal: the frame becomes the
+   * background, `surfaceImage` is laid over it as a separate layer, and that
+   * layer fades out while the card's own labels fade in. Two layers rather
+   * than swapping one background, because `background-image` cannot be
+   * transitioned — only opacity can.
+   *
+   * Ignored unless `surfaceImage` is set too; a frame with nothing over it is
+   * just a quieter card.
+   */
+  surfaceFrame?: string
+
+  /**
    * No card chrome at all: no wash, no grain, no mask, no pooling, no lift.
    * The caller supplies every visual it wants.
    *
@@ -71,6 +86,7 @@ export function Card({
   plain = false,
   bare = false,
   surfaceImage,
+  surfaceFrame,
   ...props
 }: RootCardProps) {
   if (bare) {
@@ -114,10 +130,15 @@ export function Card({
     from paperCardStyle, so a painted card dissolves along exactly the same
     contour as a plain one.
   */
-  const style: CSSProperties = surfaceImage
+  // A reveal card paints the wordless frame and wears the worded picture as a
+  // layer above it; a plain painted card paints the picture directly.
+  const reveals = Boolean(surfaceImage && surfaceFrame)
+  const painted = reveals ? surfaceFrame : surfaceImage
+
+  const style: CSSProperties = painted
     ? {
         ...paperCardStyle,
-        backgroundImage: `url("${surfaceImage}"), ${PAPER_BACKGROUND}`,
+        backgroundImage: `url("${painted}"), ${PAPER_BACKGROUND}`,
         backgroundSize: '100% 100%',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -126,10 +147,21 @@ export function Card({
 
   return (
     <div
-      className={`paper-card transition-all hover:-translate-y-0.5 ${className}`}
+      className={`paper-card transition-all hover:-translate-y-0.5 ${reveals ? 'card-reveal ' : ''}${className}`}
       style={style}
       {...props}
     >
+      {reveals && (
+        <div
+          className="card-reveal-word"
+          style={{
+            backgroundImage: `url("${surfaceImage}")`,
+            backgroundSize: '100% 100%',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
+        />
+      )}
       {children}
     </div>
   )
