@@ -24,6 +24,8 @@ import { HenryProblemSheet } from '@/components/HenryProblemSheet'
 import { readStoredHenryProblem } from '@/lib/henryproblem'
 import { pageNativeHenryTheme } from '@/lib/henry-theme'
 import { Button } from '@/components/ui/Button'
+import { CommentThread } from '@/components/CommentThread'
+import { COMMENTS_INCREMENT, type SubmissionComment } from '@/lib/grading/useSubmissionComments'
 
 export interface SpreadSubmission {
   id: string
@@ -73,6 +75,29 @@ export interface SubmissionSpreadProps {
    * configured, in which case the gradient below stands in.
    */
   pageTextureUrl?: string | null
+
+  /**
+   * The comment thread, so grading is not only a number.
+   *
+   * Passed as one object rather than ten props: it is the return of
+   * useSubmissionComments plus the two things only the page knows — who is
+   * commenting, and how it says "3 hours ago".
+   */
+  commentApi?: SpreadCommentApi
+}
+
+export interface SpreadCommentApi {
+  comments: Record<string, SubmissionComment[]>
+  drafts: Record<string, string>
+  submitting: Record<string, boolean>
+  visible: Record<string, number>
+  setDraft: (submissionId: string, value: string) => void
+  showMore: (submissionId: string) => void
+  submit: (submissionId: string, imageFile?: File | null) => void
+  edit: (commentId: string, content: string) => Promise<void>
+  remove: (commentId: string) => Promise<void>
+  currentUserId: string | null
+  formatTimeAgo: (iso: string) => string
 }
 
 /**
@@ -113,6 +138,7 @@ export function SubmissionSpread({
   loading,
   formatDate,
   pageTextureUrl,
+  commentApi,
 }: SubmissionSpreadProps) {
   const { t } = useLanguage()
   const focusRef = useRef<HTMLDivElement>(null)
@@ -321,6 +347,32 @@ export function SubmissionSpread({
                                 : t('action.save')}
                           </Button>
                         </div>
+
+                        {/*
+                          The same thread as the challenge room, not a second
+                          kind of comment: a mark says how much, and this says
+                          why. Both are what a student comes back to read.
+                        */}
+                        {commentApi && (
+                          <div className="mt-3 border-t pt-2" style={{ borderColor: 'rgba(100,60,10,0.15)' }}>
+                            <CommentThread
+                              submissionId={s.id}
+                              comments={commentApi.comments[s.id] ?? []}
+                              visibleCount={commentApi.visible[s.id] ?? COMMENTS_INCREMENT}
+                              onShowMore={() => commentApi.showMore(s.id)}
+                              newComment={commentApi.drafts[s.id] ?? ''}
+                              onCommentChange={value => commentApi.setDraft(s.id, value)}
+                              onSubmitComment={file => commentApi.submit(s.id, file)}
+                              onEditComment={commentApi.edit}
+                              onDeleteComment={commentApi.remove}
+                              isSubmitting={commentApi.submitting[s.id] ?? false}
+                              formatTimeAgo={commentApi.formatTimeAgo}
+                              currentUserId={commentApi.currentUserId}
+                              showTitle={false}
+                              allowImage
+                            />
+                          </div>
+                        )}
                       </div>
                     )
                   })}

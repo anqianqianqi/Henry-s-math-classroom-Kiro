@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { HomeButton } from '@/components/ui/HomeButton'
 import { SubmissionSpread, type SpreadChallenge } from '@/components/grading/SubmissionSpread'
+import { useSubmissionComments } from '@/lib/grading/useSubmissionComments'
 
 interface Submission {
   id: string
@@ -61,6 +62,8 @@ export default function GradingPage() {
     page, not an error.
   */
   const [pageTextureUrl, setPageTextureUrl] = useState<string | null>(null)
+  /** The teacher's own id — the thread needs it to know which comments are theirs. */
+  const [userId, setUserId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -77,6 +80,7 @@ export default function GradingPage() {
       r.roles?.name === 'teacher' || r.roles?.name === 'administrator'
     )
     if (!isTeacher) { router.push('/dashboard'); return }
+    setUserId(user.id)
 
     // Load all challenge submissions with student + challenge info
     const { data, error: fetchErr } = await supabase
@@ -191,6 +195,26 @@ export default function GradingPage() {
       .filter(s => s.challenge_id === spread.challengeId)
       .sort((a, b) => a.student_name.localeCompare(b.student_name))
   }, [spread, ungraded, graded])
+
+  /*
+    Comment threads for the answers currently open. Keyed off the spread, so
+    nothing is fetched until a problem is opened and only that problem's
+    threads are loaded.
+  */
+  const commentThreads = useSubmissionComments(
+    useMemo(() => spreadSubmissions.map(s => s.id), [spreadSubmissions]),
+    userId,
+  )
+
+  /** "3h ago" for a comment. Short, because a thread is a column not a table. */
+  const formatTimeAgo = (iso: string) => {
+    const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+    const [d, h, m] = [86400, 3600, 60]
+    if (seconds >= d) return `${Math.floor(seconds / d)}d`
+    if (seconds >= h) return `${Math.floor(seconds / h)}h`
+    if (seconds >= m) return `${Math.floor(seconds / m)}m`
+    return t('grade.justNow')
+  }
 
   // Apply date filter client-side
   function applyDateFilter(list: Submission[]) {
@@ -547,6 +571,7 @@ export default function GradingPage() {
           loading={spreadLoading}
           formatDate={formatDate}
           pageTextureUrl={pageTextureUrl}
+          commentApi={{ ...commentThreads, currentUserId: userId, formatTimeAgo }}
           onClose={() => { setSpread(null); setSpreadChallenge(null) }}
           onDraftChange={(id, points) =>
             setGrading(prev => ({ ...prev, [id]: { points, saving: prev[id]?.saving ?? false } }))
