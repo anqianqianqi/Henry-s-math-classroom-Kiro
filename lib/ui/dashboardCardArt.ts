@@ -1,5 +1,5 @@
 /**
- * The painted background each dashboard tile wears.
+ * The painted background each dashboard tile wears, and the icon on it.
  *
  * ── WHY THE PICTURE HAS A LANGUAGE ──────────────────────────
  * The word is painted into the artwork — 解 where the English reads Solve —
@@ -7,15 +7,13 @@
  * is no way to translate it after the fact; it is pigment, not text. Hence a
  * folder per language holding the same thirteen names.
  *
- * ── WHY ONLY MEADOW ─────────────────────────────────────────
- * The art is one palette's worth of bamboo and warm paper. Laid under the sea
- * or dusk wash it would fight the colour rather than carry it, so the other
- * palettes keep the flat wash they have today until someone paints them a set.
- * Returning undefined rather than a fallback image is what makes that true:
- * the card falls back to PAPER_BACKGROUND and looks exactly as it does now.
- *
- * That is also the failure mode if a file goes missing — the tile renders as
- * today's plain card rather than as a hole.
+ * ── WHY THE PICTURE HAS A PALETTE ───────────────────────────
+ * Each painted palette is a whole set: thirteen cards in two languages, two
+ * empty frames, and fourteen icons, all drawn together. A meadow icon on a sky
+ * card is not a tint mismatch, it is a different illustration. So the palette
+ * is a folder too, and a palette with no folder simply has no art — the card
+ * falls back to the flat wash it has always had, which is what dusk, sea and
+ * rose still do.
  */
 
 import type { Language } from '@/lib/i18n/catalog'
@@ -42,46 +40,62 @@ export type DashboardCardArt =
   | 'tags'
   | 'user-roles'
 
-/** The palette whose cards are painted. */
-const PAINTED_PALETTE = 'meadow'
+/**
+ * Palettes that have been painted, and what their two empty frames are called.
+ *
+ * `corner` is the frame with artwork in the corners; `wash` is the quieter one.
+ * The names differ per palette because the paintings do — bamboo leaves in
+ * meadow, clouds in sky.
+ */
+const PAINTED: Record<string, { corner: string; wash: string }> = {
+  meadow: { corner: 'blank-leaves', wash: 'blank-inkwash' },
+  sky: { corner: 'blank-clouds', wash: 'blank-inkwash' },
+}
 
 /**
- * The background for a tile, or undefined when it should stay a plain card.
+ * Which cards were painted on the corner frame rather than the wash.
  *
- * The palette check lives here rather than at each call site: fourteen tiles
- * each remembering to ask "is this meadow?" is fourteen chances to forget, and
- * the one that forgets shows bamboo under a blue wash.
+ * Measured, not guessed: each empty frame was compared against every card
+ * across the half of the picture that carries no lettering, and the matches
+ * came back at a difference of exactly 0.00 — the same paintings with the word
+ * taken out. Both palettes split the same four cards the same way, which is
+ * why this is one list rather than one per palette.
+ *
+ * It matters because a card fades to ITS OWN frame when pointed at, so the
+ * bamboo — or the cloud — does not move and only the word lifts off. Sending
+ * every card to one frame would make eight of the thirteen visibly jump.
  */
+const CORNER_FRAME: ReadonlySet<string> = new Set(['challenges', 'shop', 'students', 'bank'])
+
+/** The painted background for a tile, or undefined for an unpainted palette. */
 export function dashboardCardArt(
   art: DashboardCardArt,
   paletteId: string,
   language: Language,
 ): string | undefined {
-  if (paletteId !== PAINTED_PALETTE) return undefined
-  return `/dashboard-cards/${language}/${art}.jpg`
+  if (!PAINTED[paletteId]) return undefined
+  return `/dashboard-cards/${paletteId}/${language}/${art}.jpg`
 }
 
 /**
- * The same painting with no word on it, which the card shows while pointed at.
- *
- * ── WHY THERE ARE TWO ───────────────────────────────────────
- * The set was painted on two different bamboo frames, and which card got
- * which is not guessable from its name. It was measured: each empty frame was
- * compared against every card across the half of the picture that carries no
- * lettering, and the matches came back at a difference of exactly 0.00 — they
- * are the same paintings with the word taken out.
- *
- * That is the whole trick. A card fades to ITS OWN frame, so the bamboo does
- * not move and only the word lifts off. Pointing all of them at one frame
- * would make eight of the thirteen visibly jump.
+ * The same painting with no word on it, shown while the card is pointed at.
  *
  * Language plays no part: an empty frame has no word to translate.
  */
-const LEAVES_FRAME: ReadonlySet<string> = new Set(['challenges', 'shop', 'students', 'bank'])
-
 export function dashboardCardFrame(art: DashboardCardArt, paletteId: string): string | undefined {
-  if (paletteId !== PAINTED_PALETTE) return undefined
-  return LEAVES_FRAME.has(art)
-    ? '/dashboard-cards/blank-leaves.jpg'
-    : '/dashboard-cards/blank-inkwash.jpg'
+  const frames = PAINTED[paletteId]
+  if (!frames) return undefined
+  return `/dashboard-cards/${paletteId}/${CORNER_FRAME.has(art) ? frames.corner : frames.wash}.jpg`
+}
+
+/**
+ * The drawn icon a tile carries.
+ *
+ * Falls back to meadow's when a palette has no set of its own, so an unpainted
+ * palette still gets drawn icons rather than a row of gaps — the icons read as
+ * illustration on any card, while a whole missing background would not.
+ */
+export function dashboardEmoji(icon: string, paletteId: string): string {
+  const palette = PAINTED[paletteId] ? paletteId : 'meadow'
+  return `/dashboard-emoji/${palette}/${icon}.png`
 }

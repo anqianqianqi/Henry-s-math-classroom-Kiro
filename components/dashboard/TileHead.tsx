@@ -18,6 +18,8 @@
  * number is which is visible rather than remembered.
  */
 
+import { dashboardEmoji } from '@/lib/ui/dashboardCardArt'
+
 export interface TileStat {
   /** File stem in /public/dashboard-emoji. */
   icon: string
@@ -27,7 +29,7 @@ export interface TileStat {
   alt: string
 }
 
-export function TileHead({ items }: { items: TileStat[] }) {
+export function TileHead({ items, palette }: { items: TileStat[]; palette: string }) {
   return (
     <div className="mb-2 flex items-center justify-center gap-4">
       {items.map(item => (
@@ -46,7 +48,7 @@ export function TileHead({ items }: { items: TileStat[] }) {
           */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`/dashboard-emoji/${item.icon}.png`}
+            src={dashboardEmoji(item.icon, palette)}
             alt={item.alt}
             className="h-14 w-auto shrink-0 sm:h-16"
           />
