@@ -96,16 +96,29 @@ export function Card({
     deepens to replace the shadow that used to do that job.
   */
   /*
-    The picture sits on top of the wash, and `cover` keeps it filling the card
-    at whatever shape the grid gives it. Everything else — mask, mask sizing,
-    pooling — comes through untouched from paperCardStyle, so a painted card
-    dissolves along exactly the same contour as a plain one.
+    The picture fills the card exactly — `100% 100%`, not `cover`.
+
+    The word is painted into the artwork, so anything trimmed off an edge
+    takes part of a word with it. `cover` preserves the picture's proportions
+    and pays for it by cropping: the dashboard tile is 2.398 wide-to-tall on a
+    desktop, and it was throwing away 13% of the height, centred, which ate
+    the bottom of the lettering. Narrower than 1280 the tile becomes about
+    1.5 and `cover` would have cropped 36% of the WIDTH instead — straight
+    through the middle of the word.
+
+    So the art is authored at the tile's own shape (see public/dashboard-cards)
+    and told to fill it. At desktop the two match and nothing is distorted;
+    on a narrower screen the picture squashes rather than losing a letter.
+
+    Everything else — mask, mask sizing, pooling — comes through untouched
+    from paperCardStyle, so a painted card dissolves along exactly the same
+    contour as a plain one.
   */
   const style: CSSProperties = surfaceImage
     ? {
         ...paperCardStyle,
         backgroundImage: `url("${surfaceImage}"), ${PAPER_BACKGROUND}`,
-        backgroundSize: 'cover',
+        backgroundSize: '100% 100%',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
       }
