@@ -51,6 +51,15 @@ export interface SpreadChallenge {
   challenge_date: string
   description: string | null
   henryproblem: unknown
+  /**
+   * The problem's own picture — a net to fold, a graph to read.
+   *
+   * The worksheet only draws it when the problem is in graph mode AND this is
+   * supplied, so leaving it out renders the wording and silently drops the
+   * thing the wording is about. Half the problem, with nothing to show that
+   * half is missing.
+   */
+  image_url: string | null
 }
 
 export interface SubmissionSpreadProps {
@@ -216,11 +225,30 @@ export function SubmissionSpread({
                 ) : sheet ? (
                   // The spread is already the enlarged view, so the sheet must
                   // not paint paper of its own or offer a second zoom inside it.
-                  <HenryProblemSheet problem={sheet.problem} theme={pageNativeHenryTheme} zoomable={false} />
-                ) : challenge?.description ? (
+                  <HenryProblemSheet
+                    problem={sheet.problem}
+                    graphUrl={challenge?.image_url}
+                    theme={pageNativeHenryTheme}
+                    zoomable={false}
+                  />
+                ) : challenge?.description || challenge?.image_url ? (
+                  // A challenge with no .henryproblem snapshot still gets its
+                  // picture — it is as likely to carry the question as the
+                  // words are.
                   <>
                     <h2 className="mb-3 text-2xl font-bold">{challenge.title}</h2>
-                    <MathText text={challenge.description} className="block leading-relaxed" />
+                    {challenge.description && (
+                      <MathText text={challenge.description} className="block leading-relaxed" />
+                    )}
+                    {challenge.image_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={challenge.image_url}
+                        alt={challenge.title}
+                        className="mt-4 w-full rounded-lg border"
+                        style={{ borderColor: 'rgba(100,60,10,0.2)' }}
+                      />
+                    )}
                   </>
                 ) : (
                   <p className="text-sm italic" style={{ color: 'rgba(100,60,10,0.6)' }}>

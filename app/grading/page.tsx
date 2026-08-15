@@ -174,7 +174,10 @@ export default function GradingPage() {
 
     const { data } = await supabase
       .from('daily_challenges')
-      .select('id, title, challenge_date, description, henryproblem')
+      // image_url is the problem's own picture — the net to fold, the graph to
+      // read. Without it the worksheet renders the wording and drops what the
+      // wording refers to.
+      .select('id, title, challenge_date, description, henryproblem, image_url')
       .eq('id', s.challenge_id)
       .single()
 
