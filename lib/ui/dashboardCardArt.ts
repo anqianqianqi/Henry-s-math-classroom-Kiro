@@ -72,11 +72,24 @@ const named = (frame: string, cards: string[]) =>
 const PAINTED: Record<string, PaintedPalette> = {
   meadow: { fallback: 'blank-inkwash', frames: named('blank-leaves', CORNER_FOUR) },
   sky: { fallback: 'blank-inkwash', frames: named('blank-clouds', CORNER_FOUR) },
+  /*
+    Rose and dusk were drawn on three frames each, and — measured separately —
+    group their cards identically. Still written out twice rather than shared:
+    the agreement is a fact about two particular sets, not a rule the next
+    palette will follow, and meadow and sky already prove the split varies.
+  */
   rose: {
     fallback: 'blank-inkwash',
     frames: {
       ...named('blank-flowers', ['bank', 'classes', 'grade', 'shop', 'user-roles']),
       ...named('blank-petals', ['challenges', 'explore', 'scheduler', 'tags']),
+    },
+  },
+  dusk: {
+    fallback: 'blank-inkwash',
+    frames: {
+      ...named('blank-leafcorners', ['bank', 'classes', 'grade', 'shop', 'user-roles']),
+      ...named('blank-meadowedge', ['challenges', 'explore', 'scheduler', 'tags']),
     },
   },
 }
