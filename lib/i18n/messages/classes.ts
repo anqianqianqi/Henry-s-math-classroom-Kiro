@@ -134,6 +134,37 @@ export const classes = {
   'grade.grade': { en: 'Grade', zh: '批改' },
   'grade.editGrade': { en: 'Edit Grade', zh: '修改评分' },
 
+  // The grading page, and the spread it opens when a card is clicked.
+  // Values inside a sentence go in as placeholders rather than being joined
+  // in JSX — Chinese spaces and orders them differently.
+  'grade.history': { en: 'Grade History ({count})', zh: '批改记录（{count}）' },
+  'grade.dateTo': { en: 'to', zh: '至' },
+  'grade.allCaughtUp': { en: 'No ungraded submissions — all caught up!', zh: '没有待批改的提交——全部完成！' },
+  'grade.noneGradedYet': { en: 'No graded submissions yet.', zh: '暂无已批改的提交。' },
+  'grade.challengeDate': { en: 'Challenge date: {date}', zh: '挑战日期：{date}' },
+  'grade.submittedOn': { en: 'Submitted: {date}', zh: '提交时间：{date}' },
+  'grade.maxPts': { en: 'Max: {points} pts', zh: '满分：{points} 分' },
+  'grade.markReviewed': { en: 'Mark reviewed (0 pts)', zh: '标记为已阅（0 分）' },
+  'grade.markReviewedHint': { en: 'Mark as reviewed without assigning points', zh: '标记为已阅，不给分' },
+  'grade.update': { en: 'Update', zh: '更新' },
+  'grade.scoreOf': { en: '{points}/{max} pts', zh: '{points}/{max} 分' },
+
+  // Errors
+  'grade.errLoad': { en: 'Failed to load submissions', zh: '加载提交失败' },
+  'grade.errReview': { en: 'Failed to mark as reviewed', zh: '标记为已阅失败' },
+  'grade.errSave': { en: 'Failed to save grade', zh: '保存评分失败' },
+  'grade.errInvalidPoints': { en: 'Enter a valid point value', zh: '请输入有效的分数' },
+  'grade.errMaxPoints': { en: 'Max points is {max}', zh: '满分为 {max}' },
+
+  // The zoomed spread: problem on the left, the whole class on the right.
+  'grade.openSpread': { en: 'Open this problem and every answer to it', zh: '打开这道题与全班的解答' },
+  'grade.theProblem': { en: 'The problem', zh: '题目' },
+  'grade.classAnswers': { en: 'Answers ({count})', zh: '解答（{count}）' },
+  'grade.noProblemText': { en: 'This challenge has no problem text saved.', zh: '这道挑战题没有保存题目内容。' },
+  'grade.loadingProblem': { en: 'Loading the problem…', zh: '正在加载题目…' },
+  'grade.noAnswer': { en: 'No answer submitted.', zh: '未提交解答。' },
+  'grade.closeSpread': { en: 'Close', zh: '关闭' },
+
   // ── Class create / edit form ─────────────────────────────
   //
   // Weekdays and levels are generated from these keys rather than written out

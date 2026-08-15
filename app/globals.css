@@ -391,3 +391,25 @@ body {
   .dash-problem-btn:hover,
   .dash-problem-btn:active { transform: none; }
 }
+
+/*
+  The fade a zoomed reader arrives with.
+
+  Defined here rather than left where it was: the keyframes lived in a <style>
+  block inside MagicBookReveal, so they only existed while that component was
+  mounted. Book3DReveal and the grading spread both name this animation and
+  neither renders MagicBookReveal — an undefined animation-name fails silently,
+  so the content simply appeared without its fade and nothing looked broken
+  enough to notice.
+*/
+@keyframes content-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes content-fade-in {
+    from { opacity: 0; transform: none; }
+    to   { opacity: 1; transform: none; }
+  }
+}
