@@ -413,3 +413,68 @@ body {
     to   { opacity: 1; transform: none; }
   }
 }
+
+/*
+  ── A card that holds its painted word until you reach for it ──
+
+  At rest the tile shows the word painted into its artwork and its emoji.
+  Point at it and the word lifts off while the tile's own labels arrive.
+
+  The word and the frame are two layers rather than one swapped background,
+  because background-image cannot be transitioned and opacity can. Each card
+  fades to the frame it was actually painted on, so the bamboo never moves.
+*/
+.card-reveal { position: relative; }
+
+/* The frame is the background; this is the worded picture lying over it. */
+.card-reveal-word {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 1;
+  transition: opacity 280ms ease;
+  pointer-events: none;
+}
+
+/* Card.Body is not positioned, so without this the picture would paint over
+   its own emoji. */
+.card-reveal > :not(.card-reveal-word) { position: relative; z-index: 1; }
+
+/*
+  Labels wait. The FIRST child stays — that is the emoji on every tile, and
+  it is what keeps the dashboard scannable while the words are hidden. So
+  does anything absolutely positioned: that is the ungraded-work badge, and a
+  count of work waiting should never be hidden behind a hover.
+*/
+.card-reveal > :not(.card-reveal-word) > * {
+  opacity: 0;
+  transition: opacity 280ms ease;
+}
+.card-reveal > :not(.card-reveal-word) > :first-child,
+.card-reveal > :not(.card-reveal-word) > .absolute { opacity: 1; }
+
+/*
+  Only where a real pointer exists. A touch screen has no hover, and :hover
+  there either never fires or sticks after a tap — either way a phone would
+  show a dashboard with no labels on it. The app ships through Capacitor, so
+  that is a real device rather than a hypothetical.
+*/
+@media (hover: hover) and (pointer: fine) {
+  .card-reveal:hover .card-reveal-word { opacity: 0; }
+  .card-reveal:hover > :not(.card-reveal-word) > * { opacity: 1; }
+}
+
+/* Reaching a card by keyboard has to reveal it too, or the label is
+   mouse-only. Outside the query on purpose — focus works on every input. */
+.card-reveal:focus-within .card-reveal-word { opacity: 0; }
+.card-reveal:focus-within > :not(.card-reveal-word) > * { opacity: 1; }
+
+/* No pointer to hover with: the labels simply stay. */
+@media not all and (hover: hover) {
+  .card-reveal > :not(.card-reveal-word) > * { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-reveal-word,
+  .card-reveal > :not(.card-reveal-word) > * { transition: none; }
+}

@@ -19,6 +19,7 @@ import type { CalendarDay } from '@/components/dashboard/MonthCalendar'
 import { ClassAssignmentModal } from '@/components/dashboard/ClassAssignmentModal'
 import { DaySessionsModal } from '@/components/dashboard/DaySessionsModal'
 import { DEFAULT_PALETTE_ID, paletteById } from '@/lib/ui/paperCard'
+import { dashboardCardArt, dashboardCardFrame, type DashboardCardArt } from '@/lib/ui/dashboardCardArt'
 
 // ── Study Curve section with lang toggle ────────────────────────────────────
 function StudyCurveSection({ userId }: { userId: string }) {
@@ -143,7 +144,22 @@ export default function DashboardPage() {
   const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null) // latest blindbox image this user owns
   const router = useRouter()
   const supabase = createClient()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
+  /*
+    The painted background a tile wears, if it wears one.
+
+    Bound here so each tile names only its picture: the palette rule and the
+    reader's language are decided in one place, and a tile cannot get one of
+    them right and the other wrong. Returns undefined for every palette but
+    meadow, which is what leaves those cards exactly as they are today.
+  */
+  const cardArt = (art: DashboardCardArt) => dashboardCardArt(art, paletteId, language)
+  /*
+    The same painting with no word on it, shown while the card is pointed at.
+    Which empty frame belongs to which card was measured, not guessed — see
+    lib/ui/dashboardCardArt.ts.
+  */
+  const cardFrame = (art: DashboardCardArt) => dashboardCardFrame(art, paletteId)
   /*
     The reader's own clock, from their site setting.
 
@@ -903,6 +919,8 @@ export default function DashboardPage() {
             docs/dashboard-layout-preview.html. */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 sm:auto-rows-fr mb-8">
           <Card 
+            surfaceImage={cardArt('challenges')}
+            surfaceFrame={cardFrame('challenges')}
             className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/challenges')}
           >
@@ -915,6 +933,8 @@ export default function DashboardPage() {
 
           {/* Bubble Room — links to the user's first class bubble room, or /classes to pick */}
           <Card
+            surfaceImage={cardArt('bubble-room')}
+            surfaceFrame={cardFrame('bubble-room')}
             className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={async () => {
               // Find the user's first enrolled class and navigate to its bubble room
@@ -933,6 +953,8 @@ export default function DashboardPage() {
 
           {/* Decorations hub — book skins, pet room, etc. */}
           <Card
+            surfaceImage={cardArt('decorations')}
+            surfaceFrame={cardFrame('decorations')}
             className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/decorations')}
           >
@@ -1025,7 +1047,7 @@ export default function DashboardPage() {
           </div>
 
           {!isTeacher && !isAdmin && (
-            <Card className="flex flex-col text-center hover:shadow-lg transition-shadow">
+            <Card className="flex flex-col text-center hover:shadow-lg transition-shadow" surfaceImage={cardArt('total-score')} surfaceFrame={cardFrame('total-score')}>
               <Card.Body className="flex-1 flex flex-col items-center justify-center">
                 <div className="text-5xl mb-3 hidden sm:block">⭐</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">
@@ -1042,6 +1064,8 @@ export default function DashboardPage() {
 
           {!isTeacher && !isAdmin && (
             <Card
+              surfaceImage={cardArt('shop')}
+              surfaceFrame={cardFrame('shop')}
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/shop')}
             >
@@ -1060,6 +1084,8 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
+              surfaceImage={cardArt('grade')}
+              surfaceFrame={cardFrame('grade')}
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow relative"
               onClick={() => router.push('/grading')}
             >
@@ -1078,6 +1104,8 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
+              surfaceImage={cardArt('students')}
+              surfaceFrame={cardFrame('students')}
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/students')}
             >
@@ -1090,6 +1118,8 @@ export default function DashboardPage() {
           )}
 
           <Card 
+            surfaceImage={cardArt('classes')}
+            surfaceFrame={cardFrame('classes')}
             className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/classes')}
           >
@@ -1101,6 +1131,8 @@ export default function DashboardPage() {
           </Card>
 
           <Card 
+            surfaceImage={cardArt('explore')}
+            surfaceFrame={cardFrame('explore')}
             className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/classes/explore')}
           >
@@ -1113,6 +1145,8 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
+              surfaceImage={cardArt('bank')}
+              surfaceFrame={cardFrame('bank')}
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/challenge-bank')}
             >
@@ -1126,6 +1160,8 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
+              surfaceImage={cardArt('scheduler')}
+              surfaceFrame={cardFrame('scheduler')}
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/schedules')}
             >
@@ -1139,6 +1175,8 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
+              surfaceImage={cardArt('tags')}
+              surfaceFrame={cardFrame('tags')}
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/tags')}
             >
@@ -1152,6 +1190,8 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
+              surfaceImage={cardArt('user-roles')}
+              surfaceFrame={cardFrame('user-roles')}
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/roles')}
             >
@@ -1165,6 +1205,8 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
+              surfaceImage={cardArt('shop')}
+              surfaceFrame={cardFrame('shop')}
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/shop')}
             >
