@@ -30,6 +30,14 @@ export interface SpreadSubmission {
   student_name: string
   student_email: string
   answer: string | null
+  /**
+   * A photo of the working, when the student attached one.
+   *
+   * Often the whole answer: a student who works on paper types "36" and
+   * photographs six lines of algebra. Grading the text alone was grading the
+   * least of what they submitted.
+   */
+  image_url: string | null
   points: number | null
   max_points: number | null
   submitted_at: string
@@ -57,12 +65,42 @@ export interface SubmissionSpreadProps {
   /** True while the challenge's problem is still being fetched. */
   loading: boolean
   formatDate: (iso: string) => string
+  /**
+   * The book's page texture — book_texture_packages.inner_url.
+   *
+   * Without it the spread is a flat gradient and stops looking like the book
+   * the teacher just came from. Null while it loads, or when no package is
+   * configured, in which case the gradient below stands in.
+   */
+  pageTextureUrl?: string | null
 }
 
-/** Paper, matching the book's page when no skin texture is in play. */
-const PAGE: React.CSSProperties = {
-  background: 'linear-gradient(160deg, #f6efdd 0%, #efe3c8 55%, #e6d6b4 100%)',
+/**
+ * Paper, matching the book's page.
+ *
+ * Stretched rather than covered, for the reason Book3DReveal gives: the page
+ * grows with its content, and `cover` would zoom the texture until the
+ * decorative border is cropped off the sides. Stretching keeps the frame
+ * framing the whole sheet at any height.
+ */
+function pageStyle(textureUrl?: string | null): React.CSSProperties {
+  return textureUrl
+    ? {
+        backgroundImage: `url(${textureUrl})`,
+        backgroundSize: '100% 100%',
+        backgroundRepeat: 'no-repeat',
+      }
+    : { background: 'linear-gradient(160deg, #f6efdd 0%, #efe3c8 55%, #e6d6b4 100%)' }
 }
+
+/**
+ * Top padding on the right page, so the answers start level with the Title row
+ * opposite rather than level with the worksheet's banner above it.
+ *
+ * The same constant as Book3DReveal, and for the same reason — left page from
+ * the top is page padding, banner, then the date line.
+ */
+const ANSWERS_TOP_OFFSET = '7.3rem'
 
 export function SubmissionSpread({
   challenge,
@@ -74,6 +112,7 @@ export function SubmissionSpread({
   onClose,
   loading,
   formatDate,
+  pageTextureUrl,
 }: SubmissionSpreadProps) {
   const { t } = useLanguage()
   const focusRef = useRef<HTMLDivElement>(null)
@@ -139,7 +178,7 @@ export function SubmissionSpread({
             </button>
 
             {/* LEFT — the problem */}
-            <div className="relative flex-1" style={PAGE}>
+            <div className="relative flex-1" style={pageStyle(pageTextureUrl)}>
               <div
                 className="relative z-10 px-6 py-7 lg:px-12"
                 style={{ fontFamily: '"Georgia", "Times New Roman", serif', color: '#2d1a00', lineHeight: 1.8 }}
@@ -175,8 +214,11 @@ export function SubmissionSpread({
             />
 
             {/* RIGHT — every answer to it */}
-            <div className="relative flex-1" style={PAGE}>
-              <div className="relative z-10 px-6 py-7 lg:px-10">
+            <div className="relative flex-1" style={pageStyle(pageTextureUrl)}>
+              <div
+                className="relative z-10 px-6 lg:px-10"
+                style={{ paddingTop: ANSWERS_TOP_OFFSET, paddingBottom: '1.75rem' }}
+              >
                 <h3
                   className="mb-4 text-lg font-bold"
                   style={{ fontFamily: 'Georgia, serif', color: '#2d1a00' }}
@@ -221,10 +263,31 @@ export function SubmissionSpread({
                         <div className="mt-2 rounded-lg px-3 py-2" style={{ background: 'rgba(255,255,255,0.6)' }}>
                           {s.answer ? (
                             <MathText text={s.answer} className="block whitespace-pre-wrap text-sm leading-relaxed" />
-                          ) : (
+                          ) : !s.image_url ? (
                             <p className="text-sm italic" style={{ color: 'rgba(100,60,10,0.45)' }}>
                               {t('grade.noAnswer')}
                             </p>
+                          ) : null}
+
+                          {/*
+                            Full width and unclipped. A photograph of working is
+                            the submission for most students who use it, so it
+                            is shown at a size it can actually be read at rather
+                            than as a thumbnail to click through.
+
+                            Plain <img>: these are Supabase storage URLs on a
+                            host next/image is not configured for, and the page
+                            around it uses <img> for exactly that reason.
+                          */}
+                          {s.image_url && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={s.image_url}
+                              alt={t('grade.answer')}
+                              loading="lazy"
+                              className={`w-full rounded-lg border ${s.answer ? 'mt-2' : ''}`}
+                              style={{ borderColor: 'rgba(100,60,10,0.2)' }}
+                            />
                           )}
                         </div>
 

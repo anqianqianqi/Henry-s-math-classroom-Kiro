@@ -16,6 +16,8 @@ interface Submission {
   user_id: string
   challenge_id: string
   answer: string | null   // maps to challenge_submissions.content
+  /** A photo of the working, when the student attached one. */
+  image_url: string | null
   points: number | null
   submitted_at: string
   updated_at: string
@@ -52,6 +54,13 @@ export default function GradingPage() {
   const [spread, setSpread] = useState<{ challengeId: string; focusId: string } | null>(null)
   const [spreadChallenge, setSpreadChallenge] = useState<SpreadChallenge | null>(null)
   const [spreadLoading, setSpreadLoading] = useState(false)
+  /*
+    The book's page texture, so the spread is the paper the teacher already
+    knows rather than a flat gradient. Fetched once — it is the same sheet for
+    every problem — and allowed to fail: no package configured is a plainer
+    page, not an error.
+  */
+  const [pageTextureUrl, setPageTextureUrl] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -77,6 +86,7 @@ export default function GradingPage() {
         user_id,
         challenge_id,
         content,
+        image_url,
         points,
         submitted_at,
         updated_at,
@@ -96,6 +106,7 @@ export default function GradingPage() {
       user_id: s.user_id,
       challenge_id: s.challenge_id,
       answer: s.content,
+      image_url: s.image_url ?? null,
       points: s.points,
       submitted_at: s.submitted_at,
       updated_at: s.updated_at,
@@ -114,6 +125,36 @@ export default function GradingPage() {
   }, [router, supabase])
 
   useEffect(() => { load() }, [load])
+
+  /*
+    Resolved the same way the challenge room resolves it: the reader's own
+    texture package if they have chosen one, otherwise the default. Same
+    source as the book, so the two never drift apart.
+  */
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadPageTexture() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: pref } = await supabase
+        .from('user_book_skin_preferences')
+        .select('texture_package_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      const query = pref?.texture_package_id
+        ? supabase.from('book_texture_packages').select('inner_url').eq('id', pref.texture_package_id).maybeSingle()
+        : supabase.from('book_texture_packages').select('inner_url').eq('is_default', true).eq('is_active', true).maybeSingle()
+
+      const { data } = await query
+      if (!cancelled) setPageTextureUrl((data as any)?.inner_url ?? null)
+    }
+
+    loadPageTexture().catch(() => { /* a plainer page, not an error */ })
+    return () => { cancelled = true }
+  }, [supabase])
 
   /**
    * Open the spread on a submission's problem.
@@ -345,11 +386,24 @@ export default function GradingPage() {
                         </div>
                       </div>
 
-                      {/* Answer */}
-                      {s.answer && (
+                      {/* Answer. The photo counts as one: a card showing only
+                          "36" looked like the whole submission when six lines
+                          of working were attached underneath it. */}
+                      {(s.answer || s.image_url) && (
                         <div className="bg-gray-50 rounded-lg px-4 py-3">
                           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{t('grade.answer')}</p>
-                          <p className="text-sm text-gray-800 whitespace-pre-wrap">{s.answer}</p>
+                          {s.answer && <p className="text-sm text-gray-800 whitespace-pre-wrap">{s.answer}</p>}
+                          {s.image_url && (
+                            // Capped here — the list is for scanning, and the
+                            // spread is where it is read at full size.
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={s.image_url}
+                              alt={t('grade.answer')}
+                              loading="lazy"
+                              className={`max-h-40 rounded-lg border border-gray-200 ${s.answer ? 'mt-2' : ''}`}
+                            />
+                          )}
                         </div>
                       )}
 
@@ -492,6 +546,7 @@ export default function GradingPage() {
           drafts={grading}
           loading={spreadLoading}
           formatDate={formatDate}
+          pageTextureUrl={pageTextureUrl}
           onClose={() => { setSpread(null); setSpreadChallenge(null) }}
           onDraftChange={(id, points) =>
             setGrading(prev => ({ ...prev, [id]: { points, saving: prev[id]?.saving ?? false } }))
