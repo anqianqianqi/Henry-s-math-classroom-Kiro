@@ -8,6 +8,8 @@ export const dashboard = {
   'dash.explore': { en: 'Explore', zh: '浏览' },
   'dash.manage': { en: 'Manage', zh: '管理' },
   'dash.userRoles': { en: 'User Roles', zh: '用户角色' },
+
+  'dash.userHistory': { en: 'User History', zh: '用户记录' },
   'dash.tags': { en: 'Tags', zh: '标签' },
   'dash.scheduler': { en: 'Scheduler', zh: '排课' },
   'dash.challengeBank': { en: 'Challenge Bank', zh: '题库' },

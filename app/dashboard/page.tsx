@@ -1104,14 +1104,14 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
-              surfaceImage={cardArt('students')}
-              surfaceFrame={cardFrame('students')}
+              surfaceImage={cardArt('user-roles')}
+              surfaceFrame={cardFrame('user-roles')}
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/students')}
             >
               <Card.Body className="flex-1 flex flex-col items-center justify-center">
-                <div className="text-5xl mb-3 hidden sm:block">📊</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.students')}</div>
+                <div className="text-5xl mb-3 hidden sm:block">👥</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.userHistory')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.history')}</div>
               </Card.Body>
             </Card>
@@ -1183,21 +1183,6 @@ export default function DashboardPage() {
               <Card.Body className="flex-1 flex flex-col items-center justify-center">
                 <div className="text-5xl mb-3 hidden sm:block">🏷️</div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.tags')}</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
-              </Card.Body>
-            </Card>
-          )}
-
-          {(isTeacher || isAdmin) && (
-            <Card 
-              surfaceImage={cardArt('user-roles')}
-              surfaceFrame={cardFrame('user-roles')}
-              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => router.push('/admin/roles')}
-            >
-              <Card.Body className="flex-1 flex flex-col items-center justify-center">
-                <div className="text-5xl mb-3 hidden sm:block">👥</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.userRoles')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
               </Card.Body>
             </Card>

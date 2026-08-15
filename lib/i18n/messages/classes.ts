@@ -93,6 +93,40 @@ export const classes = {
   'students.searchPlaceholder': { en: 'Search by name or email…', zh: '按姓名或邮箱搜索……' },
   'students.allUsers': { en: 'All users', zh: '全部用户' },
   'students.studentsOnly': { en: 'Students only', zh: '仅学生' },
+
+  // ── User history: the roster, and managing who is what ──────
+  // Absorbed from the old role-management page, which is now a redirect.
+  'students.pageTitle': { en: 'User History', zh: '用户记录' },
+  'students.addUser': { en: 'Add user', zh: '添加用户' },
+  'students.newUser': { en: 'New user', zh: '新建用户' },
+  'students.firstName': { en: 'First name', zh: '名' },
+  'students.lastName': { en: 'Last name', zh: '姓' },
+  'students.email': { en: 'Email', zh: '邮箱' },
+  'students.password': { en: 'Password', zh: '密码' },
+  'students.passwordHint': { en: 'At least 6 characters', zh: '至少 6 个字符' },
+  'students.role': { en: 'Role', zh: '角色' },
+  'students.roleStudent': { en: 'Student', zh: '学生' },
+  'students.classOptional': { en: 'Class (optional)', zh: '班级（可选）' },
+  'students.noClass': { en: 'No class', zh: '不加入班级' },
+  'students.create': { en: 'Create user', zh: '创建用户' },
+  'students.creating': { en: 'Creating…', zh: '创建中…' },
+  'students.created': { en: '{name} created', zh: '已创建 {name}' },
+  'students.createFailed': { en: 'Could not create the user', zh: '创建用户失败' },
+  'students.networkError': { en: 'Network error — please try again', zh: '网络错误，请重试' },
+
+  // Changing what someone is. Administrator is offered because the page it
+  // replaced could grant it, and dropping that would quietly remove the only
+  // way to make another administrator.
+  'students.changeRole': { en: 'Change role', zh: '更改角色' },
+  'students.roleChangeFailed': { en: 'Could not change the role', zh: '更改角色失败' },
+  'students.confirmRole': {
+    en: 'Make {name} a {role}? This replaces their current role.',
+    zh: '将 {name} 设为{role}？这会替换其现有角色。',
+  },
+  'students.submissionsLabel': { en: 'submissions', zh: '提交' },
+  'students.countShown': { en: '{shown} of {total} shown', zh: '显示 {shown} / {total}' },
+  'students.countTotalUsers': { en: '{count} users total', zh: '共 {count} 位用户' },
+  'students.countTotalStudents': { en: '{count} students total', zh: '共 {count} 位学生' },
   'students.noneFound': { en: 'No users found', zh: '没有找到用户' },
   'students.noUsers': { en: 'No users yet', zh: '暂无用户' },
   'students.noStudents': { en: 'No students yet', zh: '暂无学生' },
