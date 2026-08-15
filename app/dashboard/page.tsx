@@ -98,6 +98,21 @@ export default function DashboardPage() {
   })
   const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean; submissionId?: string; hasNewTeacherComment?: boolean }>>([])
 
+  /**
+   * Questions this student asked that are still waiting.
+   *
+   * "Still waiting" is the bubble room's own definition, not a new one:
+   * unresolved and not yet expired, exactly as MyBubblesPanel splits active
+   * from completed and expired. A second definition living on the dashboard
+   * would drift from the panel the first time either changed, and a student
+   * would see a count that disagreed with the list it points at.
+   *
+   * Its own query rather than a ninth field on `stats`, which is built in two
+   * places — one for teachers and one for students — and would need the same
+   * count added to both.
+   */
+  const [openBubbles, setOpenBubbles] = useState(0)
+
   /*
     ── The welcome card's calendar ─────────────────────────────
     schoolToday rather than the browser's date: the outline has to agree with
@@ -174,6 +189,35 @@ export default function DashboardPage() {
   useEffect(() => {
     loadUser()
   }, [])
+
+  /*
+    Counted with head:true, so the database returns the number and none of the
+    rows — the tile needs a figure, not the questions themselves.
+
+    `now` is read at query time rather than from a stored value: a bubble
+    expires by the clock passing it, with nothing written to the row when it
+    does, so anything cached would keep counting a question that has quietly
+    gone stale.
+  */
+  useEffect(() => {
+    if (!user?.id) return
+    let cancelled = false
+
+    async function countOpenBubbles() {
+      const { count } = await supabase
+        .from('bubble_room_questions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .is('resolved_at', null)
+        .gt('expires_at', new Date().toISOString())
+
+      if (!cancelled) setOpenBubbles(count ?? 0)
+    }
+
+    // A missing count is a tile without a number, not an error worth showing.
+    countOpenBubbles().catch(() => {})
+    return () => { cancelled = true }
+  }, [user?.id, supabase])
 
   async function loadUser() {
     const { data: { user }, error } = await supabase.auth.getUser()
@@ -945,7 +989,16 @@ export default function DashboardPage() {
             }}
           >
             <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
-              <TileHead items={[{ icon: 'bubble-room', alt: t('nav.bubbleRoom') }]} />
+              {/* The number only appears once there is something waiting —
+                  a nought beside the icon reads as a problem rather than as
+                  a quiet inbox. */}
+              <TileHead
+                items={[{
+                  icon: 'bubble-room',
+                  value: openBubbles > 0 ? openBubbles : undefined,
+                  alt: t('nav.bubbleRoom'),
+                }]}
+              />
               <div className="text-2xl font-bold text-gray-900 mb-1">{t('nav.bubbleRoom')}</div>
               <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Q&amp;A</div>
             </Card.Body>
