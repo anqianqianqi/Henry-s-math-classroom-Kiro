@@ -37,13 +37,18 @@ export function TileHead({ items }: { items: TileStat[] }) {
             are small fixed-size local PNGs, and the width/height attributes
             already reserve the space next/image would be reserving for us.
           */}
+          {/*
+            Height is fixed and width follows the artwork. A square box would
+            put a wide icon and a tall one on different visual heights — the
+            wide one shrinking to fit its width — and a row of them steps up
+            and down. Every file is exported at the same height for the same
+            reason; see public/dashboard-emoji.
+          */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/dashboard-emoji/${item.icon}.png`}
             alt={item.alt}
-            width={64}
-            height={64}
-            className="h-14 w-14 shrink-0 object-contain sm:h-16 sm:w-16"
+            className="h-14 w-auto shrink-0 sm:h-16"
           />
           {item.value !== undefined && (
             <span className="text-3xl font-bold leading-none text-gray-900">{item.value}</span>
