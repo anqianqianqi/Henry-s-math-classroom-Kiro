@@ -41,31 +41,45 @@ export type DashboardCardArt =
   | 'user-roles'
 
 /**
- * Palettes that have been painted, and what their two empty frames are called.
+ * Painted palettes, and which empty frame each of their cards was drawn on.
  *
- * `corner` is the frame with artwork in the corners; `wash` is the quieter one.
- * The names differ per palette because the paintings do — bamboo leaves in
- * meadow, clouds in sky.
+ * ── WHY THIS IS MEASURED, NOT GUESSED ───────────────────────
+ * A card fades to ITS OWN frame when pointed at, so the artwork does not move
+ * and only the word lifts off. Send a card to the wrong frame and its border
+ * visibly jumps.
+ *
+ * Every frame was compared against every card across the half of the picture
+ * that carries no lettering. A match at a difference of 0.00 means they are the
+ * same painting with the word taken out; anything above that is a different
+ * frame. That is how these lists were built, and it is worth redoing rather
+ * than copying for any palette added later — because the split is NOT a house
+ * style. Meadow and sky both put the same four cards on their corner frame and
+ * everything else on the wash. Rose uses three frames and shares only one card
+ * with that arrangement. Assuming otherwise would have sent four rose cards to
+ * a frame they were never painted on.
  */
-const PAINTED: Record<string, { corner: string; wash: string }> = {
-  meadow: { corner: 'blank-leaves', wash: 'blank-inkwash' },
-  sky: { corner: 'blank-clouds', wash: 'blank-inkwash' },
+interface PaintedPalette {
+  /** Frame for a card not named in `frames`. */
+  fallback: string
+  /** Card → frame, for cards that sit on something other than the fallback. */
+  frames: Record<string, string>
 }
 
-/**
- * Which cards were painted on the corner frame rather than the wash.
- *
- * Measured, not guessed: each empty frame was compared against every card
- * across the half of the picture that carries no lettering, and the matches
- * came back at a difference of exactly 0.00 — the same paintings with the word
- * taken out. Both palettes split the same four cards the same way, which is
- * why this is one list rather than one per palette.
- *
- * It matters because a card fades to ITS OWN frame when pointed at, so the
- * bamboo — or the cloud — does not move and only the word lifts off. Sending
- * every card to one frame would make eight of the thirteen visibly jump.
- */
-const CORNER_FRAME: ReadonlySet<string> = new Set(['challenges', 'shop', 'students', 'bank'])
+const CORNER_FOUR = ['challenges', 'shop', 'students', 'bank']
+const named = (frame: string, cards: string[]) =>
+  Object.fromEntries(cards.map(card => [card, frame]))
+
+const PAINTED: Record<string, PaintedPalette> = {
+  meadow: { fallback: 'blank-inkwash', frames: named('blank-leaves', CORNER_FOUR) },
+  sky: { fallback: 'blank-inkwash', frames: named('blank-clouds', CORNER_FOUR) },
+  rose: {
+    fallback: 'blank-inkwash',
+    frames: {
+      ...named('blank-flowers', ['bank', 'classes', 'grade', 'shop', 'user-roles']),
+      ...named('blank-petals', ['challenges', 'explore', 'scheduler', 'tags']),
+    },
+  },
+}
 
 /** The painted background for a tile, or undefined for an unpainted palette. */
 export function dashboardCardArt(
@@ -83,9 +97,9 @@ export function dashboardCardArt(
  * Language plays no part: an empty frame has no word to translate.
  */
 export function dashboardCardFrame(art: DashboardCardArt, paletteId: string): string | undefined {
-  const frames = PAINTED[paletteId]
-  if (!frames) return undefined
-  return `/dashboard-cards/${paletteId}/${CORNER_FRAME.has(art) ? frames.corner : frames.wash}.jpg`
+  const palette = PAINTED[paletteId]
+  if (!palette) return undefined
+  return `/dashboard-cards/${paletteId}/${palette.frames[art] ?? palette.fallback}.jpg`
 }
 
 /**
