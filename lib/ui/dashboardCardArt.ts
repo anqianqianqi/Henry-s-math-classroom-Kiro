@@ -92,6 +92,13 @@ const PAINTED: Record<string, PaintedPalette> = {
       ...named('blank-meadowedge', ['challenges', 'explore', 'scheduler', 'tags']),
     },
   },
+  sea: {
+    fallback: 'blank-inkwash',
+    frames: {
+      ...named('blank-shallows', ['bank', 'classes', 'grade', 'shop', 'user-roles']),
+      ...named('blank-seabed', ['challenges', 'explore', 'scheduler', 'tags']),
+    },
+  },
 }
 
 /** The painted background for a tile, or undefined for an unpainted palette. */
