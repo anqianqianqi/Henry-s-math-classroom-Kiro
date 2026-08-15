@@ -164,6 +164,7 @@ export const classes = {
   'grade.loadingProblem': { en: 'Loading the problem…', zh: '正在加载题目…' },
   'grade.noAnswer': { en: 'No answer submitted.', zh: '未提交解答。' },
   'grade.closeSpread': { en: 'Close', zh: '关闭' },
+  'grade.justNow': { en: 'just now', zh: '刚刚' },
 
   // ── Class create / edit form ─────────────────────────────
   //
