@@ -925,7 +925,7 @@ export default function DashboardPage() {
             className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/challenges')}
           >
-            <Card.Body className="flex-1 flex flex-col items-center justify-center">
+            <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
               <TileHead items={[{ icon: 'challenges', value: stats.challengesCount, alt: t('nav.challenges') }]} />
               <div className="text-gray-600 font-medium">{t('nav.challenges')}</div>
             </Card.Body>
@@ -944,7 +944,7 @@ export default function DashboardPage() {
               router.push('/bubble-room')
             }}
           >
-            <Card.Body className="flex-1 flex flex-col items-center justify-center">
+            <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
               <TileHead items={[{ icon: 'bubble-room', alt: t('nav.bubbleRoom') }]} />
               <div className="text-2xl font-bold text-gray-900 mb-1">{t('nav.bubbleRoom')}</div>
               <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Q&amp;A</div>
@@ -958,7 +958,7 @@ export default function DashboardPage() {
             className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/decorations')}
           >
-            <Card.Body className="flex-1 flex flex-col items-center justify-center">
+            <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
               <TileHead items={[{ icon: 'decorations', alt: t('nav.decorations') }]} />
               <div className="text-3xl font-bold text-gray-900 mb-1">{t('nav.decorations')}</div>
               <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Book &amp; Room</div>
@@ -1048,7 +1048,7 @@ export default function DashboardPage() {
 
           {!isTeacher && !isAdmin && (
             <Card className="flex flex-col text-center hover:shadow-lg transition-shadow" surfaceImage={cardArt('total-score')} surfaceFrame={cardFrame('total-score')}>
-              <Card.Body className="flex-1 flex flex-col items-center justify-center">
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
                 <TileHead
                   items={[
                     { icon: 'problem-points', value: stats.totalScore, alt: t('dash.totalScore') },
@@ -1070,7 +1070,7 @@ export default function DashboardPage() {
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/shop')}
             >
-              <Card.Body className="flex-1 flex flex-col items-center justify-center">
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
                 <TileHead
                   items={[
                     { icon: 'shop-points', value: stats.spendableBalance, alt: t('dash.shopBalance') },
@@ -1091,7 +1091,7 @@ export default function DashboardPage() {
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow relative"
               onClick={() => router.push('/grading')}
             >
-              <Card.Body className="flex-1 flex flex-col items-center justify-center">
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
                 <TileHead items={[{ icon: 'grade', alt: t('dash.grade') }]} />
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.grade')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.homework')}</div>
@@ -1111,7 +1111,7 @@ export default function DashboardPage() {
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/students')}
             >
-              <Card.Body className="flex-1 flex flex-col items-center justify-center">
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
                 <TileHead items={[{ icon: 'user', alt: t('dash.userHistory') }]} />
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.userHistory')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.history')}</div>
@@ -1125,7 +1125,7 @@ export default function DashboardPage() {
             className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/classes')}
           >
-            <Card.Body className="flex-1 flex flex-col items-center justify-center">
+            <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
               <TileHead items={[{ icon: 'classes', value: stats.classesCount, alt: t('nav.classes') }]} />
               <div className="text-gray-600 font-medium">{t('nav.classes')}</div>
             </Card.Body>
@@ -1137,7 +1137,7 @@ export default function DashboardPage() {
             className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/classes/explore')}
           >
-            <Card.Body className="flex-1 flex flex-col items-center justify-center">
+            <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
               <TileHead items={[{ icon: 'explore', alt: t('dash.explore') }]} />
               <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.explore')}</div>
               <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('nav.classes')}</div>
@@ -1151,7 +1151,7 @@ export default function DashboardPage() {
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/challenge-bank')}
             >
-              <Card.Body className="flex-1 flex flex-col items-center justify-center">
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
                 <TileHead items={[{ icon: 'bank', alt: t('dash.challengeBank') }]} />
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.challengeBank')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
@@ -1166,7 +1166,7 @@ export default function DashboardPage() {
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/schedules')}
             >
-              <Card.Body className="flex-1 flex flex-col items-center justify-center">
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
                 <TileHead items={[{ icon: 'scheduler', alt: t('dash.scheduler') }]} />
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.scheduler')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
@@ -1181,7 +1181,7 @@ export default function DashboardPage() {
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/tags')}
             >
-              <Card.Body className="flex-1 flex flex-col items-center justify-center">
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
                 <TileHead items={[{ icon: 'tags', alt: t('dash.tags') }]} />
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.tags')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
@@ -1196,7 +1196,7 @@ export default function DashboardPage() {
               className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/shop')}
             >
-              <Card.Body className="flex-1 flex flex-col items-center justify-center">
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
                 <TileHead items={[{ icon: 'shop-points', alt: t('nav.shop') }]} />
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('nav.shop')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
