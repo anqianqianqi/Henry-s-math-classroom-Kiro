@@ -29,6 +29,7 @@ import { HenryProblemSheet } from '@/components/HenryProblemSheet'
 import { readStoredHenryProblem } from '@/lib/henryproblem'
 import { MathText } from '@/lib/mathtext'
 import { problemsForClass, type ProblemSetItem } from '@/lib/problemSet/query'
+import { parsePrintLanguage, wordingFor, type PrintLanguage } from '@/lib/problemSet/wording'
 
 /**
  * The printable height of an A4 page, in CSS pixels.
@@ -50,6 +51,7 @@ export default function ProblemSetPage() {
   const classId = params.get('class') ?? ''
   const from = params.get('from') ?? ''
   const to = params.get('to') ?? ''
+  const lang = parsePrintLanguage(params.get('lang'))
 
   const [items, setItems] = useState<ProblemSetItem[] | null>(null)
   const [className, setClassName] = useState('')
@@ -186,6 +188,7 @@ export default function ProblemSetPage() {
             item={item}
             index={i + 1}
             total={items.length}
+            lang={lang}
             fit={fit}
             onFitted={z => setShrunk(prev => (prev[item.id] === z ? prev : { ...prev, [item.id]: z }))}
           />
@@ -196,11 +199,12 @@ export default function ProblemSetPage() {
 }
 
 function ProblemPage({
-  item, index, total, fit, onFitted,
+  item, index, total, lang, fit, onFitted,
 }: {
   item: ProblemSetItem
   index: number
   total: number
+  lang: PrintLanguage
   fit: boolean
   onFitted: (zoom: number) => void
 }) {
@@ -263,8 +267,10 @@ function ProblemPage({
       }
     }
     return () => { cancelled = true }
+    // lang included because dropping a wording panel changes the height this
+    // measures, even though it comes from the URL and cannot change in place.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fit, item.id])
+  }, [fit, lang, item.id])
   const date = new Date(`${item.challenge_date}T12:00:00`).toLocaleDateString(undefined, {
     year: 'numeric', month: 'long', day: 'numeric',
   })
@@ -273,8 +279,9 @@ function ProblemPage({
     <section className="ps-sheet">
       <div ref={bodyRef} style={fit && zoom < 1 ? ({ zoom } as React.CSSProperties) : undefined}>
       {sheet ? (
-        // The worksheet as the challenge room draws it, with its own picture.
-        <HenryProblemSheet problem={sheet.problem} graphUrl={item.image_url} zoomable={false} />
+        // The worksheet as the challenge room draws it, with its own picture,
+        // carrying whichever wording was asked for.
+        <HenryProblemSheet problem={wordingFor(sheet.problem, lang)} graphUrl={item.image_url} zoomable={false} />
       ) : (
         // No snapshot: the title, the wording and the picture still print.
         <>

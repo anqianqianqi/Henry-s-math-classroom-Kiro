@@ -17,7 +17,9 @@
 import { useEffect, useState } from 'react'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { Button } from '@/components/ui/Button'
+import { readStoredHenryProblem } from '@/lib/henryproblem'
 import { problemDatesForClass, problemsForClass } from '@/lib/problemSet/query'
+import type { PrintLanguage } from '@/lib/problemSet/wording'
 
 export interface ProblemSetModalProps {
   open: boolean
@@ -34,10 +36,16 @@ export function ProblemSetModal({ open, onClose, classes }: ProblemSetModalProps
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [count, setCount] = useState<number | null>(null)
+  const [lang, setLang] = useState<PrintLanguage>('both')
+  /** How many in range have no snapshot, so the language choice misses them. */
+  const [plain, setPlain] = useState(0)
 
   // Reset on close, so reopening never shows the previous class's dates.
   useEffect(() => {
-    if (!open) { setClassId(''); setDates([]); setFrom(''); setTo(''); setCount(null) }
+    if (!open) {
+      setClassId(''); setDates([]); setFrom(''); setTo('')
+      setCount(null); setLang('both'); setPlain(0)
+    }
   }, [open])
 
   // The days this class has problems on.
@@ -58,11 +66,16 @@ export function ProblemSetModal({ open, onClose, classes }: ProblemSetModalProps
   }, [classId])
 
   // How many problems the chosen span holds, counted the same way the printed
-  // page will count them.
+  // page will count them. The same pass counts the ones with no editable
+  // snapshot, which are the ones the language choice cannot touch.
   useEffect(() => {
-    if (!classId || !from || !to || from > to) { setCount(null); return }
+    if (!classId || !from || !to || from > to) { setCount(null); setPlain(0); return }
     let cancelled = false
-    problemsForClass(classId, from, to).then(items => { if (!cancelled) setCount(items.length) })
+    problemsForClass(classId, from, to).then(items => {
+      if (cancelled) return
+      setCount(items.length)
+      setPlain(items.filter(i => !readStoredHenryProblem(i.henryproblem)).length)
+    })
     return () => { cancelled = true }
   }, [classId, from, to])
 
@@ -72,7 +85,7 @@ export function ProblemSetModal({ open, onClose, classes }: ProblemSetModalProps
   const ready = Boolean(classId && from && to) && !backwards && (count ?? 0) > 0
 
   function generate() {
-    const params = new URLSearchParams({ class: classId, from, to })
+    const params = new URLSearchParams({ class: classId, from, to, lang })
     // A new window rather than a route change: the teacher keeps the dashboard
     // they were on, and the printable page owns a clean document to print.
     window.open(`/problem-set?${params.toString()}`, '_blank', 'noopener,noreferrer')
@@ -139,10 +152,32 @@ export function ProblemSetModal({ open, onClose, classes }: ProblemSetModalProps
                 </label>
               </div>
 
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-gray-700">{t('pset.wording')}</span>
+                <select
+                  value={lang}
+                  onChange={e => setLang(e.target.value as PrintLanguage)}
+                  className="w-full rounded-lg border-2 border-gray-200 px-3 py-2 text-sm focus:border-primary-500"
+                >
+                  <option value="both">{t('pset.langBoth')}</option>
+                  <option value="en">{t('pset.langEn')}</option>
+                  <option value="zh">{t('pset.langZh')}</option>
+                </select>
+              </label>
+
               {backwards ? (
                 <p className="text-sm text-red-600">{t('pset.rangeBackwards')}</p>
               ) : count !== null && (
                 <p className="text-sm text-gray-500">{t('pset.countInRange', { count })}</p>
+              )}
+
+              {/* Only worth saying once a single language has been asked for. */}
+              {lang !== 'both' && !backwards && plain > 0 && (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  {plain === count
+                    ? t('pset.langAllNoSnapshot')
+                    : t('pset.langNoSnapshot', { count: plain })}
+                </p>
               )}
             </>
           )

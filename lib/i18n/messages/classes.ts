@@ -328,6 +328,21 @@ export const classes = {
   'pset.countInRange': { en: '{count} problems in this range', zh: '此范围内有 {count} 道题' },
   'pset.rangeBackwards': { en: 'The end date is before the start date.', zh: '结束日期早于开始日期。' },
 
+  // Which wording to print. Only a .henryproblem snapshot keeps the two
+  // languages apart; anything else is one block of text and prints as it is.
+  'pset.wording': { en: 'Wording', zh: '题面语言' },
+  'pset.langBoth': { en: 'English and Chinese', zh: '中英双语' },
+  'pset.langEn': { en: 'English only', zh: '仅英文' },
+  'pset.langZh': { en: 'Chinese only', zh: '仅中文' },
+  'pset.langNoSnapshot': {
+    en: '{count} of these were not imported as an editable problem, so their wording prints unchanged.',
+    zh: '其中 {count} 道不是以可编辑题目导入的，题面将原样打印。',
+  },
+  'pset.langAllNoSnapshot': {
+    en: 'None of these were imported as an editable problem, so this setting will not change what prints.',
+    zh: '这些题目都不是以可编辑题目导入的，此设置不会改变打印内容。',
+  },
+
   // The printable page itself.
   'pset.printTitle': { en: 'Problem set', zh: '题目集' },
   'pset.print': { en: 'Print', zh: '打印' },
