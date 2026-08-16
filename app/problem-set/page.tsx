@@ -99,10 +99,27 @@ export default function ProblemSetPage() {
                or the printer emits a trailing blank page. */
             break-after: page;
             page-break-after: always;
+            /* Keep a problem whole. Deliberately NOT applied to descendants:
+               break-inside on every node inside a KaTeX tree makes Chrome drop
+               and displace content, which is how the first version printed a
+               header and then an empty page. */
+            break-inside: avoid;
+            page-break-inside: avoid;
           }
           .ps-sheet:last-child { break-after: auto; page-break-after: auto; }
-          /* A problem must not be split across two pages. */
-          .ps-sheet, .ps-sheet * { break-inside: avoid; page-break-inside: avoid; }
+
+          /*
+            The worksheet IS its colours: the wording sits in a tinted panel,
+            the tags are filled chips, the header is a band. Browsers drop
+            background colours when printing, which strips the sheet back to a
+            title and some floating text — technically all there, and unreadable
+            as a worksheet. This asks for them back for the sheet only, so the
+            printout matches what the teacher previewed.
+          */
+          .ps-sheet {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
         }
       `}</style>
 

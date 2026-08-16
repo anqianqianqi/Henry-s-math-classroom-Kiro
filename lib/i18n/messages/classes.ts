@@ -337,8 +337,8 @@ export const classes = {
   'pset.nothingHere': { en: 'No problems in that range.', zh: '该范围内没有题目。' },
   'pset.noSheet': { en: 'This problem has no printable worksheet.', zh: '这道题没有可打印的题面。' },
   'pset.backgroundHint': {
-    en: 'Tick “Background graphics” in the print dialog to keep the paper texture.',
-    zh: '如需保留纸张纹理，请在打印对话框中勾选“背景图形”。',
+    en: 'In the print dialog, turn off “Headers and footers” to drop the date and URL.',
+    zh: '在打印对话框中关闭“页眉和页脚”，即可去掉日期与网址。',
   },
   'sched.title': { en: 'Class schedule', zh: '上课安排' },
   'sched.forwardOnly': {
