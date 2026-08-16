@@ -331,6 +331,8 @@ export const classes = {
   // The printable page itself.
   'pset.printTitle': { en: 'Problem set', zh: '题目集' },
   'pset.print': { en: 'Print', zh: '打印' },
+  'pset.fitToPage': { en: 'Fit each problem to one page', zh: '每题缩放到一页' },
+  'pset.shrunk': { en: '{count} shrunk to fit', zh: '{count} 道已缩放' },
   'pset.printing': { en: 'Preparing…', zh: '准备中…' },
   'pset.pageOf': { en: '{index} of {total}', zh: '第 {index} / {total} 页' },
   'pset.forClass': { en: '{name} · {from} to {to}', zh: '{name} · {from} 至 {to}' },

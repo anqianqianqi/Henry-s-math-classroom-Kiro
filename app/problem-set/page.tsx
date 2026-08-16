@@ -21,7 +21,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { createClient } from '@/lib/supabase/client'
@@ -29,6 +29,18 @@ import { HenryProblemSheet } from '@/components/HenryProblemSheet'
 import { readStoredHenryProblem } from '@/lib/henryproblem'
 import { MathText } from '@/lib/mathtext'
 import { problemsForClass, type ProblemSetItem } from '@/lib/problemSet/query'
+
+/**
+ * The printable height of an A4 page, in CSS pixels.
+ *
+ * 297mm less the 10mm margin at each end, at the 96dpi CSS reference. A sheet
+ * taller than this runs onto a second page, which is what "fit to page" exists
+ * to prevent.
+ */
+const PAGE_CONTENT_PX = Math.round((297 - 20) * (96 / 25.4))
+
+/** Below this the worksheet stops being readable; better a second page. */
+const MIN_ZOOM = 0.55
 
 export default function ProblemSetPage() {
   const { t } = useLanguage()
@@ -41,6 +53,9 @@ export default function ProblemSetPage() {
 
   const [items, setItems] = useState<ProblemSetItem[] | null>(null)
   const [className, setClassName] = useState('')
+  const [fit, setFit] = useState(true)
+  /** Which problems had to be shrunk, so the bar can say so. */
+  const [shrunk, setShrunk] = useState<Record<string, number>>({})
 
   useEffect(() => {
     if (!classId || !from || !to) { setItems([]); return }
@@ -72,12 +87,20 @@ export default function ProblemSetPage() {
         /* Screen: a stack of sheets on a grey desk, so the page breaks are
            visible before anything is printed. */
         .problem-set { background: #e9e7e2; min-height: 100vh; padding: 24px 0 48px; }
+        /*
+          A whole A4 page, with the print margin drawn as padding. The content
+          box is then 190 x 277mm on screen and 190 x 277mm on paper — the same
+          box, so a line that wraps here wraps there, and the height measured
+          for "fit to page" is the height that gets printed. An earlier version
+          was 190mm wide with 14mm of padding, which measured a 162mm column
+          and shrank problems that would have fitted.
+        */
         .ps-sheet {
           background: #fff;
-          width: 190mm;                /* A4 width less a 10mm margin each side */
-          min-height: 262mm;           /* and its height, so the break is honest */
+          width: 210mm;
+          min-height: 297mm;
           margin: 0 auto 24px;
-          padding: 14mm;
+          padding: 10mm;
           box-shadow: 0 6px 24px rgba(0,0,0,0.18);
           box-sizing: border-box;
         }
@@ -130,7 +153,15 @@ export default function ProblemSetPage() {
             {className && <p className="truncate text-xs text-gray-500">{heading}</p>}
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden text-[11px] text-gray-400 sm:inline">{t('pset.backgroundHint')}</span>
+            <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
+              <input type="checkbox" checked={fit} onChange={e => setFit(e.target.checked)} />
+              {t('pset.fitToPage')}
+              {(() => {
+                const n = Object.values(shrunk).filter(z => z < 1).length
+                return fit && n > 0 ? <span className="text-gray-400">({t('pset.shrunk', { count: n })})</span> : null
+              })()}
+            </label>
+            <span className="hidden text-[11px] text-gray-400 lg:inline">{t('pset.backgroundHint')}</span>
             <button
               type="button"
               onClick={() => window.print()}
@@ -150,22 +181,97 @@ export default function ProblemSetPage() {
         <p className="mt-10 text-center text-sm text-gray-500">{t('pset.nothingHere')}</p>
       ) : (
         items.map((item, i) => (
-          <ProblemPage key={item.id} item={item} index={i + 1} total={items.length} />
+          <ProblemPage
+            key={item.id}
+            item={item}
+            index={i + 1}
+            total={items.length}
+            fit={fit}
+            onFitted={z => setShrunk(prev => (prev[item.id] === z ? prev : { ...prev, [item.id]: z }))}
+          />
         ))
       )}
     </div>
   )
 }
 
-function ProblemPage({ item, index, total }: { item: ProblemSetItem; index: number; total: number }) {
+function ProblemPage({
+  item, index, total, fit, onFitted,
+}: {
+  item: ProblemSetItem
+  index: number
+  total: number
+  fit: boolean
+  onFitted: (zoom: number) => void
+}) {
   const { t } = useLanguage()
   const sheet = readStoredHenryProblem(item.henryproblem)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const footRef = useRef<HTMLParagraphElement>(null)
+  const [zoom, setZoom] = useState(1)
+
+  /*
+    Shrink a problem that would otherwise spill onto a second page.
+
+    `zoom` rather than `transform: scale`, because zoom takes part in layout —
+    the sheet genuinely becomes shorter, so the page break moves with it. A
+    transform only repaints, leaving the browser breaking the page where the
+    unscaled content used to end.
+
+    Measured at zoom 1 and applied once. Re-measuring after the zoom lands
+    would read the shrunken height and creep towards nothing.
+  */
+  useEffect(() => {
+    if (!fit) { setZoom(1); onFitted(1); return }
+    const el = bodyRef.current
+    if (!el) return
+    let cancelled = false
+
+    function measure() {
+      if (cancelled || !el) return
+      const natural = el.scrollHeight
+      if (!natural) return
+
+      // The page number sits below the problem and is not scaled with it, so
+      // the space the problem may occupy is the page less that line.
+      const foot = footRef.current
+      const gap = foot ? parseFloat(getComputedStyle(foot).marginTop) || 0 : 0
+      const available = PAGE_CONTENT_PX - (foot?.offsetHeight ?? 0) - gap
+
+      const next = natural > available
+        ? Math.max(MIN_ZOOM, available / natural)
+        : 1
+      setZoom(next)
+      onFitted(next)
+    }
+
+    // The graph is the tallest thing on most sheets and the last to arrive;
+    // measuring before it loads reads a sheet that is not the one printed.
+    const images = Array.from(el.querySelectorAll('img'))
+    const pending = images.filter(img => !img.complete)
+    if (!pending.length) measure()
+    else {
+      let left = pending.length
+      const done = () => { if (--left === 0) measure() }
+      pending.forEach(img => { img.addEventListener('load', done); img.addEventListener('error', done) })
+      // A slow image should not leave the sheet unmeasured forever.
+      const timer = window.setTimeout(measure, 3000)
+      return () => {
+        cancelled = true
+        window.clearTimeout(timer)
+        pending.forEach(img => { img.removeEventListener('load', done); img.removeEventListener('error', done) })
+      }
+    }
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fit, item.id])
   const date = new Date(`${item.challenge_date}T12:00:00`).toLocaleDateString(undefined, {
     year: 'numeric', month: 'long', day: 'numeric',
   })
 
   return (
     <section className="ps-sheet">
+      <div ref={bodyRef} style={fit && zoom < 1 ? ({ zoom } as React.CSSProperties) : undefined}>
       {sheet ? (
         // The worksheet as the challenge room draws it, with its own picture.
         <HenryProblemSheet problem={sheet.problem} graphUrl={item.image_url} zoomable={false} />
@@ -185,7 +291,9 @@ function ProblemPage({ item, index, total }: { item: ProblemSetItem; index: numb
         </>
       )}
 
-      <p className="mt-6 text-right text-[10px] text-gray-400">
+      </div>
+
+      <p ref={footRef} className="mt-6 text-right text-[10px] text-gray-400">
         {t('pset.pageOf', { index, total })}
       </p>
     </section>
