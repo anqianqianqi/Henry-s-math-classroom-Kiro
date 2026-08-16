@@ -348,6 +348,14 @@ export const classes = {
   'pset.print': { en: 'Print', zh: '打印' },
   'pset.fitToPage': { en: 'Fit each problem to one page', zh: '每题缩放到一页' },
   'pset.shrunk': { en: '{count} shrunk to fit', zh: '{count} 道已缩放' },
+  'pset.overflowing': {
+    en: '{count} still run past one page',
+    zh: '{count} 道仍超过一页',
+  },
+  'pset.thisOverflows': {
+    en: 'Too long for one page even at the smallest readable size — this one prints on two.',
+    zh: '即使缩到可读的最小尺寸仍超过一页，这道题会打印成两页。',
+  },
 
   // The paper. A4 and A5 are written the same way in both languages.
   'pset.paper': { en: 'Paper', zh: '纸张' },
