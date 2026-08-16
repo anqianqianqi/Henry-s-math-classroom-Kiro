@@ -36,13 +36,24 @@ import {
 } from '@/lib/problemSet/paper'
 
 /** Below this the worksheet stops being readable; better a second page. */
-const MIN_ZOOM = 0.55
+const MIN_SCALE = 0.55
 
-/** Halvings of the range between MIN_ZOOM and 1 — lands within ~0.004. */
+/** Halvings of the range between MIN_SCALE and 1 — lands within ~0.004. */
 const FIT_STEPS = 7
 
-/** Held back from the page so a rounding error has somewhere to go. */
-const SAFETY_PX = 4
+/**
+ * How much of the page a fitted problem is allowed to fill.
+ *
+ * The search below looks for the largest factor that fits, which by
+ * construction settles as close to the bottom edge as it can get — every
+ * shrunk sheet came to rest within about five pixels of it. The printed
+ * layout is not the measured layout to the pixel (text is rasterised at the
+ * printer's resolution, not the screen's, and a page of wording accumulates
+ * the difference line by line), so five pixels is not a margin, it is a
+ * coin toss. Three percent of a page is ~30px of slack and a size difference
+ * nobody can see.
+ */
+const FIT_HEADROOM = 0.97
 
 export default function ProblemSetPage() {
   const { t } = useLanguage()
@@ -58,7 +69,7 @@ export default function ProblemSetPage() {
   const [className, setClassName] = useState('')
   const [fit, setFit] = useState(true)
   /** What fitting did to each problem, so the bar can report it honestly. */
-  const [fitted, setFitted] = useState<Record<string, { zoom: number; fits: boolean }>>({})
+  const [fitted, setFitted] = useState<Record<string, { scale: number; fits: boolean }>>({})
   /*
     Starts at A4 and settles on the remembered paper after mount. Reading
     localStorage or the locale during render would give the server one answer
@@ -127,10 +138,16 @@ export default function ProblemSetPage() {
         }
         .ps-bar { position: sticky; top: 0; z-index: 10; }
 
+        /* Holds the scaled sheet. Its height is measured and written by the
+           fit, and clipping keeps a fractional pixel of the transform from
+           reaching past the height that pagination was given. */
+        .ps-fitbox { overflow: hidden; }
+
         /* Naming the paper stops the browser fitting the document to whatever
            is in the tray, which would rescale it past the measurement. The
-           margin is zero because the sheet draws its own, above. */
-        @page { size: ${page.css}; margin: 0; }
+           margin is real, so a header and footer have somewhere to go without
+           the page box eating into the sheet. */
+        @page { size: ${page.css}; margin: ${PAGE_MARGIN_MM}mm; }
 
         @media print {
           /* Nothing but the sheets. The overflow warning is a screen aid, and
@@ -138,26 +155,29 @@ export default function ProblemSetPage() {
           .ps-bar, .ps-overflow { display: none !important; }
           .problem-set { background: #fff; padding: 0; }
           /*
-            The sheet keeps the size it has on screen: a whole page of the
-            chosen paper, with the margin drawn as its own padding, and @page
-            reduced to nothing.
+            The wording wraps into a column stated in millimetres, the same one
+            it wraps into on screen.
 
-            It used to be width:auto with the margin left to @page, which hands
-            the width to the page box — and the page box is whatever the print
-            dialog says. Pick any margin setting other than the 10mm asked for
-            and the column narrows, the wording re-wraps taller, and a problem
-            measured as fitting spills onto a second sheet. The screen still
-            showed it fitting, because on screen the width is fixed in mm.
+            It used to be width:auto, which hands the width to the page box —
+            and the page box is whatever the print dialog says. Any margin
+            setting other than the one asked for narrowed the column, the
+            wording re-wrapped taller, and a problem measured as fitting spilled
+            onto a second sheet, while the screen went on showing it fitting
+            because there the width is fixed.
 
-            Sized this way the box cannot move: it is the paper. Nothing in the
-            dialog changes the column the text wraps into, and a dialog that
-            does scale the page scales all of it at once, which keeps the fit.
+            The column is the page less its margins, and the margin is left to
+            @page rather than drawn as padding here. Making the sheet the full
+            width of the paper instead works until anything shrinks the page box
+            — a header and footer, a custom margin — and then a sheet exactly as
+            wide as the paper no longer fits on it, and the browser rescales the
+            whole document to cope. Narrower by its margins, there is room to
+            absorb that.
           */
           .ps-sheet {
-            width: ${page.widthMm}mm;
+            width: ${page.widthMm - 2 * PAGE_MARGIN_MM}mm;
             min-height: 0;
-            margin: 0;
-            padding: ${PAGE_MARGIN_MM}mm;
+            margin: 0 auto;
+            padding: 0;
             box-shadow: none;
             /* One problem per page. break-after on every sheet but the last,
                or the printer emits a trailing blank page. */
@@ -213,7 +233,7 @@ export default function ProblemSetPage() {
             </label>
             {(() => {
               const verdicts = Object.values(fitted)
-              const shrunk = verdicts.filter(v => v.fits && v.zoom < 1).length
+              const shrunk = verdicts.filter(v => v.fits && v.scale < 1).length
               const over = verdicts.filter(v => !v.fits).length
               return (
                 <>
@@ -258,10 +278,10 @@ export default function ProblemSetPage() {
             lang={lang}
             fit={fit}
             contentPx={contentPx}
-            onFitted={(zoom, fits) => setFitted(prev => (
-              prev[item.id]?.zoom === zoom && prev[item.id]?.fits === fits
+            onFitted={(scale, fits) => setFitted(prev => (
+              prev[item.id]?.scale === scale && prev[item.id]?.fits === fits
                 ? prev
-                : { ...prev, [item.id]: { zoom, fits } }
+                : { ...prev, [item.id]: { scale, fits } }
             ))}
           />
         ))
@@ -280,84 +300,106 @@ function ProblemPage({
   fit: boolean
   /** Printable height of the chosen paper, in CSS pixels. */
   contentPx: number
-  onFitted: (zoom: number, fits: boolean) => void
+  onFitted: (scale: number, fits: boolean) => void
 }) {
   const { t } = useLanguage()
   const sheet = readStoredHenryProblem(item.henryproblem)
+  const boxRef = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const footRef = useRef<HTMLParagraphElement>(null)
-  const [zoom, setZoom] = useState(1)
   const [fits, setFits] = useState(true)
 
   /*
     Shrink a problem that would otherwise spill onto a second page.
 
-    `zoom` rather than `transform: scale`, because zoom takes part in layout —
-    the sheet genuinely becomes shorter, so the page break moves with it. A
-    transform only repaints, leaving the browser breaking the page where the
-    unscaled content used to end.
+    ── WHY NOT zoom ────────────────────────────────────────────
+    zoom takes part in layout, so a zoomed sheet really is shorter and every
+    height the DOM reports agrees that it fits. Chrome's *printing* does not
+    agree: it breaks pages on the unzoomed height, so a sheet shrunk to 0.7
+    was still paginated as though it were full size. Six demo problems laid
+    out well inside the page and printed as eleven — the five that were
+    shrunk each split in two, and the one left at 1 did not. Nothing in the
+    DOM showed it, which is why the screen and the print preview disagreed.
 
-    Measured at zoom 1 and applied once. Re-measuring after the zoom lands
-    would read the shrunken height and creep towards nothing.
+    ── WHAT REPLACES IT ────────────────────────────────────────
+    An outer box with a plain, measured height in pixels, holding a scaled
+    inner one. Fragmentation sees an ordinary block of an ordinary height and
+    has no transform to misread. The inner box is widened by the reciprocal of
+    the factor so that, once scaled, it comes back to exactly the column width
+    — which keeps the wording wrapping into the full width of the page rather
+    than photocopying the sheet into a narrower strip.
   */
   useEffect(() => {
+    const box = boxRef.current
     const el = bodyRef.current
-    if (!el) return
-    if (!fit) { el.style.zoom = ''; setZoom(1); setFits(true); onFitted(1, true); return }
+    if (!box || !el) return
+
+    function clear() {
+      el!.style.width = ''
+      el!.style.transform = ''
+      el!.style.transformOrigin = ''
+      box!.style.height = ''
+    }
+
+    if (!fit) { clear(); setFits(true); onFitted(1, true); return }
     let cancelled = false
 
     function measure() {
-      if (cancelled || !el) return
+      if (cancelled || !el || !box) return
 
       // The page number sits below the problem and is not scaled with it, so
-      // the space the problem may occupy is the page less that line. A couple
-      // of pixels are held back: landing on exactly 100% of the page leaves a
-      // rounding error nowhere to go but the next sheet.
+      // the space the problem may occupy is the page less that line.
       const foot = footRef.current
       const gap = foot ? parseFloat(getComputedStyle(foot).marginTop) || 0 : 0
-      const available = contentPx - (foot?.offsetHeight ?? 0) - gap - SAFETY_PX
+      const available = contentPx * FIT_HEADROOM - (foot?.offsetHeight ?? 0) - gap
 
       /** Rendered height at a given factor — what the paper actually gets. */
       function heightAt(z: number) {
-        el!.style.zoom = z === 1 ? '' : String(z)
+        if (z === 1) {
+          el!.style.width = ''
+          el!.style.transform = ''
+        } else {
+          el!.style.width = `${100 / z}%`
+          el!.style.transform = `scale(${z})`
+          el!.style.transformOrigin = 'top left'
+        }
         return el!.getBoundingClientRect().height
       }
 
       /*
         Search for the largest factor that fits rather than dividing once.
 
-        Height is not proportional to the factor. zoom scales the coordinate
-        space, so a shrunken sheet lays out in a *wider* column in its own
-        units, the wording re-wraps into fewer lines, and it comes out shorter
-        than the arithmetic predicts. One division therefore overshoots badly:
-        three demo problems asked for 0.48 and 0.34 and were pinned to the 0.55
-        floor, when measuring showed 0.80 fitted all of them.
+        Height is not proportional to the factor: the inner box is widened as
+        it is scaled down, so the wording re-wraps into fewer lines and comes
+        out shorter than the arithmetic predicts. One division therefore
+        overshoots badly — demo problems asked for 0.48 and 0.34 and were
+        pinned to the 0.55 floor when 0.80 fitted all of them.
 
-        Measuring each candidate makes no assumption about the shape of that
+        Measuring each candidate assumes nothing about the shape of that
         curve, only that it does not grow as the factor shrinks.
       */
       if (heightAt(1) <= available) {
-        el.style.zoom = ''
-        setZoom(1); setFits(true)
+        clear()
+        setFits(true)
         onFitted(1, true)
         return
       }
 
-      let lo = MIN_ZOOM
+      let lo = MIN_SCALE
       let hi = 1
-      let best = MIN_ZOOM
+      let best = MIN_SCALE
       for (let i = 0; i < FIT_STEPS; i++) {
         const mid = (lo + hi) / 2
         if (heightAt(mid) <= available) { best = mid; lo = mid } else { hi = mid }
       }
 
-      // Applied here as well as through state: when the factor happens to be
-      // the one already held, React has nothing to re-render and would leave
-      // the element at whatever the search last tried.
-      const settled = heightAt(best) <= available
-      el.style.zoom = String(best)
-      setZoom(best); setFits(settled)
-      onFitted(best, settled)
+      // A transform paints outside the flow, so the outer box has to be told
+      // how tall the result is. This height is the only thing pagination sees.
+      const settled = heightAt(best)
+      box.style.height = `${Math.ceil(settled)}px`
+      const ok = settled <= available
+      setFits(ok)
+      onFitted(best, ok)
     }
 
     // The graph is the tallest thing on most sheets and the last to arrive;
@@ -390,7 +432,10 @@ function ProblemPage({
 
   return (
     <section className="ps-sheet">
-      <div ref={bodyRef} style={fit && zoom < 1 ? ({ zoom } as React.CSSProperties) : undefined}>
+      {/* The measured height lives on the outer box; the scale on the inner
+          one. Both are set from the effect, so neither carries a style here. */}
+      <div ref={boxRef} className="ps-fitbox">
+      <div ref={bodyRef}>
       {sheet ? (
         // The worksheet as the challenge room draws it, with its own picture,
         // carrying whichever wording was asked for.
@@ -411,6 +456,7 @@ function ProblemPage({
         </>
       )}
 
+      </div>
       </div>
 
       {/*
