@@ -143,6 +143,23 @@ export default function ProblemSetPage() {
            reaching past the height that pagination was given. */
         .ps-fitbox { overflow: hidden; }
 
+        /*
+          The English and Chinese wording stay side by side, always.
+
+          The worksheet asks for two columns at Tailwind's md, which is a
+          768px *media* query. On screen that is measured against the window,
+          so a teacher at a desk sees two columns. Printing measures it against
+          the page, and every paper here gives a column of 718 to 740px — all
+          of them under the breakpoint. So the printout quietly stacked the two
+          languages, roughly doubling the height of the wording, and the fit had
+          measured a two-column sheet that never reached the paper. It is the
+          one media query inside the sheet, and this takes it out of the
+          argument: the pair is two columns on any window and on any page.
+        */
+        .ps-sheet .henry-wording-pair {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         /* Naming the paper stops the browser fitting the document to whatever
            is in the tray, which would rescale it past the measurement. The
            margin is real, so a header and footer have somewhere to go without
