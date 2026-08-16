@@ -34,6 +34,7 @@ import {
   PAGE_MARGIN_MM, PAPER_IDS, PAPER_SIZES, pageContentPx, readStoredPaper, storePaper,
   type PaperId,
 } from '@/lib/problemSet/paper'
+import { mayPrintClass, problemSetScope, type ProblemSetScope } from '@/lib/problemSet/viewer'
 
 /** Below this the worksheet stops being readable; better a second page. */
 const MIN_SCALE = 0.55
@@ -64,9 +65,12 @@ export default function ProblemSetPage() {
   const from = params.get('from') ?? ''
   const to = params.get('to') ?? ''
   const lang = parsePrintLanguage(params.get('lang'))
+  const wantsFuture = params.get('future') === '1'
 
   const [items, setItems] = useState<ProblemSetItem[] | null>(null)
   const [className, setClassName] = useState('')
+  /** Null until resolved; tells an empty page why it is empty. */
+  const [viewer, setViewer] = useState<ProblemSetScope | null>(null)
   const [fit, setFit] = useState(true)
   /** What fitting did to each problem, so the bar can report it honestly. */
   const [fitted, setFitted] = useState<Record<string, { scale: number; fits: boolean }>>({})
@@ -94,8 +98,26 @@ export default function ProblemSetPage() {
     let cancelled = false
 
     async function load() {
+      /*
+        The class rule is checked here, not only in the window that offered it.
+
+        Everything this page works from arrives in the query string, and both
+        tables behind it are readable by any signed-in user, so a student who
+        edited the class id would otherwise print a class they are not in. The
+        window is the convenient path to a URL; this is the one that decides.
+      */
+      const scope = await problemSetScope()
+      if (cancelled) return
+      setViewer(scope)
+
+      if (!mayPrintClass(scope, classId)) { setItems([]); return }
+
+      // A student's range stops at today unless they asked to read ahead; a
+      // teacher has no horizon to begin with.
+      const horizon = wantsFuture ? undefined : scope.notAfter
+
       const [problems, { data: cls }] = await Promise.all([
-        problemsForClass(classId, from, to),
+        problemsForClass(classId, from, to, horizon),
         supabase.from('classes').select('name').eq('id', classId).maybeSingle(),
       ])
       if (cancelled) return
@@ -105,7 +127,7 @@ export default function ProblemSetPage() {
 
     load().catch(() => { if (!cancelled) setItems([]) })
     return () => { cancelled = true }
-  }, [classId, from, to, supabase])
+  }, [classId, from, to, wantsFuture, supabase])
 
   const heading = useMemo(() => {
     const nice = (d: string) =>
@@ -284,7 +306,15 @@ export default function ProblemSetPage() {
       {items === null ? (
         <p className="mt-10 text-center text-sm text-gray-500">{t('pset.loadingDates')}</p>
       ) : items.length === 0 ? (
-        <p className="mt-10 text-center text-sm text-gray-500">{t('pset.nothingHere')}</p>
+        /* "Not your class" and "no problems in that range" are different
+           answers, and telling a student the first as though it were the
+           second sends them back to re-pick dates that were never the
+           problem. */
+        <p className="mt-10 text-center text-sm text-gray-500">
+          {viewer && classId && !mayPrintClass(viewer, classId)
+            ? t(viewer.userId ? 'pset.notYourClass' : 'pset.signedOut')
+            : t('pset.nothingHere')}
+        </p>
       ) : (
         items.map((item, i) => (
           <ProblemPage

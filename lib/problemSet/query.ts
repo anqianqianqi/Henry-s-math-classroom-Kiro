@@ -27,38 +27,65 @@ export interface ProblemSetItem {
   max_points: number | null
 }
 
-/** Every date this class has a problem on, newest last. For the dropdowns. */
-export async function problemDatesForClass(classId: string): Promise<string[]> {
+/**
+ * Every date this class has a problem on, newest last. For the dropdowns.
+ *
+ * `notAfter` is a student's horizon — see lib/problemSet/viewer.ts. Applied
+ * here rather than by the caller so a date the viewer may not reach is never
+ * offered in the first place.
+ */
+export async function problemDatesForClass(classId: string, notAfter?: string): Promise<string[]> {
   const supabase = createClient()
   const ids = await assignedChallengeIds(supabase, classId)
   if (!ids.length) return []
 
-  const { data } = await supabase
+  let query = supabase
     .from('daily_challenges')
     .select('challenge_date')
     .in('id', ids)
-    .order('challenge_date', { ascending: true })
+  if (notAfter) query = query.lte('challenge_date', notAfter)
+
+  const { data } = await query.order('challenge_date', { ascending: true })
 
   // Distinct, because a day can carry more than one problem.
   return [...new Set((data ?? []).map((r: any) => r.challenge_date).filter(Boolean))]
 }
 
-/** The problems themselves, in date order. Both ends inclusive. */
+/**
+ * The later end of a range, never past the viewer's horizon.
+ *
+ * Its own function because it is the whole of the rule and the range arrives
+ * from a query string: `to` is whatever the URL said.
+ */
+export function clampRangeEnd(to: string, notAfter?: string): string {
+  return notAfter && notAfter < to ? notAfter : to
+}
+
+/**
+ * The problems themselves, in date order. Both ends inclusive.
+ *
+ * `notAfter` clamps the end of the range rather than trusting it: the range
+ * arrives from the query string of the printable page, where a student could
+ * type any date they liked.
+ */
 export async function problemsForClass(
   classId: string,
   from: string,
   to: string,
+  notAfter?: string,
 ): Promise<ProblemSetItem[]> {
   const supabase = createClient()
   const ids = await assignedChallengeIds(supabase, classId)
   if (!ids.length) return []
+
+  const end = clampRangeEnd(to, notAfter)
 
   const { data } = await supabase
     .from('daily_challenges')
     .select('id, title, challenge_date, description, henryproblem, image_url, max_points')
     .in('id', ids)
     .gte('challenge_date', from)
-    .lte('challenge_date', to)
+    .lte('challenge_date', end)
     .order('challenge_date', { ascending: true })
 
   return (data ?? []) as ProblemSetItem[]

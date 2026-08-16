@@ -328,6 +328,28 @@ export const classes = {
   'pset.countInRange': { en: '{count} problems in this range', zh: '此范围内有 {count} 道题' },
   'pset.rangeBackwards': { en: 'The end date is before the start date.', zh: '结束日期早于开始日期。' },
 
+  // A student prints their own classes, up to today unless they read ahead.
+  'pset.noClasses': {
+    en: 'You are not enrolled in a class yet.',
+    zh: '你还没有加入任何班级。',
+  },
+  'pset.includeFuture': {
+    en: 'Include problems set for later',
+    zh: '包含以后布置的题目',
+  },
+  'pset.includeFutureHint': {
+    en: 'Off by default, so the set ends with today’s problem. Turn it on to work ahead.',
+    zh: '默认关闭，题目集到今天为止。打开后可以提前做后面的题。',
+  },
+  'pset.notYourClass': {
+    en: 'You can only print problems for a class you are in.',
+    zh: '你只能打印自己所在班级的题目。',
+  },
+  'pset.signedOut': {
+    en: 'Sign in to print a problem set.',
+    zh: '请先登录再打印题目集。',
+  },
+
   // Which wording to print. Only a .henryproblem snapshot keeps the two
   // languages apart; anything else is one block of text and prints as it is.
   'pset.wording': { en: 'Wording', zh: '题面语言' },

@@ -19,6 +19,7 @@ import type { CalendarDay } from '@/components/dashboard/MonthCalendar'
 import { ClassAssignmentModal } from '@/components/dashboard/ClassAssignmentModal'
 import { DaySessionsModal } from '@/components/dashboard/DaySessionsModal'
 import { ProblemSetModal } from '@/components/dashboard/ProblemSetModal'
+import { printableClasses } from '@/lib/problemSet/viewer'
 import { TileHead } from '@/components/dashboard/TileHead'
 import { DEFAULT_PALETTE_ID, paletteById } from '@/lib/ui/paperCard'
 import { dashboardCardArt, dashboardCardFrame, type DashboardCardArt } from '@/lib/ui/dashboardCardArt'
@@ -145,7 +146,7 @@ export default function DashboardPage() {
   const [assignmentOpen, setAssignmentOpen] = useState(false)
   const [problemSetOpen, setProblemSetOpen] = useState(false)
   const [editingDay, setEditingDay] = useState<string | null>(null)
-  const [teacherClasses, setTeacherClasses] = useState<{ id: string; name: string }[]>([])
+  const [myClasses, setMyClasses] = useState<{ id: string; name: string }[]>([])
   const [monthNonce, setMonthNonce] = useState(0)
   const [petRoomBgUrl, setPetRoomBgUrl] = useState<string | null>(null)
   const [petRoomFrameUrl, setPetRoomFrameUrl] = useState<string | null>(null)
@@ -688,14 +689,21 @@ export default function DashboardPage() {
     return () => { cancelled = true }
   }, [petRoomBgUrl])
 
-  // The class list for the two authoring dropdowns. Teachers see every class,
-  // matching /classes; loaded once rather than per modal open.
+  /*
+    The class list behind the calendar's dropdowns.
+
+    A teacher sees every class, matching /classes. A student sees the ones they
+    are enrolled in — they print problem sets too, and a dropdown offering
+    other people's classes would be both wrong and useless. The authoring
+    windows that also read this list are rendered for teachers only, so they
+    still receive what they always did.
+  */
   useEffect(() => {
-    if (!isTeacher || !user?.id) return
+    if (!user?.id) return
     let cancelled = false
     ;(async () => {
-      const { data } = await supabase.from('classes').select('id, name').order('name', { ascending: true })
-      if (!cancelled) setTeacherClasses(data || [])
+      const found = await printableClasses(isTeacher, user.id)
+      if (!cancelled) setMyClasses(found)
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -920,7 +928,21 @@ export default function DashboardPage() {
           onOpenProblem={id => router.push(`/challenges/${id}`)}
           onDayClick={isTeacher ? setEditingDay : undefined}
           onOpenAssignment={isTeacher ? () => setAssignmentOpen(true) : undefined}
-          onOpenProblemSet={isTeacher ? () => setProblemSetOpen(true) : undefined}
+          /* Printing is for everyone: a student revises from the same sheets
+             the class was set. Authoring beside it stays teacher-only. */
+          onOpenProblemSet={() => setProblemSetOpen(true)}
+        />
+
+        {/*
+          Outside the teacher block, and given the reader's own horizon: a
+          student prints the classes they are in, and a range that stops at
+          today unless they ask to read ahead.
+        */}
+        <ProblemSetModal
+          open={problemSetOpen}
+          onClose={() => setProblemSetOpen(false)}
+          classes={myClasses}
+          notAfter={isTeacher ? undefined : schoolToday}
         />
 
         {isTeacher && (
@@ -931,11 +953,6 @@ export default function DashboardPage() {
               today={schoolToday}
               authorTimezone={viewerTimezone}
               onChanged={() => setMonthNonce(n => n + 1)}
-            />
-            <ProblemSetModal
-              open={problemSetOpen}
-              onClose={() => setProblemSetOpen(false)}
-              classes={teacherClasses}
             />
             <DaySessionsModal
               date={editingDay}
@@ -951,7 +968,7 @@ export default function DashboardPage() {
                   endTime: c.endTime ?? '00:00:00',
                   cancelled: c.cancelled,
                 }))}
-              classes={teacherClasses}
+              classes={myClasses}
               today={schoolToday}
               viewerTimezone={viewerTimezone}
               onClose={() => setEditingDay(null)}
