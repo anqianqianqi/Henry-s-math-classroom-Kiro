@@ -348,6 +348,17 @@ export const classes = {
   'pset.print': { en: 'Print', zh: '打印' },
   'pset.fitToPage': { en: 'Fit each problem to one page', zh: '每题缩放到一页' },
   'pset.shrunk': { en: '{count} shrunk to fit', zh: '{count} 道已缩放' },
+
+  // The paper. A4 and A5 are written the same way in both languages.
+  'pset.paper': { en: 'Paper', zh: '纸张' },
+  'pset.paperA4': { en: 'A4', zh: 'A4' },
+  'pset.paperA5': { en: 'A5', zh: 'A5' },
+  'pset.paperLetter': { en: 'Letter', zh: 'Letter 信纸' },
+  'pset.paperLegal': { en: 'Legal', zh: 'Legal 法律纸' },
+  'pset.paperHint': {
+    en: 'Choose the same paper in the print dialog and leave scaling at 100%, or it will be resized again.',
+    zh: '请在打印对话框中选择相同纸张并将缩放保持为 100%，否则会被再次缩放。',
+  },
   'pset.printing': { en: 'Preparing…', zh: '准备中…' },
   'pset.pageOf': { en: '{index} of {total}', zh: '第 {index} / {total} 页' },
   'pset.forClass': { en: '{name} · {from} to {to}', zh: '{name} · {from} 至 {to}' },

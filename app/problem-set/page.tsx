@@ -30,15 +30,10 @@ import { readStoredHenryProblem } from '@/lib/henryproblem'
 import { MathText } from '@/lib/mathtext'
 import { problemsForClass, type ProblemSetItem } from '@/lib/problemSet/query'
 import { parsePrintLanguage, wordingFor, type PrintLanguage } from '@/lib/problemSet/wording'
-
-/**
- * The printable height of an A4 page, in CSS pixels.
- *
- * 297mm less the 10mm margin at each end, at the 96dpi CSS reference. A sheet
- * taller than this runs onto a second page, which is what "fit to page" exists
- * to prevent.
- */
-const PAGE_CONTENT_PX = Math.round((297 - 20) * (96 / 25.4))
+import {
+  PAGE_MARGIN_MM, PAPER_IDS, PAPER_SIZES, pageContentPx, readStoredPaper, storePaper,
+  type PaperId,
+} from '@/lib/problemSet/paper'
 
 /** Below this the worksheet stops being readable; better a second page. */
 const MIN_ZOOM = 0.55
@@ -58,6 +53,24 @@ export default function ProblemSetPage() {
   const [fit, setFit] = useState(true)
   /** Which problems had to be shrunk, so the bar can say so. */
   const [shrunk, setShrunk] = useState<Record<string, number>>({})
+  /*
+    Starts at A4 and settles on the remembered paper after mount. Reading
+    localStorage or the locale during render would give the server one answer
+    and the browser another, and React would discard the markup it streamed.
+  */
+  const [paper, setPaper] = useState<PaperId>('a4')
+  useEffect(() => { setPaper(readStoredPaper()) }, [])
+
+  const page = PAPER_SIZES[paper]
+  const contentPx = pageContentPx(paper)
+
+  function choosePaper(next: PaperId) {
+    setPaper(next)
+    storePaper(next)
+    // Every sheet is measured against the new height, so drop the old verdicts
+    // rather than letting the count describe the paper that was just replaced.
+    setShrunk({})
+  }
 
   useEffect(() => {
     if (!classId || !from || !to) { setItems([]); return }
@@ -90,25 +103,27 @@ export default function ProblemSetPage() {
            visible before anything is printed. */
         .problem-set { background: #e9e7e2; min-height: 100vh; padding: 24px 0 48px; }
         /*
-          A whole A4 page, with the print margin drawn as padding. The content
-          box is then 190 x 277mm on screen and 190 x 277mm on paper — the same
-          box, so a line that wraps here wraps there, and the height measured
-          for "fit to page" is the height that gets printed. An earlier version
-          was 190mm wide with 14mm of padding, which measured a 162mm column
-          and shrank problems that would have fitted.
+          A whole page of the chosen paper, with the print margin drawn as
+          padding. The content box is then the same on screen as on paper, so a
+          line that wraps here wraps there and the height measured for "fit to
+          page" is the height that gets printed. An earlier version was 190mm
+          wide with 14mm of padding, which measured a 162mm column and shrank
+          problems that would have fitted.
         */
         .ps-sheet {
           background: #fff;
-          width: 210mm;
-          min-height: 297mm;
+          width: ${page.widthMm}mm;
+          min-height: ${page.heightMm}mm;
           margin: 0 auto 24px;
-          padding: 10mm;
+          padding: ${PAGE_MARGIN_MM}mm;
           box-shadow: 0 6px 24px rgba(0,0,0,0.18);
           box-sizing: border-box;
         }
         .ps-bar { position: sticky; top: 0; z-index: 10; }
 
-        @page { size: A4; margin: 10mm; }
+        /* Naming the paper stops the browser fitting the document to whatever
+           is in the tray, which would rescale it past the measurement. */
+        @page { size: ${page.css}; margin: ${PAGE_MARGIN_MM}mm; }
 
         @media print {
           /* Nothing but the sheets. */
@@ -156,6 +171,19 @@ export default function ProblemSetPage() {
           </div>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
+              {t('pset.paper')}
+              <select
+                value={paper}
+                onChange={e => choosePaper(e.target.value as PaperId)}
+                className="rounded border border-gray-300 px-1.5 py-1 text-[11px] text-gray-700"
+                title={t('pset.paperHint')}
+              >
+                {PAPER_IDS.map(id => (
+                  <option key={id} value={id}>{t(PAPER_SIZES[id].label)}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-1.5 text-[11px] text-gray-600">
               <input type="checkbox" checked={fit} onChange={e => setFit(e.target.checked)} />
               {t('pset.fitToPage')}
               {(() => {
@@ -190,6 +218,7 @@ export default function ProblemSetPage() {
             total={items.length}
             lang={lang}
             fit={fit}
+            contentPx={contentPx}
             onFitted={z => setShrunk(prev => (prev[item.id] === z ? prev : { ...prev, [item.id]: z }))}
           />
         ))
@@ -199,13 +228,15 @@ export default function ProblemSetPage() {
 }
 
 function ProblemPage({
-  item, index, total, lang, fit, onFitted,
+  item, index, total, lang, fit, contentPx, onFitted,
 }: {
   item: ProblemSetItem
   index: number
   total: number
   lang: PrintLanguage
   fit: boolean
+  /** Printable height of the chosen paper, in CSS pixels. */
+  contentPx: number
   onFitted: (zoom: number) => void
 }) {
   const { t } = useLanguage()
@@ -226,13 +257,21 @@ function ProblemPage({
     would read the shrunken height and creep towards nothing.
   */
   useEffect(() => {
-    if (!fit) { setZoom(1); onFitted(1); return }
     const el = bodyRef.current
     if (!el) return
+    if (!fit) { el.style.zoom = ''; setZoom(1); onFitted(1); return }
     let cancelled = false
 
     function measure() {
       if (cancelled || !el) return
+
+      /*
+        Back to full size before reading the height. Changing the paper
+        re-measures a sheet that is already shrunk, and measuring it as it
+        stands would read the shrunken height, shrink that, and walk the
+        problem towards nothing over a few changes of the dropdown.
+      */
+      el.style.zoom = '1'
       const natural = el.scrollHeight
       if (!natural) return
 
@@ -240,11 +279,16 @@ function ProblemPage({
       // the space the problem may occupy is the page less that line.
       const foot = footRef.current
       const gap = foot ? parseFloat(getComputedStyle(foot).marginTop) || 0 : 0
-      const available = PAGE_CONTENT_PX - (foot?.offsetHeight ?? 0) - gap
+      const available = contentPx - (foot?.offsetHeight ?? 0) - gap
 
       const next = natural > available
         ? Math.max(MIN_ZOOM, available / natural)
         : 1
+
+      // Applied here as well as through state: when the factor happens to be
+      // the one already held, React has nothing to re-render and would leave
+      // the element at the full size it was just measured at.
+      el.style.zoom = next === 1 ? '' : String(next)
       setZoom(next)
       onFitted(next)
     }
@@ -267,10 +311,12 @@ function ProblemPage({
       }
     }
     return () => { cancelled = true }
-    // lang included because dropping a wording panel changes the height this
-    // measures, even though it comes from the URL and cannot change in place.
+    // contentPx: a change of paper changes both the height to fit inside and
+    // the width the wording wraps at, so the sheet has to be measured again.
+    // lang: dropping a wording panel changes the height this measures, even
+    // though it comes from the URL and cannot change in place.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fit, lang, item.id])
+  }, [fit, lang, contentPx, item.id])
   const date = new Date(`${item.challenge_date}T12:00:00`).toLocaleDateString(undefined, {
     year: 'numeric', month: 'long', day: 'numeric',
   })
