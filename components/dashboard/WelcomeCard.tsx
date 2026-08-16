@@ -60,6 +60,8 @@ export interface WelcomeCardProps {
   /** Teacher and admin only — absent leaves the grid read-only. */
   onDayClick?: (date: string) => void
   onOpenAssignment?: () => void
+  /** Opens the printable problem set window. Teacher and admin only. */
+  onOpenProblemSet?: () => void
   /** The reader's own clock. The calendar converts into it and says so. */
   viewerTimezone: string
   /**
@@ -84,7 +86,7 @@ export function WelcomeCard({
   firstName, isTeacher, palette, onPaletteChange,
   challenges, collapsedCount, expanded, onToggleExpanded,
   onOpenChallenge, onCreateChallenge,
-  month, onMonthChange, days, today, onDayClick, onOpenAssignment, viewerTimezone,
+  month, onMonthChange, days, today, onDayClick, onOpenAssignment, onOpenProblemSet, viewerTimezone,
   onOpenProblem,
 }: WelcomeCardProps) {
   const { t, language } = useLanguage()
@@ -248,15 +250,30 @@ export function WelcomeCard({
           viewerTimezone={viewerTimezone}
           onProblemClick={onOpenProblem}
           onDayClick={onDayClick}
-          headerAction={onOpenAssignment && (
-            <button
-              type="button"
-              onClick={onOpenAssignment}
-              className="text-[11px] px-2.5 py-1 rounded-full border transition-colors whitespace-nowrap"
-              style={{ borderColor: palette.rule, color: palette.ink2 }}
-            >
-              🗓️ {t('sched.assignClasses')}
-            </button>
+          headerAction={(onOpenAssignment || onOpenProblemSet) && (
+            /* Both authoring buttons share the calendar's one header slot. */
+            <div className="flex items-center gap-1.5">
+              {onOpenAssignment && (
+                <button
+                  type="button"
+                  onClick={onOpenAssignment}
+                  className="text-[11px] px-2.5 py-1 rounded-full border transition-colors whitespace-nowrap"
+                  style={{ borderColor: palette.rule, color: palette.ink2 }}
+                >
+                  🗓️ {t('sched.assignClasses')}
+                </button>
+              )}
+              {onOpenProblemSet && (
+                <button
+                  type="button"
+                  onClick={onOpenProblemSet}
+                  className="text-[11px] px-2.5 py-1 rounded-full border transition-colors whitespace-nowrap"
+                  style={{ borderColor: palette.rule, color: palette.ink2 }}
+                >
+                  🖨️ {t('pset.button')}
+                </button>
+              )}
+            </div>
           )}
         />
       </div>

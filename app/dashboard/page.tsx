@@ -18,6 +18,7 @@ import { WelcomeCard } from '@/components/dashboard/WelcomeCard'
 import type { CalendarDay } from '@/components/dashboard/MonthCalendar'
 import { ClassAssignmentModal } from '@/components/dashboard/ClassAssignmentModal'
 import { DaySessionsModal } from '@/components/dashboard/DaySessionsModal'
+import { ProblemSetModal } from '@/components/dashboard/ProblemSetModal'
 import { TileHead } from '@/components/dashboard/TileHead'
 import { DEFAULT_PALETTE_ID, paletteById } from '@/lib/ui/paperCard'
 import { dashboardCardArt, dashboardCardFrame, type DashboardCardArt } from '@/lib/ui/dashboardCardArt'
@@ -142,6 +143,7 @@ export default function DashboardPage() {
     itself from scratch.
   */
   const [assignmentOpen, setAssignmentOpen] = useState(false)
+  const [problemSetOpen, setProblemSetOpen] = useState(false)
   const [editingDay, setEditingDay] = useState<string | null>(null)
   const [teacherClasses, setTeacherClasses] = useState<{ id: string; name: string }[]>([])
   const [monthNonce, setMonthNonce] = useState(0)
@@ -918,6 +920,7 @@ export default function DashboardPage() {
           onOpenProblem={id => router.push(`/challenges/${id}`)}
           onDayClick={isTeacher ? setEditingDay : undefined}
           onOpenAssignment={isTeacher ? () => setAssignmentOpen(true) : undefined}
+          onOpenProblemSet={isTeacher ? () => setProblemSetOpen(true) : undefined}
         />
 
         {isTeacher && (
@@ -928,6 +931,11 @@ export default function DashboardPage() {
               today={schoolToday}
               authorTimezone={viewerTimezone}
               onChanged={() => setMonthNonce(n => n + 1)}
+            />
+            <ProblemSetModal
+              open={problemSetOpen}
+              onClose={() => setProblemSetOpen(false)}
+              classes={teacherClasses}
             />
             <DaySessionsModal
               date={editingDay}

@@ -310,6 +310,36 @@ export const classes = {
   // ── Authoring a timetable from the dashboard calendar ────
   // A class no longer carries a weekly time; its sessions are written here.
   'sched.assignClasses': { en: 'Class assignment', zh: '排课' },
+
+  // ── Problem set: a printable run of one class’s problems ──
+  'pset.button': { en: 'Problem set', zh: '题目集' },
+  'pset.title': { en: 'Generate problem set', zh: '生成题目集' },
+  'pset.intro': {
+    en: 'Pick a class and a range of dates. Every problem assigned in that range is laid out one to a page, ready to print.',
+    zh: '选择班级与日期范围。该范围内布置的每道题都会单独占一页，可直接打印。',
+  },
+  'pset.class': { en: 'Class', zh: '班级' },
+  'pset.pickClass': { en: 'Pick a class', zh: '选择班级' },
+  'pset.from': { en: 'From', zh: '开始' },
+  'pset.to': { en: 'To', zh: '结束' },
+  'pset.generate': { en: 'Generate', zh: '生成' },
+  'pset.loadingDates': { en: 'Looking for problems…', zh: '正在查找题目…' },
+  'pset.noProblems': { en: 'This class has no problems assigned.', zh: '该班级还没有布置题目。' },
+  'pset.countInRange': { en: '{count} problems in this range', zh: '此范围内有 {count} 道题' },
+  'pset.rangeBackwards': { en: 'The end date is before the start date.', zh: '结束日期早于开始日期。' },
+
+  // The printable page itself.
+  'pset.printTitle': { en: 'Problem set', zh: '题目集' },
+  'pset.print': { en: 'Print', zh: '打印' },
+  'pset.printing': { en: 'Preparing…', zh: '准备中…' },
+  'pset.pageOf': { en: '{index} of {total}', zh: '第 {index} / {total} 页' },
+  'pset.forClass': { en: '{name} · {from} to {to}', zh: '{name} · {from} 至 {to}' },
+  'pset.nothingHere': { en: 'No problems in that range.', zh: '该范围内没有题目。' },
+  'pset.noSheet': { en: 'This problem has no printable worksheet.', zh: '这道题没有可打印的题面。' },
+  'pset.backgroundHint': {
+    en: 'Tick “Background graphics” in the print dialog to keep the paper texture.',
+    zh: '如需保留纸张纹理，请在打印对话框中勾选“背景图形”。',
+  },
   'sched.title': { en: 'Class schedule', zh: '上课安排' },
   'sched.forwardOnly': {
     en: 'Sessions are only ever created from today onward. Past classes are never changed.',
