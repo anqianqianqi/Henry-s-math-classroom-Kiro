@@ -478,3 +478,74 @@ body {
   .card-reveal-word,
   .card-reveal > :not(.card-reveal-word) > * { transition: none; }
 }
+
+/*
+  ── A raised surface on the welcome card ────────────────────
+  The problem chips and the two buttons above the calendar. Both sit on
+  painted paper and both were flat: a hairline border, a 13%-opacity tint,
+  and the artwork reading straight through them at full sharpness, so a
+  chip looked like a rectangle drawn on the picture rather than a thing
+  resting on it.
+
+  Two changes make it an object. `backdrop-filter` blurs the painting where
+  the chip covers it, which is what frosted glass does and what the eye
+  reads as "there is a pane here" — a sharp background through a tinted box
+  says the box is paint, a blurred one says it is glass. And the shadow is
+  layered rather than single: a lit top edge, a shaded bottom edge, a tight
+  contact shadow, and a wider cast one. A single drop shadow reads as a
+  sticker; the pair of inset edges is what gives it thickness.
+
+  The two colours come from the palette through custom properties, so a
+  chip on the sea card pools blue-green and one on the rose card pools
+  pink, rather than every palette casting the same grey.
+
+  These are NOT masked elements — the mask lives on the card around them —
+  so an outer shadow survives here, unlike PAPER_POOL on the card itself.
+*/
+.paper-raise {
+  backdrop-filter: blur(7px) saturate(1.08);
+  -webkit-backdrop-filter: blur(7px) saturate(1.08);
+  /*
+    The highlight is a background layer rather than a ::before overlay. An
+    overlay paints above the in-flow content, and the two calendar buttons
+    label themselves with bare text nodes — nothing to lift back above it
+    with a z-index — so the gradient would wash across the words. As a
+    background it sits under the text by construction.
+
+    Callers must therefore set background-COLOR, not the background
+    shorthand, which would drop this layer.
+  */
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 62%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 var(--raise-shade, rgba(0, 0, 0, 0.06)),
+    0 1px 1.5px rgba(0, 0, 0, 0.05),
+    0 5px 12px -4px var(--raise-cast, rgba(0, 0, 0, 0.14));
+  transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+/* Lifting further from the page, with the cast shadow travelling further
+   than the contact one — that difference is what reads as height. */
+@media (hover: hover) and (pointer: fine) {
+  .paper-raise:hover {
+    transform: translateY(-1.5px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      inset 0 -1px 0 var(--raise-shade, rgba(0, 0, 0, 0.08)),
+      0 2px 2px rgba(0, 0, 0, 0.05),
+      0 10px 20px -6px var(--raise-cast, rgba(0, 0, 0, 0.2));
+  }
+}
+
+/* Pressed: back onto the page, and the lit edge swaps ends. */
+.paper-raise:active {
+  transform: translateY(0.5px);
+  box-shadow:
+    inset 0 2px 4px var(--raise-shade, rgba(0, 0, 0, 0.12)),
+    0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paper-raise { transition: none; }
+  .paper-raise:hover { transform: none; }
+}

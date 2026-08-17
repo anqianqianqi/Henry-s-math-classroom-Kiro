@@ -133,6 +133,26 @@ export const PAPER_POOL = 'inset 0 0 26px 6px rgba(176,138,88,0.20)'
 /** Deepened on hover — the outer shadow a card used to lift with cannot survive a mask. */
 export const PAPER_POOL_HOVER = 'inset 0 0 30px 8px rgba(176,138,88,0.30)'
 
+/**
+ * The two colours a raised surface on the card shades and casts with.
+ *
+ * Spread onto anything wearing `.paper-raise` (see globals.css) alongside a
+ * background-COLOR — the class supplies a highlight through background-image,
+ * which the background shorthand would wipe out.
+ *
+ * From the palette rather than a fixed grey: a chip on the sea card should
+ * pool blue-green and one on the rose card pink, the way a shadow on tinted
+ * paper takes the colour of the paper. `pool` is already the card's own
+ * settling colour, and `rule` its hairline, which is the right weight for the
+ * shaded bottom edge.
+ */
+export function raiseVars(p: PaperPalette): React.CSSProperties {
+  return {
+    '--raise-shade': p.rule,
+    '--raise-cast': p.pool,
+  } as React.CSSProperties
+}
+
 export const PAPER_MASK = uri(MASK_SVG)
 
 /** Everything a masked card needs, ready to spread onto a style prop. */

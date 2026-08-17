@@ -26,7 +26,7 @@
 
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import type { TranslationKey } from '@/lib/i18n/catalog'
-import { PAPER_PALETTES, paperSurfaceStyle, type PaperPalette } from '@/lib/ui/paperCard'
+import { PAPER_PALETTES, paperSurfaceStyle, raiseVars, type PaperPalette } from '@/lib/ui/paperCard'
 import { MonthCalendar, type CalendarDay } from './MonthCalendar'
 
 export interface WelcomeChallenge {
@@ -177,8 +177,10 @@ export function WelcomeCard({
                   <button
                     key={c.id}
                     onClick={() => onOpenChallenge(c)}
-                    className="text-left rounded-xl px-4 py-2.5 flex items-center justify-between gap-2 border transition-colors w-full"
-                    style={{ background: palette.chip, borderColor: palette.rule }}
+                    className="paper-raise text-left rounded-xl px-4 py-2.5 flex items-center justify-between gap-2 border w-full"
+                    /* backgroundColor, not background: .paper-raise puts the
+                       lit face in background-image, which the shorthand drops. */
+                    style={{ backgroundColor: palette.chip, borderColor: palette.rule, ...raiseVars(palette) }}
                   >
                     <span className="flex-1 min-w-0">
                       <span className="flex items-center gap-1.5 flex-wrap mb-0.5">
@@ -257,8 +259,8 @@ export function WelcomeCard({
                 <button
                   type="button"
                   onClick={onOpenAssignment}
-                  className="text-[11px] px-2.5 py-1 rounded-full border transition-colors whitespace-nowrap"
-                  style={{ borderColor: palette.rule, color: palette.ink2 }}
+                  className="paper-raise text-[11px] px-2.5 py-1 rounded-full border whitespace-nowrap"
+                  style={{ backgroundColor: palette.chip, borderColor: palette.rule, color: palette.ink2, ...raiseVars(palette) }}
                 >
                   🗓️ {t('sched.assignClasses')}
                 </button>
@@ -267,8 +269,8 @@ export function WelcomeCard({
                 <button
                   type="button"
                   onClick={onOpenProblemSet}
-                  className="text-[11px] px-2.5 py-1 rounded-full border transition-colors whitespace-nowrap"
-                  style={{ borderColor: palette.rule, color: palette.ink2 }}
+                  className="paper-raise text-[11px] px-2.5 py-1 rounded-full border whitespace-nowrap"
+                  style={{ backgroundColor: palette.chip, borderColor: palette.rule, color: palette.ink2, ...raiseVars(palette) }}
                 >
                   🖨️ {t('pset.button')}
                 </button>
