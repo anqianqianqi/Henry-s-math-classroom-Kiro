@@ -33,6 +33,21 @@ import type { Box } from '@/lib/solutions/crop'
 
 type Stage = 'pick' | 'reading' | 'review' | 'posting' | 'done'
 
+/** Work already handed in for a problem, shown beside the new crop. */
+interface Previous {
+  id: string
+  imageUrl: string | null
+  /** Typed working, when it was submitted from the challenge page. */
+  content: string
+  points: number | null
+  /**
+   * Locked means the student accepted the grade and the challenge page stops
+   * offering them an Edit button. Nothing here may overwrite that.
+   */
+  isLocked: boolean
+  submittedAt: string
+}
+
 /** One row of the review: a problem, and whatever was found for it. */
 interface Found {
   problem: ProblemSetItem
@@ -42,8 +57,8 @@ interface Found {
   confidence: number
   preview: string | null
   accepted: boolean
-  /** Id of an existing submission this would replace. */
-  existing?: string
+  /** What is already there, if anything. */
+  previous?: Previous
 }
 
 export default function SolutionsPage() {
@@ -61,7 +76,7 @@ export default function SolutionsPage() {
   const [note, setNote] = useState('')
   const [error, setError] = useState('')
   const [rows, setRows] = useState<Found[]>([])
-  const [result, setResult] = useState<{ posted: number; failed: number } | null>(null)
+  const [result, setResult] = useState<{ posted: number; failed: number; locked: number } | null>(null)
 
   /** Kept out of state: canvases are large and never need to re-render. */
   const pagesRef = useRef<RenderedPage[]>([])
@@ -94,14 +109,32 @@ export default function SolutionsPage() {
       const problems = await problemsForClass(classId, from, to, scope?.notAfter)
       if (!problems.length) throw new Error(t('sol.noProblems'))
 
-      // Which of these the student has already handed in, so the review can
-      // say so rather than failing on the unique (challenge, user) constraint.
+      /*
+        What has already been handed in, in full rather than just its id.
+
+        Enough to put the old answer beside the new one: its picture, anything
+        typed, when it was sent, the mark if it has been graded, and whether it
+        is locked. A student re-uploading a set they have partly done should be
+        deciding between two answers they can both see, not agreeing to
+        overwrite something described to them only as "already handed in".
+      */
       const { data: already } = await supabase
         .from('challenge_submissions')
-        .select('id, challenge_id')
+        .select('id, challenge_id, content, image_url, points, is_locked, submitted_at')
         .eq('user_id', scope!.userId!)
         .in('challenge_id', problems.map(p => p.id))
-      const existing = new Map((already ?? []).map((r: any) => [r.challenge_id, r.id as string]))
+
+      const existing = new Map<string, Previous>((already ?? []).map((r: any) => [
+        r.challenge_id,
+        {
+          id: r.id,
+          imageUrl: r.image_url ?? null,
+          content: String(r.content ?? ''),
+          points: typeof r.points === 'number' ? r.points : null,
+          isLocked: Boolean(r.is_locked),
+          submittedAt: String(r.submitted_at ?? ''),
+        },
+      ]))
 
       setNote(t('sol.matching', { pages: pages.length, problems: problems.length }))
       const res = await fetch('/api/solutions/split', {
@@ -150,10 +183,14 @@ export default function SolutionsPage() {
           box,
           confidence: hit?.confidence ?? 0,
           preview: box && page !== null ? cropToDataUrl(pages[page], box) : null,
-          // Anything found is accepted by default; a problem already handed in
-          // is not, so re-uploading a set never quietly overwrites older work.
+          /*
+            Anything newly found is handed in by default. A problem that
+            already has an answer is not: re-uploading a whole set must never
+            quietly replace work the student did earlier, so keeping what is
+            there is the default and replacing is the deliberate choice.
+          */
           accepted: Boolean(box) && !existing.has(problem.id),
-          existing: existing.get(problem.id),
+          previous: existing.get(problem.id),
         }
       }))
       setStage('review')
@@ -193,11 +230,21 @@ export default function SolutionsPage() {
     const crops = await Promise.all(chosen.map(async r => ({
       challengeId: r.problem.id,
       blob: await cropToBlob(pages[r.page!], r.box!),
-      replaces: r.existing,
+      replaces: r.previous?.id,
+      // Carried so the writer can refuse a locked row on its own account,
+      // rather than trusting this page to have filtered it out.
+      previousIsLocked: r.previous?.isLocked ?? false,
     })))
 
     const outcome = await postCrops(scope.userId, crops)
-    setResult({ posted: outcome.posted.length, failed: outcome.failed.length })
+    // A locked row was refused on purpose, so it is reported as left alone
+    // rather than counted among the failures.
+    const locked = outcome.failed.filter(f => f.reason === 'LOCKED').length
+    setResult({
+      posted: outcome.posted.length,
+      failed: outcome.failed.length - locked,
+      locked,
+    })
     setStage('done')
   }
 
@@ -291,23 +338,29 @@ export default function SolutionsPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-gray-900">{row.problem.title}</p>
                     <p className="text-xs text-gray-500">{niceDate(row.problem.challenge_date)}</p>
-                    {row.existing && (
-                      <p className="mt-1 text-xs text-amber-700">{t('sol.alreadyHandedIn')}</p>
-                    )}
                   </div>
-                  {row.box && (
+                  {/* Only a problem with nothing handed in yet gets a plain
+                      include box. Where there is already an answer the choice
+                      is between two of them, and it is made below, next to
+                      both. */}
+                  {row.box && !row.previous && (
                     <label className="flex shrink-0 items-center gap-1.5 text-xs text-gray-600">
                       <input
                         type="checkbox"
                         checked={row.accepted}
                         onChange={e => setRows(rs => rs.map((r, n) => n === i ? { ...r, accepted: e.target.checked } : r))}
                       />
-                      {row.existing ? t('sol.replace') : t('sol.include')}
+                      {t('sol.include')}
                     </label>
                   )}
                 </div>
 
-                {row.preview ? (
+                {row.previous && row.preview ? (
+                  <Compare
+                    row={row}
+                    onChoose={replace => setRows(rs => rs.map((r, n) => n === i ? { ...r, accepted: replace } : r))}
+                  />
+                ) : row.preview ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={row.preview} alt={row.problem.title}
                     className="mt-2 max-h-64 w-full rounded border border-gray-200 object-contain bg-white" />
@@ -349,12 +402,108 @@ export default function SolutionsPage() {
           {result.failed > 0 && (
             <p className="mt-1 text-sm text-red-700">{t('sol.postFailed', { count: result.failed })}</p>
           )}
+          {result.locked > 0 && (
+            <p className="mt-1 text-sm text-gray-600">{t('sol.postFailedLocked', { count: result.locked })}</p>
+          )}
           <Link href="/dashboard" className="mt-4 inline-block text-sm text-primary-600 underline">
             {t('sol.backToDashboard')}
           </Link>
         </div>
       )}
     </Shell>
+  )
+}
+
+/**
+ * The answer already handed in, beside the one just found.
+ *
+ * Two panels rather than a checkbox saying "replace". The student is choosing
+ * between two pieces of their own work, possibly written weeks apart, and the
+ * only way to choose sensibly is to see both. Keeping what is there is
+ * selected: an upload of a whole set will meet problems already done, and the
+ * safe reading of that is "I am filling in the gaps", not "throw the rest
+ * away".
+ *
+ * A locked answer offers no choice at all. Locked means the student accepted
+ * the grade, and the challenge page withdraws its Edit button at that point;
+ * this has no business doing what that page refuses to.
+ */
+function Compare({ row, onChoose }: { row: Found; onChoose: (replace: boolean) => void }) {
+  const { t } = useLanguage()
+  const previous = row.previous!
+  const locked = previous.isLocked
+
+  const panel = 'rounded-lg border p-2'
+  const chosen = 'border-primary-500 bg-primary-50'
+  const plain = 'border-gray-200'
+
+  return (
+    <div className="mt-2">
+      <div className="grid gap-2 sm:grid-cols-2">
+        {/* What is there now */}
+        <div className={`${panel} ${!row.accepted ? chosen : plain}`}>
+          <div className="mb-1 flex items-baseline justify-between gap-2">
+            <span className="text-xs font-semibold text-gray-700">{t('sol.previous')}</span>
+            <span className="text-[11px] text-gray-500">
+              {previous.submittedAt ? niceDate(previous.submittedAt.slice(0, 10)) : ''}
+            </span>
+          </div>
+          {previous.points !== null && (
+            <p className="mb-1 text-[11px] font-medium text-emerald-700">
+              {t('sol.gradedAt', { points: previous.points })}
+            </p>
+          )}
+          {previous.imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={previous.imageUrl} alt={t('sol.previous')}
+              className="max-h-56 w-full rounded border border-gray-200 bg-white object-contain" />
+          )}
+          {previous.content.trim() && (
+            <p className="mt-1 whitespace-pre-wrap break-words text-[11px] text-gray-700">
+              {previous.content.trim().slice(0, 400)}
+            </p>
+          )}
+          {!previous.imageUrl && !previous.content.trim() && (
+            <p className="text-[11px] italic text-gray-400">{t('sol.previousEmpty')}</p>
+          )}
+        </div>
+
+        {/* What this upload found */}
+        <div className={`${panel} ${row.accepted ? chosen : plain}`}>
+          <div className="mb-1 flex items-baseline justify-between gap-2">
+            <span className="text-xs font-semibold text-gray-700">{t('sol.current')}</span>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={row.preview!} alt={t('sol.current')}
+            className="max-h-56 w-full rounded border border-gray-200 bg-white object-contain" />
+        </div>
+      </div>
+
+      {locked ? (
+        <p className="mt-2 rounded bg-gray-100 px-2 py-1.5 text-[11px] text-gray-600">
+          🔒 {t('sol.lockedKeep')}
+        </p>
+      ) : (
+        <div className="mt-2 flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-1.5 text-xs text-gray-700">
+            <input type="radio" name={`choice-${row.problem.id}`}
+              checked={!row.accepted} onChange={() => onChoose(false)} />
+            {t('sol.keepPrevious')}
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-gray-700">
+            <input type="radio" name={`choice-${row.problem.id}`}
+              checked={row.accepted} onChange={() => onChoose(true)} />
+            {t('sol.useNew')}
+          </label>
+          {previous.points !== null && row.accepted && (
+            // Replacing graded work is allowed while it is unlocked, but the
+            // student should know the mark it already carries is about to
+            // describe an answer that is no longer there.
+            <span className="text-[11px] text-amber-700">{t('sol.replacingGraded')}</span>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 

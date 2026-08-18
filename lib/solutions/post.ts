@@ -26,6 +26,15 @@ export interface AcceptedCrop {
   blob: Blob
   /** Set when this problem already had a submission that is being replaced. */
   replaces?: string
+  /**
+   * Whether that submission is locked.
+   *
+   * Locked means the student accepted the grade, and the challenge page takes
+   * its Edit button away at that point. Checked here as well as in the review
+   * so that the rule holds wherever a caller comes from: this writes over
+   * graded work if asked, and the answer to being asked is no.
+   */
+  previousIsLocked?: boolean
   /** Carried onto the row so a re-published bank problem keeps its work. */
   bankItemId?: string | null
 }
@@ -58,6 +67,11 @@ export async function postCrops(userId: string, crops: AcceptedCrop[]): Promise<
 
   for (const crop of crops) {
     try {
+      // Checked before anything is uploaded: a refusal that happens after the
+      // upload leaves an orphaned file in the bucket that nothing will ever
+      // reference or clean up.
+      if (crop.replaces && crop.previousIsLocked) throw new Error('LOCKED')
+
       const path = cropPath(userId, crop.challengeId)
       const { error: uploadError } = await supabase.storage
         .from('challenge-images')
