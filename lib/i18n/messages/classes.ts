@@ -373,6 +373,12 @@ export const classes = {
   'sol.notFound': { en: 'No working found for this one.', zh: '没有找到这道题的作答。' },
   'sol.usePage': { en: 'Use page {page}', zh: '用第 {page} 页' },
   'sol.include': { en: 'Hand in', zh: '提交' },
+  'sol.viewProblem': { en: 'See the question', zh: '查看题目' },
+  'sol.closePreview': { en: 'Close', zh: '关闭' },
+  'sol.reviewHint': {
+    en: 'Tap a title, or “See the question”, to read the problem beside the answer found for it.',
+    zh: '点击题目名称或“查看题目”，即可对照查看题目与找到的作答。',
+  },
   'sol.alreadyHandedIn': { en: 'You have answered this one already', zh: '这道题你已经作答过' },
   'sol.alreadyLocked': { en: 'Answered and locked after grading', zh: '已作答，批改后已锁定' },
 

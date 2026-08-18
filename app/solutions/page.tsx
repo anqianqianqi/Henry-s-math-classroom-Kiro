@@ -30,6 +30,7 @@ import { renderUpload, visionDataUrl, type RenderedPage } from '@/lib/solutions/
 import { cropToBlob, cropToDataUrl, measureWorkBox } from '@/lib/solutions/cropCanvas'
 import { postCrops } from '@/lib/solutions/post'
 import { matchPrevious } from '@/lib/solutions/previous'
+import { ProblemPeek } from '@/components/solutions/ProblemPeek'
 import type { Box } from '@/lib/solutions/crop'
 
 type Stage = 'pick' | 'reading' | 'review' | 'posting' | 'done'
@@ -130,6 +131,9 @@ export default function SolutionsPage() {
   const [error, setError] = useState('')
   const [rows, setRows] = useState<Found[]>([])
   const [result, setResult] = useState<{ posted: number; failed: number; locked: number } | null>(null)
+
+  /** The problem being read full size, if one is open. */
+  const [peek, setPeek] = useState<Found | null>(null)
 
   /** Kept out of state: canvases are large and never need to re-render. */
   const pagesRef = useRef<RenderedPage[]>([])
@@ -370,14 +374,41 @@ export default function SolutionsPage() {
           <div className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
             {t('sol.reviewIntro', { found: rows.length - missing, total: rows.length })}
             {missing > 0 && <> {t('sol.reviewMissing', { count: missing })}</>}
+            <span className="mt-1 block text-[11px] text-amber-800/80">{t('sol.reviewHint')}</span>
           </div>
+
+          {peek && <ProblemPeek problem={peek.problem} preview={peek.preview} onClose={() => setPeek(null)} />}
 
           <ul className="space-y-3">
             {rows.map((row, i) => (
               <li key={row.problem.id} className="rounded-xl border border-gray-200 p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-gray-900">{row.problem.title}</p>
+                    {/*
+                      The title opens the question, and says so with a button
+                      beside it. Checking that a crop landed on the right
+                      problem means reading the problem, and the review only
+                      ever showed its title — the one thing a student cannot
+                      check an answer against.
+                    */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPeek(row)}
+                        className="truncate text-left text-sm font-semibold text-gray-900 underline decoration-dotted
+                                   underline-offset-2 hover:text-primary-700"
+                      >
+                        {row.problem.title}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPeek(row)}
+                        className="shrink-0 rounded-full border border-gray-300 px-2 py-0.5 text-[11px]
+                                   text-gray-600 transition-colors hover:border-primary-400 hover:text-primary-700"
+                      >
+                        🔍 {t('sol.viewProblem')}
+                      </button>
+                    </div>
                     <p className="text-xs text-gray-500">{niceDate(row.problem.challenge_date)}</p>
                     {/* Said in the header as well as shown in the panels below.
                         A problem with an answer already but no new crop found
