@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest",
-    "i18n:audit": "node scripts/i18n-audit.mjs"
+    "i18n:audit": "node scripts/i18n-audit.mjs",
+    "sync:pdfjs": "node scripts/sync-pdfjs.js",
+    "postinstall": "npm run sync:pdfjs",
+    "prebuild": "npm run sync:pdfjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.0",
@@ -22,6 +25,7 @@
     "katex": "^0.18.1",
     "lucide-react": "^0.575.0",
     "next": "^13.5.6",
+    "pdfjs-dist": "^6.2.108",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-hook-form": "^7.51.0",

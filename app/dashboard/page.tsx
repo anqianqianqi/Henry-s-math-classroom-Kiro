@@ -931,6 +931,9 @@ export default function DashboardPage() {
           /* Printing is for everyone: a student revises from the same sheets
              the class was set. Authoring beside it stays teacher-only. */
           onOpenProblemSet={() => setProblemSetOpen(true)}
+          /* Students only: RLS lets a submission be written for the signed-in
+             user and nobody else, so a teacher has nothing to hand in. */
+          onOpenSolutions={isTeacher ? undefined : () => router.push('/solutions')}
         />
 
         {/*

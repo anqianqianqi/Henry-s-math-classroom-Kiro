@@ -62,6 +62,8 @@ export interface WelcomeCardProps {
   onOpenAssignment?: () => void
   /** Opens the printable problem set window. Teacher and admin only. */
   onOpenProblemSet?: () => void
+  /** Student only: hand in a whole set from one scan. */
+  onOpenSolutions?: () => void
   /** The reader's own clock. The calendar converts into it and says so. */
   viewerTimezone: string
   /**
@@ -86,7 +88,7 @@ export function WelcomeCard({
   firstName, isTeacher, palette, onPaletteChange,
   challenges, collapsedCount, expanded, onToggleExpanded,
   onOpenChallenge, onCreateChallenge,
-  month, onMonthChange, days, today, onDayClick, onOpenAssignment, onOpenProblemSet, viewerTimezone,
+  month, onMonthChange, days, today, onDayClick, onOpenAssignment, onOpenProblemSet, onOpenSolutions, viewerTimezone,
   onOpenProblem,
 }: WelcomeCardProps) {
   const { t, language } = useLanguage()
@@ -252,7 +254,7 @@ export function WelcomeCard({
           viewerTimezone={viewerTimezone}
           onProblemClick={onOpenProblem}
           onDayClick={onDayClick}
-          headerAction={(onOpenAssignment || onOpenProblemSet) && (
+          headerAction={(onOpenAssignment || onOpenProblemSet || onOpenSolutions) && (
             /* Both authoring buttons share the calendar's one header slot. */
             <div className="flex items-center gap-1.5">
               {onOpenAssignment && (
@@ -273,6 +275,16 @@ export function WelcomeCard({
                   style={{ backgroundColor: palette.chip, borderColor: palette.rule, color: palette.ink2, ...raiseVars(palette) }}
                 >
                   🖨️ {t('pset.button')}
+                </button>
+              )}
+              {onOpenSolutions && (
+                <button
+                  type="button"
+                  onClick={onOpenSolutions}
+                  className="paper-raise text-[11px] px-2.5 py-1 rounded-full border whitespace-nowrap"
+                  style={{ backgroundColor: palette.chip, borderColor: palette.rule, color: palette.ink2, ...raiseVars(palette) }}
+                >
+                  📤 {t('sol.button')}
                 </button>
               )}
             </div>
