@@ -27,7 +27,7 @@ import { readStoredHenryProblem } from '@/lib/henryproblem'
 import { problemDatesForClass, problemsForClass, type ProblemSetItem } from '@/lib/problemSet/query'
 import { problemSetScope, type ProblemSetScope } from '@/lib/problemSet/viewer'
 import { renderUpload, visionDataUrl, type RenderedPage } from '@/lib/solutions/pages'
-import { cropToBlob, cropToDataUrl } from '@/lib/solutions/cropCanvas'
+import { cropToBlob, cropToDataUrl, measureWorkBox } from '@/lib/solutions/cropCanvas'
 import { postCrops } from '@/lib/solutions/post'
 import type { Box } from '@/lib/solutions/crop'
 
@@ -130,8 +130,20 @@ export default function SolutionsPage() {
 
       setRows(problems.map(problem => {
         const hit: any = byId.get(problem.id)
-        const box: Box | null = hit ? hit.box : null
         const page = hit ? hit.page : null
+        /*
+          The model says which page a problem is on, and which side of a
+          two-up scan. The rectangle is then measured off that page: the
+          bottom edge of the printed card down to the last stroke of writing.
+
+          Its own boxes were wrong in both directions at once — opening inside
+          the printed card, so the crop arrived with the Chinese wording and
+          the tag chips above the answer, and closing above the final line, so
+          the answer was cut off. Vision models identify reliably and locate
+          approximately, so it is used as a hint about which half and nothing
+          more.
+        */
+        const box: Box | null = page !== null ? measureWorkBox(pages[page], hit?.box) : null
         return {
           problem,
           page,
@@ -155,11 +167,18 @@ export default function SolutionsPage() {
     }
   }
 
-  /** Fall back to the whole page when the crop missed. */
+  /**
+   * Point a problem at a page by hand, when the matching missed it.
+   *
+   * Still measured rather than taken whole: the same card-edge detection runs
+   * on the page chosen, so picking a page by hand gives the same tidy crop as
+   * a match. Only if there is nothing measurable there does it fall back to
+   * the entire page, which at least hands in something the teacher can read.
+   */
   function useWholePage(index: number, page: number) {
     const pages = pagesRef.current
     if (!pages[page]) return
-    const box: Box = { x: 0, y: 0, w: 1, h: 1 }
+    const box: Box = measureWorkBox(pages[page]) ?? { x: 0, y: 0, w: 1, h: 1 }
     setRows(rs => rs.map((r, i) => i === index
       ? { ...r, page, box, preview: cropToDataUrl(pages[page], box), accepted: true }
       : r))

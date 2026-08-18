@@ -3,6 +3,7 @@
 /** Cutting a rectangle out of a rendered page. Browser half of crop.ts. */
 
 import { boxToRect, type Box } from './crop'
+import { detectWorkBox } from './detect'
 import type { RenderedPage } from './pages'
 
 /** The region as a JPEG blob, cut from the full-resolution page. */
@@ -36,4 +37,28 @@ export function cropToDataUrl(page: RenderedPage, box: Box): string {
   ctx.fillRect(0, 0, rect.width, rect.height)
   ctx.drawImage(canvas, rect.left, rect.top, rect.width, rect.height, 0, 0, rect.width, rect.height)
   return out.toDataURL('image/jpeg', 0.85)
+}
+
+/**
+ * The crop for a sheet, measured from the page rather than guessed at.
+ *
+ * `hint` is the model's box, used only to decide which side of a two-up scan
+ * the sheet is on. Its coordinates are otherwise ignored — see detect.ts for
+ * why. Returns null when there is nothing handwritten under the card, which
+ * the review shows as an unanswered problem.
+ */
+export function measureWorkBox(page: RenderedPage, hint?: Box | null): Box | null {
+  const { canvas } = page
+  const ctx = canvas.getContext('2d')!
+  const px = ctx.getImageData(0, 0, canvas.width, canvas.height)
+
+  let half: 'left' | 'right' | 'whole' = 'whole'
+  if (hint) {
+    const centre = hint.x + hint.w / 2
+    // Only a box clearly on one side implies a two-up scan; one straddling
+    // the middle is the model describing a whole page.
+    if (hint.w < 0.62) half = centre < 0.5 ? 'left' : 'right'
+  }
+
+  return detectWorkBox({ data: px.data, width: px.width, height: px.height }, half)
 }
