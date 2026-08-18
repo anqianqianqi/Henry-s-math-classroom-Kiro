@@ -2,14 +2,24 @@
 
 /** Cutting a rectangle out of a rendered page. Browser half of crop.ts. */
 
-import { boxToRect, type Box } from './crop'
+import { boxToRect, BOX_PAD, type Box } from './crop'
 import { detectWorkBox } from './detect'
 import type { RenderedPage } from './pages'
 
+/*
+  Padding is for a box that was measured, not one that was drawn.
+
+  A measured box is grown a little before cutting, because the detector stops
+  at the last dark pixel and a stroke can sit a hair outside it. A box a
+  student dragged around their own working is already exactly what they asked
+  for, and growing it would pull in the line above — so a hand-drawn crop is
+  cut at zero padding, which the caller asks for by passing it.
+*/
+
 /** The region as a JPEG blob, cut from the full-resolution page. */
-export async function cropToBlob(page: RenderedPage, box: Box): Promise<Blob> {
+export async function cropToBlob(page: RenderedPage, box: Box, pad: number = BOX_PAD): Promise<Blob> {
   const { canvas } = page
-  const rect = boxToRect(box, canvas.width, canvas.height)
+  const rect = boxToRect(box, canvas.width, canvas.height, pad)
 
   const out = document.createElement('canvas')
   out.width = rect.width
@@ -26,9 +36,9 @@ export async function cropToBlob(page: RenderedPage, box: Box): Promise<Blob> {
 }
 
 /** The same region as a data URL, for showing in the review list. */
-export function cropToDataUrl(page: RenderedPage, box: Box): string {
+export function cropToDataUrl(page: RenderedPage, box: Box, pad: number = BOX_PAD): string {
   const { canvas } = page
-  const rect = boxToRect(box, canvas.width, canvas.height)
+  const rect = boxToRect(box, canvas.width, canvas.height, pad)
   const out = document.createElement('canvas')
   out.width = rect.width
   out.height = rect.height

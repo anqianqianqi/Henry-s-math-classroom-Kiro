@@ -373,6 +373,14 @@ export const classes = {
   'sol.notFound': { en: 'No working found for this one.', zh: '没有找到这道题的作答。' },
   'sol.usePage': { en: 'Use page {page}', zh: '用第 {page} 页' },
   'sol.include': { en: 'Hand in', zh: '提交' },
+  'sol.adjustCrop': { en: 'Change the crop', zh: '调整裁切' },
+  'sol.cropHint': {
+    en: 'Drag a box around your working for this problem.',
+    zh: '拖动框选这道题的作答部分。',
+  },
+  'sol.cropSave': { en: 'Use this crop', zh: '使用此裁切' },
+  'sol.cropReset': { en: 'Back to what was found', zh: '恢复自动识别' },
+  'sol.cropWholePage': { en: 'Whole page', zh: '整页' },
   'sol.viewProblem': { en: 'See the question', zh: '查看题目' },
   'sol.closePreview': { en: 'Close', zh: '关闭' },
   'sol.reviewHint': {

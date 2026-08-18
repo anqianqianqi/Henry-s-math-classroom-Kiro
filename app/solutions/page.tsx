@@ -32,7 +32,8 @@ import { cropToBlob, cropToDataUrl, measureWorkBox } from '@/lib/solutions/cropC
 import { postCrops } from '@/lib/solutions/post'
 import { matchPrevious } from '@/lib/solutions/previous'
 import { ProblemPeek } from '@/components/solutions/ProblemPeek'
-import type { Box } from '@/lib/solutions/crop'
+import { CropEditor } from '@/components/solutions/CropEditor'
+import { BOX_PAD, type Box } from '@/lib/solutions/crop'
 
 type Stage = 'pick' | 'reading' | 'review' | 'posting' | 'done'
 
@@ -60,6 +61,12 @@ interface Found {
   confidence: number
   preview: string | null
   accepted: boolean
+  /**
+   * True once the student has drawn the box themselves. Such a box is cut at
+   * zero padding: it is already exactly the region they asked for, and growing
+   * it would pull in the line above.
+   */
+  handDrawn?: boolean
   /** What is already there, if anything. */
   previous?: Previous
 }
@@ -133,6 +140,9 @@ export default function SolutionsPage() {
   const [error, setError] = useState('')
   const [rows, setRows] = useState<Found[]>([])
   const [result, setResult] = useState<{ posted: number; failed: number; locked: number } | null>(null)
+
+  /** Which row's crop is being redrawn, if any. */
+  const [cropping, setCropping] = useState<number | null>(null)
 
   /** The problem being read full size, if one is open. */
   const [peek, setPeek] = useState<Found | null>(null)
@@ -260,7 +270,7 @@ export default function SolutionsPage() {
     if (!pages[page]) return
     const box: Box = measureWorkBox(pages[page]) ?? { x: 0, y: 0, w: 1, h: 1 }
     setRows(rs => rs.map((r, i) => i === index
-      ? { ...r, page, box, preview: cropToDataUrl(pages[page], box), accepted: true }
+      ? { ...r, page, box, preview: cropToDataUrl(pages[page], box, 0), accepted: true, handDrawn: true }
       : r))
   }
 
@@ -272,7 +282,7 @@ export default function SolutionsPage() {
 
     const crops = await Promise.all(chosen.map(async r => ({
       challengeId: r.problem.id,
-      blob: await cropToBlob(pages[r.page!], r.box!),
+      blob: await cropToBlob(pages[r.page!], r.box!, r.handDrawn ? 0 : BOX_PAD),
       replaces: r.previous?.id,
       // Carried so the writer can refuse a locked row on its own account,
       // rather than trusting this page to have filtered it out.
@@ -396,6 +406,26 @@ export default function SolutionsPage() {
 
           {peek && <ProblemPeek problem={peek.problem} preview={peek.preview} onClose={() => setPeek(null)} />}
 
+          {cropping !== null && rows[cropping]?.page !== null && (
+            <CropEditor
+              page={pagesRef.current[rows[cropping].page!]}
+              box={rows[cropping].box}
+              title={rows[cropping].problem.title}
+              onCancel={() => setCropping(null)}
+              onSave={box => {
+                const i = cropping
+                const page = pagesRef.current[rows[i].page!]
+                setRows(rs => rs.map((r, n) => n === i
+                  // Drawn by hand, so cut exactly: no padding here and none
+                  // when the blob is made, or the two would disagree and what
+                  // is posted would not be what was approved.
+                  ? { ...r, box, preview: cropToDataUrl(page, box, 0), handDrawn: true, accepted: true }
+                  : r))
+                setCropping(null)
+              }}
+            />
+          )}
+
           <ul className="space-y-3">
             {rows.map((row, i) => (
               <li key={row.problem.id} className="rounded-xl border border-gray-200 p-3">
@@ -457,11 +487,27 @@ export default function SolutionsPage() {
                   <Compare
                     row={row}
                     onChoose={replace => setRows(rs => rs.map((r, n) => n === i ? { ...r, accepted: replace } : r))}
+                    onAdjust={() => setCropping(i)}
                   />
                 ) : row.preview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={row.preview} alt={row.problem.title}
-                    className="mt-2 max-h-64 w-full rounded border border-gray-200 object-contain bg-white" />
+                  <div className="mt-2">
+                    {/* The crop is the button. Measuring the working off the
+                        page is right most of the time and cannot be right
+                        always, and the picture is the thing a student is
+                        looking at when they notice it is wrong. */}
+                    <button type="button" onClick={() => setCropping(i)} className="block w-full text-left"
+                      title={t('sol.adjustCrop')}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={row.preview} alt={row.problem.title}
+                        className="max-h-64 w-full rounded border border-gray-200 bg-white object-contain
+                                   transition-colors hover:border-primary-400" />
+                    </button>
+                    <button type="button" onClick={() => setCropping(i)}
+                      className="mt-1 rounded-full border border-gray-300 px-2 py-0.5 text-[11px] text-gray-600
+                                 transition-colors hover:border-primary-400 hover:text-primary-700">
+                      ✂️ {t('sol.adjustCrop')}
+                    </button>
+                  </div>
                 ) : (
                   <div className="mt-2 rounded border border-dashed border-gray-300 px-3 py-4 text-center text-xs text-gray-500">
                     {/* Nothing new was found. If there is an answer already,
@@ -549,7 +595,11 @@ export default function SolutionsPage() {
  * the grade, and the challenge page withdraws its Edit button at that point;
  * this has no business doing what that page refuses to.
  */
-function Compare({ row, onChoose }: { row: Found; onChoose: (replace: boolean) => void }) {
+function Compare({ row, onChoose, onAdjust }: {
+  row: Found
+  onChoose: (replace: boolean) => void
+  onAdjust: () => void
+}) {
   const { t } = useLanguage()
   const previous = row.previous!
   const locked = previous.isLocked
