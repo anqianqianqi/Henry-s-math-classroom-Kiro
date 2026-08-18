@@ -61,6 +61,15 @@ const CARD_ROW_SHARE = 0.35
 /** A row holds working when this much of its width is ink. */
 const INK_ROW_SHARE = 0.004
 
+/**
+ * Ink pixels a column needs before it counts as part of the working.
+ *
+ * Two, because a pen stroke is thicker than one pixel and a speck of scanner
+ * noise is not. One would let a single dark dot in the margin widen the crop
+ * to the edge of the page.
+ */
+const COLUMN_INK_MIN = 2
+
 /** The card is looked for in the top part of the sheet only. */
 const CARD_SEARCH_LIMIT = 0.72
 
@@ -189,18 +198,32 @@ export function findWorkColumns(
   px: Pixels,
   rows: { top: number; bottom: number },
   region: { left: number; right: number },
-  step = 3,
+  step = 2,
 ): { left: number; right: number } {
   let left = -1
   let right = -1
   for (let x = region.left; x < region.right; x += step) {
     let inkInColumn = 0
-    for (let y = rows.top; y <= rows.bottom; y += step) {
+    /*
+      Every row of the band, not every third.
+
+      A line of writing is roughly horizontal, so a column crosses it once,
+      over the thickness of the stroke. Sampling every third row turned that
+      single crossing into one hit or none — and the test below wants two — so
+      a column only counted where two SEPARATE lines happened to overlap in
+      it. With five lines of dense working that is most columns and the crop
+      looked right; with two short lines it is almost none, and the box
+      collapsed to a sliver a few pixels wide with the answer outside it.
+
+      The band is short, so reading every row of it costs little, and it is
+      read once per sheet.
+    */
+    for (let y = rows.top; y <= rows.bottom; y++) {
       const i = (y * px.width + x) * 4
       const luma = (px.data[i] * 299 + px.data[i + 1] * 587 + px.data[i + 2] * 114) / 1000
-      if (luma < INK_CEILING) { inkInColumn++; if (inkInColumn > 1) break }
+      if (luma < INK_CEILING) { inkInColumn++; if (inkInColumn >= COLUMN_INK_MIN) break }
     }
-    if (inkInColumn > 1) {
+    if (inkInColumn >= COLUMN_INK_MIN) {
       if (left < 0) left = x
       right = x
     }

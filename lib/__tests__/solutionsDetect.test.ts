@@ -251,3 +251,69 @@ describe('the real printed palette', () => {
     }
   })
 })
+
+/**
+ * The regression that sent this looking.
+ *
+ * A sheet answered in two short lines came back with a crop a few pixels
+ * wide, with the answer outside it. findWorkColumns sampled each column every
+ * third row and wanted two ink pixels before believing there was working
+ * there — but a line of writing is roughly horizontal, so a column crosses it
+ * ONCE, over the thickness of the stroke. Sampling every third row turned that
+ * crossing into one hit or none, so a column only qualified where two separate
+ * lines happened to overlap in it. Five dense lines gave plenty of those and
+ * looked fine; two short lines gave almost none.
+ */
+describe('a sparsely answered sheet', () => {
+  /** The card, then just two short strokes under it. */
+  function twoShortLines(width = 400, height = 1000) {
+    const px = sheet(width, height)
+    fill(px, 20, 30, width - 20, 90, CREAM)
+    fill(px, 20, 100, width - 20, 300, CREAM)
+    fill(px, 20, 310, width - 20, 340, CREAM)
+    // Two thin, widely separated lines — "a×a < a×b < b×b" and the line under it.
+    fill(px, 60, 500, 260, 502, INK)
+    fill(px, 60, 560, 220, 562, INK)
+    return px
+  }
+
+  it('boxes the whole of two short lines, not a slice of them', () => {
+    const px = twoShortLines()
+    const box = detectWorkBox(px, 'whole')!
+    expect(box).not.toBeNull()
+
+    // The strokes run from x=60 to x=260 of 400, so 0.15 to 0.65.
+    expect(box.x).toBeLessThanOrEqual(60 / 400)
+    expect(box.x + box.w).toBeGreaterThanOrEqual(260 / 400)
+
+    // And the width must be a real width, not the sliver this used to give.
+    expect(box.w).toBeGreaterThan(0.4)
+  })
+
+  it('covers both lines top to bottom', () => {
+    const box = detectWorkBox(twoShortLines(), 'whole')!
+    expect(box.y).toBeLessThanOrEqual(500 / 1000)
+    expect(box.y + box.h).toBeGreaterThanOrEqual(562 / 1000)
+  })
+
+  it('still finds a single line on its own', () => {
+    const px = sheet(400, 1000)
+    fill(px, 20, 30, 380, 300, CREAM)
+    fill(px, 70, 520, 300, 522, INK)
+    const box = detectWorkBox(px, 'whole')!
+    expect(box.x).toBeLessThanOrEqual(70 / 400)
+    expect(box.x + box.w).toBeGreaterThanOrEqual(300 / 400)
+  })
+
+  // The reason the rule asked for two pixels in the first place.
+  it('is not dragged to the edge by a single speck', () => {
+    const px = sheet(400, 1000)
+    fill(px, 20, 30, 380, 300, CREAM)
+    fill(px, 70, 520, 300, 522, INK)
+    px.data[(530 * 400 + 395) * 4] = 20      // one stray dark pixel, far right
+    px.data[(530 * 400 + 395) * 4 + 1] = 20
+    px.data[(530 * 400 + 395) * 4 + 2] = 20
+    const box = detectWorkBox(px, 'whole')!
+    expect(box.x + box.w).toBeLessThan(0.95)
+  })
+})
