@@ -29,6 +29,7 @@ import { problemSetScope, type ProblemSetScope } from '@/lib/problemSet/viewer'
 import { renderUpload, visionDataUrl, type RenderedPage } from '@/lib/solutions/pages'
 import { cropToBlob, cropToDataUrl, measureWorkBox } from '@/lib/solutions/cropCanvas'
 import { postCrops } from '@/lib/solutions/post'
+import { matchPrevious } from '@/lib/solutions/previous'
 import type { Box } from '@/lib/solutions/crop'
 
 type Stage = 'pick' | 'reading' | 'review' | 'posting' | 'done'
@@ -59,6 +60,58 @@ interface Found {
   accepted: boolean
   /** What is already there, if anything. */
   previous?: Previous
+}
+
+/**
+ * What this student has already handed in, for each problem in the set.
+ *
+ * ── WHY TWO KEYS ────────────────────────────────────────────
+ * A submission to a problem published from the challenge bank is keyed by the
+ * BANK item, not by the daily instance, so that republishing the problem keeps
+ * the student's work (add-bank-item-submissions.sql). Deleting an instance
+ * sets challenge_id to NULL and leaves the row standing on bank_item_id alone.
+ *
+ * Looking only under challenge_id therefore found nothing for any problem that
+ * came from the bank — which is most of them — so the review showed no sign
+ * that a problem had been answered and no picture of the answer. Worse than the
+ * missing notice: an insert would then have added a SECOND submission beside
+ * the one already there, since the partial unique index only covers rows with a
+ * null bank_item_id.
+ *
+ * Both keys are read, and the bank id wins where a problem has one, matching
+ * how the challenge page resolves the same question.
+ */
+async function loadPrevious(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  problems: ProblemSetItem[],
+): Promise<Map<string, Previous>> {
+  const columns = 'id, challenge_id, bank_item_id, content, image_url, points, is_locked, submitted_at'
+  const bankIds = problems.map(p => p.source_bank_id).filter(Boolean) as string[]
+
+  const [byChallenge, byBank] = await Promise.all([
+    supabase.from('challenge_submissions').select(columns)
+      .eq('user_id', userId).in('challenge_id', problems.map(p => p.id)),
+    bankIds.length
+      ? supabase.from('challenge_submissions').select(columns)
+          .eq('user_id', userId).in('bank_item_id', bankIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ])
+
+  const read = (r: any): Previous => ({
+    id: r.id,
+    imageUrl: r.image_url ?? null,
+    content: String(r.content ?? ''),
+    points: typeof r.points === 'number' ? r.points : null,
+    isLocked: Boolean(r.is_locked),
+    submittedAt: String(r.submitted_at ?? ''),
+  })
+
+  const rows = [...((byChallenge as any).data ?? []), ...((byBank as any).data ?? [])]
+
+  const found = new Map<string, Previous>()
+  matchPrevious(problems, rows).forEach((row, problemId) => found.set(problemId, read(row)))
+  return found
 }
 
 export default function SolutionsPage() {
@@ -118,23 +171,7 @@ export default function SolutionsPage() {
         deciding between two answers they can both see, not agreeing to
         overwrite something described to them only as "already handed in".
       */
-      const { data: already } = await supabase
-        .from('challenge_submissions')
-        .select('id, challenge_id, content, image_url, points, is_locked, submitted_at')
-        .eq('user_id', scope!.userId!)
-        .in('challenge_id', problems.map(p => p.id))
-
-      const existing = new Map<string, Previous>((already ?? []).map((r: any) => [
-        r.challenge_id,
-        {
-          id: r.id,
-          imageUrl: r.image_url ?? null,
-          content: String(r.content ?? ''),
-          points: typeof r.points === 'number' ? r.points : null,
-          isLocked: Boolean(r.is_locked),
-          submittedAt: String(r.submitted_at ?? ''),
-        },
-      ]))
+      const existing = await loadPrevious(supabase, scope!.userId!, problems)
 
       setNote(t('sol.matching', { pages: pages.length, problems: problems.length }))
       const res = await fetch('/api/solutions/split', {
@@ -234,6 +271,10 @@ export default function SolutionsPage() {
       // Carried so the writer can refuse a locked row on its own account,
       // rather than trusting this page to have filtered it out.
       previousIsLocked: r.previous?.isLocked ?? false,
+      // Without this a bank-sourced problem gets a row keyed only by its daily
+      // instance, which the challenge page will not find and which sits beside
+      // the student's real submission rather than being it.
+      bankItemId: r.problem.source_bank_id,
     })))
 
     const outcome = await postCrops(scope.userId, crops)
@@ -338,6 +379,15 @@ export default function SolutionsPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-gray-900">{row.problem.title}</p>
                     <p className="text-xs text-gray-500">{niceDate(row.problem.challenge_date)}</p>
+                    {/* Said in the header as well as shown in the panels below.
+                        A problem with an answer already but no new crop found
+                        falls through to the "nothing found" branch, and used to
+                        give no hint at all that it had been answered. */}
+                    {row.previous && (
+                      <p className="mt-1 text-xs text-amber-700">
+                        {row.previous.isLocked ? `🔒 ${t('sol.alreadyLocked')}` : t('sol.alreadyHandedIn')}
+                      </p>
+                    )}
                   </div>
                   {/* Only a problem with nothing handed in yet gets a plain
                       include box. Where there is already an answer the choice
@@ -366,6 +416,29 @@ export default function SolutionsPage() {
                     className="mt-2 max-h-64 w-full rounded border border-gray-200 object-contain bg-white" />
                 ) : (
                   <div className="mt-2 rounded border border-dashed border-gray-300 px-3 py-4 text-center text-xs text-gray-500">
+                    {/* Nothing new was found. If there is an answer already,
+                        show it — the student needs to know this problem is
+                        covered, not just that this upload missed it. */}
+                    {row.previous && (
+                      <div className="mb-3 text-left">
+                        <p className="mb-1 text-[11px] font-semibold text-gray-700">
+                          {t('sol.previous')}
+                          <span className="ml-2 font-normal text-gray-500">
+                            {row.previous.submittedAt ? niceDate(row.previous.submittedAt.slice(0, 10)) : ''}
+                          </span>
+                        </p>
+                        {row.previous.imageUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={row.previous.imageUrl} alt={t('sol.previous')}
+                            className="max-h-48 w-full rounded border border-gray-200 bg-white object-contain" />
+                        )}
+                        {row.previous.content.trim() && (
+                          <p className="whitespace-pre-wrap break-words text-[11px] text-gray-700">
+                            {row.previous.content.trim().slice(0, 400)}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     {t('sol.notFound')}
                     <div className="mt-2 flex flex-wrap justify-center gap-1">
                       {pagesRef.current.map((_, p) => (

@@ -373,6 +373,9 @@ export const classes = {
   'sol.notFound': { en: 'No working found for this one.', zh: '没有找到这道题的作答。' },
   'sol.usePage': { en: 'Use page {page}', zh: '用第 {page} 页' },
   'sol.include': { en: 'Hand in', zh: '提交' },
+  'sol.alreadyHandedIn': { en: 'You have answered this one already', zh: '这道题你已经作答过' },
+  'sol.alreadyLocked': { en: 'Answered and locked after grading', zh: '已作答，批改后已锁定' },
+
   // Choosing between an answer already handed in and the one just found.
   'sol.previous': { en: 'Handed in before', zh: '之前提交的' },
   'sol.current': { en: 'Found in this upload', zh: '本次上传找到的' },

@@ -25,6 +25,18 @@ export interface ProblemSetItem {
   /** The problem's own picture — a net to fold, a graph to read. */
   image_url: string | null
   max_points: number | null
+  /**
+   * The bank problem this was published from, when it was.
+   *
+   * A submission to a bank-sourced problem is keyed by the BANK item, not by
+   * the daily instance, so that republishing the problem does not lose the
+   * student's work — see add-bank-item-submissions.sql, and note that
+   * challenge_id is set to NULL when the instance is deleted. Anything asking
+   * "has this been answered?" therefore has to look under this id as well as
+   * the challenge id, and a new submission has to carry it or a second row
+   * lands beside the one that was already there.
+   */
+  source_bank_id: string | null
 }
 
 /**
@@ -82,7 +94,7 @@ export async function problemsForClass(
 
   const { data } = await supabase
     .from('daily_challenges')
-    .select('id, title, challenge_date, description, henryproblem, image_url, max_points')
+    .select('id, title, challenge_date, description, henryproblem, image_url, max_points, source_bank_id')
     .in('id', ids)
     .gte('challenge_date', from)
     .lte('challenge_date', end)
