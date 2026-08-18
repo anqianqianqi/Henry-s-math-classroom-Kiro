@@ -146,7 +146,11 @@ export default function SolutionsPage() {
       }))
       setStage('review')
     } catch (err: any) {
-      setError(String(err?.message ?? err))
+      const raw = String(err?.message ?? err)
+      // A file the browser cannot decode names itself; anything else is shown
+      // as it came, since it is already one of the messages thrown above.
+      const unreadable = raw.startsWith('UNREADABLE_IMAGE:')
+      setError(unreadable ? t('sol.unreadableImage', { file: raw.slice('UNREADABLE_IMAGE:'.length) }) : raw)
       setStage('pick')
     }
   }

@@ -112,7 +112,26 @@ async function renderPdf(file: File): Promise<HTMLCanvasElement[]> {
 }
 
 async function renderImage(file: File): Promise<HTMLCanvasElement> {
-  const bitmap = await createImageBitmap(file)
+  let bitmap: ImageBitmap
+  try {
+    /*
+      imageOrientation stated rather than left to the default.
+
+      A phone writes the photo in the sensor's orientation and records how to
+      turn it in an EXIF tag. Ignore that tag and homework shot in portrait
+      arrives on its side — the crops would still be cut correctly, and every
+      one of them would be sideways in the teacher's grading queue. The spec
+      default has moved to 'from-image', but it did not start there and not
+      every browser this ships to arrived at the same time, so it is asked for.
+    */
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+  } catch {
+    // createImageBitmap throws a bare InvalidStateError for anything it cannot
+    // decode — most often an iPhone HEIC opened on a desktop browser. Named
+    // here so the page can say which file it was rather than showing a DOM
+    // exception to a student.
+    throw new Error(`UNREADABLE_IMAGE:${file.name}`)
+  }
   const scale = fitScale(bitmap.width, bitmap.height, CROP_LONG_EDGE)
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(bitmap.width * scale)

@@ -354,8 +354,12 @@ export const classes = {
   },
   'sol.file': { en: 'Your pages', zh: '你的答题页' },
   'sol.fileHint': {
-    en: 'One PDF, or several photos. Keep the printed question on the page — it is how each answer is recognised.',
-    zh: '一个 PDF，或多张照片。请保留页面上打印的题目，系统依靠它来识别每道作答。',
+    en: 'One PDF, or several photos (JPEG, PNG). Keep the printed question on the page — it is how each answer is recognised.',
+    zh: '一个 PDF，或多张照片（JPEG、PNG）。请保留页面上打印的题目，系统依靠它来识别每道作答。',
+  },
+  'sol.unreadableImage': {
+    en: 'Could not open "{file}". iPhone photos saved as HEIC often cannot be read on a computer — sharing them as JPEG, or handing in the PDF, works.',
+    zh: '无法打开“{file}”。iPhone 的 HEIC 照片在电脑上通常无法读取，改用 JPEG 分享或提交 PDF 即可。',
   },
   'sol.read': { en: 'Read my pages', zh: '识别答题页' },
   'sol.readingPages': { en: 'Opening your pages…', zh: '正在打开答题页…' },
