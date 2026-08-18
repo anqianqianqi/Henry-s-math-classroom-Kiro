@@ -21,6 +21,7 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { createClient } from '@/lib/supabase/client'
 import { readStoredHenryProblem } from '@/lib/henryproblem'
@@ -118,6 +119,7 @@ async function loadPrevious(
 export default function SolutionsPage() {
   const { t } = useLanguage()
   const supabase = createClient()
+  const router = useRouter()
 
   const [scope, setScope] = useState<ProblemSetScope | null>(null)
   const [classId, setClassId] = useState('')
@@ -293,6 +295,21 @@ export default function SolutionsPage() {
     setStage('done')
   }
 
+  /**
+    Leaving, with a word first where there is something to lose.
+
+    The rendered pages and their crops live only in this page's memory, and
+    the reading that produced them cost a call to the model. Walking away from
+    a review that has answers waiting to be handed in throws all of that away,
+    and it is not obvious from a back arrow that it would.
+  */
+  function leave() {
+    const busy = stage === 'reading' || stage === 'posting'
+    const unposted = stage === 'review' && rows.some(r => r.accepted)
+    if ((busy || unposted) && !window.confirm(t('sol.leaveWarning'))) return
+    router.push('/dashboard')
+  }
+
   const acceptedCount = rows.filter(r => r.accepted).length
   const missing = rows.filter(r => !r.box).length
 
@@ -301,7 +318,7 @@ export default function SolutionsPage() {
   }
 
   return (
-    <Shell title={t('sol.title')}>
+    <Shell title={t('sol.title')} onBack={leave}>
       {stage === 'pick' && (
         <>
           <p className="mb-4 text-sm text-gray-600">{t('sol.intro')}</p>
@@ -611,12 +628,40 @@ function Compare({ row, onChoose }: { row: Found; onChoose: (replace: boolean) =
   )
 }
 
-function Shell({ title, children }: { title: string; children: React.ReactNode }) {
+/**
+ * The page frame, with the way out.
+ *
+ * This route is pushed from the dashboard rather than opened in its own
+ * window, so leaving it is a navigation the page has to offer. Without one, a
+ * student who opened it to look, or whose upload matched nothing, is left
+ * pressing the browser's back button — and on the phone build there is not
+ * always one of those to press.
+ */
+function Shell({
+  title, onBack, children,
+}: {
+  title: string
+  /** Runs instead of the plain link, for a stage with work to lose. */
+  onBack?: () => void
+  children: React.ReactNode
+}) {
+  const { t } = useLanguage()
+
+  const label = <>← {t('sol.backToDashboard')}</>
+  const style = 'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900'
+
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="mx-auto max-w-2xl rounded-2xl bg-white p-6 shadow-sm">
-        <h1 className="mb-4 text-lg font-bold text-gray-900">{title}</h1>
-        {children}
+      <div className="mx-auto max-w-2xl">
+        <div className="mb-2">
+          {onBack
+            ? <button type="button" onClick={onBack} className={style}>{label}</button>
+            : <Link href="/dashboard" className={style}>{label}</Link>}
+        </div>
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <h1 className="mb-4 text-lg font-bold text-gray-900">{title}</h1>
+          {children}
+        </div>
       </div>
     </div>
   )

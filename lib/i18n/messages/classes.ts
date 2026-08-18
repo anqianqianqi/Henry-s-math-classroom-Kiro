@@ -402,6 +402,10 @@ export const classes = {
   'sol.posting': { en: 'Handing in…', zh: '正在提交…' },
   'sol.posted': { en: '{count} answers handed in.', zh: '已提交 {count} 道作答。' },
   'sol.postFailed': { en: '{count} could not be handed in.', zh: '有 {count} 道提交失败。' },
+  'sol.leaveWarning': {
+    en: 'Leave without handing in? The pages you uploaded and the answers found in them will be lost.',
+    zh: '确定要离开吗？已上传的页面和识别出的作答都会丢失。',
+  },
   'sol.backToDashboard': { en: 'Back to the dashboard', zh: '返回主页' },
   'pset.signedOut': {
     en: 'Sign in to print a problem set.',
