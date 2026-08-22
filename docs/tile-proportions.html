@@ -1,0 +1,258 @@
+<!--
+  Tile proportions around the pet room.
+
+  Open this file directly in a browser; it needs no server and no assets other
+  than the room picture next door in public/.
+
+  ── THE PROBLEM ─────────────────────────────────────────────
+  The room takes its height from its own 3:2 picture — 803 wide becomes 535
+  tall. Spanning two grid rows, that makes each row 255px. The tiles beside it
+  stretch to match, but Card.Body is px-6 py-4 with no vertical centring, so
+  their content stays at the top and 100px of card hangs empty underneath. They
+  do not read as tall cards; they read as broken ones.
+
+  Meanwhile the row above is still 156px, so the grid has two different tile
+  heights and no rhythm.
+
+  ── THE FOUR WAYS OUT ───────────────────────────────────────
+  A  what ships today, for comparison
+  B  same geometry, content centred — one CSS line
+  C  the room spans three rows instead of two, which lands every row back at
+     roughly the natural tile height
+  D  four columns, which narrows the room and so shortens it
+
+  ── NOT A DECISION ──────────────────────────────────────────
+  Nothing here is implemented. Siblings: dashboard-layout-preview.html,
+  welcome-card-variants.html.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tile proportions around the pet room</title>
+<style>
+  :root { color-scheme: light dark;
+    --ground:#f4f5f6; --surface:#fff; --ink:#16181c; --ink-2:#434a54; --ink-3:#737b85;
+    --rule:#d9dde1; --accent:#3d6a8b; --accent-wash:#e6eef4; --flag-warn:#8a6414; --flag-good:#2f6b46;
+    --mono: ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --sans: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  @media (prefers-color-scheme: dark) { :root {
+    --ground:#121418; --surface:#191c21; --ink:#e7eaee; --ink-2:#b0b8c1; --ink-3:#838c96;
+    --rule:#2b3037; --accent:#7fa9c8; --accent-wash:#1e2831; --flag-warn:#d9ab52; --flag-good:#7fbd97; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--sans); line-height:1.6; }
+  .wrap { max-width:1360px; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
+  h1 { font-family:var(--serif); font-weight:600; font-size:2rem; margin:0 0 .4rem; }
+  h2 { font-family:var(--serif); font-weight:600; font-size:1.3rem; margin:2.5rem 0 .2rem; }
+  .lede { color:var(--ink-2); max-width:42rem; margin:0 0 .4rem; }
+  .meta { color:var(--ink-3); font-family:var(--mono); font-size:.76rem; margin:0 0 1.5rem; }
+  .caption { color:var(--ink-3); font-size:.85rem; margin:.2rem 0 1rem; max-width:48rem; }
+  code { font-family:var(--mono); font-size:.85em; background:var(--accent-wash); padding:.08em .35em; border-radius:3px; }
+
+  .controls { position:sticky; top:0; z-index:20; display:flex; gap:1.25rem; align-items:center;
+    background:var(--ground); border-bottom:1px solid var(--rule); padding:.8rem 0; margin-bottom:.5rem; }
+  .ctl-label { font-family:var(--mono); font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); }
+  .seg { display:inline-flex; border:1px solid var(--rule); border-radius:6px; overflow:hidden; }
+  .seg button { font:inherit; font-size:.85rem; padding:.3rem .8rem; border:0; cursor:pointer;
+    background:var(--surface); color:var(--ink-2); white-space:nowrap; }
+  .seg button[aria-pressed="true"] { background:var(--accent); color:#fff; }
+
+  .stage { background:linear-gradient(to bottom right,#f0fdf4,#fff 50%,rgba(59,130,246,.1));
+    border:1px solid var(--rule); border-radius:10px; padding:1.25rem; overflow-x:auto; }
+  .mock { width:1216px; }
+
+  .grid { display:grid; gap:24px; }
+  .g3 { grid-template-columns:repeat(3,1fr); }
+  .g4 { grid-template-columns:repeat(4,1fr); }
+
+  .tile { background-image:var(--paper-bg); box-shadow:inset 0 0 26px 6px rgba(176,138,88,.20);
+    mask-image:var(--paper-mask); -webkit-mask-image:var(--paper-mask);
+    mask-size:100% 100%; -webkit-mask-size:100% 100%; mask-repeat:no-repeat; -webkit-mask-repeat:no-repeat;
+    padding:16px 24px; text-align:center; }
+  /* B, C, D centre the content; A deliberately does not, which is the bug. */
+  .centred .tile { display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .tile .emoji { font-size:3rem; line-height:1; margin-bottom:.6rem; }
+  .tile .val { font-size:1.875rem; font-weight:700; color:#111827; margin-bottom:.15rem; line-height:1.2; }
+  .tile .val.sm { font-size:1.4rem; }
+  .tile .lbl { color:#4b5563; font-weight:500; font-size:.92rem; }
+  .tile .lbl.caps { color:#6b7280; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; }
+  .ta { color:#16a34a; } .sl { color:#d1d5db; }
+
+  .room { grid-column:span 2; border-radius:24px; overflow:hidden; position:relative;
+    background-image:url(../public/pet-room-bg.png); background-size:cover; background-position:center bottom;
+    aspect-ratio:3/2; }
+  .r2 { grid-row:span 2; } .r3 { grid-row:span 3; }
+  .room .cat { position:absolute; left:46%; bottom:14%; transform:translateX(-50%); font-size:2.4rem;
+    filter:drop-shadow(0 6px 8px rgba(0,0,0,.25)); }
+  .room .tag { position:absolute; left:12px; top:12px; background:rgba(0,0,0,.45); color:#fff;
+    font:600 11px var(--mono); padding:2px 8px; border-radius:9999px; }
+
+  .measure { width:100%; max-width:52rem; border-collapse:collapse; font-size:.85rem; margin-top:.5rem; }
+  .measure th,.measure td { text-align:left; padding:.4rem .5rem; border-bottom:1px solid var(--rule); }
+  .measure th { font-family:var(--mono); font-size:.7rem; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-3); font-weight:500; }
+  .measure td { font-family:var(--mono); font-size:.8rem; }
+  .measure td:first-child { font-family:var(--sans); }
+  .good { color:var(--flag-good); font-weight:600; }
+  .warn { color:var(--flag-warn); font-weight:600; }
+  .note { border-left:3px solid var(--rule); padding:.1rem 0 .1rem 1rem; margin:0 0 1rem; max-width:46rem; }
+  .note.warn { border-left-color:var(--flag-warn); }
+  .note.good { border-left-color:var(--flag-good); }
+  .note h3 { margin:0 0 .2rem; font-size:.95rem; font-weight:600; }
+  .note p { margin:0; color:var(--ink-2); font-size:.9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Tiles around the pet room</h1>
+  <p class="lede">
+    The room is 803&times;535 because that is its picture's shape. Everything here is about what
+    the tiles beside and above it should be, so the grid reads as one thing.
+  </p>
+  <p class="meta">1216px content column &middot; 24px gutters &middot; room picture 1536&times;1024</p>
+
+  <div class="controls">
+    <span class="ctl-label">Role</span>
+    <div class="seg" id="role">
+      <button data-v="student" aria-pressed="true">Student</button>
+      <button data-v="teacher" aria-pressed="false">Teacher</button>
+    </div>
+  </div>
+
+  <div id="out"></div>
+
+  <h2>Measured</h2>
+  <p class="caption">Read off the rendered boxes, not calculated from the CSS.</p>
+  <table class="measure"><thead><tr>
+    <th>Option</th><th>Room</th><th>Tile heights</th><th>Consistent?</th><th>Empty slots</th>
+  </tr></thead><tbody id="measure"></tbody></table>
+
+  <h2>What each one costs</h2>
+  <div id="notes"></div>
+</div>
+
+<script>
+/* Paper treatment, from lib/ui/paperCard.ts. */
+(function () {
+  var W=320,H=160,FADE=.035, band=Math.min(W,H)*FADE
+  var inset=band*.5, blur=band*.15, disp=band*.4, radius=band*1.5, freq=3.2/Math.min(W,H)
+  var MASK='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'+
+   '<filter id="m" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">'+
+   '<feGaussianBlur stdDeviation="'+blur.toFixed(2)+'" result="s"/>'+
+   '<feTurbulence type="fractalNoise" baseFrequency="'+freq.toFixed(5)+'" numOctaves="2" seed="20260801" result="n"/>'+
+   '<feDisplacementMap in="s" in2="n" scale="'+disp.toFixed(2)+'" xChannelSelector="R" yChannelSelector="G"/>'+
+   '</filter><rect x="'+inset.toFixed(1)+'" y="'+inset.toFixed(1)+'" width="'+(W-inset*2).toFixed(1)+'" height="'+(H-inset*2).toFixed(1)+'" rx="'+radius.toFixed(1)+'" fill="#fff" filter="url(#m)"/></svg>'
+  var G='<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><filter id="g">'+
+   '<feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" seed="11"/>'+
+   '<feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.10"/></feComponentTransfer>'+
+   '</filter><rect width="140" height="140" filter="url(#g)"/></svg>'
+  var uri=function(s){ return 'url("data:image/svg+xml;utf8,'+encodeURIComponent(s)+'")' }
+  var r=document.documentElement.style
+  r.setProperty('--paper-mask', uri(MASK))
+  r.setProperty('--paper-bg',[uri(G),
+    'radial-gradient(120% 110% at 22% 0%, #fffdf4 0%, rgba(255,253,244,0) 62%)',
+    'linear-gradient(155deg, #fdf7e9 0%, #f4ecd6 100%)'].join(', '))
+})()
+
+var T = {
+  challenges:{e:'🎯',v:'17',l:'Challenges'},
+  bubble:{e:'💬',v:'Bubble Room',l:'Q&A',c:1,s:1},
+  decor:{e:'🎨',v:'Decorations',l:'Book &amp; Room',c:1},
+  score:{e:'⭐',h:'48 <span class=sl>/</span> <span class=ta>0</span>',L:'Total Score <span class=sl>/</span> TA Score'},
+  shop:{e:'🛍️',h:'<span class=ta>48</span> <span class=sl>/</span> <span class=ta>0</span>',L:'Shop Balance <span class=sl>/</span> TA points'},
+  classes:{e:'📚',v:'3',l:'Classes'},
+  explore:{e:'🌍',v:'Explore',l:'Classes',c:1},
+  grade:{e:'📝',v:'Grade',l:'Homework',c:1},
+  students:{e:'📊',v:'Students',l:'History',c:1},
+  bank:{e:'🏦',v:'Challenge Bank',l:'Manage',c:1,s:1},
+  sched:{e:'📅',v:'Scheduler',l:'Manage',c:1},
+  tags:{e:'🏷️',v:'Tags',l:'Manage',c:1},
+  roles:{e:'👥',v:'User Roles',l:'Manage',c:1},
+  mshop:{e:'🛍️',v:'Shop',l:'Manage',c:1},
+}
+var ORDER = {
+  student:['challenges','bubble','decor','ROOM','score','shop','classes','explore'],
+  teacher:['challenges','bubble','decor','ROOM','grade','students','classes','explore','bank','sched','tags','roles','mshop'],
+}
+var tile = k => { var t=T[k]; return '<div class="tile"><div class="emoji">'+t.e+'</div>'+
+  '<div class="val'+(t.s?' sm':'')+'">'+(t.h||t.v)+'</div>'+
+  '<div class="lbl'+(t.c?' caps':'')+'">'+(t.L||t.l)+'</div></div>' }
+var room = span => '<div class="room '+span+'"><span class="tag">pet room</span><span class="cat">🐈</span></div>'
+
+var OPTS = [
+  { id:'A', name:'As it ships today', cols:'g3', span:'r2', centred:false, rows:null,
+    why:'Rows size themselves: 152px where a tile decides, 256px where the room does. And the stretched tiles keep their content at the top, so a hundred pixels hangs empty under it.' },
+  { id:'B', name:'Centre the content, nothing else', cols:'g3', span:'r2', centred:true, rows:null,
+    why:'One line on Card.Body. The two tiles beside the room stop looking broken — but the grid still has two row heights, which is the part you see across the whole page.' },
+  { id:'C', name:'Uniform rows, room 2&times;2', cols:'g3', span:'r2', centred:true, rows:256,
+    why:'grid-auto-rows pins every row to the height the room dictates. Everything matches, and every tile is a chunky 256px — the room is exactly four of them.' },
+  { id:'D', name:'Uniform rows, room 2&times;3', cols:'g3', span:'r3', centred:true, rows:162,
+    why:'The same idea with the room over three rows instead of two, which lands the row height near what a tile wants anyway. Everything matches at close to its natural size.' },
+  { id:'E', name:'Four columns, room 2&times;2', cols:'g4', span:'r2', centred:true, rows:187,
+    why:'A narrower room is a shorter room. Tiles get squarer and a teacher&rsquo;s twelve fit in fewer rows; a student&rsquo;s seven leave more gaps.' },
+]
+
+var state = { role:'student' }
+
+function render () {
+  document.getElementById('out').innerHTML = OPTS.map(function (o) {
+    var keys = ORDER[state.role]
+    var body = keys.map(function (k) { return k==='ROOM' ? room(o.span) : tile(k) }).join('')
+    return '<h2>'+o.id+' — '+o.name+'</h2><p class="caption">'+o.why+'</p>'+
+      '<div class="stage"><div class="mock"><div class="grid '+o.cols+(o.centred?' centred':'')+'" data-opt="'+o.id+'"'+(o.rows?' style="grid-auto-rows:'+o.rows+'px"':'')+'>'+
+      body+'</div></div></div>'
+  }).join('')
+  requestAnimationFrame(measure)
+}
+
+function measure () {
+  var rows = OPTS.map(function (o) {
+    var g = document.querySelector('[data-opt="'+o.id+'"]')
+    var r = g.querySelector('.room').getBoundingClientRect()
+    var hs = [].slice.call(g.querySelectorAll('.tile')).map(function (t) { return Math.round(t.getBoundingClientRect().height) })
+    var uniq = [].concat(hs).sort(function(a,b){return a-b}).filter(function(v,i,a){ return i===0 || v-a[i-1] > 3 })
+    // Whole slots the grid has room for, minus what is in it.
+    var colsN = o.cols==='g4' ? 4 : 3
+    var spanN = o.span==='r3' ? 3 : 2
+    var used = hs.length + 2*spanN
+    var empty = (Math.ceil(used/colsN)*colsN) - used
+    return { o:o, w:Math.round(r.width), h:Math.round(r.height), uniq:uniq, empty:empty }
+  })
+  document.getElementById('measure').innerHTML = rows.map(function (x) {
+    var ok = x.uniq.length === 1
+    return '<tr><td>'+x.o.id+' — '+x.o.name+'</td><td>'+x.w+'&times;'+x.h+'</td>'+
+      '<td>'+x.uniq.join(', ')+'px</td>'+
+      '<td class="'+(ok?'good':'warn')+'">'+(ok?'one height':x.uniq.length+' heights')+'</td>'+
+      '<td>'+x.empty+'</td></tr>'
+  }).join('')
+
+  var best = rows.filter(function(x){ return x.uniq.length===1 }).map(function(x){ return x.o.id })
+  document.getElementById('notes').innerHTML = [
+    ['warn','A is the bug, not an option',
+     'It is here so the others have something to be better than. The stretched tiles are not styled for their height — Card.Body is <code>px-6 py-4</code> and nothing centres — so the content sits at the top of a 255px card.'],
+    ['','B is the cheapest thing that helps',
+     'Adding <code>flex flex-col items-center justify-center</code> to a stretched tile costs one line and fixes the look of the two beside the room. It does not fix the grid having two different row heights, which is the part you can see across the whole page.'],
+    ['good','C is the one that makes the grid regular',
+     'Three rows instead of two divides the room\'s 535px into rows near the tile\'s own natural height, so every card on the page is the same size and the room is exactly a 2&times;3 block of them. Measured heights are in the table.'],
+    ['','D changes more than it looks',
+     'Four columns narrows every tile, which shortens the room too. It suits a teacher\'s twelve tiles better than a student\'s seven, and it is the only option that changes how much text fits on a tile.'],
+    ['', 'Whichever, the content should centre',
+     'B, C and D all assume it. A tile that is taller than its content needs to say so on purpose.'+
+     (best.length ? ' Options with a single tile height as measured here: '+best.join(', ')+'.' : '')],
+  ].map(function (n) { return '<div class="note'+(n[0]?' '+n[0]:'')+'"><h3>'+n[1]+'</h3><p>'+n[2]+'</p></div>' }).join('')
+}
+
+document.querySelectorAll('.seg').forEach(function (seg) {
+  seg.addEventListener('click', function (e) {
+    var b=e.target.closest('button'); if(!b) return
+    state[seg.id]=b.dataset.v
+    seg.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed', String(x===b)) })
+    render()
+  })
+})
+render()
+</script>
+</body>
+</html>

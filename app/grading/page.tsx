@@ -2,19 +2,23 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { HomeButton } from '@/components/ui/HomeButton'
+import { SubmissionSpread, type SpreadChallenge } from '@/components/grading/SubmissionSpread'
+import { useSubmissionComments } from '@/lib/grading/useSubmissionComments'
 
 interface Submission {
   id: string
   user_id: string
   challenge_id: string
   answer: string | null   // maps to challenge_submissions.content
+  /** A photo of the working, when the student attached one. */
+  image_url: string | null
   points: number | null
   submitted_at: string
   updated_at: string
@@ -41,6 +45,26 @@ export default function GradingPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
+  /*
+    ── The open spread ─────────────────────────────────────────
+    Which problem is open, and which student was clicked to open it. The
+    submissions themselves are not stored: they are derived from the lists
+    already in state, so grading one and reloading updates the spread without
+    it having to refetch or close.
+  */
+  const [spread, setSpread] = useState<{ challengeId: string; focusId: string } | null>(null)
+  const [spreadChallenge, setSpreadChallenge] = useState<SpreadChallenge | null>(null)
+  const [spreadLoading, setSpreadLoading] = useState(false)
+  /*
+    The book's page texture, so the spread is the paper the teacher already
+    knows rather than a flat gradient. Fetched once — it is the same sheet for
+    every problem — and allowed to fail: no package configured is a plainer
+    page, not an error.
+  */
+  const [pageTextureUrl, setPageTextureUrl] = useState<string | null>(null)
+  /** The teacher's own id — the thread needs it to know which comments are theirs. */
+  const [userId, setUserId] = useState<string | null>(null)
+
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
@@ -56,6 +80,7 @@ export default function GradingPage() {
       r.roles?.name === 'teacher' || r.roles?.name === 'administrator'
     )
     if (!isTeacher) { router.push('/dashboard'); return }
+    setUserId(user.id)
 
     // Load all challenge submissions with student + challenge info
     const { data, error: fetchErr } = await supabase
@@ -65,6 +90,7 @@ export default function GradingPage() {
         user_id,
         challenge_id,
         content,
+        image_url,
         points,
         submitted_at,
         updated_at,
@@ -74,7 +100,7 @@ export default function GradingPage() {
       .order('submitted_at', { ascending: false })
 
     if (fetchErr) {
-      setError('Failed to load submissions')
+      setError(t('grade.errLoad'))
       setLoading(false)
       return
     }
@@ -84,6 +110,7 @@ export default function GradingPage() {
       user_id: s.user_id,
       challenge_id: s.challenge_id,
       answer: s.content,
+      image_url: s.image_url ?? null,
       points: s.points,
       submitted_at: s.submitted_at,
       updated_at: s.updated_at,
@@ -103,6 +130,95 @@ export default function GradingPage() {
 
   useEffect(() => { load() }, [load])
 
+  /*
+    Resolved the same way the challenge room resolves it: the reader's own
+    texture package if they have chosen one, otherwise the default. Same
+    source as the book, so the two never drift apart.
+  */
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadPageTexture() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: pref } = await supabase
+        .from('user_book_skin_preferences')
+        .select('texture_package_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      const query = pref?.texture_package_id
+        ? supabase.from('book_texture_packages').select('inner_url').eq('id', pref.texture_package_id).maybeSingle()
+        : supabase.from('book_texture_packages').select('inner_url').eq('is_default', true).eq('is_active', true).maybeSingle()
+
+      const { data } = await query
+      if (!cancelled) setPageTextureUrl((data as any)?.inner_url ?? null)
+    }
+
+    loadPageTexture().catch(() => { /* a plainer page, not an error */ })
+    return () => { cancelled = true }
+  }, [supabase])
+
+  /**
+   * Open the spread on a submission's problem.
+   *
+   * The problem text is fetched here rather than with the list: the list query
+   * pulls only a title and a date for every submission on the site, and the
+   * wording is needed for exactly one challenge at a time.
+   */
+  async function openSpread(s: Submission) {
+    setSpread({ challengeId: s.challenge_id, focusId: s.id })
+    setSpreadChallenge(null)
+    setSpreadLoading(true)
+
+    const { data } = await supabase
+      .from('daily_challenges')
+      // image_url is the problem's own picture — the net to fold, the graph to
+      // read. Without it the worksheet renders the wording and drops what the
+      // wording refers to.
+      .select('id, title, challenge_date, description, henryproblem, image_url')
+      .eq('id', s.challenge_id)
+      .single()
+
+    setSpreadChallenge((data as SpreadChallenge) ?? null)
+    setSpreadLoading(false)
+  }
+
+  /*
+    Every answer to the open problem, graded or not, in a stable order.
+
+    Sorted by name rather than by grading state on purpose: ordering by
+    "still needs a mark" would make a row jump to the bottom the moment it is
+    graded, and the teacher loses their place mid-list.
+  */
+  const spreadSubmissions = useMemo(() => {
+    if (!spread) return []
+    return [...ungraded, ...graded]
+      .filter(s => s.challenge_id === spread.challengeId)
+      .sort((a, b) => a.student_name.localeCompare(b.student_name))
+  }, [spread, ungraded, graded])
+
+  /*
+    Comment threads for the answers currently open. Keyed off the spread, so
+    nothing is fetched until a problem is opened and only that problem's
+    threads are loaded.
+  */
+  const commentThreads = useSubmissionComments(
+    useMemo(() => spreadSubmissions.map(s => s.id), [spreadSubmissions]),
+    userId,
+  )
+
+  /** "3h ago" for a comment. Short, because a thread is a column not a table. */
+  const formatTimeAgo = (iso: string) => {
+    const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+    const [d, h, m] = [86400, 3600, 60]
+    if (seconds >= d) return `${Math.floor(seconds / d)}d`
+    if (seconds >= h) return `${Math.floor(seconds / h)}h`
+    if (seconds >= m) return `${Math.floor(seconds / m)}m`
+    return t('grade.justNow')
+  }
+
   // Apply date filter client-side
   function applyDateFilter(list: Submission[]) {
     return list.filter(s => {
@@ -119,7 +235,7 @@ export default function GradingPage() {
       .update({ points: 0 })
       .eq('id', submissionId)
 
-    if (updateErr) { setError('Failed to mark as reviewed'); return }
+    if (updateErr) { setError(t('grade.errReview')); return }
     await load()
   }
 
@@ -127,8 +243,8 @@ export default function GradingPage() {
     const entry = grading[submissionId]
     if (!entry) return
     const pts = parseFloat(entry.points)
-    if (isNaN(pts) || pts < 0) { setError('Enter a valid point value'); return }
-    if (maxPts !== null && pts > maxPts) { setError(`Max points is ${maxPts}`); return }
+    if (isNaN(pts) || pts < 0) { setError(t('grade.errInvalidPoints')); return }
+    if (maxPts !== null && pts > maxPts) { setError(t('grade.errMaxPoints', { max: maxPts })); return }
 
     setGrading(g => ({ ...g, [submissionId]: { ...g[submissionId], saving: true } }))
     setError(null)
@@ -139,7 +255,7 @@ export default function GradingPage() {
       .eq('id', submissionId)
 
     if (updateErr) {
-      setError('Failed to save grade')
+      setError(t('grade.errSave'))
       setGrading(g => ({ ...g, [submissionId]: { ...g[submissionId], saving: false } }))
       return
     }
@@ -168,7 +284,7 @@ export default function GradingPage() {
         <div className="max-w-5xl mx-auto px-4 py-3 sm:py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
-              ← Back
+              {t('action.back')}
             </Button>
             <HomeButton />
             <h1 className="text-lg sm:text-xl font-bold text-gray-900">{t('grade.pageTitle')}</h1>
@@ -191,7 +307,7 @@ export default function GradingPage() {
               onChange={e => setDateFrom(e.target.value)}
               className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
             />
-            <span className="text-gray-400 text-sm">to</span>
+            <span className="text-gray-400 text-sm">{t('grade.dateTo')}</span>
             <input
               type="date"
               value={dateTo}
@@ -234,7 +350,7 @@ export default function GradingPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            Grade History ({graded.length})
+            {t('grade.history', { count: graded.length })}
           </button>
         </div>
 
@@ -243,7 +359,7 @@ export default function GradingPage() {
             <Card.Body>
               <div className="text-center py-16">
                 <p className="text-lg font-medium text-gray-600">
-                  {tab === 'ungraded' ? 'No ungraded submissions — all caught up!' : 'No graded submissions yet.'}
+                  {tab === 'ungraded' ? t('grade.allCaughtUp') : t('grade.noneGradedYet')}
                 </p>
               </div>
             </Card.Body>
@@ -255,7 +371,12 @@ export default function GradingPage() {
               const isEditing = !!g
 
               return (
-                <Card key={s.id}>
+                <Card
+                  key={s.id}
+                  onClick={() => openSpread(s)}
+                  title={t('grade.openSpread')}
+                  className="cursor-pointer"
+                >
                   <Card.Body>
                     <div className="space-y-3">
                       {/* Header row */}
@@ -267,39 +388,55 @@ export default function GradingPage() {
                               <span className="text-xs text-gray-400">{s.student_email}</span>
                             )}
                           </div>
+                          {/* Opens the spread in place. It used to push to
+                              /challenges/{id}, which is the trip this whole
+                              feature exists to stop making. */}
                           <button
-                            onClick={() => router.push(`/challenges/${s.challenge_id}?submission=${s.id}`)}
+                            onClick={event => { event.stopPropagation(); openSpread(s) }}
                             className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline mt-0.5 text-left"
                           >
                             {s.challenge_title} →
                           </button>
                           <p className="text-xs text-gray-400 mt-0.5">
-                            Challenge date: {formatDate(s.challenge_date)}
-                            {' · '}Submitted: {formatDate(s.submitted_at)}
-                            {s.max_points !== null && ` · Max: ${s.max_points} pts`}
+                            {t('grade.challengeDate', { date: formatDate(s.challenge_date) })}
+                            {' · '}{t('grade.submittedOn', { date: formatDate(s.submitted_at) })}
+                            {s.max_points !== null && ` · ${t('grade.maxPts', { points: s.max_points })}`}
                           </p>
                         </div>
 
                         <div className="shrink-0 text-right">
                           {tab === 'history' && s.points !== null && (
                             <div className="text-lg font-bold text-primary-600">
-                              {s.points}{s.max_points !== null ? `/${s.max_points}` : ''} pts
+                              {t('grade.scoreOf', { points: s.points ?? 0, max: s.max_points ?? '—' })}
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {/* Answer */}
-                      {s.answer && (
+                      {/* Answer. The photo counts as one: a card showing only
+                          "36" looked like the whole submission when six lines
+                          of working were attached underneath it. */}
+                      {(s.answer || s.image_url) && (
                         <div className="bg-gray-50 rounded-lg px-4 py-3">
                           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{t('grade.answer')}</p>
-                          <p className="text-sm text-gray-800 whitespace-pre-wrap">{s.answer}</p>
+                          {s.answer && <p className="text-sm text-gray-800 whitespace-pre-wrap">{s.answer}</p>}
+                          {s.image_url && (
+                            // Capped here — the list is for scanning, and the
+                            // spread is where it is read at full size.
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={s.image_url}
+                              alt={t('grade.answer')}
+                              loading="lazy"
+                              className={`max-h-40 rounded-lg border border-gray-200 ${s.answer ? 'mt-2' : ''}`}
+                            />
+                          )}
                         </div>
                       )}
 
                       {/* Grading row */}
                       {tab === 'ungraded' && (
-                        <div className="flex items-center gap-3 pt-1">
+                        <div className="flex items-center gap-3 pt-1" onClick={event => event.stopPropagation()}>
                           {isEditing ? (
                             <>
                               <div className="flex items-center gap-2">
@@ -334,7 +471,7 @@ export default function GradingPage() {
                                 disabled={g.saving}
                                 onClick={() => setGrading(prev => { const n = { ...prev }; delete n[s.id]; return n })}
                               >
-                                Cancel
+                                {t('action.cancel')}
                               </Button>
                             </>
                           ) : (
@@ -351,9 +488,9 @@ export default function GradingPage() {
                               <button
                                 onClick={() => handleMarkReviewed(s.id)}
                                 className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-                                title="Mark as reviewed without assigning points"
+                                title={t('grade.markReviewedHint')}
                               >
-                                Mark reviewed (0 pts)
+                                {t('grade.markReviewed')}
                               </button>
                             </div>
                           )}
@@ -362,7 +499,7 @@ export default function GradingPage() {
 
                       {/* History: edit button */}
                       {tab === 'history' && (
-                        <div className="flex items-center gap-3 pt-1">
+                        <div className="flex items-center gap-3 pt-1" onClick={event => event.stopPropagation()}>
                           {isEditing ? (
                             <>
                               <div className="flex items-center gap-2">
@@ -389,7 +526,7 @@ export default function GradingPage() {
                                 disabled={g.saving || !g.points}
                                 onClick={() => handleGrade(s.id, s.max_points)}
                               >
-                                {g.saving ? 'Saving…' : 'Update'}
+                                {g.saving ? t('status.saving') : t('grade.update')}
                               </Button>
                               <Button
                                 size="sm"
@@ -397,7 +534,7 @@ export default function GradingPage() {
                                 disabled={g.saving}
                                 onClick={() => setGrading(prev => { const n = { ...prev }; delete n[s.id]; return n })}
                               >
-                                Cancel
+                                {t('action.cancel')}
                               </Button>
                             </>
                           ) : (
@@ -422,6 +559,29 @@ export default function GradingPage() {
           </div>
         )}
       </main>
+
+      {/*
+        The spread reads the same draft state and the same save handler as the
+        list, so a mark typed in either place behaves identically and there is
+        one code path that writes to challenge_submissions.
+      */}
+      {spread && (
+        <SubmissionSpread
+          challenge={spreadChallenge}
+          submissions={spreadSubmissions}
+          focusId={spread.focusId}
+          drafts={grading}
+          loading={spreadLoading}
+          formatDate={formatDate}
+          pageTextureUrl={pageTextureUrl}
+          commentApi={{ ...commentThreads, currentUserId: userId, formatTimeAgo }}
+          onClose={() => { setSpread(null); setSpreadChallenge(null) }}
+          onDraftChange={(id, points) =>
+            setGrading(prev => ({ ...prev, [id]: { points, saving: prev[id]?.saving ?? false } }))
+          }
+          onSave={handleGrade}
+        />
+      )}
     </div>
   )
 }

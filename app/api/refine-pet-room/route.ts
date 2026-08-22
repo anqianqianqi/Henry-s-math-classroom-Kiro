@@ -16,17 +16,10 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { PET_AREA_REFINE_CONTEXT as PET_AREA_CONTEXT, PET_ROOM_IMAGE_SIZE } from '@/lib/petRoom/promptContext'
 
 export const dynamic = 'force-dynamic'
 
-// Same composition context as generate — keeps every iteration aligned
-const PET_AREA_CONTEXT = `
-The image is a background for a pet area on a web dashboard.
-Landscape orientation (wider than tall, 3:2 aspect ratio).
-Keep the lower-centre clear — a small cat sits there.
-Wall art / picture frames should remain as clearly defined rectangular areas.
-Anime / Studio Ghibli cozy interior style.
-`.trim()
 
 export async function POST(request: Request) {
   try {
@@ -87,7 +80,7 @@ export async function POST(request: Request) {
     formData.append('image', imgBlob, 'source.png')
     formData.append('prompt', editPrompt)
     formData.append('n', '1')
-    formData.append('size', '1536x1024')    // same landscape dimensions as generation
+    formData.append('size', PET_ROOM_IMAGE_SIZE)
 
     const editRes = await fetch('https://api.openai.com/v1/images/edits', {
       method: 'POST',

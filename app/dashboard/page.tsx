@@ -10,9 +10,19 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import NotificationBell from '@/components/NotificationBell'
 import { AnnouncementButton } from '@/components/AnnouncementButton'
-import { schoolDateString } from '@/lib/utils/timezone'
+import { schoolDateString, convertOccurrence, zoneLabel, SCHOOL_TIMEZONE } from '@/lib/utils/timezone'
+import { useViewerZone } from '@/components/ui/useViewerZone'
 import dynamicImport from 'next/dynamic'
 import StudentStudyCurve from '@/components/StudentStudyCurve'
+import { WelcomeCard } from '@/components/dashboard/WelcomeCard'
+import type { CalendarDay } from '@/components/dashboard/MonthCalendar'
+import { ClassAssignmentModal } from '@/components/dashboard/ClassAssignmentModal'
+import { DaySessionsModal } from '@/components/dashboard/DaySessionsModal'
+import { ProblemSetModal } from '@/components/dashboard/ProblemSetModal'
+import { printableClasses } from '@/lib/problemSet/viewer'
+import { TileHead } from '@/components/dashboard/TileHead'
+import { DEFAULT_PALETTE_ID, paletteById } from '@/lib/ui/paperCard'
+import { dashboardCardArt, dashboardCardFrame, type DashboardCardArt } from '@/lib/ui/dashboardCardArt'
 
 // ── Study Curve section with lang toggle ────────────────────────────────────
 function StudyCurveSection({ userId }: { userId: string }) {
@@ -89,18 +99,128 @@ export default function DashboardPage() {
     taBalance: 0,
   })
   const [todayChallenges, setTodayChallenges] = useState<Array<{ id: string; title: string; challenge_date: string; submitted: boolean; submissionId?: string; hasNewTeacherComment?: boolean }>>([])
+
+  /**
+   * Questions this student asked that are still waiting.
+   *
+   * "Still waiting" is the bubble room's own definition, not a new one:
+   * unresolved and not yet expired, exactly as MyBubblesPanel splits active
+   * from completed and expired. A second definition living on the dashboard
+   * would drift from the panel the first time either changed, and a student
+   * would see a count that disagreed with the list it points at.
+   *
+   * Its own query rather than a ninth field on `stats`, which is built in two
+   * places — one for teachers and one for students — and would need the same
+   * count added to both.
+   */
+  const [openBubbles, setOpenBubbles] = useState(0)
+
+  /*
+    ── The welcome card's calendar ─────────────────────────────
+    schoolToday rather than the browser's date: the outline has to agree with
+    what the rest of the site calls today, which is the school's timezone.
+  */
+  const schoolToday = schoolDateString()
+  const [paletteId, setPaletteId] = useState<string>(DEFAULT_PALETTE_ID)
+  const [calendarMonth, setCalendarMonth] = useState<Date>(
+    () => new Date(Number(schoolToday.slice(0, 4)), Number(schoolToday.slice(5, 7)) - 1, 1),
+  )
+  const [calendarDays, setCalendarDays] = useState<Record<string, CalendarDay>>({})
+  /*
+    The challenge ids assigned to this student, hoisted out of loadTodayChallenge
+    so the month query can reuse them. Resolving them costs four round trips —
+    memberships, individual assignments, class assignments, roles — and they do
+    not change while the reader steps back through months.
+
+    null means "not resolved yet"; an empty array means "resolved, none".
+  */
+  const [assignedChallengeIds, setAssignedChallengeIds] = useState<string[] | null>(null)
+  const palette = paletteById(paletteId)
+
+  /*
+    Authoring, teacher and admin only. `monthNonce` is bumped after any write so
+    the month effect refetches — the alternative is threading a reload callback
+    down through two components, and the effect already knows how to rebuild
+    itself from scratch.
+  */
+  const [assignmentOpen, setAssignmentOpen] = useState(false)
+  const [problemSetOpen, setProblemSetOpen] = useState(false)
+  const [editingDay, setEditingDay] = useState<string | null>(null)
+  const [myClasses, setMyClasses] = useState<{ id: string; name: string }[]>([])
+  const [monthNonce, setMonthNonce] = useState(0)
   const [petRoomBgUrl, setPetRoomBgUrl] = useState<string | null>(null)
   const [petRoomFrameUrl, setPetRoomFrameUrl] = useState<string | null>(null)
   const [petRoomFrameSlot, setPetRoomFrameSlot] = useState<{ x: number; y: number; w: number; h: number; rotate?: number; rotateY?: number; rotateX?: number } | null>(null)
   const [petRoomAnimZones, setPetRoomAnimZones] = useState<any[]>([])
+  /**
+   * The room picture's own width/height, e.g. 1.5 for a 1536x1024 room.
+   *
+   * Read from the file rather than stored, so a room uploaded at any shape is
+   * shown at that shape without anyone recording its dimensions by hand. Null
+   * until the image reports; see the note on #pet-area for why it matters.
+   */
+  const [petRoomAspect, setPetRoomAspect] = useState<number | null>(null)
   const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null) // latest blindbox image this user owns
   const router = useRouter()
   const supabase = createClient()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
+  /*
+    The painted background a tile wears, if it wears one.
+
+    Bound here so each tile names only its picture: the palette rule and the
+    reader's language are decided in one place, and a tile cannot get one of
+    them right and the other wrong. Returns undefined for every palette but
+    meadow, which is what leaves those cards exactly as they are today.
+  */
+  const cardArt = (art: DashboardCardArt) => dashboardCardArt(art, paletteId, language)
+  /*
+    The same painting with no word on it, shown while the card is pointed at.
+    Which empty frame belongs to which card was measured, not guessed — see
+    lib/ui/dashboardCardArt.ts.
+  */
+  const cardFrame = (art: DashboardCardArt) => dashboardCardFrame(art, paletteId)
+  /*
+    The reader's own clock, from their site setting.
+
+    It does both jobs here. Sessions are shown converted into it, and anything
+    a teacher schedules is stored as meaning it — so the time they type is the
+    time they see, whichever class they are scheduling and wherever the teacher
+    who owns that class happens to be.
+  */
+  const { timezone: viewerTimezone } = useViewerZone()
 
   useEffect(() => {
     loadUser()
   }, [])
+
+  /*
+    Counted with head:true, so the database returns the number and none of the
+    rows — the tile needs a figure, not the questions themselves.
+
+    `now` is read at query time rather than from a stored value: a bubble
+    expires by the clock passing it, with nothing written to the row when it
+    does, so anything cached would keep counting a question that has quietly
+    gone stale.
+  */
+  useEffect(() => {
+    if (!user?.id) return
+    let cancelled = false
+
+    async function countOpenBubbles() {
+      const { count } = await supabase
+        .from('bubble_room_questions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .is('resolved_at', null)
+        .gt('expires_at', new Date().toISOString())
+
+      if (!cancelled) setOpenBubbles(count ?? 0)
+    }
+
+    // A missing count is a tile without a number, not an error worth showing.
+    countOpenBubbles().catch(() => {})
+    return () => { cancelled = true }
+  }, [user?.id, supabase])
 
   async function loadUser() {
     const { data: { user }, error } = await supabase.auth.getUser()
@@ -112,13 +232,23 @@ export default function DashboardPage() {
 
     setUser(user)
 
-    // ── Parallel: profile + user_roles ────────────────────────────────────
-    const [{ data: profile }, { data: userRoles, error: rolesError }] = await Promise.all([
+    // ── Parallel: profile + user_roles + card pigment ─────────────────────
+    // The palette read is allowed to fail: add-dashboard-palette.sql may not
+    // have been run yet, and a missing colour preference is a default, not an
+    // error. Same shape as the other optional preference reads on this page.
+    const [{ data: profile }, { data: userRoles, error: rolesError }, paletteResult] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase.from('user_roles').select('role_id').eq('user_id', user.id).is('class_id', null),
+      Promise.resolve(
+        supabase.from('user_book_skin_preferences')
+          .select('dashboard_palette').eq('user_id', user.id).maybeSingle(),
+      ).catch(() => ({ data: null })),
     ])
 
     setProfile(profile)
+
+    const storedPalette = (paletteResult as any)?.data?.dashboard_palette
+    if (storedPalette) setPaletteId(storedPalette)
 
     console.log('User roles:', { userRoles, rolesError, userId: user.id })
 
@@ -387,6 +517,198 @@ export default function DashboardPage() {
   const [expandedChallenges, setExpandedChallenges] = useState(false)
   const CHALLENGES_COLLAPSED = 3
 
+  /**
+   * Persist the chosen pigment, and keep the card responsive while it saves.
+   *
+   * The column is added by supabase/add-dashboard-palette.sql. Until that has
+   * been run the write fails, and it is allowed to: the choice still applies for
+   * this session, and a colour preference is not worth an error dialog. Same
+   * shape as the other optional preference reads on this page.
+   */
+  async function handlePaletteChange(next: string) {
+    setPaletteId(next)
+    if (!user?.id) return
+    try {
+      await supabase.from('user_book_skin_preferences')
+        .upsert({ user_id: user.id, dashboard_palette: next }, { onConflict: 'user_id' })
+    } catch (_) { /* column not migrated yet — the choice still holds locally */ }
+  }
+
+  /*
+    ── The visible month ───────────────────────────────────────
+    Refetched when the reader steps back a month, and gated on the assignment
+    ids being resolved so a student's first paint does not query `.in('id', [])`
+    and then have to do it again.
+
+    A teacher's calendar is a timetable and carries no problems, so their path
+    skips the challenge queries entirely rather than fetching and discarding.
+  */
+  useEffect(() => {
+    if (!user?.id) return
+    if (!isTeacher && assignedChallengeIds === null) return
+
+    let cancelled = false
+    const y = calendarMonth.getFullYear()
+    const m = calendarMonth.getMonth()
+    const pad = (n: number) => (n < 10 ? `0${n}` : String(n))
+    const from = `${y}-${pad(m + 1)}-01`
+    const to = `${y}-${pad(m + 1)}-${pad(new Date(y, m + 1, 0).getDate())}`
+
+    ;(async () => {
+      const days: Record<string, CalendarDay> = {}
+      const touch = (d: string) => (days[d] ||= { problems: [], classes: [] })
+
+      // ── Classes ──────────────────────────────────────────
+      // A student sees their own; a teacher sees every class running that day.
+      let classIds: string[] | null = null
+      if (!isTeacher) {
+        const { data: memberships } = await supabase
+          .from('class_members').select('class_id').eq('user_id', user.id)
+        classIds = [...new Set((memberships || []).map((r: any) => r.class_id))]
+      }
+
+      if (classIds === null || classIds.length > 0) {
+        // A teacher's rows carry what the day editor needs to write against;
+        // a student's would never be read, but one query for both beats two
+        // that differ by three columns.
+        /*
+          Fetched a day wider on each side than the month being shown.
+
+          A session is stored on the date it happens in the zone it was written
+          in, and the reader may be somewhere else: a 21:00 New York class is
+          09:00 the NEXT morning in Shanghai. So the last session of the
+          previous month can belong on the 1st for this reader, and the last of
+          this month can leave it entirely. Fetching the exact month would drop
+          the first of those and no one would notice from New York.
+        */
+        const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n))
+        const asDate = (s: string, shift: number) => {
+          const d = new Date(`${s}T12:00:00`)
+          d.setDate(d.getDate() + shift)
+          return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+        }
+
+        let q = supabase
+          .from('class_occurrences')
+          .select('id, class_id, occurrence_date, status, series_id, start_time, end_time, timezone, classes:class_id(name, timezone)')
+          .gte('occurrence_date', asDate(from, -1))
+          .lte('occurrence_date', asDate(to, 1))
+          .order('start_time', { ascending: true })
+        if (classIds) q = q.in('class_id', classIds)
+        const { data: occ } = await q
+
+        for (const o of (occ || []) as any[]) {
+          // The clock the time was written on. Falls back to the class's zone
+          // for rows predating add-session-timezone.sql, then to the school's.
+          const sourceZone = o.timezone ?? o.classes?.timezone ?? SCHOOL_TIMEZONE
+          const local = convertOccurrence(
+            o.occurrence_date, o.start_time, sourceZone, viewerTimezone,
+          )
+          // A conversion that fails leaves the session where it was stored
+          // rather than dropping it — a class on a slightly wrong day beats a
+          // class the reader never learns about.
+          const onDate = local?.date ?? o.occurrence_date
+          if (onDate < from || onDate > to) continue
+
+          const localEnd = convertOccurrence(
+            o.occurrence_date, o.end_time, sourceZone, viewerTimezone,
+          )
+          touch(onDate).classes.push({
+            id: o.class_id,
+            name: o.classes?.name ?? '',
+            cancelled: o.status === 'cancelled',
+            occurrenceId: o.id,
+            seriesId: o.series_id ?? null,
+            startTime: local?.time ?? o.start_time,
+            endTime: localEnd?.time ?? o.end_time,
+          })
+        }
+      }
+
+      // ── Problems, students only ──────────────────────────
+      if (!isTeacher && assignedChallengeIds && assignedChallengeIds.length > 0) {
+        const { data: challenges } = await supabase
+          .from('daily_challenges')
+          .select('id, title, challenge_date, max_points')
+          .in('id', assignedChallengeIds)
+          .gte('challenge_date', from)
+          .lte('challenge_date', to)
+
+        const ids = (challenges || []).map((c: any) => c.id)
+        // challenge_id → points. A key with a null value is submitted-but-
+        // ungraded; an absent key is not submitted. The two are different
+        // states and collapsing them into a boolean would lose the one a
+        // student most wants to see.
+        const marks = new Map<string, number | null>()
+        if (ids.length > 0) {
+          const { data: subs } = await supabase
+            .from('challenge_submissions')
+            .select('challenge_id, points')
+            .eq('user_id', user.id)
+            .in('challenge_id', ids)
+          for (const s of (subs || []) as any[]) marks.set(s.challenge_id, s.points ?? null)
+        }
+        for (const c of (challenges || []) as any[]) {
+          touch(c.challenge_date).problems.push({
+            id: c.id,
+            title: c.title ?? '',
+            submitted: marks.has(c.id),
+            points: marks.get(c.id) ?? null,
+            maxPoints: c.max_points ?? null,
+          })
+        }
+      }
+
+      if (!cancelled) setCalendarDays(days)
+    })()
+
+    return () => { cancelled = true }
+    // viewerTimezone is a dependency, not a detail: it decides which day each
+    // session lands on, so the month has to be rebuilt when it resolves.
+  }, [user?.id, isTeacher, assignedChallengeIds, calendarMonth, monthNonce, viewerTimezone])
+
+  /*
+    Ask the room picture how wide it is relative to its height.
+
+    Decoding the header is enough for naturalWidth — the browser has usually
+    already fetched the file for the background, so this is the cache rather
+    than a second download. A failure leaves the ratio null and the box keeps
+    its 400px floor, which is where it was before any of this.
+  */
+  useEffect(() => {
+    if (!petRoomBgUrl) { setPetRoomAspect(null); return }
+    let cancelled = false
+    const img = new Image()
+    img.onload = () => {
+      if (!cancelled && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        setPetRoomAspect(img.naturalWidth / img.naturalHeight)
+      }
+    }
+    img.onerror = () => { if (!cancelled) setPetRoomAspect(null) }
+    img.src = petRoomBgUrl
+    return () => { cancelled = true }
+  }, [petRoomBgUrl])
+
+  /*
+    The class list behind the calendar's dropdowns.
+
+    A teacher sees every class, matching /classes. A student sees the ones they
+    are enrolled in — they print problem sets too, and a dropdown offering
+    other people's classes would be both wrong and useless. The authoring
+    windows that also read this list are rendered for teachers only, so they
+    still receive what they always did.
+  */
+  useEffect(() => {
+    if (!user?.id) return
+    let cancelled = false
+    ;(async () => {
+      const found = await printableClasses(isTeacher, user.id)
+      if (!cancelled) setMyClasses(found)
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTeacher, user?.id])
+
   async function loadTodayChallenge(userId: string, teacherRole: boolean) {
     try {
       const today = schoolDateString()
@@ -435,6 +757,10 @@ export default function DashboardPage() {
 
       const individualIds = individualAssignments?.map((a: any) => a.challenge_id) || []
       const allAssignedIds = [...new Set([...classAssignedIds, ...individualIds])]
+      // Published before the early return below, so a student with nothing
+      // assigned still resolves to "none" rather than leaving the calendar
+      // waiting on an answer that never comes.
+      setAssignedChallengeIds(allAssignedIds)
       if (allAssignedIds.length === 0) return
 
       // 1. Submissions + today's challenges in parallel (both depend only on allAssignedIds)
@@ -564,95 +890,207 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Hero row: Welcome + Today's Challenges on left half, pet area on right half */}
-        <div className="flex gap-4 mb-8">
-          {/* Left half: combined welcome + challenges card */}
-          <div className="flex-1 min-w-0 bg-gradient-to-br from-primary-500 to-accent-blue rounded-3xl shadow-lg overflow-hidden">
-            <div className="flex flex-col px-6 py-5 h-full">
-              {/* Welcome text — centered at top */}
-              <div className="text-center mb-4">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <span className="text-2xl">👋</span>
-                  <h2 className="text-xl font-bold text-white">Welcome back, {firstName}!</h2>
-                </div>
-                <p className="text-white/75 text-sm">
-                  {isTeacher ? "Let's inspire some students today! 👨‍🏫" : "Let's have fun with math today! 🎉"}
-                </p>
-              </div>
+        {/* The welcome card.
 
-              {/* Today's challenges — full width within outer padding */}
-              <div className="flex flex-col gap-2">
-                {todayChallenges.length > 0 ? (
-                  <>
-                    {(expandedChallenges ? todayChallenges : todayChallenges.slice(0, CHALLENGES_COLLAPSED)).map(challenge => (
-                      <button
-                        key={challenge.id}
-                        onClick={() => {
-                          // Mark comment as seen
-                          if (challenge.submissionId) {
-                            try { localStorage.setItem(`comment_seen_${challenge.submissionId}`, new Date().toISOString()) } catch (_) {}
-                          }
-                          router.push(`/challenges/${challenge.id}`)
-                        }}
-                        className="text-left bg-white/15 hover:bg-white/25 rounded-xl px-4 py-2.5 group flex items-center justify-between transition-all"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
-                              {challenge.challenge_date === new Date().toISOString().split('T')[0] ? '🎯 Today' : `📅 ${challenge.challenge_date}`}
-                            </span>
-                            {!isTeacher && (
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                                challenge.submitted ? 'bg-green-400/30 text-green-100' : 'bg-yellow-400/30 text-yellow-100'
-                              }`}>
-                                {challenge.submitted ? '✓ Done' : '⏳'}
-                              </span>
-                            )}
-                            {!isTeacher && challenge.hasNewTeacherComment && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-blue-400/40 text-blue-100">
-                                💬 New comment
-                              </span>
-                            )}
-                          </div>
-                          <p className="font-semibold text-white text-sm truncate">
-                            {challenge.title}
-                          </p>
-                        </div>
-                        <span className="text-white/50 group-hover:text-white ml-2 shrink-0 transition-colors">→</span>
-                      </button>
-                    ))}
-                    {todayChallenges.length > CHALLENGES_COLLAPSED && (
-                      <button
-                        onClick={() => setExpandedChallenges(v => !v)}
-                        className="text-[11px] text-white/60 hover:text-white text-left pl-1 transition-colors"
-                      >
-                        {expandedChallenges
-                          ? '▲ Show less'
-                          : `▼ +${todayChallenges.length - CHALLENGES_COLLAPSED} more`}
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-white/60 text-sm pl-1">
-                    <span className="text-2xl block mb-1">🎯</span>
-                    No challenge today
-                    {isTeacher && (
-                      <button onClick={() => router.push('/challenges/new')} className="block text-xs text-white/80 hover:text-white mt-1 underline">
-                        Create one →
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+            Its markup lives in components/dashboard/WelcomeCard, which is also
+            where the paper treatment, the pigment picker and the 40/60 split
+            are explained. What stays here is the data: this page already
+            resolves the reader, their role and their assigned challenges, and
+            the card should not go fetching any of it a second time. */}
+        <WelcomeCard
+          firstName={firstName}
+          isTeacher={isTeacher}
+          palette={palette}
+          onPaletteChange={handlePaletteChange}
+          challenges={todayChallenges}
+          collapsedCount={CHALLENGES_COLLAPSED}
+          expanded={expandedChallenges}
+          onToggleExpanded={() => setExpandedChallenges(v => !v)}
+          onOpenChallenge={c => {
+            // Opening a challenge is also the moment its comment stops being new.
+            if (c.submissionId) {
+              try { localStorage.setItem(`comment_seen_${c.submissionId}`, new Date().toISOString()) } catch (_) {}
+            }
+            router.push(`/challenges/${c.id}`)
+          }}
+          onCreateChallenge={() => router.push('/challenges/new')}
+          month={calendarMonth}
+          onMonthChange={setCalendarMonth}
+          days={calendarDays}
+          today={schoolToday}
+          viewerTimezone={viewerTimezone}
+          /*
+            No comment-seen bookkeeping here, unlike the left column. That badge
+            only exists on the list, and the challenge page marks the comment
+            read on load anyway — so a problem opened from the calendar settles
+            itself.
+          */
+          onOpenProblem={id => router.push(`/challenges/${id}`)}
+          onDayClick={isTeacher ? setEditingDay : undefined}
+          onOpenAssignment={isTeacher ? () => setAssignmentOpen(true) : undefined}
+          /* Printing is for everyone: a student revises from the same sheets
+             the class was set. Authoring beside it stays teacher-only. */
+          onOpenProblemSet={() => setProblemSetOpen(true)}
+          /* Students only: RLS lets a submission be written for the signed-in
+             user and nobody else, so a teacher has nothing to hand in. */
+          onOpenSolutions={isTeacher ? undefined : () => router.push('/solutions')}
+        />
 
-          {/* Right half: pet area — room+frame baked into background, user photo in frame_slot */}
+        {/*
+          Outside the teacher block, and given the reader's own horizon: a
+          student prints the classes they are in, and a range that stops at
+          today unless they ask to read ahead.
+        */}
+        <ProblemSetModal
+          open={problemSetOpen}
+          onClose={() => setProblemSetOpen(false)}
+          classes={myClasses}
+          notAfter={isTeacher ? undefined : schoolToday}
+        />
+
+        {isTeacher && (
+          <>
+            <ClassAssignmentModal
+              open={assignmentOpen}
+              onClose={() => setAssignmentOpen(false)}
+              today={schoolToday}
+              authorTimezone={viewerTimezone}
+              onChanged={() => setMonthNonce(n => n + 1)}
+            />
+            <DaySessionsModal
+              date={editingDay}
+              sessions={(calendarDays[editingDay ?? '']?.classes ?? [])
+                // Only rows that came back with an occurrence id can be edited.
+                .filter(c => c.occurrenceId)
+                .map(c => ({
+                  id: c.occurrenceId!,
+                  classId: c.id,
+                  className: c.name,
+                  seriesId: c.seriesId ?? null,
+                  startTime: c.startTime ?? '00:00:00',
+                  endTime: c.endTime ?? '00:00:00',
+                  cancelled: c.cancelled,
+                }))}
+              classes={myClasses}
+              today={schoolToday}
+              viewerTimezone={viewerTimezone}
+              onClose={() => setEditingDay(null)}
+              onChanged={() => setMonthNonce(n => n + 1)}
+            />
+          </>
+        )}
+
+        {/* Stats Cards.
+
+            The pet room is one of them now — a 2×2 block with the day's tiles
+            above it, the reader's own numbers down its right, and navigation
+            beneath, so it is surrounded rather than parked beside the greeting.
+
+            The order below is one sequence for both roles, which is what keeps
+            the top row identical whoever is reading: a teacher opening the page
+            should not find it rearranged. Compared against the alternatives in
+            docs/dashboard-layout-preview.html. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 sm:auto-rows-fr mb-8">
+          <Card 
+            surfaceImage={cardArt('challenges')}
+            surfaceFrame={cardFrame('challenges')}
+            className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => router.push('/challenges')}
+          >
+            <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
+              <TileHead items={[{ icon: 'challenges', value: stats.challengesCount, alt: t('nav.challenges') }]} palette={paletteId} />
+              <div className="text-gray-600 font-medium">{t('nav.challenges')}</div>
+            </Card.Body>
+          </Card>
+
+          {/* Bubble Room — links to the user's first class bubble room, or /classes to pick */}
+          <Card
+            surfaceImage={cardArt('bubble-room')}
+            surfaceFrame={cardFrame('bubble-room')}
+            className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={async () => {
+              // Find the user's first enrolled class and navigate to its bubble room
+              const supabaseClient = createClient()
+              const { data: { user: u } } = await supabaseClient.auth.getUser()
+              if (!u) { router.push('/classes'); return }
+              router.push('/bubble-room')
+            }}
+          >
+            <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
+              {/* The number only appears once there is something waiting —
+                  a nought beside the icon reads as a problem rather than as
+                  a quiet inbox. */}
+              <TileHead
+                items={[{
+                  icon: 'bubble-room',
+                  value: openBubbles > 0 ? openBubbles : undefined,
+                  alt: t('nav.bubbleRoom'),
+                }]}
+                palette={paletteId}
+              />
+              <div className="text-2xl font-bold text-gray-900 mb-1">{t('nav.bubbleRoom')}</div>
+              <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Q&amp;A</div>
+            </Card.Body>
+          </Card>
+
+          {/* Decorations hub — book skins, pet room, etc. */}
+          <Card
+            surfaceImage={cardArt('decorations')}
+            surfaceFrame={cardFrame('decorations')}
+            className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => router.push('/decorations')}
+          >
+            <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
+              <TileHead items={[{ icon: 'decorations', alt: t('nav.decorations') }]} palette={paletteId} />
+              <div className="text-3xl font-bold text-gray-900 mb-1">{t('nav.decorations')}</div>
+              <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Book &amp; Room</div>
+            </Card.Body>
+          </Card>
+
+          {/* Admin: Book Skins managed via Decorations hub */}
+
           <div
             id="pet-area"
-            className="flex-1 min-w-0 self-start rounded-3xl overflow-hidden relative"
+            /*
+              Three rows on a wide screen, two below it, and `self-start` in
+              both cases.
+
+              `self-start` is the half that is easy to drop. The rows are equal
+              (auto-rows-fr) and sized by whatever the tiles need, so the room's
+              share of them is very nearly its own height but never exactly. A
+              stretched grid item has both dimensions decided for it, and a box
+              whose width and height are both already decided ignores
+              aspect-ratio entirely — which is the crop above, back again, this
+              time with no image ratio to blame. Starting the room instead lets
+              it take its width from the columns and its height from the ratio,
+              and leaves the remainder as a few pixels of gap.
+            */
+            className="col-span-2 sm:row-span-2 xl:row-span-3 self-start rounded-3xl overflow-hidden relative"
             style={{
-              minHeight: '400px',
+              /*
+                ── The room is shown at its own shape, and that is load-bearing ──
+                The background is painted with `cover`, but every overlay on top
+                of it — the photo in the wall frame, and each animated zone — is
+                positioned as a percentage of THIS BOX. Those two only agree when
+                the box has the same aspect as the picture. `cover` on a wider box
+                crops the top and bottom away and scales what is left, while the
+                overlays go on stretching across the full box: the room loses its
+                ceiling and its floor, and the animations drift off the things
+                they animate.
+
+                It matched by luck before. The old half-of-a-hero-row was about
+                600x400 and pet-room-bg.png is 1536x1024 — both exactly 3:2 — so
+                nothing was cropped and nothing drifted. Moving into the grid made
+                the box 2:1 and broke both at once.
+
+                Asking the image for its own ratio makes the agreement a rule
+                rather than a coincidence, and it holds for any room a student
+                picks, whatever shape it was drawn at.
+              */
+              aspectRatio: petRoomAspect ?? undefined,
+              // Only until the image reports back. A fixed height after that
+              // would fight the ratio and re-introduce the crop.
+              minHeight: petRoomAspect ? undefined : '400px',
               backgroundImage: petRoomBgUrl ? `url(${petRoomBgUrl})` : undefined,
               backgroundSize: 'cover',
               backgroundPosition: 'center bottom',
@@ -689,40 +1127,17 @@ export default function DashboardPage() {
 
             <InlinePet />
           </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
-          <Card 
-            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => router.push('/classes')}
-          >
-            <Card.Body>
-              <div className="text-5xl mb-3 hidden sm:block">📚</div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">{stats.classesCount}</div>
-              <div className="text-gray-600 font-medium">{t('nav.classes')}</div>
-            </Card.Body>
-          </Card>
-
-          <Card 
-            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => router.push('/challenges')}
-          >
-            <Card.Body>
-              <div className="text-5xl mb-3 hidden sm:block">🎯</div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">{stats.challengesCount}</div>
-              <div className="text-gray-600 font-medium">{t('nav.challenges')}</div>
-            </Card.Body>
-          </Card>
 
           {!isTeacher && !isAdmin && (
-            <Card className="text-center hover:shadow-lg transition-shadow">
-              <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">⭐</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">
-                  {stats.totalScore} <span className="text-gray-300">/</span>{' '}
-                  <span className="text-green-600">{stats.taScore}</span>
-                </div>
+            <Card className="flex flex-col text-center hover:shadow-lg transition-shadow" surfaceImage={cardArt('total-score')} surfaceFrame={cardFrame('total-score')}>
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
+                <TileHead
+                  items={[
+                    { icon: 'problem-points', value: stats.totalScore, alt: t('dash.totalScore') },
+                    { icon: 'ta-points', value: stats.taScore, alt: t('settings.taScore') },
+                  ]}
+                  palette={paletteId}
+                />
                 <div className="text-gray-600 font-medium">
                   {t('dash.totalScore')} <span className="text-gray-300">/</span>{' '}
                   {t('settings.taScore')}
@@ -733,15 +1148,19 @@ export default function DashboardPage() {
 
           {!isTeacher && !isAdmin && (
             <Card
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              surfaceImage={cardArt('shop')}
+              surfaceFrame={cardFrame('shop')}
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/shop')}
             >
-              <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">🛍️</div>
-                <div className="text-3xl font-bold text-primary-600 mb-1">
-                  {stats.spendableBalance} <span className="text-gray-300">/</span>{' '}
-                  <span className="text-green-600">{stats.taBalance}</span>
-                </div>
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
+                <TileHead
+                  items={[
+                    { icon: 'shop-points', value: stats.spendableBalance, alt: t('dash.shopBalance') },
+                    { icon: 'shop-ta-points', value: stats.taBalance, alt: t('shop.taPoints') },
+                  ]}
+                  palette={paletteId}
+                />
                 <div className="text-gray-600 font-medium">
                   {t('dash.shopBalance')} <span className="text-gray-300">/</span> {t('shop.taPoints')}
                 </div>
@@ -749,107 +1168,75 @@ export default function DashboardPage() {
             </Card>
           )}
 
+          {(isTeacher || isAdmin) && (
+            <Card 
+              surfaceImage={cardArt('grade')}
+              surfaceFrame={cardFrame('grade')}
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow relative"
+              onClick={() => router.push('/grading')}
+            >
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
+                <TileHead items={[{ icon: 'grade', alt: t('dash.grade') }]} palette={paletteId} />
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.grade')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.homework')}</div>
+                {ungradedCount > 0 && (
+                  <span className="absolute top-3 right-3 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {ungradedCount}
+                  </span>
+                )}
+              </Card.Body>
+            </Card>
+          )}
+
+          {(isTeacher || isAdmin) && (
+            <Card 
+              surfaceImage={cardArt('user-roles')}
+              surfaceFrame={cardFrame('user-roles')}
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/students')}
+            >
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
+                <TileHead items={[{ icon: 'user', alt: t('dash.userHistory') }]} palette={paletteId} />
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.userHistory')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.history')}</div>
+              </Card.Body>
+            </Card>
+          )}
+
           <Card 
-            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+            surfaceImage={cardArt('classes')}
+            surfaceFrame={cardFrame('classes')}
+            className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => router.push('/classes')}
+          >
+            <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
+              <TileHead items={[{ icon: 'classes', value: stats.classesCount, alt: t('nav.classes') }]} palette={paletteId} />
+              <div className="text-gray-600 font-medium">{t('nav.classes')}</div>
+            </Card.Body>
+          </Card>
+
+          <Card 
+            surfaceImage={cardArt('explore')}
+            surfaceFrame={cardFrame('explore')}
+            className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => router.push('/classes/explore')}
           >
-            <Card.Body>
-              <div className="text-5xl mb-3 hidden sm:block">🌍</div>
+            <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
+              <TileHead items={[{ icon: 'explore', alt: t('dash.explore') }]} palette={paletteId} />
               <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.explore')}</div>
               <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('nav.classes')}</div>
             </Card.Body>
           </Card>
 
-          {/* Bubble Room — links to the user's first class bubble room, or /classes to pick */}
-          <Card
-            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={async () => {
-              // Find the user's first enrolled class and navigate to its bubble room
-              const supabaseClient = createClient()
-              const { data: { user: u } } = await supabaseClient.auth.getUser()
-              if (!u) { router.push('/classes'); return }
-              router.push('/bubble-room')
-            }}
-          >
-            <Card.Body>
-              <div className="text-5xl mb-3 hidden sm:block">💬</div>
-              <div className="text-2xl font-bold text-gray-900 mb-1">{t('nav.bubbleRoom')}</div>
-              <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Q&amp;A</div>
-            </Card.Body>
-          </Card>
-
-          {/* Decorations hub — book skins, pet room, etc. */}
-          <Card
-            className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => router.push('/decorations')}
-          >
-            <Card.Body>
-              <div className="text-5xl mb-3 hidden sm:block">🎨</div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">{t('nav.decorations')}</div>
-              <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">Book &amp; Room</div>
-            </Card.Body>
-          </Card>
           {(isTeacher || isAdmin) && (
             <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => router.push('/admin/shop')}
-            >
-              <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">🛍️</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{t('nav.shop')}</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
-              </Card.Body>
-            </Card>
-          )}
-
-          {/* Admin: Book Skins managed via Decorations hub */}
-
-          {(isTeacher || isAdmin) && (
-            <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => router.push('/admin/roles')}
-            >
-              <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">👥</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.userRoles')}</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
-              </Card.Body>
-            </Card>
-          )}
-
-          {(isTeacher || isAdmin) && (
-            <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => router.push('/admin/tags')}
-            >
-              <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">🏷️</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.tags')}</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
-              </Card.Body>
-            </Card>
-          )}
-
-          {(isTeacher || isAdmin) && (
-            <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => router.push('/admin/schedules')}
-            >
-              <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">📅</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.scheduler')}</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
-              </Card.Body>
-            </Card>
-          )}
-
-          {(isTeacher || isAdmin) && (
-            <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
+              surfaceImage={cardArt('bank')}
+              surfaceFrame={cardFrame('bank')}
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => router.push('/admin/challenge-bank')}
             >
-              <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">🏦</div>
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
+                <TileHead items={[{ icon: 'bank', alt: t('dash.challengeBank') }]} palette={paletteId} />
                 <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.challengeBank')}</div>
                 <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
               </Card.Body>
@@ -858,31 +1245,45 @@ export default function DashboardPage() {
 
           {(isTeacher || isAdmin) && (
             <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => router.push('/students')}
+              surfaceImage={cardArt('scheduler')}
+              surfaceFrame={cardFrame('scheduler')}
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/admin/schedules')}
             >
-              <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">📊</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.students')}</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.history')}</div>
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
+                <TileHead items={[{ icon: 'scheduler', alt: t('dash.scheduler') }]} palette={paletteId} />
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.scheduler')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
               </Card.Body>
             </Card>
           )}
 
           {(isTeacher || isAdmin) && (
             <Card 
-              className="text-center cursor-pointer hover:shadow-lg transition-shadow relative"
-              onClick={() => router.push('/grading')}
+              surfaceImage={cardArt('tags')}
+              surfaceFrame={cardFrame('tags')}
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/admin/tags')}
             >
-              <Card.Body>
-                <div className="text-5xl mb-3 hidden sm:block">📝</div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.grade')}</div>
-                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.homework')}</div>
-                {ungradedCount > 0 && (
-                  <span className="absolute top-3 right-3 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                    {ungradedCount}
-                  </span>
-                )}
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
+                <TileHead items={[{ icon: 'tags', alt: t('dash.tags') }]} palette={paletteId} />
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('dash.tags')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
+              </Card.Body>
+            </Card>
+          )}
+
+          {(isTeacher || isAdmin) && (
+            <Card 
+              surfaceImage={cardArt('shop')}
+              surfaceFrame={cardFrame('shop')}
+              className="flex flex-col text-center cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => router.push('/admin/shop')}
+            >
+              <Card.Body className="flex-1 flex flex-col items-center justify-start pt-7">
+                <TileHead items={[{ icon: 'shop-points', alt: t('nav.shop') }]} palette={paletteId} />
+                <div className="text-3xl font-bold text-gray-900 mb-1">{t('nav.shop')}</div>
+                <div className="text-gray-500 text-xs font-medium uppercase tracking-wide">{t('dash.manage')}</div>
               </Card.Body>
             </Card>
           )}

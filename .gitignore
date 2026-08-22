@@ -32,3 +32,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Copied from node_modules by scripts/sync-pdfjs.js on install and build.
+# Committing it would be a second copy of pdfjs that no lockfile watches.
+public/pdfjs/

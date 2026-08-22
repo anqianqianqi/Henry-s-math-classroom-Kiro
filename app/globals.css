@@ -326,3 +326,226 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .radio-note { display: none; }
 }
+
+/* ── The next class still to come this week ──────────────────────────────────
+   A ring drawn just outside the day cell, breathing slowly. It has to be
+   findable at a glance in a grid of forty-two cells without pulling the eye off
+   the problem list beside it, so this is a 2.6s breath and not a blink.
+
+   ::after rather than a border on the cell itself: the cell already carries a
+   border for "today", and the two would fight over the same edge. */
+@keyframes dash-next-class {
+  0%, 100% { opacity: 0.18; transform: scale(1); }
+  50%      { opacity: 0.75; transform: scale(1.04); }
+}
+
+.dash-next-class::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 0.5rem;
+  border: 2px solid var(--dash-accent, currentColor);
+  pointer-events: none;
+  animation: dash-next-class 2.6s ease-in-out infinite;
+}
+
+/* Still marked, just not moving — the ring is the only thing saying which class
+   is next, so it has to stay visible rather than be switched off. */
+@media (prefers-reduced-motion: reduce) {
+  .dash-next-class::after { animation: none; opacity: 0.7; }
+}
+
+/* ── A problem in the calendar, as a raised sheet ────────────────────────────
+   Transparent on purpose: the wash and its grain show through, so the button
+   belongs to whichever pigment the reader chose rather than painting over it.
+   That is also why the whole effect is white and black at low alpha and no
+   colour of its own — it has to sit on five different palettes.
+
+   The relief is how light falls on thick paper, not gloss: a lit top edge, a
+   shadow beneath, and it presses INTO the sheet when clicked. The audit's
+   complaint about the direction being replaced was "buttons are pressed
+   plastic", and a glossy button here would be that again at a smaller size. */
+.dash-problem-btn {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.10));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-bottom-color: rgba(0, 0, 0, 0.11);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 1px 2px rgba(0, 0, 0, 0.13);
+  transition: transform 0.09s ease, box-shadow 0.09s ease, background 0.09s ease;
+}
+
+.dash-problem-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 2px 4px rgba(0, 0, 0, 0.16);
+}
+
+.dash-problem-btn:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.20);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+/* The travel is the only part anyone asked to be spared. Colour and shadow
+   still change, so the button is no less responsive — it just stays put. */
+@media (prefers-reduced-motion: reduce) {
+  .dash-problem-btn { transition: box-shadow 0.09s ease, background 0.09s ease; }
+  .dash-problem-btn:hover,
+  .dash-problem-btn:active { transform: none; }
+}
+
+/*
+  The fade a zoomed reader arrives with.
+
+  Defined here rather than left where it was: the keyframes lived in a <style>
+  block inside MagicBookReveal, so they only existed while that component was
+  mounted. Book3DReveal and the grading spread both name this animation and
+  neither renders MagicBookReveal — an undefined animation-name fails silently,
+  so the content simply appeared without its fade and nothing looked broken
+  enough to notice.
+*/
+@keyframes content-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes content-fade-in {
+    from { opacity: 0; transform: none; }
+    to   { opacity: 1; transform: none; }
+  }
+}
+
+/*
+  ── A card that holds its painted word until you reach for it ──
+
+  At rest the tile shows the word painted into its artwork and its emoji.
+  Point at it and the word lifts off while the tile's own labels arrive.
+
+  The word and the frame are two layers rather than one swapped background,
+  because background-image cannot be transitioned and opacity can. Each card
+  fades to the frame it was actually painted on, so the bamboo never moves.
+*/
+.card-reveal { position: relative; }
+
+/* The frame is the background; this is the worded picture lying over it. */
+.card-reveal-word {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 1;
+  transition: opacity 280ms ease;
+  pointer-events: none;
+}
+
+/* Card.Body is not positioned, so without this the picture would paint over
+   its own emoji. */
+.card-reveal > :not(.card-reveal-word) { position: relative; z-index: 1; }
+
+/*
+  Labels wait. The FIRST child stays — that is the emoji on every tile, and
+  it is what keeps the dashboard scannable while the words are hidden. So
+  does anything absolutely positioned: that is the ungraded-work badge, and a
+  count of work waiting should never be hidden behind a hover.
+*/
+.card-reveal > :not(.card-reveal-word) > * {
+  opacity: 0;
+  transition: opacity 280ms ease;
+}
+.card-reveal > :not(.card-reveal-word) > :first-child,
+.card-reveal > :not(.card-reveal-word) > .absolute { opacity: 1; }
+
+/*
+  Only where a real pointer exists. A touch screen has no hover, and :hover
+  there either never fires or sticks after a tap — either way a phone would
+  show a dashboard with no labels on it. The app ships through Capacitor, so
+  that is a real device rather than a hypothetical.
+*/
+@media (hover: hover) and (pointer: fine) {
+  .card-reveal:hover .card-reveal-word { opacity: 0; }
+  .card-reveal:hover > :not(.card-reveal-word) > * { opacity: 1; }
+}
+
+/* Reaching a card by keyboard has to reveal it too, or the label is
+   mouse-only. Outside the query on purpose — focus works on every input. */
+.card-reveal:focus-within .card-reveal-word { opacity: 0; }
+.card-reveal:focus-within > :not(.card-reveal-word) > * { opacity: 1; }
+
+/* No pointer to hover with: the labels simply stay. */
+@media not all and (hover: hover) {
+  .card-reveal > :not(.card-reveal-word) > * { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-reveal-word,
+  .card-reveal > :not(.card-reveal-word) > * { transition: none; }
+}
+
+/*
+  ── A raised surface on the welcome card ────────────────────
+  The problem chips and the two buttons above the calendar. Both sit on
+  painted paper and both were flat: a hairline border, a 13%-opacity tint,
+  and the artwork reading straight through them at full sharpness, so a
+  chip looked like a rectangle drawn on the picture rather than a thing
+  resting on it.
+
+  Two changes make it an object. `backdrop-filter` blurs the painting where
+  the chip covers it, which is what frosted glass does and what the eye
+  reads as "there is a pane here" — a sharp background through a tinted box
+  says the box is paint, a blurred one says it is glass. And the shadow is
+  layered rather than single: a lit top edge, a shaded bottom edge, a tight
+  contact shadow, and a wider cast one. A single drop shadow reads as a
+  sticker; the pair of inset edges is what gives it thickness.
+
+  The two colours come from the palette through custom properties, so a
+  chip on the sea card pools blue-green and one on the rose card pools
+  pink, rather than every palette casting the same grey.
+
+  These are NOT masked elements — the mask lives on the card around them —
+  so an outer shadow survives here, unlike PAPER_POOL on the card itself.
+*/
+.paper-raise {
+  backdrop-filter: blur(7px) saturate(1.08);
+  -webkit-backdrop-filter: blur(7px) saturate(1.08);
+  /*
+    The highlight is a background layer rather than a ::before overlay. An
+    overlay paints above the in-flow content, and the two calendar buttons
+    label themselves with bare text nodes — nothing to lift back above it
+    with a z-index — so the gradient would wash across the words. As a
+    background it sits under the text by construction.
+
+    Callers must therefore set background-COLOR, not the background
+    shorthand, which would drop this layer.
+  */
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 62%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 var(--raise-shade, rgba(0, 0, 0, 0.06)),
+    0 1px 1.5px rgba(0, 0, 0, 0.05),
+    0 5px 12px -4px var(--raise-cast, rgba(0, 0, 0, 0.14));
+  transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+/* Lifting further from the page, with the cast shadow travelling further
+   than the contact one — that difference is what reads as height. */
+@media (hover: hover) and (pointer: fine) {
+  .paper-raise:hover {
+    transform: translateY(-1.5px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      inset 0 -1px 0 var(--raise-shade, rgba(0, 0, 0, 0.08)),
+      0 2px 2px rgba(0, 0, 0, 0.05),
+      0 10px 20px -6px var(--raise-cast, rgba(0, 0, 0, 0.2));
+  }
+}
+
+/* Pressed: back onto the page, and the lit edge swaps ends. */
+.paper-raise:active {
+  transform: translateY(0.5px);
+  box-shadow:
+    inset 0 2px 4px var(--raise-shade, rgba(0, 0, 0, 0.12)),
+    0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paper-raise { transition: none; }
+  .paper-raise:hover { transform: none; }
+}

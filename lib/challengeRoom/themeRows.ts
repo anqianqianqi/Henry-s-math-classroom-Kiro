@@ -53,7 +53,9 @@ export interface BookThemeRow {
   styles: unknown
   palettes: unknown
   moods: unknown
+  cover_surfaces: unknown
   papers: unknown
+  grounds: unknown
   frames: unknown
   inner_accents: unknown
   clusters: unknown
@@ -121,7 +123,9 @@ export function rowToBookTheme(row: BookThemeRow): BookTheme {
     styles: asList(row.styles),
     palettes: asList(row.palettes),
     moods: asList(row.moods),
+    coverSurfaces: asList(row.cover_surfaces),
     papers: asList(row.papers),
+    grounds: asList(row.grounds),
     frames: asList(row.frames),
     innerAccents: asList(row.inner_accents),
     clusters: asList(row.clusters),
@@ -174,7 +178,9 @@ export function mergeBookTheme(existing: BookTheme | null, spec: BookSpec): Book
     styles: [],
     palettes: [],
     moods: [],
+    coverSurfaces: [],
     papers: [],
+    grounds: [],
     frames: [],
     innerAccents: [],
     clusters: [],
@@ -186,7 +192,9 @@ export function mergeBookTheme(existing: BookTheme | null, spec: BookSpec): Book
     styles: union(base.styles, [spec.artStyle]),
     palettes: union(base.palettes, [spec.palette]),
     moods: union(base.moods, [spec.mood]),
+    coverSurfaces: union(base.coverSurfaces, [spec.coverSurface]),
     papers: union(base.papers, [spec.paper]),
+    grounds: union(base.grounds, [spec.ground]),
     frames: union(base.frames, [spec.frame]),
     innerAccents: union(base.innerAccents, [spec.innerAccent]),
     clusters: union(base.clusters, spec.cornerClusters),
@@ -218,7 +226,9 @@ export function bookThemeToRow(theme: BookTheme, axes?: AxisVector): Omit<BookTh
     styles: theme.styles,
     palettes: theme.palettes,
     moods: theme.moods,
+    cover_surfaces: theme.coverSurfaces,
     papers: theme.papers,
+    grounds: theme.grounds,
     frames: theme.frames,
     inner_accents: theme.innerAccents,
     clusters: theme.clusters,
@@ -253,6 +263,8 @@ export function bookThemeIsUsable(theme: BookTheme): boolean {
     theme.palettes.length >= 1 &&
     theme.moods.length >= 1 &&
     theme.papers.length >= 1 &&
+    // Not gated: a theme promoted before `grounds` existed has none, and the
+    // compiler falls back to the palette's deepest tone rather than failing.
     theme.frames.length >= 1
   )
 }

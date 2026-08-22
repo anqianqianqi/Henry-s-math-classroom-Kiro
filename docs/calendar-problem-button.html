@@ -1,0 +1,375 @@
+<!--
+  The problem entry as a button — three ways of feeling raised, three ways of
+  fitting a status beside a name.
+
+  Open this file directly in a browser; it needs no server and no assets.
+
+  ── THE CONSTRAINT ──────────────────────────────────────────
+  A cell is 124px. At the 25/75 split the content column is 1216px, the gap
+  takes 32, and the calendar's three parts of four leave 888 — seven columns
+  and six 3px gutters gives 124.3 each, less 8px of padding.
+
+  So a name and a status on ONE line share about 116px. "(submitted / not
+  graded)" is 108px of that on its own, which is why the status treatments
+  below are a real choice and not decoration: the full wording leaves eight
+  pixels for the problem.
+
+  ── WHY NOT A PLASTIC BUTTON ────────────────────────────────
+  The site is being repainted as painted paper, and the audit's complaint
+  about the old direction was "buttons are pressed plastic". A gloss button
+  here would be that again, smaller. All three of these are transparent — the
+  wash shows through every one — and get their relief from how light falls on
+  paper: a raised edge, a frosted pane, or an impression pressed into the
+  sheet.
+
+  ── NOT A DECISION ──────────────────────────────────────────
+  Nothing here is implemented. Siblings: welcome-card-variants.html,
+  art-direction-audit.html.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendar Problem Button — relief and status</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --ground:#f4f5f6; --surface:#ffffff; --ink:#16181c; --ink-2:#434a54;
+    --ink-3:#737b85; --rule:#d9dde1; --accent:#3d6a8b; --accent-wash:#e6eef4;
+    --flag-warn:#8a6414;
+    --mono: ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ground:#121418; --surface:#191c21; --ink:#e7eaee; --ink-2:#b0b8c1;
+      --ink-3:#838c96; --rule:#2b3037; --accent:#7fa9c8; --accent-wash:#1e2831;
+      --flag-warn:#d9ab52; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--sans);
+    line-height:1.6; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1080px; margin:0 auto; padding:3rem 1.5rem 6rem; }
+  h1 { font-family:var(--serif); font-weight:600; font-size:2rem; line-height:1.2; margin:0 0 .5rem; }
+  h2 { font-family:var(--serif); font-weight:600; font-size:1.25rem; margin:2.5rem 0 .4rem; }
+  .lede { color:var(--ink-2); max-width:40rem; margin:0 0 .4rem; }
+  .meta { color:var(--ink-3); font-family:var(--mono); font-size:.76rem; margin:0 0 2rem; }
+  .caption { color:var(--ink-3); font-size:.84rem; margin:.1rem 0 1rem; max-width:46rem; }
+  code { font-family:var(--mono); font-size:.85em; background:var(--accent-wash); padding:.08em .35em; border-radius:3px; }
+
+  .controls { position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap;
+    gap:1.25rem; align-items:center; background:var(--ground);
+    border-bottom:1px solid var(--rule); padding:.85rem 0; margin-bottom:.5rem; }
+  .ctl-label { font-family:var(--mono); font-size:.7rem; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--ink-3); margin-right:.4rem; }
+  .seg { display:inline-flex; border:1px solid var(--rule); border-radius:6px; overflow:hidden; }
+  .seg button { font:inherit; font-size:.85rem; padding:.3rem .75rem; border:0; cursor:pointer;
+    background:var(--surface); color:var(--ink-2); white-space:nowrap; }
+  .seg button[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  .sw { width:.7rem; height:.7rem; border-radius:2px; display:inline-block; margin-right:.35rem;
+    vertical-align:-1px; border:1px solid rgba(0,0,0,.15); }
+
+  /* ── The card, in the chosen pigment ──────────────────────── */
+  .stage { background:linear-gradient(to bottom right,#f0fdf4 0%,#ffffff 50%,rgba(59,130,246,.1) 100%);
+    border:1px solid var(--rule); border-radius:10px; padding:1.5rem; overflow-x:auto; }
+  .hero { background-image:var(--hero-bg); box-shadow:var(--hero-pool);
+    mask-image:var(--paper-mask); -webkit-mask-image:var(--paper-mask);
+    mask-size:100% 100%; -webkit-mask-size:100% 100%;
+    mask-repeat:no-repeat; -webkit-mask-repeat:no-repeat;
+    padding:1.25rem; color:var(--hero-ink); width:906px; }
+
+  .cal { display:grid; grid-template-columns:repeat(7, 124px); gap:3px; }
+  .day { border:1px solid var(--hero-rule); border-radius:.4rem; padding:.25rem;
+    min-height:78px; background:var(--hero-cell); display:flex; flex-direction:column; gap:2px; }
+  .day.today { border-color:var(--hero-accent); border-width:2px; padding:calc(.25rem - 1px); }
+  .day-n { font-size:.62rem; font-weight:700; color:var(--hero-ink-2); line-height:1.1; }
+  .cls { display:flex; align-items:baseline; gap:3px; font-size:.55rem; line-height:1.3; }
+  .cls span.nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--hero-ink-2); }
+  .cls span.tm { color:var(--hero-ink-3); flex:0 0 auto; }
+
+  /* ── The problem entry ────────────────────────────────────── */
+  .prob {
+    display:flex; align-items:center; gap:3px; width:100%; text-align:left;
+    font:inherit; font-size:.58rem; line-height:1.35; cursor:pointer;
+    padding:2px 4px; border-radius:4px; color:var(--hero-ink);
+    transition:transform .09s ease, box-shadow .09s ease, background .09s ease;
+  }
+  .prob .shape { flex:0 0 auto; color:var(--hero-accent); }
+  .prob .nm { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .prob .st { flex:0 0 auto; font-size:.54rem; }
+  .prob .st.done { color:var(--hero-done-ink); }
+  .prob .st.partial { color:var(--hero-accent-ink); }
+  .prob .st.ungraded { color:var(--hero-ink-3); }
+  .prob.locked { cursor:default; opacity:.75; }
+
+  /* Raised paper. A lit top edge, a shadow beneath, and it presses in when
+     clicked — the sheet is thick, not glossy. */
+  .emboss .prob:not(.locked) {
+    background:linear-gradient(180deg, rgba(255,255,255,.42), rgba(255,255,255,.10));
+    border:1px solid rgba(255,255,255,.5); border-bottom-color:rgba(0,0,0,.11);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.65), 0 1px 2px rgba(0,0,0,.13);
+  }
+  .emboss .prob:not(.locked):hover { transform:translateY(-1px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.75), 0 2px 4px rgba(0,0,0,.16); }
+  .emboss .prob:not(.locked):active { transform:translateY(1px);
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.20); background:rgba(0,0,0,.03); }
+
+  /* Frosted pane laid on the wash. Reads as a separate material rather than a
+     thicker sheet; the blur is what sells it. */
+  .glass .prob:not(.locked) {
+    background:rgba(255,255,255,.24); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+    border:1px solid rgba(255,255,255,.55);
+    box-shadow:0 1px 3px rgba(0,0,0,.10), inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  .glass .prob:not(.locked):hover { background:rgba(255,255,255,.36); transform:translateY(-1px);
+    box-shadow:0 3px 6px rgba(0,0,0,.13), inset 0 1px 0 rgba(255,255,255,.85); }
+  .glass .prob:not(.locked):active { transform:translateY(1px); background:rgba(255,255,255,.18);
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.16); }
+
+  /* Pressed INTO the sheet, and it rises to meet you. The only one whose
+     resting state is a hole rather than a bump. */
+  .carve .prob:not(.locked) {
+    background:rgba(0,0,0,.035); border:1px solid rgba(0,0,0,.05);
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.15), 0 1px 0 rgba(255,255,255,.55);
+  }
+  .carve .prob:not(.locked):hover { background:rgba(255,255,255,.22);
+    box-shadow:inset 0 1px 1px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.10); }
+  .carve .prob:not(.locked):active {
+    box-shadow:inset 0 2px 4px rgba(0,0,0,.22); background:rgba(0,0,0,.05); }
+
+  @media (prefers-reduced-motion: reduce) { .prob { transition:none !important; } }
+
+  .note { border-left:3px solid var(--rule); padding:.1rem 0 .1rem 1rem; margin:0 0 1.1rem; max-width:44rem; }
+  .note.warn { border-left-color:var(--flag-warn); }
+  .note h3 { margin:0 0 .2rem; font-size:.95rem; font-weight:600; }
+  .note p { margin:0; color:var(--ink-2); font-size:.9rem; }
+  .pal-table { width:100%; max-width:44rem; border-collapse:collapse; font-size:.85rem; margin-top:.4rem; }
+  .pal-table th,.pal-table td { text-align:left; padding:.4rem .5rem; border-bottom:1px solid var(--rule); }
+  .pal-table th { font-family:var(--mono); font-size:.7rem; text-transform:uppercase;
+    letter-spacing:.06em; color:var(--ink-3); font-weight:500; }
+  .pal-table td { font-family:var(--mono); font-size:.78rem; }
+  .pal-table td:first-child { font-family:var(--sans); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>The problem entry, as a button</h1>
+  <p class="lede">
+    Three ways of feeling raised without feeling plastic, and three ways of getting a
+    status beside a name in 116 pixels. Hover and click them — the press is the point.
+  </p>
+  <p class="meta">cell 124px &middot; MonthCalendar.tsx &middot; not implemented</p>
+
+  <div class="controls">
+    <div><span class="ctl-label">Relief</span>
+      <div class="seg" id="relief">
+        <button data-v="emboss" aria-pressed="true">Raised</button>
+        <button data-v="glass" aria-pressed="false">Frosted</button>
+        <button data-v="carve" aria-pressed="false">Pressed in</button>
+      </div>
+    </div>
+    <div><span class="ctl-label">Status</span>
+      <div class="seg" id="status">
+        <button data-v="words" aria-pressed="true">Full words</button>
+        <button data-v="short" aria-pressed="false">Short</button>
+        <button data-v="icon" aria-pressed="false">Icon</button>
+      </div>
+    </div>
+    <div><span class="ctl-label">Palette</span><div class="seg" id="pal"></div></div>
+  </div>
+
+  <h2>In a cell</h2>
+  <p class="caption" id="cap"></p>
+  <div class="stage"><div class="hero" id="hero"></div></div>
+
+  <h2>What the status costs the name</h2>
+  <p class="caption">
+    Measured in this browser, at this moment, by rendering each treatment and reading the boxes back —
+    not estimated from character counts.
+  </p>
+  <table class="pal-table"><thead><tr>
+    <th>Status</th><th>Widest status</th><th>Left for the name</th><th>Titles cut</th>
+  </tr></thead><tbody id="measure"></tbody></table>
+
+  <h2>What this raises</h2>
+  <div id="notes"></div>
+
+</div>
+
+<script>
+/* Paper treatment, from lib/ui/paperCard.ts. */
+var GRAIN
+;(function () {
+  var W=320,H=160,FADE=.035, band=Math.min(W,H)*FADE
+  var inset=band*.5, blur=band*.15, disp=band*.4, radius=band*1.5, freq=3.2/Math.min(W,H)
+  var MASK='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'+
+    '<filter id="m" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">'+
+    '<feGaussianBlur stdDeviation="'+blur.toFixed(2)+'" result="s"/>'+
+    '<feTurbulence type="fractalNoise" baseFrequency="'+freq.toFixed(5)+'" numOctaves="2" seed="20260801" result="n"/>'+
+    '<feDisplacementMap in="s" in2="n" scale="'+disp.toFixed(2)+'" xChannelSelector="R" yChannelSelector="G"/>'+
+    '</filter><rect x="'+inset.toFixed(1)+'" y="'+inset.toFixed(1)+'" width="'+(W-inset*2).toFixed(1)+'" height="'+(H-inset*2).toFixed(1)+'" rx="'+radius.toFixed(1)+'" fill="#fff" filter="url(#m)"/></svg>'
+  var G='<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><filter id="g">'+
+    '<feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" seed="11"/>'+
+    '<feColorMatrix type="saturate" values="0"/>'+
+    '<feComponentTransfer><feFuncA type="linear" slope="0.10"/></feComponentTransfer>'+
+    '</filter><rect width="140" height="140" filter="url(#g)"/></svg>'
+  var uri=function(s){ return 'url("data:image/svg+xml;utf8,'+encodeURIComponent(s)+'")' }
+  GRAIN=uri(G)
+  document.documentElement.style.setProperty('--paper-mask', uri(MASK))
+})()
+
+var PALETTES=[
+  { id:'rose', name:'Ash rose', swatch:'#eecdc6', from:'#fdf5f3', a:'#f9e7e3', b:'#eecdc6',
+    pool:'rgba(178,124,116,.22)', ink:'#3f2724', ink2:'#684a45', ink3:'#96736d',
+    rule:'rgba(178,124,116,.28)', cell:'rgba(255,250,249,.45)',
+    accent:'#b0736a', accentInk:'#7d4740', doneInk:'#5c6231' },
+  { id:'meadow', name:'Meadow', swatch:'#d5e3bd', from:'#f6faee', a:'#e9f1da', b:'#d5e3bd',
+    pool:'rgba(112,134,74,.22)', ink:'#2b3720', ink2:'#4f6039', ink3:'#7d8c66',
+    rule:'rgba(112,134,74,.30)', cell:'rgba(250,253,244,.45)',
+    accent:'#6d8a45', accentInk:'#3f5427', doneInk:'#2f5c34' },
+  { id:'sky', name:'Sky', swatch:'#c9dced', from:'#f4f9fc', a:'#e4eff7', b:'#c9dced',
+    pool:'rgba(94,131,163,.22)', ink:'#22323f', ink2:'#425768', ink3:'#71889a',
+    rule:'rgba(94,131,163,.28)', cell:'rgba(248,252,255,.45)',
+    accent:'#4f7fa5', accentInk:'#2c4d67', doneInk:'#245c50' },
+  { id:'dusk', name:'Dusk', swatch:'#f2d3a8', from:'#fef6ea', a:'#fbe9d2', b:'#f2d3a8',
+    pool:'rgba(184,132,72,.24)', ink:'#3d2a14', ink2:'#6b5334', ink3:'#9a8058',
+    rule:'rgba(184,132,72,.30)', cell:'rgba(255,250,240,.45)',
+    accent:'#b8843f', accentInk:'#7d5520', doneInk:'#5a6224' },
+  { id:'sea', name:'Sea', swatch:'#bfdfd9', from:'#f1faf8', a:'#dcefec', b:'#bfdfd9',
+    pool:'rgba(80,140,132,.22)', ink:'#1e3835', ink2:'#3e5d57', ink3:'#6b8c85',
+    rule:'rgba(80,140,132,.28)', cell:'rgba(246,253,251,.45)',
+    accent:'#43897e', accentInk:'#245a51', doneInk:'#28603c' },
+]
+
+var STATUS={
+  words:{ ungraded:'(submitted / not graded)', done:'(done!)', partial:'(check comment)' },
+  short:{ ungraded:'(ungraded)', done:'(done!)', partial:'(comment)' },
+  icon:{ ungraded:'⏳', done:'✓', partial:'💬' },
+}
+
+/* Real names, long and short, to show what truncation costs. */
+var DAYS=[
+  { n:9,  probs:[['Distributive Property 3','partial']], cls:['理解數學 F','19:00'] },
+  { n:10, probs:[['变化不等式2','done']], cls:null, today:true },
+  { n:11, probs:[['Inequality I','ungraded'],['絕對值定義 2','done']], cls:['Testing Class','21:04'] },
+  { n:12, probs:[['减法与数线 2','done']], cls:null },
+  { n:13, probs:[['Area of a Trapezoid and Other Shapes','partial']], cls:['理解數學 F','19:00'] },
+  { n:14, probs:[], cls:null },
+  { n:15, probs:[['加法與數線3','locked']], cls:null },
+]
+
+var state={ relief:'emboss', status:'words', pal:'rose' }
+
+function pal(){ return PALETTES.find(function(p){ return p.id===state.pal }) }
+
+function apply(){
+  var p=pal(), r=document.documentElement.style
+  r.setProperty('--hero-bg',[GRAIN,
+    'radial-gradient(120% 110% at 22% 0%, '+p.from+' 0%, rgba(255,255,255,0) 62%)',
+    'linear-gradient(155deg, '+p.a+' 0%, '+p.b+' 100%)'].join(', '))
+  r.setProperty('--hero-pool','inset 0 0 26px 6px '+p.pool)
+  ;[['ink',p.ink],['ink-2',p.ink2],['ink-3',p.ink3],['rule',p.rule],['cell',p.cell],
+    ['accent',p.accent],['accent-ink',p.accentInk],['done-ink',p.doneInk]]
+    .forEach(function(kv){ r.setProperty('--hero-'+kv[0], kv[1]) })
+}
+
+/** Just the drawing, so measure() can redraw without re-entering render(). */
+function paint(){
+  apply()
+  var S=STATUS[state.status]
+  document.getElementById('hero').className='hero '+state.relief
+  document.getElementById('hero').innerHTML =
+    '<div class="cal">' + DAYS.map(function(d){
+      var inner='<span class="day-n">'+d.n+'</span>'
+      if (d.cls) inner+='<span class="cls"><span style="color:'+pal().accent+'">■</span>'+
+        '<span class="nm">'+d.cls[0]+'</span><span class="tm">'+d.cls[1]+'</span></span>'
+      inner += d.probs.map(function(pr){
+        var locked = pr[1]==='locked'
+        if (locked) return '<span class="prob locked"><span class="shape">🔒</span>'+
+          '<span class="nm" style="font-style:italic;color:var(--hero-ink-3)">Not open yet</span></span>'
+        return '<button class="prob" type="button">'+
+          '<span class="shape">✎</span>'+
+          '<span class="nm">'+pr[0]+'</span>'+
+          '<span class="st '+pr[1]+'">'+S[pr[1]]+'</span>'+
+        '</button>'
+      }).join('')
+      return '<div class="day'+(d.today?' today':'')+'">'+inner+'</div>'
+    }).join('') + '</div>'
+}
+
+function render(){
+  paint()
+  document.getElementById('cap').innerHTML =
+    'The 13th is deliberately a title no cell can hold; the 15th is a future day, which stays '+
+    'unclickable. Hover and press the rest.'
+  measure()
+
+  document.getElementById('notes').innerHTML=[
+    ['warn','No status wording leaves a name intact at this width',
+      'The table above is measured live, not estimated. Full words squeeze one title to ZERO pixels. Icons are '+
+      'the only treatment that keeps most of the row for the name — and even then the longer titles still cut. '+
+      'Moving the status beside the name costs the name, at 124px; there is no arrangement where both fit.'],
+    ['','All three reliefs are transparent',
+      'The wash and its grain show through every one; none of them paints a solid fill. Raised and Frosted sit '+
+      'on top of the sheet, Pressed-in is a hollow in it — and is the only one whose resting state already looks '+
+      'clicked, which may be the wrong signal for a thing you want people to click.'],
+    ['','A locked day is not a button',
+      'It keeps the plain text it has now. Giving a future problem a raised, pressable surface would promise '+
+      'something the challenge page then refuses.'],
+    ['','Press is motion, and motion is opt-out',
+      'Each style moves 1px under the pointer. That is inside <code>prefers-reduced-motion</code>, so a reader '+
+      'who asked for less still gets the colour and shadow change without the travel.'],
+  ].map(function(x){ return '<div class="note'+(x[0]?' '+x[0]:'')+'"><h3>'+x[1]+'</h3><p>'+x[2]+'</p></div>' }).join('')
+}
+
+/*
+  Render each status treatment in turn and read the boxes back.
+
+  Estimating this from character counts would have been wrong twice over: the
+  titles are a mix of Latin and Chinese, whose glyphs are not the same width,
+  and flexbox decides how the shortfall is shared. The only reliable answer is
+  to lay it out and measure.
+*/
+function measure(){
+  var keep=state.status, rows=[]
+  ;['words','short','icon'].forEach(function(mode){
+    state.status=mode; paint()
+    var probs=[].slice.call(document.querySelectorAll('button.prob'))
+    var stw=probs.map(function(b){ return Math.round(b.querySelector('.st').getBoundingClientRect().width) })
+    var nmw=probs.map(function(b){ return Math.round(b.querySelector('.nm').getBoundingClientRect().width) })
+    var cut=probs.filter(function(b){ var n=b.querySelector('.nm'); return n.scrollWidth > n.clientWidth+1 }).length
+    rows.push({ mode:mode, st:Math.max.apply(null,stw),
+      lo:Math.min.apply(null,nmw), hi:Math.max.apply(null,nmw), cut:cut, of:probs.length })
+  })
+  state.status=keep; paint()
+
+  var NAME={ words:'Full words', short:'Short', icon:'Icon' }
+  document.getElementById('measure').innerHTML = rows.map(function(r){
+    var bad = r.lo === 0
+    return '<tr'+(bad?' style="color:var(--flag-warn)"':'')+'><td>'+NAME[r.mode]+'</td>'+
+      '<td>'+r.st+'px</td>'+
+      '<td>'+r.lo+'–'+r.hi+'px'+(bad?' — one title vanishes entirely':'')+'</td>'+
+      '<td>'+r.cut+' of '+r.of+'</td></tr>'
+  }).join('')
+}
+
+document.getElementById('pal').innerHTML = PALETTES.map(function(p){
+  return '<button data-v="'+p.id+'" aria-pressed="'+(p.id===state.pal)+'">'+
+    '<span class="sw" style="background:'+p.swatch+'"></span>'+p.name+'</button>'
+}).join('')
+
+document.querySelectorAll('.seg').forEach(function(seg){
+  seg.addEventListener('click', function(e){
+    var b=e.target.closest('button'); if(!b) return
+    state[seg.id==='pal'?'pal':seg.id]=b.dataset.v
+    seg.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed', String(x===b)) })
+    render()
+  })
+})
+
+render()
+</script>
+</body>
+</html>

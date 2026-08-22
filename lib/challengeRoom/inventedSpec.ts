@@ -245,7 +245,9 @@ export function parseInventedBook(raw: unknown, opts: ParseOpts): InventResult<B
   const name = clean(o.name)
   const mood = clean(o.mood)
   const palette = clean(o.palette)
+  const coverSurface = clean(o.coverSurface)
   const paper = clean(o.paper)
+  const ground = clean(o.ground)
   const frame = clean(o.frame)
   const innerAccent = clean(o.innerAccent)
 
@@ -256,7 +258,12 @@ export function parseInventedBook(raw: unknown, opts: ParseOpts): InventResult<B
     [
       ['Mood', mood],
       ['Palette', palette],
+      ['Cover surface', coverSurface],
       ['Paper', paper],
+      // Required of the model even though the spec type allows it to be
+      // absent: optional exists for recipes saved before the field did, not as
+      // licence for a fresh one to skip it and fall back to guesswork.
+      ['Ground', ground],
       ['Frame', frame],
     ],
     BOOK_PATTERNS,
@@ -290,12 +297,18 @@ export function parseInventedBook(raw: unknown, opts: ParseOpts): InventResult<B
       name,
       mood,
       palette,
+      coverSurface,
       paper,
+      ground,
       frame,
       cornerClusters: [clusters[0], clusters[1], clusters[2], clusters[3]],
       notes: '',
       ...(artStyle ? { artStyle } : {}),
       ...(innerAccent ? { innerAccent } : {}),
+      // Matches a fresh dice roll. Not asked of the model: whether a cover
+      // looks bound is a house decision, not a per-theme one, and letting it
+      // choose would make the setting flicker between invents.
+      coverRelief: true,
       ...(opts.vector ? { axes: opts.vector } : {}),
     },
   }

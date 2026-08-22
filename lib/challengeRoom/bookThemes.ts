@@ -13,6 +13,28 @@
  * something other than cream paper with gold filigree — and why the sci-fi and
  * indigo worlds below can exist at all.
  *
+ * ── FOUR FIELDS, FOUR JOBS ──────────────────────────────────
+ *   coverSurfaces  what the COVER is bound in — cloth, leather, lacquer,
+ *                  veneer, metal. Material and feel only.
+ *   papers         what the INNER PAGE is. Always a paper.
+ *   grounds        what colour BOTH are. One name, full strength on the cover,
+ *                  a pale tint of the same hue inside.
+ *   palettes       what the four corner clusters are coloured with.
+ *
+ * The halves match on colour, palette and frame — never on texture. A bound
+ * book is not made of one substance, and there used to be a single `paper`
+ * field doing both jobs, which is why every cover rendered as a sheet of paper
+ * however the theme was written.
+ *
+ * Papers used to name colour too, and 23 of 24 did. Since the material covers
+ * most of the canvas, that made it the real colour authority and left the
+ * palette with nothing to tint but four small vignettes — so every cover came
+ * out the colour of the paper, which is to say pale.
+ *
+ * A colour word in either material list silently takes the ground back from
+ * `grounds`. bookBundleThemes.test.ts fails the build if one appears, and also
+ * if the two lists collapse back into the same vocabulary.
+ *
  * randomBookSpec() deals four distinct clusters into the corners.
  */
 
@@ -26,7 +48,22 @@ export interface BookTheme {
   styles: string[]
   palettes: string[]
   moods: string[]
+  /**
+   * What the COVER is bound in — cloth, leather, lacquer, veneer, metal.
+   * Material and texture only; `grounds` supplies the colour.
+   */
+  coverSurfaces: string[]
+  /** What the INNER PAGE is. Always a paper, and varied by TYPE, not adjective. */
   papers: string[]
+  /**
+   * The sheet's colour — one name per entry, not a list of colours.
+   *
+   * Distinct from `palettes`, which colours the corner clusters. This is the
+   * ground both halves carry: full strength on the cover, a pale tint of the
+   * same hue on the inner page. Mid-to-deep tones work best — a ground that is
+   * already pale gives a cover and an inner page that look identical.
+   */
+  grounds: string[]
   frames: string[]
   /** Sparse motif edging the inner page — must stay quiet, text prints there. */
   innerAccents: string[]
@@ -49,11 +86,17 @@ export const BOOK_THEMES: BookTheme[] = [
       'sunlit, playful, easy',
       'gentle, hopeful, a little sleepy',
     ],
-    papers: [
-      'warm ivory watercolor paper with gentle handmade grain',
-      'soft cream cold-press stock with a fine tooth',
-      'pale oat paper with a faint deckled texture',
+    coverSurfaces: [
+      'fine book-cloth over board with a visible woven grain',
+      'soft brushed linen drawn tight over the boards',
+      'lightly waxed canvas with a close even weave',
     ],
+    papers: [
+      'cold-press watercolour paper with a soft open tooth',
+      'handmade sheet with a feathered deckle and visible pulp flecks',
+      'lightly sized cartridge with a fine even weave',
+    ],
+    grounds: ['soft meadow green', 'warm rose', 'honeyed straw'],
     frames: [
       'thin antique-gold botanical filigree',
       'slender pressed-flower border in soft green ink',
@@ -92,11 +135,17 @@ export const BOOK_THEMES: BookTheme[] = [
       'still, secretive, softly lit',
       'wistful, clear, faintly enchanted',
     ],
-    papers: [
-      'soft moon-ivory watercolor paper with visible cold-press grain',
-      'cool bone laid paper with a fine chain-line grain',
-      'pale grey-blue stock with a smooth chalky surface',
+    coverSurfaces: [
+      'silk-finish cloth over board with a faint lustre',
+      'smooth vellum drawn tight across the boards',
+      'fine-grained leather with a soft matte bloom',
     ],
+    papers: [
+      'laid paper with distinct chain lines',
+      'glassine-thin leaf with a silky translucence',
+      'calendered wove with a faint powdery bloom',
+    ],
+    grounds: ['moonstone blue', 'dusty lavender', 'deep periwinkle'],
     frames: [
       'fine pale-gold vines with tiny stars and crescent details',
       'slender silver rule dotted with pinhead constellations',
@@ -135,11 +184,17 @@ export const BOOK_THEMES: BookTheme[] = [
       'brisk, cheerful, out-of-doors',
       'warm, unhurried, well-fed',
     ],
-    papers: [
-      'creamy fibrous watercolor paper with subtle deckled texture',
-      'warm oat stock with visible flecks of pulp',
-      'soft buff paper with a light woven grain',
+    coverSurfaces: [
+      'coarse buckram over board with a pronounced weave',
+      'oiled leather with a deep natural pebble',
+      'thin wood veneer with an open, visible figure',
     ],
+    papers: [
+      'coarse rag paper with visible pulp inclusions',
+      'heavy blotting paper with a soft absorbent nap',
+      'matte cartridge with a slight drag under the hand',
+    ],
+    grounds: ['moss green', 'warm russet', 'chestnut brown'],
     frames: [
       'narrow antique-gold oak-leaf and berry border',
       'thin russet rule with small acorn corner marks',
@@ -178,11 +233,17 @@ export const BOOK_THEMES: BookTheme[] = [
       'brisk, bright, methodical',
       'grey-day, tender, unhurried',
     ],
-    papers: [
-      'sun-warmed ivory watercolor stock with a fine salt-paper grain',
-      'salt-flecked cream paper with a coarse cold-press tooth',
-      'cool bone stock with faint tide-line staining',
+    coverSurfaces: [
+      'salt-worn canvas with a loose open weave',
+      'weathered oilcloth with a faintly tacky sheen',
+      'bleached wood veneer with a raised, scoured grain',
     ],
+    papers: [
+      'rough cold-press paper with a pronounced granular tooth',
+      'cockled sheet that has been damp and dried flat again',
+      'thin tracing leaf with a smooth waxy hand',
+    ],
+    grounds: ['sea-glass aqua', 'storm slate', 'weathered driftwood grey'],
     frames: [
       'slender antique-gold seaweed filigree',
       'narrow pewter rope-twist border',
@@ -221,11 +282,17 @@ export const BOOK_THEMES: BookTheme[] = [
       'precise, quiet, faintly reverent',
       'studious, warm, orderly',
     ],
-    papers: [
-      'warm vellum-toned watercolor paper with restrained botanical grain',
-      'smooth parchment stock with a faint mottled tone',
-      'pale bone paper with fine visible laid lines',
+    coverSurfaces: [
+      'smooth calf leather with a fine even grain',
+      'marbled paper laid over board, its swirl close and fine',
+      'dense book-cloth with a barely visible ribbing',
     ],
+    papers: [
+      'smooth hot-press paper with almost no tooth',
+      'vellum-finish leaf with a faint mottled cloud in the pulp',
+      'herbarium laid paper with fine visible chain lines',
+    ],
+    grounds: ['deep indigo', 'antique olive', 'damson wine'],
     frames: [
       'precise antique-gold botanical linework dotted with tiny constellations',
       'fine indigo rule with small engraved star points',
@@ -271,11 +338,17 @@ export const BOOK_THEMES: BookTheme[] = [
       'clinical, clear, unhurried',
       'remote, luminous, orderly',
     ],
-    papers: [
-      'smooth matte composite sheet with a faint hexagonal weave',
-      'cool bone-white synthetic stock with a barely-visible grid emboss',
-      'soft charcoal panel with a fine brushed-metal sheen',
+    coverSurfaces: [
+      'anodised metal panel with a fine directional brush',
+      'moulded polymer shell with a soft matte micro-texture',
+      'carbon-weave composite with a tight visible lattice',
     ],
+    papers: [
+      'synthetic wove with a barely visible embossed grid',
+      'matte composite leaf with a faint hexagonal weave',
+      'technical paper with a hard calendered face',
+    ],
+    grounds: ['vacuum black', 'deep navy', 'graphite'],
     frames: [
       'hairline cyan circuit-trace border with small node dots',
       'thin brushed-aluminium rule with machined corner ticks',
@@ -314,11 +387,17 @@ export const BOOK_THEMES: BookTheme[] = [
       'quiet, disciplined, faintly festive',
       'late, unhurried, softly lit',
     ],
-    papers: [
-      'warm bamboo paper with a visible long-fibre grain',
-      'aged tea-toned stock with soft mottling',
-      'pale straw paper with a fine ribbed texture',
+    coverSurfaces: [
+      'raw silk over board with visible slubs in the weave',
+      'lacquered panel with a deep glassy gloss',
+      'thread-bound cloth wrapper with a soft loose drape',
     ],
+    papers: [
+      'long-fibre bamboo paper with visible strands',
+      'soft absorbent xuan paper with a furred cut edge',
+      'thin ribbed paper with a fine regular corrugation',
+    ],
+    grounds: ['lantern red', 'ink black', 'deep persimmon'],
     frames: [
       'thin cinnabar rule with small square corner seals',
       'fine ink border of bamboo leaves and knots',
@@ -357,11 +436,17 @@ export const BOOK_THEMES: BookTheme[] = [
       'orderly, bright, matter-of-fact',
       'bold, calm, faintly retro',
     ],
-    papers: [
-      'flat chalk-white stock with no visible grain',
-      'smooth bone card with a very fine matte tooth',
-      'warm off-white board with a soft even surface',
+    coverSurfaces: [
+      'flat matte board with a completely even surface',
+      'smooth laminate with a slight satin reflection',
+      'screen-printed cloth with a crisp flat finish',
     ],
+    papers: [
+      'flat wove with no perceptible grain',
+      'smooth offset paper with a very fine matte tooth',
+      'dense pressed leaf with a slight satin face',
+    ],
+    grounds: ['cobalt', 'mustard ochre', 'terracotta'],
     frames: [
       'a single bold rule in flat cobalt with square corners',
       'two thin parallel lines in warm black, evenly spaced',
@@ -422,7 +507,16 @@ export function randomBookSpec(theme?: BookTheme, opts: RandomBookOpts = {}): Bo
     name: t.name,
     mood: pick(t.moods, rng),
     palette: pick(t.palettes, rng),
+    coverSurface: pick(t.coverSurfaces, rng),
+    /*
+      On for a fresh roll, because a bound cover is the look the library is
+      after. Not rolled: a coin flip would make half a collection read as
+      boards and half as printed sheets, which is worse than either. The admin
+      toggles it off per bundle.
+    */
+    coverRelief: true,
     paper: pick(t.papers, rng),
+    ground: pick(t.grounds, rng),
     frame: pick(t.frames, rng),
     cornerClusters: [c[0], c[1], c[2], c[3]],
     notes: '',

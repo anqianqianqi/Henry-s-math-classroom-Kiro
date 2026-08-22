@@ -16,8 +16,8 @@
  * </Card>
  */
 
-import { HTMLAttributes, ReactNode } from 'react'
-import { paperCardStyle } from '@/lib/ui/paperCard'
+import { CSSProperties, HTMLAttributes, ReactNode } from 'react'
+import { PAPER_BACKGROUND, paperCardStyle } from '@/lib/ui/paperCard'
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
@@ -32,6 +32,36 @@ interface RootCardProps extends CardProps {
    * of forty rows.
    */
   plain?: boolean
+
+  /**
+   * A painted background for this card, laid over the usual wash.
+   *
+   * A prop rather than a style override, for the same reason `bare` is one:
+   * the treatment is an inline style, and `{...props}` is spread AFTER
+   * `style={paperCardStyle}` — so a caller passing `style` replaces the whole
+   * thing and silently takes the mask, the grain and the pooling with it. The
+   * card would keep its picture and lose its soft edge, which is the one part
+   * nobody would think to check.
+   *
+   * The wash stays underneath rather than being replaced, so a missing file
+   * leaves today's plain card instead of a hole.
+   */
+  surfaceImage?: string
+
+  /**
+   * The same painting with its word removed, revealed while the card is
+   * pointed at or focused.
+   *
+   * Supplying this turns the card into a reveal: the frame becomes the
+   * background, `surfaceImage` is laid over it as a separate layer, and that
+   * layer fades out while the card's own labels fade in. Two layers rather
+   * than swapping one background, because `background-image` cannot be
+   * transitioned — only opacity can.
+   *
+   * Ignored unless `surfaceImage` is set too; a frame with nothing over it is
+   * just a quieter card.
+   */
+  surfaceFrame?: string
 
   /**
    * No card chrome at all: no wash, no grain, no mask, no pooling, no lift.
@@ -50,7 +80,15 @@ interface RootCardProps extends CardProps {
   bare?: boolean
 }
 
-export function Card({ children, className = '', plain = false, bare = false, ...props }: RootCardProps) {
+export function Card({
+  children,
+  className = '',
+  plain = false,
+  bare = false,
+  surfaceImage,
+  surfaceFrame,
+  ...props
+}: RootCardProps) {
   if (bare) {
     return <div className={className} {...props}>{children}</div>
   }
@@ -73,12 +111,57 @@ export function Card({ children, className = '', plain = false, bare = false, ..
     its rim. Lift on hover is kept — a transform still works — and the pooling
     deepens to replace the shadow that used to do that job.
   */
+  /*
+    The picture fills the card exactly — `100% 100%`, not `cover`.
+
+    The word is painted into the artwork, so anything trimmed off an edge
+    takes part of a word with it. `cover` preserves the picture's proportions
+    and pays for it by cropping: the dashboard tile is 2.398 wide-to-tall on a
+    desktop, and it was throwing away 13% of the height, centred, which ate
+    the bottom of the lettering. Narrower than 1280 the tile becomes about
+    1.5 and `cover` would have cropped 36% of the WIDTH instead — straight
+    through the middle of the word.
+
+    So the art is authored at the tile's own shape (see public/dashboard-cards)
+    and told to fill it. At desktop the two match and nothing is distorted;
+    on a narrower screen the picture squashes rather than losing a letter.
+
+    Everything else — mask, mask sizing, pooling — comes through untouched
+    from paperCardStyle, so a painted card dissolves along exactly the same
+    contour as a plain one.
+  */
+  // A reveal card paints the wordless frame and wears the worded picture as a
+  // layer above it; a plain painted card paints the picture directly.
+  const reveals = Boolean(surfaceImage && surfaceFrame)
+  const painted = reveals ? surfaceFrame : surfaceImage
+
+  const style: CSSProperties = painted
+    ? {
+        ...paperCardStyle,
+        backgroundImage: `url("${painted}"), ${PAPER_BACKGROUND}`,
+        backgroundSize: '100% 100%',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }
+    : paperCardStyle
+
   return (
     <div
-      className={`paper-card transition-all hover:-translate-y-0.5 ${className}`}
-      style={paperCardStyle}
+      className={`paper-card transition-all hover:-translate-y-0.5 ${reveals ? 'card-reveal ' : ''}${className}`}
+      style={style}
       {...props}
     >
+      {reveals && (
+        <div
+          className="card-reveal-word"
+          style={{
+            backgroundImage: `url("${surfaceImage}")`,
+            backgroundSize: '100% 100%',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
+        />
+      )}
       {children}
     </div>
   )

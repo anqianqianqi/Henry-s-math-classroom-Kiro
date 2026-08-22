@@ -220,3 +220,75 @@ export function convertSession(
   }
   return null
 }
+
+export interface ConvertedOccurrence {
+  /** YYYY-MM-DD in the viewer's zone. May differ from the stored date. */
+  date: string
+  /** HH:MM in the viewer's zone. */
+  time: string
+  /** The instant it happens, for taking a zone label AT the session. */
+  at: Date
+}
+
+/**
+ * One dated session, expressed in the viewer's zone.
+ *
+ * ── WHY THIS AND NOT convertSession ─────────────────────────
+ * convertSession answers "when is the next Monday class", and has to go looking
+ * for a date because a weekly slot does not have one. A session does. Knowing
+ * the date makes this both simpler and more honest: there is exactly one
+ * instant to convert and no probing forward, so it works for sessions in the
+ * past as readily as the future.
+ *
+ * ── WHY THE DATE COMES BACK TOO ─────────────────────────────
+ * Because it moves. A class at 21:00 in New York is 09:00 the NEXT MORNING in
+ * Shanghai, and a calendar that converted the time but kept the stored date
+ * would show a student a session on a day they do not have one. The returned
+ * date is the day the reader should look for it under.
+ */
+export function convertOccurrence(
+  date: string,
+  time: string,
+  fromZone: string,
+  toZone: string,
+): ConvertedOccurrence | null {
+  const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date.trim())
+  const hm = /^(\d{1,2}):(\d{2})/.exec(time.trim())
+  if (!ymd || !hm) return null
+  if (!isValidTimeZone(fromZone) || !isValidTimeZone(toZone)) return null
+
+  const [y, m, d] = [Number(ymd[1]), Number(ymd[2]), Number(ymd[3])]
+  const hour = Number(hm[1])
+  const minute = Number(hm[2])
+  if (hour > 23 || minute > 59) return null
+
+  /*
+    Guess the instant using the offset as it stands, then correct once. The
+    first guess can land the far side of a clock change, where the offset is
+    not what was assumed — the correction re-reads it at the guessed instant
+    and pins the right one.
+  */
+  let instant = Date.UTC(y, m - 1, d, hour, minute)
+  instant -= offsetMinutes(fromZone, new Date(instant)) * 60000
+  instant = Date.UTC(y, m - 1, d, hour, minute)
+    - offsetMinutes(fromZone, new Date(instant)) * 60000
+
+  const at = new Date(instant)
+  if (Number.isNaN(at.getTime())) return null
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: toZone,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(at)
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? ''
+  // Midnight comes back as '24' from some ICU builds; the date part is already
+  // the following day, so only the hour needs correcting.
+  const hh = get('hour') === '24' ? '00' : get('hour')
+
+  return {
+    date: `${get('year')}-${get('month')}-${get('day')}`,
+    time: `${hh}:${get('minute')}`,
+    at,
+  }
+}

@@ -132,8 +132,13 @@ function Sheet({
           )}
 
           {hasGraph && hasEnglish && hasChinese ? (
-            /* Graph mode: English lower-left, Chinese lower-right. */
-            <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '0.75em' }}>
+            /* Graph mode: English lower-left, Chinese lower-right.
+
+               The class is a hook for hosts that need this pair to keep its
+               shape regardless of the viewport — printing resolves md: against
+               the width of the page, not the window, and every paper size is
+               narrower than the breakpoint. */
+            <div className="henry-wording-pair grid grid-cols-1 md:grid-cols-2" style={{ gap: '0.75em' }}>
               <WordingPanel text={problem.english} lang="en" palette={palette} />
               <WordingPanel text={problem.chinese} lang="zh" palette={palette} />
             </div>

@@ -9,14 +9,12 @@ import SessionsList from '@/components/SessionsList'
 import SessionDetail from '@/components/SessionDetail'
 import EnrollmentManager from '@/components/EnrollmentManager'
 import JoinRequestManager from '@/components/JoinRequestManager'
-import { generateOccurrences } from '@/lib/utils/occurrences'
 import { HomeButton } from '@/components/ui/HomeButton'
 
 interface Class {
   id: string
   name: string
   description: string | null
-  schedule: Array<{ day: string; startTime: string; endTime: string }> | null
   start_date: string
   end_date: string | null
   created_at: string
@@ -46,7 +44,6 @@ export default function ClassDetailPage() {
   const [isEnrolled, setIsEnrolled] = useState(false)
   const [joinRequestStatus, setJoinRequestStatus] = useState<'none' | 'pending' | 'approved' | 'denied'>('none')
   const [requestingJoin, setRequestingJoin] = useState(false)
-  const [generatingSessions, setGeneratingSessions] = useState(false)
   const [publishedChallenges, setPublishedChallenges] = useState<Array<{
     id: string; title: string; challenge_date: string; max_points: number | null
   }>>([])
@@ -268,56 +265,6 @@ export default function ClassDetailPage() {
     }
   }
 
-  async function handleGenerateSessions() {
-    if (!classData?.schedule || !classData.start_date) {
-      alert('Class needs a schedule and start date to generate sessions')
-      return
-    }
-    setGeneratingSessions(true)
-    try {
-      // Find the latest existing session date
-      const { data: latest } = await supabase
-        .from('class_occurrences')
-        .select('occurrence_date')
-        .eq('class_id', classId)
-        .order('occurrence_date', { ascending: false })
-        .limit(1)
-
-      const startFrom = latest?.[0]
-        ? new Date(new Date(latest[0].occurrence_date).getTime() + 24 * 60 * 60 * 1000)
-        : new Date(classData.start_date)
-
-      const endDate = new Date(startFrom.getTime() + 8 * 7 * 24 * 60 * 60 * 1000)
-
-      // Get current max session number
-      const { data: maxSession } = await supabase
-        .from('class_occurrences')
-        .select('session_number')
-        .eq('class_id', classId)
-        .order('session_number', { ascending: false })
-        .limit(1)
-
-      const startNumber = (maxSession?.[0]?.session_number || 0)
-
-      const occurrences = generateOccurrences(classId, classData.schedule, startFrom, endDate)
-      occurrences.forEach((o, i) => { o.session_number = startNumber + i + 1 })
-
-      if (occurrences.length > 0) {
-        const { error } = await supabase.from('class_occurrences').insert(occurrences)
-        if (error) throw error
-        alert(`Generated ${occurrences.length} new sessions`)
-        window.location.reload()
-      } else {
-        alert('No new sessions to generate')
-      }
-    } catch (err) {
-      console.error('Failed to generate sessions:', err)
-      alert('Failed to generate sessions')
-    } finally {
-      setGeneratingSessions(false)
-    }
-  }
-
   async function handleDelete() {
     if (!confirm('Are you sure you want to delete this class? This cannot be undone.')) {
       return
@@ -381,16 +328,6 @@ export default function ClassDetailPage() {
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6 sm:mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{classData.name}</h1>
-            {classData.schedule && classData.schedule.length > 0 && (
-              <div className="text-gray-600 space-y-1">
-                {classData.schedule.map((slot, index) => (
-                  <p key={index} className="flex items-center gap-2">
-                    <span className="hidden sm:inline">📅</span>
-                    <span>{slot.day}s {slot.startTime} - {slot.endTime}</span>
-                  </p>
-                ))}
-              </div>
-            )}
           </div>
           <div className="flex gap-2">
             {/* Bubble Room button — accessible to teachers and enrolled students */}
@@ -412,14 +349,6 @@ export default function ClassDetailPage() {
                   onClick={() => router.push(`/classes/${classId}/edit`)}
                 >
                   <span className="hidden sm:inline">✏️ </span>Edit
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleGenerateSessions}
-                  disabled={generatingSessions}
-                >
-                  {generatingSessions ? 'Generating...' : '+ Sessions'}
                 </Button>
                 <Button
                   variant="danger"
@@ -482,21 +411,6 @@ export default function ClassDetailPage() {
                   <div>
                     <dt className="text-sm font-medium text-gray-500">{t('class.description')}</dt>
                     <dd className="mt-1 text-gray-900">{classData.description}</dd>
-                  </div>
-                )}
-                {classData.schedule && classData.schedule.length > 0 && (
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">{t('class.meetingTimes')}</dt>
-                    <dd className="mt-1 space-y-2">
-                      {classData.schedule.map((slot, index) => (
-                        <div key={index} className="flex items-center gap-2 text-gray-900">
-                          <span className="hidden sm:inline">📅</span>
-                          <span className="font-medium">{slot.day}s</span>
-                          <span className="text-gray-500">•</span>
-                          <span>{slot.startTime} - {slot.endTime}</span>
-                        </div>
-                      ))}
-                    </dd>
                   </div>
                 )}
                 <div>

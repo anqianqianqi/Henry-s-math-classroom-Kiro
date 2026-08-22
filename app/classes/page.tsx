@@ -11,13 +11,14 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { ClassSchedule } from '@/components/ui/ClassSchedule'
 import { useViewerZone } from '@/components/ui/useViewerZone'
-import { SCHOOL_TIMEZONE } from '@/lib/utils/timezone'
+import { SCHOOL_TIMEZONE, schoolDateString } from '@/lib/utils/timezone'
+import { meetingSlotsFor } from '@/lib/classSchedule/operations'
+import type { DerivedSlot } from '@/lib/classSchedule/derive'
 
 interface Class {
   id: string
   name: string
   description: string | null
-  schedule: Array<{ day: string; startTime: string; endTime: string }> | null
   timezone: string | null
   start_date: string
   end_date: string | null
@@ -31,6 +32,12 @@ interface Class {
 
 export default function ClassesPage() {
   const [classes, setClasses] = useState<Class[]>([])
+  /*
+    When each class meets, derived from its upcoming sessions rather than read
+    from classes.schedule — which no longer says anything, now that sessions are
+    authored one at a time on the dashboard calendar. Keyed by class id.
+  */
+  const [meetings, setMeetings] = useState<Record<string, DerivedSlot[]>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isTeacher, setIsTeacher] = useState(false)
@@ -78,6 +85,7 @@ export default function ClassesPage() {
           .order('created_at', { ascending: false })
         if (error) throw error
         setClasses(data || [])
+        await loadMeetings(data || [])
       } else {
         // Students see only enrolled classes
         const { data: memberships } = await supabase
@@ -93,6 +101,7 @@ export default function ClassesPage() {
             .order('created_at', { ascending: false })
           if (error) throw error
           setClasses(data || [])
+        await loadMeetings(data || [])
         }
       }
     } catch (err) {
@@ -100,6 +109,19 @@ export default function ClassesPage() {
       setError(err instanceof Error ? err.message : t('class.loadFailed'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  /**
+   * One query for the whole list, not one per class. Failure is swallowed on
+   * purpose: a class card without its meeting line is still a usable card, and
+   * this is not worth taking the page down for.
+   */
+  async function loadMeetings(rows: Class[]) {
+    try {
+      setMeetings(await meetingSlotsFor(supabase, rows.map(c => c.id), schoolDateString()))
+    } catch (err) {
+      console.error('Load meeting pattern error:', err)
     }
   }
 
@@ -165,12 +187,12 @@ export default function ClassesPage() {
                     {cls.description || t('class.noDescription')}
                   </p>
                   <div className="space-y-2 text-sm">
-                    {cls.schedule && cls.schedule.length > 0 && (
+                    {meetings[cls.id]?.length > 0 && (
                       <div className="text-gray-500">
                         <span className="font-medium">{t('class.schedule')}</span>
                         <div className="mt-1 text-xs">
                           <ClassSchedule
-                            slots={cls.schedule}
+                            slots={meetings[cls.id]}
                             classTimezone={cls.timezone ?? SCHOOL_TIMEZONE}
                             viewerTimezone={viewerTimezone}
                           />

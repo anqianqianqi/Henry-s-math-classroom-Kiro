@@ -20,12 +20,6 @@ const DAY_KEYS = [
 ] as const
 
 
-interface ScheduleSlot {
-  id: string
-  day: string
-  startTime: string
-  endTime: string
-}
 
 export default function EditClassPage() {
   const { t } = useLanguage()
@@ -49,9 +43,6 @@ export default function EditClassPage() {
     price: '',
     location: ''
   })
-  const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([
-    { id: crypto.randomUUID(), day: '', startTime: '', endTime: '' }
-  ])
   const [coverImage, setCoverImage] = useState<File | null>(null)
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null)
   const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(null)
@@ -108,18 +99,6 @@ export default function EditClassPage() {
       if (data.learning_objectives && Array.isArray(data.learning_objectives) && data.learning_objectives.length > 0) {
         setLearningObjectives(data.learning_objectives)
       }
-
-      // Load schedule slots from JSONB
-      if (data.schedule && Array.isArray(data.schedule) && data.schedule.length > 0) {
-        setScheduleSlots(
-          data.schedule.map((slot: any) => ({
-            id: crypto.randomUUID(),
-            day: slot.day || '',
-            startTime: slot.startTime || '',
-            endTime: slot.endTime || ''
-          }))
-        )
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load class')
     } finally {
@@ -127,21 +106,6 @@ export default function EditClassPage() {
     }
   }
 
-  function addScheduleSlot() {
-    setScheduleSlots([...scheduleSlots, { id: crypto.randomUUID(), day: '', startTime: '', endTime: '' }])
-  }
-
-  function removeScheduleSlot(id: string) {
-    if (scheduleSlots.length > 1) {
-      setScheduleSlots(scheduleSlots.filter(slot => slot.id !== id))
-    }
-  }
-
-  function updateScheduleSlot(id: string, field: 'day' | 'startTime' | 'endTime', value: string) {
-    setScheduleSlots(scheduleSlots.map(slot =>
-      slot.id === id ? { ...slot, [field]: value } : slot
-    ))
-  }
 
   function handleCoverImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -225,15 +189,6 @@ export default function EditClassPage() {
         }
       }
 
-      // Filter out empty schedule slots and format them
-      const validSlots = scheduleSlots
-        .filter(slot => slot.day && slot.startTime && slot.endTime)
-        .map(slot => ({
-          day: slot.day,
-          startTime: slot.startTime,
-          endTime: slot.endTime
-        }))
-
       // Filter out empty learning objectives
       const validObjectives = learningObjectives.filter(obj => obj.trim() !== '')
 
@@ -242,7 +197,6 @@ export default function EditClassPage() {
         .update({
           name: formData.name,
           description: formData.description || null,
-          schedule: validSlots.length > 0 ? validSlots : null,
           start_date: formData.start_date,
           end_date: formData.end_date || null,
           // Update new marketing fields
@@ -333,82 +287,9 @@ export default function EditClassPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Class Schedule
-                </label>
-                <p className="text-sm text-gray-600 mb-4">
-                  Add one or more meeting times for your class
-                </p>
-                
-                <div className="space-y-3">
-                  {scheduleSlots.map((slot, index) => (
-                    <div key={slot.id} className="flex gap-3 items-start">
-                      <div className="flex-1 space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Day of Week
-                          </label>
-                          <select
-                            value={slot.day}
-                            onChange={(e) => updateScheduleSlot(slot.id, 'day', e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          >
-                            <option value="">{t('classForm.selectDay')}</option>
-                            {DAY_KEYS.map(([value, key]) => (
-                              <option key={value} value={value}>{t(key)}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Start Time
-                            </label>
-                            <input
-                              type="time"
-                              value={slot.startTime}
-                              onChange={(e) => updateScheduleSlot(slot.id, 'startTime', e.target.value)}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              End Time
-                            </label>
-                            <input
-                              type="time"
-                              value={slot.endTime}
-                              onChange={(e) => updateScheduleSlot(slot.id, 'endTime', e.target.value)}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      {scheduleSlots.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeScheduleSlot(slot.id)}
-                          className="mt-8 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Remove this time slot"
-                        >
-                          🗑️
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={addScheduleSlot}
-                  className="mt-4 flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 
-                           rounded-lg transition-colors font-medium text-sm"
-                >
-                  <span>➕</span>
-                  <span>{t('classForm.addMeeting')}</span>
-                </button>
-              </div>
+              {/* The weekly schedule field is gone: a class no longer carries a
+                  time. Its sessions live on the dashboard calendar, which is
+                  the only place they are created or changed. */}
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField 

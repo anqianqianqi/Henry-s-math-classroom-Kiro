@@ -61,7 +61,6 @@ const BASELINE = new Set([
   'app/classes/new/page.tsx',
   'app/dashboard/page.tsx',
   'app/decorations/pet-room/page.tsx',
-  'app/grading/page.tsx',
   'components/BookCoverLivePreview.tsx',
   'components/ChallengeTemplates.tsx',
   'components/CommentThread.tsx',

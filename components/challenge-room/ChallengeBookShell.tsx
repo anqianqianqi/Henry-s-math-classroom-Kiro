@@ -49,6 +49,12 @@ export interface ChallengeBookShellProps {
   date: string
   children: React.ReactNode
   solutionSlot?: React.ReactNode
+  /**
+   * Heading above `solutionSlot`. 2D path only — the 3D spread prints no such
+   * label, because its right page begins level with the worksheet's title row
+   * and a second heading there reads as a stray line.
+   */
+  solutionLabel?: React.ReactNode
   /** 2D path props — passed straight through to MagicBookReveal */
   coverImageUrl?: string
   pageImageUrl?: string
@@ -75,6 +81,7 @@ export function ChallengeBookShell({
   date,
   children,
   solutionSlot,
+  solutionLabel,
   coverImageUrl,
   pageImageUrl,
   coverLayout,
@@ -130,6 +137,7 @@ export function ChallengeBookShell({
       title={title}
       date={date}
       solutionSlot={solutionSlot}
+      solutionLabel={solutionLabel}
       coverImageUrl={coverImageUrl}
       pageImageUrl={pageImageUrl}
       coverLayout={coverLayout}
