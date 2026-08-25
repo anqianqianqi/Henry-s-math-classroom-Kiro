@@ -85,6 +85,13 @@ export const auth = {
     en: 'Welcome to your math learning platform',
     zh: '欢迎来到您的数学学习平台',
   },
+  'auth.landingHeadline': {
+    en: 'Henry Math Classroom',
+    zh: 'Henry 数学教室',
+  },
+  'auth.landingPrimaryCta': { en: 'Enter classroom', zh: '进入教室' },
+  'auth.landingSecondaryCta': { en: 'Create account', zh: '创建账号' },
+  'auth.landingPreviewDateRecent': { en: 'Recent', zh: '最近' },
   'auth.login': { en: 'Login', zh: '登录' },
   'auth.signUp': { en: 'Sign Up', zh: '注册' },
 

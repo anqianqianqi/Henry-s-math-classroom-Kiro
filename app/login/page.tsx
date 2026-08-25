@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
-import { Card } from '@/components/ui/Card'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { OceanAuthShell } from '@/components/auth/OceanAuthShell'
+import { ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -46,18 +47,26 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <OceanAuthShell>
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            {t('auth.appName')}
-          </h1>
-          <p className="mt-2 text-gray-600">{t('auth.signInSubtitle')}</p>
-        </div>
+        <a
+          href="/"
+          className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/12 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-cyan-950/20 backdrop-blur-md transition hover:bg-white/20"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          {t('action.back')}
+        </a>
 
-        <Card>
-          <Card.Body>
-            <form onSubmit={handleLogin} className="space-y-4">
+        <div className="landing-auth-card overflow-hidden rounded-lg border border-white/30 bg-white/76 shadow-2xl shadow-cyan-950/35 backdrop-blur-xl">
+          <div className="border-b border-cyan-900/10 px-6 py-6 text-center">
+            <h1 className="text-3xl font-black leading-tight text-[#08314d]">
+              {t('auth.appName')}
+            </h1>
+            <p className="mt-2 text-sm font-semibold text-cyan-900/70">{t('auth.signInSubtitle')}</p>
+          </div>
+
+          <div className="px-6 py-5">
+            <form onSubmit={handleLogin} className="space-y-4 landing-auth-form">
               {error && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-sm text-red-600">{error}</p>
@@ -83,7 +92,7 @@ export default function LoginPage() {
               />
 
               <div className="text-right -mt-2">
-                <a href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+                <a href="/forgot-password" className="text-sm font-semibold text-[#087579] hover:underline">
                   {t('auth.forgotPassword')}
                 </a>
               </div>
@@ -93,22 +102,23 @@ export default function LoginPage() {
                 variant="primary"
                 size="lg"
                 isLoading={isLoading}
-                className="w-full"
+                className="w-full !rounded-full !text-[#13334c] focus:!ring-[#ffd166]"
               >
                 {t('auth.signIn')}
               </Button>
             </form>
-          </Card.Body>
-          <Card.Footer>
-            <p className="text-sm text-center text-gray-600">
+          </div>
+
+          <div className="border-t border-cyan-900/10 bg-cyan-50/65 px-6 py-4">
+            <p className="text-center text-sm font-semibold text-cyan-950/70">
               {t('auth.noAccount')}{' '}
-              <a href="/signup" className="text-blue-600 hover:underline">
+              <a href="/signup" className="text-[#087579] hover:underline">
                 {t('auth.signUpLink')}
               </a>
             </p>
-          </Card.Footer>
-        </Card>
+          </div>
+        </div>
       </div>
-    </div>
+    </OceanAuthShell>
   )
 }

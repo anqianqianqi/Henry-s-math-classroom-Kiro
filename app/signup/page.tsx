@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
-import { Card } from '@/components/ui/Card'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
+import { OceanAuthShell } from '@/components/auth/OceanAuthShell'
+import { ArrowLeft, MailCheck } from 'lucide-react'
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -67,43 +68,47 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-start justify-center bg-gray-50 px-4 py-16 pt-[max(4rem,calc(env(safe-area-inset-top)+1rem))]">
-      <div className="w-full max-w-md">
+    <OceanAuthShell>
+      <div className="w-full max-w-lg">
         <a
           href="/login"
-          className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 py-2 px-3 -ml-3 rounded-lg active:bg-gray-100"
+          className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/12 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-cyan-950/20 backdrop-blur-md transition hover:bg-white/20"
         >
-          ← {t('action.back')}
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          {t('action.back')}
         </a>
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            {t('auth.appName')}
-          </h1>
-          <p className="mt-2 text-gray-600">{t('auth.signUpSubtitle')}</p>
-        </div>
 
         {emailSent ? (
-          <Card>
-            <Card.Body>
-              <div className="text-center py-6 space-y-4">
-                <span className="text-5xl">📧</span>
-                <h2 className="text-xl font-semibold text-gray-900">{t('auth.checkEmail')}</h2>
-                <p className="text-gray-600">
+          <div className="landing-auth-card overflow-hidden rounded-lg border border-white/30 bg-white/76 shadow-2xl shadow-cyan-950/35 backdrop-blur-xl">
+            <div className="px-6 py-10 text-center">
+              <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[#8fe6d2] text-[#08314d] shadow-[0_5px_0_rgba(3,74,87,0.22)]">
+                <MailCheck className="h-8 w-8" aria-hidden="true" />
+              </div>
+              <div className="space-y-4">
+                <h1 className="text-3xl font-black leading-tight text-[#08314d]">{t('auth.checkEmail')}</h1>
+                <p className="font-semibold leading-6 text-cyan-950/72">
                   {t('auth.confirmationSent', { email })}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm font-semibold text-cyan-950/58">
                   {t('auth.didNotReceive')}
                 </p>
-                <a href="/login" className="text-blue-600 hover:underline text-sm">
+                <a href="/login" className="landing-auth-submit inline-flex rounded-full px-5 py-2.5 text-sm font-black text-[#13334c] shadow-[0_4px_0_rgba(110,71,0,0.2)] transition">
                   {t('auth.goToSignIn')}
                 </a>
               </div>
-            </Card.Body>
-          </Card>
+            </div>
+          </div>
         ) : (
-        <Card>
-          <Card.Body>
-            <form onSubmit={handleSignUp} className="space-y-4">
+        <div className="landing-auth-card overflow-hidden rounded-lg border border-white/30 bg-white/76 shadow-2xl shadow-cyan-950/35 backdrop-blur-xl">
+          <div className="border-b border-cyan-900/10 px-6 py-6 text-center">
+            <h1 className="text-3xl font-black leading-tight text-[#08314d]">
+              {t('auth.appName')}
+            </h1>
+            <p className="mt-2 text-sm font-semibold text-cyan-900/70">{t('auth.signUpSubtitle')}</p>
+          </div>
+
+          <div className="px-6 py-5">
+            <form onSubmit={handleSignUp} className="space-y-4 landing-auth-form">
               {error && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-sm text-red-600">{error}</p>
@@ -172,23 +177,24 @@ export default function SignUpPage() {
                 variant="primary"
                 size="lg"
                 isLoading={isLoading}
-                className="w-full"
+                className="w-full !rounded-full !text-[#13334c] focus:!ring-[#ffd166]"
               >
                 {t('auth.createAccount')}
               </Button>
             </form>
-          </Card.Body>
-          <Card.Footer>
-            <p className="text-sm text-center text-gray-600">
+          </div>
+
+          <div className="border-t border-cyan-900/10 bg-cyan-50/65 px-6 py-4">
+            <p className="text-center text-sm font-semibold text-cyan-950/70">
               {t('auth.haveAccount')}{' '}
-              <a href="/login" className="text-blue-600 hover:underline">
+              <a href="/login" className="text-[#087579] hover:underline">
                 {t('auth.signIn')}
               </a>
             </p>
-          </Card.Footer>
-        </Card>
+          </div>
+        </div>
         )}
       </div>
-    </div>
+    </OceanAuthShell>
   )
 }
