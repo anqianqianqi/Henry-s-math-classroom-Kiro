@@ -13,9 +13,15 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react'
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 
 type LandingCssVars = CSSProperties & Record<`--${string}`, string | number | undefined>
+type PreviewCalendarCell = {
+  day: string
+  problem?: string
+  status?: 'todo' | 'done' | 'comment' | 'locked'
+  today?: boolean
+}
 
 const iconMap = {
   calendar: CalendarDays,
@@ -263,21 +269,63 @@ function assetLayer(asset: LandingAsset): 'background' | 'panel' | 'seabed' {
   return 'background'
 }
 
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
+function buildCalendarPreview(date: Date): { label: string; cells: PreviewCalendarCell[] } {
+  const today = startOfDay(date)
+  const start = new Date(today)
+  start.setDate(today.getDate() - today.getDay())
+
+  const label = today.toLocaleDateString(undefined, {
+    month: 'long',
+    year: 'numeric',
+  })
+
+  const plannedWork: Record<number, Pick<PreviewCalendarCell, 'problem' | 'status'>> = {
+    [-1]: { problem: 'Fractions', status: 'done' },
+    0: { problem: 'Linear', status: 'todo' },
+    3: { problem: 'Class 4:30' },
+    5: { problem: 'Graphing', status: 'todo' },
+  }
+
+  return {
+    label,
+    cells: Array.from({ length: 14 }, (_, index) => {
+      const cellDate = new Date(start)
+      cellDate.setDate(start.getDate() + index)
+      const offset = Math.round((cellDate.getTime() - today.getTime()) / 86_400_000)
+      const work = plannedWork[offset]
+
+      return {
+        day: String(cellDate.getDate()),
+        today: offset === 0,
+        ...work,
+      }
+    }),
+  }
+}
+
 export default function Home() {
   const { t } = useLanguage()
   const [oceanTimeClass, setOceanTimeClass] = useState('landing-ocean-day')
+  const [calendarDate, setCalendarDate] = useState(() => new Date())
   const LoginIcon = iconMap.login
   const SignupIcon = iconMap.userPlus
   const preview = landingTheme.dashboardPreview
+  const previewCalendar = useMemo(() => buildCalendarPreview(calendarDate), [calendarDate])
   const floatingAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'background')
   const panelAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'panel')
   const seabedAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'seabed')
 
   useEffect(() => {
     setOceanTimeClass(getOceanTimeClass())
+    setCalendarDate(new Date())
 
     const interval = window.setInterval(() => {
       setOceanTimeClass(getOceanTimeClass())
+      setCalendarDate(new Date())
     }, 60_000)
 
     return () => window.clearInterval(interval)
@@ -355,7 +403,7 @@ export default function Home() {
 
                   <div className="landing-calendar-shell rounded-lg border p-2 sm:p-3">
                     <div className="mb-2 flex items-center gap-2">
-                      <span className="flex-1 font-serif text-sm font-semibold text-white">August 2026</span>
+                      <span className="flex-1 font-serif text-sm font-semibold text-white">{previewCalendar.label}</span>
                       <span className="grid h-6 w-6 place-items-center rounded-full border border-cyan-100/28 text-xs text-cyan-100/76">‹</span>
                       <span className="grid h-6 w-6 place-items-center rounded-full border border-cyan-100/28 text-xs text-cyan-100/76">›</span>
                     </div>
@@ -367,9 +415,9 @@ export default function Home() {
                       ))}
                     </div>
                     <div className="mt-1 grid grid-cols-7 gap-1">
-                      {preview.calendar.map(cell => (
+                      {previewCalendar.cells.map((cell, index) => (
                         <div
-                          key={`${cell.day}-${cell.problem ?? 'empty'}`}
+                          key={`${cell.day}-${index}-${cell.problem ?? 'empty'}`}
                           className={`landing-calendar-cell ${cell.today ? 'landing-calendar-today' : ''}`}
                         >
                           <span className="text-[9px] font-black">{cell.day}</span>
