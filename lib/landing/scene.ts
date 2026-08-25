@@ -34,6 +34,8 @@ export type LandingAsset =
       delay: string
       speed: string
       scale?: number
+      src?: string
+      className?: string
     }
   | {
       kind: 'clownfish' | 'seahorse' | 'turtle' | 'ray' | 'octopus'
@@ -45,6 +47,7 @@ export type LandingAsset =
       speed: string
       scale?: number
       className?: string
+      src?: string
     }
   | {
       kind: 'starfish' | 'crab' | 'shell'
@@ -56,11 +59,13 @@ export type LandingAsset =
       speed: string
       scale?: number
       className?: string
+      src?: string
     }
   | {
       kind: 'jellyfish'
       layer?: 'background' | 'panel'
       className?: string
+      src?: string
     }
   | {
       kind: 'coral' | 'kelp'
@@ -159,19 +164,19 @@ export const landingTheme: LandingTheme = {
     { kind: 'bubble', left: '72%', size: '8px', delay: '-11s', speed: '14s' },
     { kind: 'bubble', left: '86%', size: '16px', delay: '-5s', speed: '19s' },
     { kind: 'bubble', left: '94%', size: '10px', delay: '-9s', speed: '17s' },
-    { kind: 'fish', top: '16%', delay: '-1.7s', speed: '23s', scale: 0.72, color: '#f8b45f' },
-    { kind: 'fish', top: '38%', delay: '-17.4s', speed: '31s', scale: 0.96, color: '#ef8f84' },
-    { kind: 'fish', top: '58%', delay: '-8.6s', speed: '27s', scale: 0.64, color: '#a7dca9' },
-    { kind: 'clownfish', top: '27%', delay: '-12.9s', speed: '26s', scale: 0.82 },
-    { kind: 'clownfish', top: '69%', delay: '-3.4s', speed: '36s', scale: 0.68 },
-    { kind: 'seahorse', top: '45%', delay: '-24.2s', speed: '43s', scale: 0.76 },
-    { kind: 'turtle', top: '31%', delay: '-6.8s', speed: '49s', scale: 0.86 },
-    { kind: 'ray', top: '53%', delay: '-29.5s', speed: '54s', scale: 0.78 },
-    { kind: 'octopus', top: '74%', delay: '-18.1s', speed: '39s', scale: 0.7 },
-    { kind: 'starfish', layer: 'seabed', left: '36%', bottom: '2.2rem', delay: '-11.3s', speed: '23s', scale: 0.82 },
-    { kind: 'crab', layer: 'seabed', left: '58%', bottom: '1.5rem', delay: '-2.6s', speed: '19s', scale: 0.72 },
-    { kind: 'shell', layer: 'seabed', left: '24%', bottom: '1.15rem', delay: '-15.8s', speed: '21s', scale: 0.82 },
-    { kind: 'jellyfish', layer: 'panel' },
+    { kind: 'fish', top: '16%', delay: '-1.7s', speed: '23s', scale: 0.72, color: '#f8b45f', src: '/landing/creatures/small-fish-gold.png' },
+    { kind: 'fish', top: '38%', delay: '-17.4s', speed: '31s', scale: 0.96, color: '#ef8f84', src: '/landing/creatures/small-fish-coral.png' },
+    { kind: 'fish', top: '58%', delay: '-8.6s', speed: '27s', scale: 0.64, color: '#a7dca9', src: '/landing/creatures/small-fish-gold.png' },
+    { kind: 'clownfish', top: '27%', delay: '-12.9s', speed: '26s', scale: 0.82, src: '/landing/creatures/clownfish.png' },
+    { kind: 'clownfish', top: '69%', delay: '-3.4s', speed: '36s', scale: 0.68, src: '/landing/creatures/clownfish.png' },
+    { kind: 'seahorse', top: '45%', delay: '-24.2s', speed: '43s', scale: 0.76, src: '/landing/creatures/seahorse.png' },
+    { kind: 'turtle', top: '31%', delay: '-6.8s', speed: '49s', scale: 0.86, src: '/landing/creatures/sea-turtle.png' },
+    { kind: 'ray', top: '53%', delay: '-29.5s', speed: '54s', scale: 0.78, src: '/landing/creatures/manta-ray.png' },
+    { kind: 'octopus', top: '74%', delay: '-18.1s', speed: '39s', scale: 0.7, src: '/landing/creatures/octopus.png' },
+    { kind: 'starfish', layer: 'seabed', left: '36%', bottom: '2.2rem', delay: '-11.3s', speed: '23s', scale: 0.82, src: '/landing/creatures/starfish.png' },
+    { kind: 'crab', layer: 'seabed', left: '58%', bottom: '1.5rem', delay: '-2.6s', speed: '19s', scale: 0.72, src: '/landing/creatures/crab.png' },
+    { kind: 'shell', layer: 'seabed', left: '24%', bottom: '1.15rem', delay: '-15.8s', speed: '21s', scale: 0.82, src: '/landing/creatures/shell.png' },
+    { kind: 'jellyfish', layer: 'panel', src: '/landing/creatures/jellyfish.png' },
     { kind: 'coral', className: 'landing-coral-left' },
     { kind: 'coral', className: 'landing-coral-right' },
     { kind: 'kelp', className: 'landing-kelp-one' },

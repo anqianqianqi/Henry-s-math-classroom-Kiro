@@ -65,7 +65,8 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
       animationDelay: asset.delay,
       animationDuration: asset.speed,
       '--fish-scale': asset.scale ?? 1,
-      backgroundColor: asset.color,
+      backgroundColor: asset.src ? undefined : asset.color,
+      backgroundImage: asset.src ? `url(${asset.src})` : undefined,
     }
   }
 
@@ -86,6 +87,13 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
       animationDelay: asset.delay,
       animationDuration: asset.speed,
       '--creature-scale': asset.scale ?? 1,
+      backgroundImage: asset.src ? `url(${asset.src})` : undefined,
+    }
+  }
+
+  if (asset.kind === 'jellyfish') {
+    return {
+      backgroundImage: asset.src ? `url(${asset.src})` : undefined,
     }
   }
 
@@ -120,6 +128,17 @@ function renderAsset(asset: LandingAsset, index: number) {
   }
 
   if (asset.kind === 'fish') {
+    if (asset.src) {
+      return (
+        <span
+          key={`fish-${index}`}
+          className={`landing-art landing-art-fish ${asset.className ?? ''}`}
+          aria-hidden="true"
+          style={assetStyle(asset)}
+        />
+      )
+    }
+
     return (
       <span
         key={`fish-${index}`}
@@ -127,21 +146,34 @@ function renderAsset(asset: LandingAsset, index: number) {
         aria-hidden="true"
         style={assetStyle(asset)}
       >
-        <span />
+        <span className="landing-creature-detail" />
+        <span className="landing-creature-symbol">=</span>
       </span>
     )
   }
 
   if (asset.kind === 'jellyfish') {
+    if (asset.src) {
+      return (
+        <span
+          key={`jellyfish-${index}`}
+          className={`landing-art landing-art-jellyfish ${asset.className ?? ''}`}
+          aria-hidden="true"
+          style={assetStyle(asset)}
+        />
+      )
+    }
+
     return (
       <div
         key={`jellyfish-${index}`}
         className={`landing-jellyfish ${asset.className ?? ''}`}
         aria-hidden="true"
       >
-        <span />
-        <span />
-        <span />
+        <span className="landing-jelly-tentacle" />
+        <span className="landing-jelly-tentacle" />
+        <span className="landing-jelly-tentacle" />
+        <span className="landing-creature-symbol">√</span>
       </div>
     )
   }
@@ -156,6 +188,17 @@ function renderAsset(asset: LandingAsset, index: number) {
     asset.kind === 'crab' ||
     asset.kind === 'shell'
   ) {
+    if (asset.src) {
+      return (
+        <span
+          key={`${asset.kind}-${index}`}
+          className={`landing-art landing-art-${asset.kind} ${asset.className ?? ''}`}
+          aria-hidden="true"
+          style={assetStyle(asset)}
+        />
+      )
+    }
+
     return (
       <span
         key={`${asset.kind}-${index}`}
@@ -163,7 +206,8 @@ function renderAsset(asset: LandingAsset, index: number) {
         aria-hidden="true"
         style={assetStyle(asset)}
       >
-        <span />
+        <span className="landing-creature-detail" />
+        <span className="landing-creature-symbol">{creatureSymbol(asset.kind)}</span>
       </span>
     )
   }
@@ -188,6 +232,29 @@ function renderAsset(asset: LandingAsset, index: number) {
       style={assetStyle(asset)}
     />
   )
+}
+
+function creatureSymbol(kind: LandingAsset['kind']) {
+  switch (kind) {
+    case 'clownfish':
+      return '='
+    case 'seahorse':
+      return '?'
+    case 'turtle':
+      return 'π'
+    case 'ray':
+      return '∑'
+    case 'octopus':
+      return '∞'
+    case 'starfish':
+      return '*'
+    case 'crab':
+      return '≤'
+    case 'shell':
+      return '∪'
+    default:
+      return ''
+  }
 }
 
 function assetLayer(asset: LandingAsset): 'background' | 'panel' | 'seabed' {
@@ -236,15 +303,19 @@ export default function Home() {
                 href="/login"
                 className="landing-primary-cta inline-flex min-h-14 items-center justify-center gap-2 rounded-full px-7 text-base font-black shadow-[0_7px_0_rgba(110,71,0,0.28)] transition hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-white/60 active:translate-y-1 active:shadow-none"
               >
-                <LoginIcon className="h-5 w-5" aria-hidden="true" />
-                {t(landingTheme.content.primaryCta)}
+                <span className="landing-cta-icon" aria-hidden="true">
+                  <LoginIcon className="h-4 w-4" />
+                </span>
+                <span className="relative z-10">{t(landingTheme.content.primaryCta)}</span>
               </a>
               <a
                 href="/signup"
-                className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full border border-white/55 bg-white/14 px-7 text-base font-black text-white shadow-lg shadow-cyan-950/20 backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/22 focus:outline-none focus:ring-4 focus:ring-white/45"
+                className="landing-secondary-cta inline-flex min-h-14 items-center justify-center gap-2 rounded-full border border-white/55 bg-white/14 px-7 text-base font-black text-white shadow-lg shadow-cyan-950/20 backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/22 focus:outline-none focus:ring-4 focus:ring-white/45"
               >
-                <SignupIcon className="h-5 w-5" aria-hidden="true" />
-                {t(landingTheme.content.secondaryCta)}
+                <span className="landing-cta-icon landing-cta-icon-secondary" aria-hidden="true">
+                  <SignupIcon className="h-4 w-4" />
+                </span>
+                <span className="relative z-10">{t(landingTheme.content.secondaryCta)}</span>
               </a>
             </div>
           </div>

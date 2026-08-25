@@ -43,7 +43,8 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
       animationDelay: asset.delay,
       animationDuration: asset.speed,
       '--fish-scale': asset.scale ?? 1,
-      backgroundColor: asset.color,
+      backgroundColor: asset.src ? undefined : asset.color,
+      backgroundImage: asset.src ? `url(${asset.src})` : undefined,
     }
   }
 
@@ -64,6 +65,13 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
       animationDelay: asset.delay,
       animationDuration: asset.speed,
       '--creature-scale': asset.scale ?? 1,
+      backgroundImage: asset.src ? `url(${asset.src})` : undefined,
+    }
+  }
+
+  if (asset.kind === 'jellyfish') {
+    return {
+      backgroundImage: asset.src ? `url(${asset.src})` : undefined,
     }
   }
 
@@ -98,6 +106,17 @@ function renderAsset(asset: LandingAsset, index: number) {
   }
 
   if (asset.kind === 'fish') {
+    if (asset.src) {
+      return (
+        <span
+          key={`fish-${index}`}
+          className={`landing-art landing-art-fish ${asset.className ?? ''}`}
+          aria-hidden="true"
+          style={assetStyle(asset)}
+        />
+      )
+    }
+
     return (
       <span
         key={`fish-${index}`}
@@ -105,21 +124,34 @@ function renderAsset(asset: LandingAsset, index: number) {
         aria-hidden="true"
         style={assetStyle(asset)}
       >
-        <span />
+        <span className="landing-creature-detail" />
+        <span className="landing-creature-symbol">=</span>
       </span>
     )
   }
 
   if (asset.kind === 'jellyfish') {
+    if (asset.src) {
+      return (
+        <span
+          key={`jellyfish-${index}`}
+          className={`landing-art landing-art-jellyfish ${asset.className ?? ''}`}
+          aria-hidden="true"
+          style={assetStyle(asset)}
+        />
+      )
+    }
+
     return (
       <div
         key={`jellyfish-${index}`}
         className={`landing-jellyfish ${asset.className ?? ''}`}
         aria-hidden="true"
       >
-        <span />
-        <span />
-        <span />
+        <span className="landing-jelly-tentacle" />
+        <span className="landing-jelly-tentacle" />
+        <span className="landing-jelly-tentacle" />
+        <span className="landing-creature-symbol">√</span>
       </div>
     )
   }
@@ -134,6 +166,17 @@ function renderAsset(asset: LandingAsset, index: number) {
     asset.kind === 'crab' ||
     asset.kind === 'shell'
   ) {
+    if (asset.src) {
+      return (
+        <span
+          key={`${asset.kind}-${index}`}
+          className={`landing-art landing-art-${asset.kind} ${asset.className ?? ''}`}
+          aria-hidden="true"
+          style={assetStyle(asset)}
+        />
+      )
+    }
+
     return (
       <span
         key={`${asset.kind}-${index}`}
@@ -141,7 +184,8 @@ function renderAsset(asset: LandingAsset, index: number) {
         aria-hidden="true"
         style={assetStyle(asset)}
       >
-        <span />
+        <span className="landing-creature-detail" />
+        <span className="landing-creature-symbol">{creatureSymbol(asset.kind)}</span>
       </span>
     )
   }
@@ -166,6 +210,29 @@ function renderAsset(asset: LandingAsset, index: number) {
       style={assetStyle(asset)}
     />
   )
+}
+
+function creatureSymbol(kind: LandingAsset['kind']) {
+  switch (kind) {
+    case 'clownfish':
+      return '='
+    case 'seahorse':
+      return '?'
+    case 'turtle':
+      return 'π'
+    case 'ray':
+      return '∑'
+    case 'octopus':
+      return '∞'
+    case 'starfish':
+      return '*'
+    case 'crab':
+      return '≤'
+    case 'shell':
+      return '∪'
+    default:
+      return ''
+  }
 }
 
 function assetLayer(asset: LandingAsset): 'background' | 'panel' | 'seabed' {

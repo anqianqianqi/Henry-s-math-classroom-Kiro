@@ -212,7 +212,7 @@ body {
   transform: rotate(-8deg);
 }
 
-.landing-fish span {
+.landing-fish .landing-creature-detail {
   position: absolute;
   right: 2.45rem;
   top: -0.42rem;
@@ -222,6 +222,35 @@ body {
   background: rgba(255, 250, 222, 0.5);
   transform: rotate(12deg);
   box-shadow: -0.35rem 2.28rem 0 -0.18rem rgba(255, 250, 222, 0.42);
+}
+
+.landing-creature-symbol {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  color: rgba(30, 55, 64, 0.42);
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow:
+    0 1px 0 rgba(255, 250, 222, 0.18),
+    0 0 0.45rem rgba(255, 250, 222, 0.12);
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.landing-ocean-night .landing-creature-symbol {
+  color: rgba(218, 241, 255, 0.5);
+  text-shadow:
+    0 0 0.45rem rgba(169, 232, 236, 0.28),
+    0 1px 0 rgba(5, 24, 42, 0.3);
+}
+
+.landing-fish .landing-creature-symbol {
+  inset: 0.35rem 1.15rem 0.28rem 1.15rem;
+  font-size: 2.25rem;
+  transform: rotate(-3deg) scaleX(1.25);
 }
 
 .landing-creature {
@@ -279,7 +308,7 @@ body {
   animation: landing-fin-flutter 2.2s ease-in-out infinite;
 }
 
-.landing-clownfish span {
+.landing-clownfish .landing-creature-detail {
   position: absolute;
   right: 0.36rem;
   top: 0.48rem;
@@ -288,6 +317,13 @@ body {
   border-radius: 9999px;
   background: radial-gradient(circle at 54% 52%, #163342 0 0.1rem, rgba(255, 246, 213, 0.5) 0.105rem 0.13rem, transparent 0.14rem);
   box-shadow: 0 0 0 0.12rem rgba(93, 58, 48, 0.12);
+}
+
+.landing-clownfish .landing-creature-symbol {
+  inset: 0.14rem 1.1rem 0.18rem 1rem;
+  color: rgba(93, 58, 48, 0.72);
+  font-size: 2.1rem;
+  transform: rotate(-2deg) scaleX(1.4);
 }
 
 .landing-seahorse {
@@ -335,7 +371,7 @@ body {
   transform: rotate(-28deg);
 }
 
-.landing-seahorse span {
+.landing-seahorse .landing-creature-detail {
   position: absolute;
   left: -0.42rem;
   top: 1.22rem;
@@ -345,6 +381,16 @@ body {
   background:
     repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.44) 0 0.16rem, rgba(255, 255, 255, 0.12) 0.16rem 0.3rem);
   clip-path: polygon(100% 0, 0 12%, 72% 25%, 0 38%, 72% 52%, 0 66%, 72% 80%, 0 94%, 100% 100%);
+}
+
+.landing-seahorse .landing-creature-symbol {
+  left: 0.45rem;
+  top: 0.18rem;
+  width: 1.65rem;
+  height: 3.9rem;
+  color: rgba(116, 74, 25, 0.62);
+  font-size: 4rem;
+  transform: rotate(5deg) scaleX(0.82);
 }
 
 .landing-starfish {
@@ -367,11 +413,18 @@ body {
   animation: landing-starfish-drift 22s ease-in-out infinite;
 }
 
-.landing-starfish span {
+.landing-starfish .landing-creature-detail {
   position: absolute;
   inset: 0.72rem;
   border-radius: 48% 52% 54% 46%;
   background: radial-gradient(circle at 50% 50%, rgba(255, 250, 222, 0.28), transparent 62%);
+}
+
+.landing-starfish .landing-creature-symbol {
+  inset: 0.08rem;
+  color: rgba(114, 53, 36, 0.52);
+  font-size: 3.1rem;
+  transform: rotate(8deg);
 }
 
 .landing-turtle {
@@ -421,7 +474,7 @@ body {
   border: 0.2rem solid rgba(6, 56, 45, 0.3);
 }
 
-.landing-turtle span {
+.landing-turtle .landing-creature-detail {
   position: absolute;
   left: 0.5rem;
   top: -0.32rem;
@@ -435,6 +488,16 @@ body {
     2.84rem 2.54rem 0 #79dca4,
     -0.76rem 1.6rem 0 -0.23rem #2b8058;
   animation: landing-flipper 2.8s ease-in-out infinite;
+}
+
+.landing-turtle .landing-creature-symbol {
+  left: 0.84rem;
+  top: 0.42rem;
+  width: 3.1rem;
+  height: 2.1rem;
+  color: rgba(6, 56, 45, 0.42);
+  font-size: 2.35rem;
+  transform: rotate(-4deg) scaleX(1.08);
 }
 
 .landing-ray {
@@ -477,6 +540,16 @@ body {
   border-radius: 50%;
   background: rgba(255, 250, 222, 0.22);
   box-shadow: 3.44rem 0.02rem 0 rgba(255, 250, 222, 0.16);
+}
+
+.landing-ray .landing-creature-symbol {
+  left: 1.38rem;
+  top: 0.28rem;
+  width: 3rem;
+  height: 2rem;
+  color: rgba(22, 51, 66, 0.38);
+  font-size: 2.15rem;
+  transform: rotate(3deg) scaleX(1.1);
 }
 
 .landing-octopus {
@@ -529,7 +602,7 @@ body {
   background: rgba(6, 35, 58, 0.48);
 }
 
-.landing-octopus span {
+.landing-octopus .landing-creature-detail {
   position: absolute;
   left: 0.72rem;
   top: -0.38rem;
@@ -537,6 +610,16 @@ body {
   height: 0.68rem;
   border-radius: 9999px 9999px 0 0;
   background: rgba(255, 255, 255, 0.28);
+}
+
+.landing-octopus .landing-creature-symbol {
+  left: 0.36rem;
+  top: 0.35rem;
+  width: 2.7rem;
+  height: 2.05rem;
+  color: rgba(69, 42, 82, 0.44);
+  font-size: 2.7rem;
+  transform: rotate(-3deg);
 }
 
 .landing-crab {
@@ -580,7 +663,7 @@ body {
   transform: rotate(38deg);
 }
 
-.landing-crab span {
+.landing-crab .landing-creature-detail {
   position: absolute;
   left: 0.34rem;
   top: 1.1rem;
@@ -593,6 +676,16 @@ body {
     1.3rem -0.02rem 0 #d9535f,
     1.95rem 0.16rem 0 #d9535f,
     2.6rem -0.02rem 0 #d9535f;
+}
+
+.landing-crab .landing-creature-symbol {
+  left: 0.52rem;
+  top: 0.05rem;
+  width: 2.5rem;
+  height: 1.5rem;
+  color: rgba(96, 45, 42, 0.48);
+  font-size: 1.8rem;
+  transform: rotate(-4deg) scaleX(1.2);
 }
 
 .landing-shell {
@@ -614,7 +707,7 @@ body {
   animation: landing-shell-rock 18s ease-in-out infinite;
 }
 
-.landing-shell span {
+.landing-shell .landing-creature-detail {
   position: absolute;
   left: 50%;
   bottom: 0.18rem;
@@ -623,6 +716,13 @@ body {
   background: rgba(117, 70, 42, 0.22);
   transform: translateX(-50%);
   box-shadow: -0.72rem 0.14rem 0 rgba(117, 70, 42, 0.15), 0.72rem 0.14rem 0 rgba(117, 70, 42, 0.15);
+}
+
+.landing-shell .landing-creature-symbol {
+  inset: 0.26rem 0.4rem 0.25rem;
+  color: rgba(117, 70, 42, 0.42);
+  font-size: 2.5rem;
+  transform: rotate(1deg) scaleX(1.12);
 }
 
 .landing-image-asset {
@@ -640,16 +740,178 @@ body {
   pointer-events: none;
 }
 
+.landing-art {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  filter: drop-shadow(0 12px 18px rgba(5, 35, 58, 0.16));
+  pointer-events: none;
+}
+
+.landing-ocean-night .landing-art {
+  filter: drop-shadow(0 0 14px rgba(169, 232, 236, 0.2)) drop-shadow(0 12px 18px rgba(5, 22, 38, 0.2));
+}
+
+.landing-art-fish {
+  left: -7rem;
+  width: 5.5rem;
+  height: 2.75rem;
+  animation: landing-fish-swim 22s linear infinite;
+}
+
+.landing-art-clownfish {
+  left: -6rem;
+  width: 5.6rem;
+  height: 2.8rem;
+  animation: landing-creature-swim 24s linear infinite;
+}
+
+.landing-art-seahorse {
+  left: -4rem;
+  width: 3.2rem;
+  height: 5.35rem;
+  animation: landing-seahorse-swim 32s linear infinite;
+}
+
+.landing-art-turtle {
+  left: -6rem;
+  width: 6rem;
+  height: 3.6rem;
+  animation: landing-creature-swim 36s linear infinite;
+}
+
+.landing-art-ray {
+  left: -7rem;
+  width: 6.8rem;
+  height: 3.4rem;
+  animation: landing-ray-glide 40s linear infinite;
+}
+
+.landing-art-octopus {
+  left: -4rem;
+  width: 4rem;
+  height: 4rem;
+  animation: landing-octopus-drift 30s linear infinite;
+}
+
+.landing-art-starfish {
+  width: 3.6rem;
+  height: 3.6rem;
+  animation: landing-starfish-drift 22s ease-in-out infinite;
+}
+
+.landing-art-crab {
+  width: 4.2rem;
+  height: 3rem;
+  animation: landing-crab-scuttle 14s ease-in-out infinite;
+}
+
+.landing-art-shell {
+  width: 3.45rem;
+  height: 2.6rem;
+  animation: landing-shell-rock 18s ease-in-out infinite;
+}
+
+.landing-art-jellyfish {
+  right: 1.1rem;
+  bottom: 1.2rem;
+  z-index: 0;
+  width: 6.3rem;
+  height: 8.7rem;
+  opacity: 0.86;
+  animation: landing-jelly-drift 7s ease-in-out infinite;
+}
+
 .landing-primary-cta {
+  position: relative;
+  overflow: hidden;
   color: var(--landing-cta-text, #13334c);
-  background: var(--landing-cta, #ffd166);
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 253, 238, 0.6), transparent 1.8rem),
+    radial-gradient(circle at 76% 92%, rgba(229, 166, 88, 0.2), transparent 2.8rem),
+    repeating-linear-gradient(115deg, rgba(126, 97, 48, 0.035) 0 1px, transparent 1px 8px),
+    var(--landing-cta, #ffd166);
   box-shadow:
     0 7px 0 rgba(126, 97, 48, 0.22),
     0 16px 32px rgba(70, 96, 88, 0.18);
 }
 
+.landing-primary-cta::before,
+.landing-secondary-cta::before {
+  position: absolute;
+  inset: 0.12rem;
+  content: "";
+  border-radius: inherit;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.24), transparent 36%),
+    radial-gradient(ellipse at 70% 110%, rgba(255, 255, 255, 0.16), transparent 42%);
+  pointer-events: none;
+}
+
 .landing-primary-cta:hover {
-  background: var(--landing-cta-hover, #ffe08a);
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 253, 238, 0.72), transparent 1.8rem),
+    radial-gradient(circle at 76% 92%, rgba(229, 166, 88, 0.18), transparent 2.8rem),
+    repeating-linear-gradient(115deg, rgba(126, 97, 48, 0.03) 0 1px, transparent 1px 8px),
+    var(--landing-cta-hover, #ffe08a);
+}
+
+.landing-secondary-cta {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 253, 238, 0.18), transparent 1.9rem),
+    radial-gradient(circle at 86% 92%, rgba(185, 232, 190, 0.18), transparent 2.7rem),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 8px),
+    rgba(255, 255, 255, 0.14);
+}
+
+.landing-secondary-cta:hover {
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 253, 238, 0.24), transparent 1.9rem),
+    radial-gradient(circle at 86% 92%, rgba(185, 232, 190, 0.24), transparent 2.7rem),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 8px),
+    rgba(255, 255, 255, 0.22);
+}
+
+.landing-cta-icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 1.95rem;
+  height: 1.95rem;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 44% 56% 48% 52%;
+  color: color-mix(in srgb, var(--landing-cta-text, #35505b) 86%, #6aa195);
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 253, 238, 0.86), transparent 0.52rem),
+    radial-gradient(circle at 72% 82%, rgba(185, 232, 190, 0.42), transparent 0.74rem),
+    rgba(255, 253, 238, 0.34);
+  box-shadow:
+    inset 0 0 0 1px rgba(126, 97, 48, 0.08),
+    0 0.18rem 0.5rem rgba(70, 96, 88, 0.13);
+  transform: rotate(-4deg);
+}
+
+.landing-cta-icon svg {
+  stroke-width: 2.8;
+  filter: drop-shadow(0 1px 0 rgba(255, 253, 238, 0.42));
+}
+
+.landing-cta-icon-secondary {
+  color: rgba(245, 255, 252, 0.92);
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 253, 238, 0.28), transparent 0.52rem),
+    radial-gradient(circle at 72% 82%, rgba(185, 232, 190, 0.3), transparent 0.74rem),
+    rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 0.18rem 0.5rem rgba(8, 49, 77, 0.16);
+  transform: rotate(4deg);
 }
 
 .landing-auth-card {
@@ -927,7 +1189,7 @@ body {
   opacity: 0.92;
 }
 
-.landing-jellyfish span {
+.landing-jellyfish .landing-jelly-tentacle {
   position: absolute;
   top: 5.5rem;
   width: 0.28rem;
@@ -938,18 +1200,32 @@ body {
   animation: landing-tentacle 2.8s ease-in-out infinite;
 }
 
-.landing-jellyfish span:nth-child(1) {
+.landing-jellyfish .landing-jelly-tentacle:nth-child(1) {
   left: 1.7rem;
 }
 
-.landing-jellyfish span:nth-child(2) {
+.landing-jellyfish .landing-jelly-tentacle:nth-child(2) {
   left: 2.9rem;
   animation-delay: -0.9s;
 }
 
-.landing-jellyfish span:nth-child(3) {
+.landing-jellyfish .landing-jelly-tentacle:nth-child(3) {
   left: 4.1rem;
   animation-delay: -1.8s;
+}
+
+.landing-jellyfish .landing-creature-symbol {
+  left: 1.2rem;
+  top: 0.7rem;
+  width: 3.6rem;
+  height: 4.1rem;
+  color: rgba(95, 83, 97, 0.34);
+  font-size: 4.1rem;
+  transform: rotate(-7deg) scaleY(1.08);
+}
+
+.landing-ocean-night .landing-jellyfish .landing-creature-symbol {
+  color: rgba(218, 241, 255, 0.44);
 }
 
 .landing-seabed {
@@ -983,15 +1259,24 @@ body {
 .landing-coral,
 .landing-kelp {
   position: absolute;
-  bottom: 1.2rem;
+  bottom: 1rem;
+  filter: drop-shadow(0 0.5rem 0.65rem rgba(70, 96, 88, 0.15));
   transform-origin: bottom center;
 }
 
 .landing-coral {
-  width: 4.5rem;
-  height: 5.5rem;
-  background: var(--landing-coral, #ff7a7a);
-  clip-path: polygon(45% 100%, 45% 60%, 18% 38%, 28% 28%, 48% 46%, 51% 22%, 62% 22%, 60% 51%, 80% 33%, 90% 43%, 61% 67%, 61% 100%);
+  width: 5.2rem;
+  height: 5.8rem;
+  border-radius: 9999px 9999px 0.7rem 0.7rem;
+  background:
+    radial-gradient(ellipse at 22% 72%, color-mix(in srgb, var(--landing-coral, #f28f7c) 82%, white) 0 0.62rem, transparent 0.66rem),
+    radial-gradient(ellipse at 39% 42%, color-mix(in srgb, var(--landing-coral, #f28f7c) 88%, white) 0 0.56rem, transparent 0.6rem),
+    radial-gradient(ellipse at 55% 24%, color-mix(in srgb, var(--landing-coral, #f28f7c) 78%, white) 0 0.62rem, transparent 0.66rem),
+    radial-gradient(ellipse at 76% 52%, color-mix(in srgb, var(--landing-coral, #f28f7c) 86%, white) 0 0.58rem, transparent 0.62rem),
+    linear-gradient(90deg, transparent 0 15%, var(--landing-coral, #f28f7c) 16% 28%, transparent 29% 36%, color-mix(in srgb, var(--landing-coral, #f28f7c) 88%, #d86f6f) 37% 50%, transparent 51% 58%, var(--landing-coral, #f28f7c) 59% 72%, transparent 73%),
+    linear-gradient(180deg, color-mix(in srgb, var(--landing-coral, #f28f7c) 86%, white), var(--landing-coral, #f28f7c));
+  clip-path: polygon(46% 100%, 46% 68%, 17% 51%, 12% 33%, 29% 36%, 47% 49%, 47% 18%, 57% 8%, 65% 20%, 63% 50%, 82% 34%, 94% 38%, 86% 55%, 61% 72%, 61% 100%);
+  opacity: 0.9;
   animation: landing-kelp-sway 4.8s ease-in-out infinite;
 }
 
@@ -1001,17 +1286,26 @@ body {
 
 .landing-coral-right {
   right: 10%;
-  width: 5.2rem;
-  height: 6.2rem;
-  background: var(--landing-sunlight, #ffd166);
+  width: 5.7rem;
+  height: 6.4rem;
+  background:
+    radial-gradient(ellipse at 22% 72%, color-mix(in srgb, var(--landing-sunlight, #ffe6a8) 86%, white) 0 0.62rem, transparent 0.66rem),
+    radial-gradient(ellipse at 39% 42%, color-mix(in srgb, var(--landing-sunlight, #ffe6a8) 76%, #f28f7c) 0 0.56rem, transparent 0.6rem),
+    radial-gradient(ellipse at 55% 24%, color-mix(in srgb, var(--landing-sunlight, #ffe6a8) 88%, white) 0 0.62rem, transparent 0.66rem),
+    radial-gradient(ellipse at 76% 52%, color-mix(in srgb, var(--landing-sunlight, #ffe6a8) 78%, #f28f7c) 0 0.58rem, transparent 0.62rem),
+    linear-gradient(90deg, transparent 0 15%, var(--landing-sunlight, #ffe6a8) 16% 28%, transparent 29% 36%, color-mix(in srgb, var(--landing-sunlight, #ffe6a8) 82%, #d89b5f) 37% 50%, transparent 51% 58%, var(--landing-sunlight, #ffe6a8) 59% 72%, transparent 73%),
+    linear-gradient(180deg, color-mix(in srgb, var(--landing-sunlight, #ffe6a8) 86%, white), var(--landing-sunlight, #ffe6a8));
   animation-delay: -1.8s;
 }
 
 .landing-kelp {
-  width: 1.2rem;
-  height: 7rem;
-  border-radius: 9999px 9999px 0 0;
-  background: linear-gradient(color-mix(in srgb, var(--landing-accent, #8fe6d2) 72%, #52d273), #128c65);
+  width: 1.45rem;
+  height: 7.2rem;
+  border-radius: 9999px 9999px 0.35rem 0.35rem;
+  background:
+    radial-gradient(ellipse at 36% 15%, rgba(255, 253, 238, 0.18), transparent 1.4rem),
+    linear-gradient(color-mix(in srgb, var(--landing-accent, #8fe6d2) 68%, #6acb87), #178762);
+  opacity: 0.88;
   animation: landing-kelp-sway 5.4s ease-in-out infinite;
 }
 
@@ -1021,8 +1315,10 @@ body {
   width: 1.4rem;
   height: 2.8rem;
   content: "";
-  border-radius: 9999px 0 9999px 0;
-  background: color-mix(in srgb, var(--landing-accent, #8fe6d2) 62%, #59d68a);
+  border-radius: 9999px 12% 9999px 18%;
+  background:
+    radial-gradient(ellipse at 34% 22%, rgba(255, 253, 238, 0.18), transparent 0.8rem),
+    color-mix(in srgb, var(--landing-accent, #8fe6d2) 62%, #59d68a);
 }
 
 .landing-kelp::before {
@@ -1219,8 +1515,9 @@ body {
   .landing-air-bubble,
   .landing-fish,
   .landing-creature,
+  .landing-art,
   .landing-jellyfish,
-  .landing-jellyfish span,
+  .landing-jelly-tentacle,
   .landing-coral,
   .landing-kelp {
     animation: none !important;
