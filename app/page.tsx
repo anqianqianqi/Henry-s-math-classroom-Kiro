@@ -65,14 +65,24 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
     }
   }
 
+  if (asset.kind === 'math') {
+    return {
+      left: asset.left,
+      animationDelay: asset.delay,
+      animationDuration: asset.speed,
+      '--math-bubble-scale': asset.scale ?? 1,
+    }
+  }
+
   if (asset.kind === 'fish') {
     return {
       top: asset.top,
       animationDelay: asset.delay,
       animationDuration: asset.speed,
       '--fish-scale': asset.scale ?? 1,
+      '--art-image': asset.src ? `url(${asset.src})` : undefined,
+      '--art-frame-image': asset.frameSrcs?.[0] ? `url(${asset.frameSrcs[0]})` : asset.frameSrc ? `url(${asset.frameSrc})` : undefined,
       backgroundColor: asset.src ? undefined : asset.color,
-      backgroundImage: asset.src ? `url(${asset.src})` : undefined,
     }
   }
 
@@ -82,6 +92,7 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
     asset.kind === 'turtle' ||
     asset.kind === 'ray' ||
     asset.kind === 'octopus' ||
+    asset.kind === 'whale' ||
     asset.kind === 'starfish' ||
     asset.kind === 'crab' ||
     asset.kind === 'shell'
@@ -93,13 +104,15 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
       animationDelay: asset.delay,
       animationDuration: asset.speed,
       '--creature-scale': asset.scale ?? 1,
-      backgroundImage: asset.src ? `url(${asset.src})` : undefined,
+      '--art-image': asset.src ? `url(${asset.src})` : undefined,
+      '--art-frame-image': asset.frameSrcs?.[0] ? `url(${asset.frameSrcs[0]})` : asset.frameSrc ? `url(${asset.frameSrc})` : undefined,
     }
   }
 
   if (asset.kind === 'jellyfish') {
     return {
-      backgroundImage: asset.src ? `url(${asset.src})` : undefined,
+      '--art-image': asset.src ? `url(${asset.src})` : undefined,
+      '--art-frame-image': asset.frameSrcs?.[0] ? `url(${asset.frameSrcs[0]})` : asset.frameSrc ? `url(${asset.frameSrc})` : undefined,
     }
   }
 
@@ -133,15 +146,42 @@ function renderAsset(asset: LandingAsset, index: number) {
     )
   }
 
+  if (asset.kind === 'math') {
+    return (
+      <span
+        key={`math-${index}`}
+        className={`landing-math-bubble ${asset.className ?? ''}`}
+        aria-hidden="true"
+        style={assetStyle(asset)}
+      >
+        <span className="landing-math-bubble-symbol">{asset.symbol}</span>
+      </span>
+    )
+  }
+
   if (asset.kind === 'fish') {
     if (asset.src) {
+      const frames = artFrames(asset)
       return (
         <span
           key={`fish-${index}`}
           className={`landing-art landing-art-fish ${asset.className ?? ''}`}
           aria-hidden="true"
           style={assetStyle(asset)}
-        />
+        >
+          <span className={`landing-art-body ${frames.length > 1 ? 'landing-art-body-has-frame' : ''}`}>
+            {frames.map((src, frameIndex) => (
+              <span
+                key={`${src}-${frameIndex}`}
+                className="landing-art-frame"
+                style={{
+                  '--frame-image': `url(${src})`,
+                  '--frame-index': frameIndex,
+                } as LandingCssVars}
+              />
+            ))}
+          </span>
+        </span>
       )
     }
 
@@ -160,13 +200,27 @@ function renderAsset(asset: LandingAsset, index: number) {
 
   if (asset.kind === 'jellyfish') {
     if (asset.src) {
+      const frames = artFrames(asset)
       return (
         <span
           key={`jellyfish-${index}`}
           className={`landing-art landing-art-jellyfish ${asset.className ?? ''}`}
           aria-hidden="true"
           style={assetStyle(asset)}
-        />
+        >
+          <span className={`landing-art-body ${frames.length > 1 ? 'landing-art-body-has-frame' : ''}`}>
+            {frames.map((src, frameIndex) => (
+              <span
+                key={`${src}-${frameIndex}`}
+                className="landing-art-frame"
+                style={{
+                  '--frame-image': `url(${src})`,
+                  '--frame-index': frameIndex,
+                } as LandingCssVars}
+              />
+            ))}
+          </span>
+        </span>
       )
     }
 
@@ -190,18 +244,33 @@ function renderAsset(asset: LandingAsset, index: number) {
     asset.kind === 'turtle' ||
     asset.kind === 'ray' ||
     asset.kind === 'octopus' ||
+    asset.kind === 'whale' ||
     asset.kind === 'starfish' ||
     asset.kind === 'crab' ||
     asset.kind === 'shell'
   ) {
     if (asset.src) {
+      const frames = artFrames(asset)
       return (
         <span
           key={`${asset.kind}-${index}`}
           className={`landing-art landing-art-${asset.kind} ${asset.className ?? ''}`}
           aria-hidden="true"
           style={assetStyle(asset)}
-        />
+        >
+          <span className={`landing-art-body ${frames.length > 1 ? 'landing-art-body-has-frame' : ''}`}>
+            {frames.map((src, frameIndex) => (
+              <span
+                key={`${src}-${frameIndex}`}
+                className="landing-art-frame"
+                style={{
+                  '--frame-image': `url(${src})`,
+                  '--frame-index': frameIndex,
+                } as LandingCssVars}
+              />
+            ))}
+          </span>
+        </span>
       )
     }
 
@@ -240,6 +309,16 @@ function renderAsset(asset: LandingAsset, index: number) {
   )
 }
 
+function artFrames(
+  asset: Extract<LandingAsset, { kind: 'fish' | 'clownfish' | 'seahorse' | 'turtle' | 'ray' | 'octopus' | 'whale' | 'starfish' | 'crab' | 'shell' | 'jellyfish' }>
+) {
+  if (!asset.src) {
+    return []
+  }
+
+  return [asset.src, ...(asset.frameSrcs ?? (asset.frameSrc ? [asset.frameSrc] : []))]
+}
+
 function creatureSymbol(kind: LandingAsset['kind']) {
   switch (kind) {
     case 'clownfish':
@@ -252,6 +331,8 @@ function creatureSymbol(kind: LandingAsset['kind']) {
       return '∑'
     case 'octopus':
       return '∞'
+    case 'whale':
+      return '≈'
     case 'starfish':
       return '*'
     case 'crab':
@@ -315,7 +396,8 @@ export default function Home() {
   const SignupIcon = iconMap.userPlus
   const preview = landingTheme.dashboardPreview
   const previewCalendar = useMemo(() => buildCalendarPreview(calendarDate), [calendarDate])
-  const floatingAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'background')
+  const titleWhaleAsset = landingTheme.assets.find(asset => asset.kind === 'whale')
+  const floatingAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'background' && asset.kind !== 'whale')
   const panelAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'panel')
   const seabedAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'seabed')
 
@@ -339,14 +421,18 @@ export default function Home() {
 
       {floatingAssets.map(renderAsset)}
 
-      <section className="relative z-10 flex min-h-screen items-center px-5 py-8 sm:px-8 sm:py-14 lg:px-14">
+      <section className="relative flex min-h-screen items-center px-5 py-8 sm:px-8 sm:py-14 lg:px-14">
         <div className="mx-auto grid w-full max-w-[88rem] items-center gap-6 sm:gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(28rem,0.95fr)]">
-          <div className="max-w-3xl pt-6 sm:pt-0">
-            <h1 className="max-w-4xl text-4xl font-black leading-[0.98] tracking-normal text-white drop-shadow-2xl sm:text-6xl lg:text-7xl">
-              {t(landingTheme.content.headline)}
-            </h1>
+          <div className="relative max-w-3xl pt-6 sm:pt-0">
+            <div className="landing-title-wrap relative">
+              <h1 className="relative z-0 max-w-4xl text-4xl font-black leading-[0.98] tracking-normal text-white drop-shadow-2xl sm:text-6xl lg:text-7xl">
+                {t(landingTheme.content.headline)}
+              </h1>
 
-            <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row">
+              {titleWhaleAsset ? renderAsset(Object.assign({}, titleWhaleAsset, { className: 'landing-title-whale' }) as LandingAsset, 0) : null}
+            </div>
+
+            <div className="relative z-30 mt-10 flex flex-col gap-3 sm:mt-12 sm:flex-row sm:justify-end">
               <a
                 href="/login"
                 className="landing-primary-cta inline-flex min-h-14 items-center justify-center gap-2 rounded-full px-7 text-base font-black shadow-[0_7px_0_rgba(110,71,0,0.28)] transition hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-white/60 active:translate-y-1 active:shadow-none"
@@ -368,7 +454,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="landing-aquarium-panel relative mx-auto w-full max-w-2xl overflow-hidden rounded-lg border border-white/30 bg-white/16 p-3 shadow-2xl shadow-cyan-950/35 backdrop-blur-xl sm:p-5">
+          <div className="landing-aquarium-panel relative z-30 mx-auto w-full max-w-2xl overflow-hidden rounded-lg border border-white/30 bg-white/16 p-3 shadow-2xl shadow-cyan-950/35 backdrop-blur-xl sm:p-5">
             {panelAssets.map(renderAsset)}
             <div className="relative z-10">
               <div className="flex items-center justify-between gap-4">

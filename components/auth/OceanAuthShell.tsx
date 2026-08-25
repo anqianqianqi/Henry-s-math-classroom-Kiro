@@ -37,14 +37,24 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
     }
   }
 
+  if (asset.kind === 'math') {
+    return {
+      left: asset.left,
+      animationDelay: asset.delay,
+      animationDuration: asset.speed,
+      '--math-bubble-scale': asset.scale ?? 1,
+    }
+  }
+
   if (asset.kind === 'fish') {
     return {
       top: asset.top,
       animationDelay: asset.delay,
       animationDuration: asset.speed,
       '--fish-scale': asset.scale ?? 1,
+      '--art-image': asset.src ? `url(${asset.src})` : undefined,
+      '--art-frame-image': asset.frameSrcs?.[0] ? `url(${asset.frameSrcs[0]})` : asset.frameSrc ? `url(${asset.frameSrc})` : undefined,
       backgroundColor: asset.src ? undefined : asset.color,
-      backgroundImage: asset.src ? `url(${asset.src})` : undefined,
     }
   }
 
@@ -54,6 +64,7 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
     asset.kind === 'turtle' ||
     asset.kind === 'ray' ||
     asset.kind === 'octopus' ||
+    asset.kind === 'whale' ||
     asset.kind === 'starfish' ||
     asset.kind === 'crab' ||
     asset.kind === 'shell'
@@ -65,13 +76,15 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
       animationDelay: asset.delay,
       animationDuration: asset.speed,
       '--creature-scale': asset.scale ?? 1,
-      backgroundImage: asset.src ? `url(${asset.src})` : undefined,
+      '--art-image': asset.src ? `url(${asset.src})` : undefined,
+      '--art-frame-image': asset.frameSrcs?.[0] ? `url(${asset.frameSrcs[0]})` : asset.frameSrc ? `url(${asset.frameSrc})` : undefined,
     }
   }
 
   if (asset.kind === 'jellyfish') {
     return {
-      backgroundImage: asset.src ? `url(${asset.src})` : undefined,
+      '--art-image': asset.src ? `url(${asset.src})` : undefined,
+      '--art-frame-image': asset.frameSrcs?.[0] ? `url(${asset.frameSrcs[0]})` : asset.frameSrc ? `url(${asset.frameSrc})` : undefined,
     }
   }
 
@@ -105,15 +118,42 @@ function renderAsset(asset: LandingAsset, index: number) {
     )
   }
 
+  if (asset.kind === 'math') {
+    return (
+      <span
+        key={`math-${index}`}
+        className={`landing-math-bubble ${asset.className ?? ''}`}
+        aria-hidden="true"
+        style={assetStyle(asset)}
+      >
+        <span className="landing-math-bubble-symbol">{asset.symbol}</span>
+      </span>
+    )
+  }
+
   if (asset.kind === 'fish') {
     if (asset.src) {
+      const frames = artFrames(asset)
       return (
         <span
           key={`fish-${index}`}
           className={`landing-art landing-art-fish ${asset.className ?? ''}`}
           aria-hidden="true"
           style={assetStyle(asset)}
-        />
+        >
+          <span className={`landing-art-body ${frames.length > 1 ? 'landing-art-body-has-frame' : ''}`}>
+            {frames.map((src, frameIndex) => (
+              <span
+                key={`${src}-${frameIndex}`}
+                className="landing-art-frame"
+                style={{
+                  '--frame-image': `url(${src})`,
+                  '--frame-index': frameIndex,
+                } as LandingCssVars}
+              />
+            ))}
+          </span>
+        </span>
       )
     }
 
@@ -132,13 +172,27 @@ function renderAsset(asset: LandingAsset, index: number) {
 
   if (asset.kind === 'jellyfish') {
     if (asset.src) {
+      const frames = artFrames(asset)
       return (
         <span
           key={`jellyfish-${index}`}
           className={`landing-art landing-art-jellyfish ${asset.className ?? ''}`}
           aria-hidden="true"
           style={assetStyle(asset)}
-        />
+        >
+          <span className={`landing-art-body ${frames.length > 1 ? 'landing-art-body-has-frame' : ''}`}>
+            {frames.map((src, frameIndex) => (
+              <span
+                key={`${src}-${frameIndex}`}
+                className="landing-art-frame"
+                style={{
+                  '--frame-image': `url(${src})`,
+                  '--frame-index': frameIndex,
+                } as LandingCssVars}
+              />
+            ))}
+          </span>
+        </span>
       )
     }
 
@@ -162,18 +216,33 @@ function renderAsset(asset: LandingAsset, index: number) {
     asset.kind === 'turtle' ||
     asset.kind === 'ray' ||
     asset.kind === 'octopus' ||
+    asset.kind === 'whale' ||
     asset.kind === 'starfish' ||
     asset.kind === 'crab' ||
     asset.kind === 'shell'
   ) {
     if (asset.src) {
+      const frames = artFrames(asset)
       return (
         <span
           key={`${asset.kind}-${index}`}
           className={`landing-art landing-art-${asset.kind} ${asset.className ?? ''}`}
           aria-hidden="true"
           style={assetStyle(asset)}
-        />
+        >
+          <span className={`landing-art-body ${frames.length > 1 ? 'landing-art-body-has-frame' : ''}`}>
+            {frames.map((src, frameIndex) => (
+              <span
+                key={`${src}-${frameIndex}`}
+                className="landing-art-frame"
+                style={{
+                  '--frame-image': `url(${src})`,
+                  '--frame-index': frameIndex,
+                } as LandingCssVars}
+              />
+            ))}
+          </span>
+        </span>
       )
     }
 
@@ -212,6 +281,16 @@ function renderAsset(asset: LandingAsset, index: number) {
   )
 }
 
+function artFrames(
+  asset: Extract<LandingAsset, { kind: 'fish' | 'clownfish' | 'seahorse' | 'turtle' | 'ray' | 'octopus' | 'whale' | 'starfish' | 'crab' | 'shell' | 'jellyfish' }>
+) {
+  if (!asset.src) {
+    return []
+  }
+
+  return [asset.src, ...(asset.frameSrcs ?? (asset.frameSrc ? [asset.frameSrc] : []))]
+}
+
 function creatureSymbol(kind: LandingAsset['kind']) {
   switch (kind) {
     case 'clownfish':
@@ -224,6 +303,8 @@ function creatureSymbol(kind: LandingAsset['kind']) {
       return '∑'
     case 'octopus':
       return '∞'
+    case 'whale':
+      return '≈'
     case 'starfish':
       return '*'
     case 'crab':

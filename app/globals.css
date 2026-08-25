@@ -108,7 +108,7 @@ body {
   background:
     conic-gradient(from 210deg at 50% 0%, rgba(255, 247, 213, 0.48), transparent 10deg 25deg, rgba(255, 245, 204, 0.28) 34deg, transparent 48deg 360deg);
   filter: blur(11px);
-  opacity: 0.68;
+  opacity: 0.88;
   transform-origin: top center;
   animation: landing-beams 9s ease-in-out infinite alternate;
   pointer-events: none;
@@ -162,6 +162,82 @@ body {
   box-shadow:
     inset 0 0 12px rgba(224, 244, 255, 0.26),
     0 0 16px rgba(169, 232, 236, 0.24);
+}
+
+.landing-math-bubble {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  bottom: -4.25rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 9999px;
+  color: rgba(23, 68, 94, 0.76);
+  background:
+    radial-gradient(circle at 31% 25%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.2) 0.82rem, transparent 1.2rem),
+    radial-gradient(circle at 64% 70%, rgba(255, 255, 255, 0.22), transparent 1.45rem),
+    radial-gradient(circle at center, rgba(226, 252, 255, 0.32), rgba(255, 255, 255, 0.08) 58%, rgba(255, 255, 255, 0.02) 72%);
+  box-shadow:
+    inset 0 0 1.2rem rgba(255, 255, 255, 0.32),
+    inset -0.55rem -0.45rem 0.9rem rgba(45, 143, 166, 0.1),
+    0 0 1.4rem color-mix(in srgb, var(--landing-accent, #8fe6d2) 24%, transparent);
+  opacity: 0;
+  transform-origin: center;
+  animation: landing-math-bubble-rise 20s ease-in infinite;
+  pointer-events: none;
+}
+
+.landing-math-bubble::before {
+  position: absolute;
+  top: 0.56rem;
+  left: 0.64rem;
+  width: 0.56rem;
+  height: 0.56rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.58);
+  content: "";
+}
+
+.landing-math-bubble-symbol {
+  position: relative;
+  z-index: 2;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.62rem;
+  font-weight: 900;
+  line-height: 1;
+  opacity: 0.86;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.36),
+    0 0 0.72rem rgba(255, 255, 255, 0.28);
+  transform: rotate(-6deg);
+}
+
+.landing-math-pearl {
+  color: rgba(54, 57, 106, 0.76);
+}
+
+.landing-math-coral {
+  color: rgba(121, 55, 58, 0.74);
+}
+
+.landing-math-mint {
+  color: rgba(18, 88, 78, 0.74);
+}
+
+.landing-math-blue {
+  color: rgba(18, 72, 108, 0.74);
+}
+
+.landing-math-sun {
+  color: rgba(115, 73, 18, 0.74);
+}
+
+.landing-ocean-night .landing-math-bubble {
+  border-color: rgba(222, 246, 255, 0.52);
+  color: rgba(213, 244, 255, 0.42);
+  filter: drop-shadow(0 0 12px rgba(169, 232, 236, 0.2));
 }
 
 .landing-fish {
@@ -742,13 +818,38 @@ body {
 
 .landing-art {
   position: absolute;
-  z-index: 1;
+  z-index: 12;
   display: block;
+  filter: drop-shadow(0 12px 18px rgba(5, 35, 58, 0.16));
+  pointer-events: none;
+}
+
+.landing-art-body {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-origin: 52% 52%;
+}
+
+.landing-art-frame {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background-image: var(--frame-image);
   background-position: center;
   background-repeat: no-repeat;
   background-size: contain;
-  filter: drop-shadow(0 12px 18px rgba(5, 35, 58, 0.16));
-  pointer-events: none;
+  opacity: 0;
+}
+
+.landing-art-frame:first-child {
+  opacity: 1;
+}
+
+.landing-art-body-has-frame .landing-art-frame:not(:first-child) {
+  animation: landing-art-frame-overlay var(--frame-cycle, 2.4s) ease-in-out infinite;
+  animation-delay: calc(var(--frame-cycle, 2.4s) / -4 * var(--frame-index, 0));
+  opacity: 0;
 }
 
 .landing-ocean-night .landing-art {
@@ -759,60 +860,142 @@ body {
   left: -7rem;
   width: 5.5rem;
   height: 2.75rem;
+  --frame-cycle: 1.36s;
   animation: landing-fish-swim 22s linear infinite;
+}
+
+.landing-art-fish .landing-art-body {
+  animation: landing-fish-body-swim 1.25s ease-in-out infinite;
 }
 
 .landing-art-clownfish {
   left: -6rem;
   width: 5.6rem;
   height: 2.8rem;
+  --frame-cycle: 1.48s;
   animation: landing-creature-swim 24s linear infinite;
+}
+
+.landing-art-clownfish .landing-art-body {
+  animation: landing-clownfish-body-swim 1.3s ease-in-out infinite;
 }
 
 .landing-art-seahorse {
   left: -4rem;
   width: 3.2rem;
   height: 5.35rem;
+  --frame-cycle: 1.9s;
   animation: landing-seahorse-swim 32s linear infinite;
+}
+
+.landing-art-seahorse .landing-art-body {
+  transform-origin: 48% 58%;
+  animation: landing-seahorse-body-swim 2.4s ease-in-out infinite;
 }
 
 .landing-art-turtle {
   left: -6rem;
   width: 6rem;
   height: 3.6rem;
+  --frame-cycle: 2.15s;
   animation: landing-creature-swim 36s linear infinite;
+}
+
+.landing-art-turtle .landing-art-body {
+  animation: landing-turtle-body-swim 2.4s ease-in-out infinite;
 }
 
 .landing-art-ray {
   left: -7rem;
   width: 6.8rem;
   height: 3.4rem;
+  --frame-cycle: 2.35s;
   animation: landing-ray-glide 40s linear infinite;
+}
+
+.landing-art-ray .landing-art-body {
+  transform-origin: 50% 46%;
+  animation: landing-ray-body-glide 2.8s ease-in-out infinite;
 }
 
 .landing-art-octopus {
   left: -4rem;
   width: 4rem;
   height: 4rem;
+  --frame-cycle: 1.72s;
   animation: landing-octopus-drift 30s linear infinite;
+}
+
+.landing-art-octopus .landing-art-body {
+  transform-origin: 50% 38%;
+  animation: landing-octopus-body-pulse 2.4s ease-in-out infinite;
+}
+
+.landing-art-whale {
+  left: -18rem;
+  z-index: 0;
+  width: min(38vw, 30rem);
+  min-width: 21rem;
+  height: min(17.7vw, 14rem);
+  min-height: 9.8rem;
+  opacity: 0.75;
+  --frame-cycle: 5.8s;
+  animation: landing-whale-swim 96s linear infinite;
+}
+
+.landing-art-whale .landing-art-body {
+  transform-origin: 48% 52%;
+  animation: landing-whale-body-swim 6.4s ease-in-out infinite;
+}
+
+.landing-title-whale {
+  position: absolute;
+  left: auto;
+  top: calc(100% - clamp(1.05rem, 2.5vw, 2.15rem)) !important;
+  z-index: 1;
+  display: block;
+  width: clamp(17rem, 44vw, 31rem);
+  min-width: 0;
+  height: clamp(8rem, 20.5vw, 14.4rem);
+  min-height: 0;
+  margin-top: 0;
+  margin-left: clamp(0.1rem, 2vw, 1.4rem);
+  opacity: 0.75;
+  --frame-cycle: 4.8s;
+  animation: landing-title-whale-swim 24s linear infinite !important;
 }
 
 .landing-art-starfish {
   width: 3.6rem;
   height: 3.6rem;
+  --frame-cycle: 2.8s;
   animation: landing-starfish-drift 22s ease-in-out infinite;
+}
+
+.landing-art-starfish .landing-art-body {
+  animation: landing-seabed-soft-wiggle 3.6s ease-in-out infinite;
 }
 
 .landing-art-crab {
   width: 4.2rem;
   height: 3rem;
+  --frame-cycle: 1.42s;
   animation: landing-crab-scuttle 14s ease-in-out infinite;
+}
+
+.landing-art-crab .landing-art-body {
+  animation: landing-crab-body-scuttle 1.4s ease-in-out infinite;
 }
 
 .landing-art-shell {
   width: 3.45rem;
   height: 2.6rem;
+  --frame-cycle: 3.1s;
   animation: landing-shell-rock 18s ease-in-out infinite;
+}
+
+.landing-art-shell .landing-art-body {
+  animation: landing-shell-body-rock 4s ease-in-out infinite;
 }
 
 .landing-art-jellyfish {
@@ -822,7 +1005,13 @@ body {
   width: 6.3rem;
   height: 8.7rem;
   opacity: 0.86;
+  --frame-cycle: 2s;
   animation: landing-jelly-drift 7s ease-in-out infinite;
+}
+
+.landing-art-jellyfish .landing-art-body {
+  transform-origin: 50% 28%;
+  animation: landing-jelly-body-pulse 2.2s ease-in-out infinite;
 }
 
 .landing-primary-cta {
@@ -1376,6 +1565,24 @@ body {
   }
 }
 
+@keyframes landing-math-bubble-rise {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(-4deg) scale(calc(var(--math-bubble-scale, 1) * 0.8));
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.78;
+  }
+  54% {
+    transform: translate3d(1.7rem, -54vh, 0) rotate(7deg) scale(var(--math-bubble-scale, 1));
+    opacity: 0.72;
+  }
+  100% {
+    transform: translate3d(-1.1rem, -108vh, 0) rotate(-8deg) scale(calc(var(--math-bubble-scale, 1) * 0.62));
+    opacity: 0;
+  }
+}
+
 @keyframes landing-tail-wag {
   0%, 100% { transform: rotate(-6deg) scaleY(1); }
   50% { transform: rotate(8deg) scaleY(0.94); }
@@ -1384,6 +1591,73 @@ body {
 @keyframes landing-fin-flutter {
   0%, 100% { transform: rotate(8deg); }
   50% { transform: rotate(18deg) translateY(0.08rem); }
+}
+
+@keyframes landing-art-frame-overlay {
+  0%, 100% { opacity: 0; }
+  18%, 32% { opacity: 0.42; }
+  46% { opacity: 0; }
+}
+
+@keyframes landing-art-gentle-pulse {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.4deg) scale(1); }
+  50% { transform: translate3d(0, -0.05rem, 0) rotate(0.5deg) scale(1.01, 0.994); }
+}
+
+@keyframes landing-fish-body-swim {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.4deg) scale(1); }
+  50% { transform: translate3d(0.04rem, -0.02rem, 0) rotate(0.6deg) scale(1.012, 0.994); }
+}
+
+@keyframes landing-clownfish-body-swim {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.5deg) scale(1); }
+  50% { transform: translate3d(0.05rem, -0.02rem, 0) rotate(0.8deg) scale(1.014, 0.992); }
+}
+
+@keyframes landing-seahorse-body-swim {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.8deg) scale(1); }
+  50% { transform: translate3d(0.04rem, -0.07rem, 0) rotate(1deg) scale(1.01, 0.996); }
+}
+
+@keyframes landing-turtle-body-swim {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.4deg) scale(1); }
+  50% { transform: translate3d(0.04rem, -0.03rem, 0) rotate(0.6deg) scale(1.008, 0.996); }
+}
+
+@keyframes landing-ray-body-glide {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1, 1) rotate(0deg); }
+  50% { transform: translate3d(0, -0.06rem, 0) scale(1.012, 0.988) rotate(0.4deg); }
+}
+
+@keyframes landing-octopus-body-pulse {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1, 1) rotate(-0.4deg); }
+  50% { transform: translate3d(0.02rem, -0.06rem, 0) scale(1.014, 0.992) rotate(0.6deg); }
+}
+
+@keyframes landing-whale-body-swim {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.2deg) scale(1); }
+  50% { transform: translate3d(0.06rem, -0.04rem, 0) rotate(0.25deg) scale(1.004, 0.998); }
+}
+
+@keyframes landing-seabed-soft-wiggle {
+  0%, 100% { transform: rotate(-2deg) scale(1); }
+  50% { transform: rotate(3deg) scale(1.025); }
+}
+
+@keyframes landing-crab-body-scuttle {
+  0%, 100% { transform: translateX(-0.04rem) rotate(-1deg) scale(1); }
+  50% { transform: translateX(0.12rem) rotate(1.4deg) scale(1.015, 0.985); }
+}
+
+@keyframes landing-shell-body-rock {
+  0%, 100% { transform: rotate(-1.5deg) scale(1); }
+  50% { transform: rotate(2deg) scale(1.01); }
+}
+
+@keyframes landing-jelly-body-pulse {
+  0%, 100% { transform: translate3d(0, 0.08rem, 0) scale(1, 1); }
+  45% { transform: translate3d(0, -0.08rem, 0) scale(1.018, 0.99); }
+  70% { transform: translate3d(0, -0.02rem, 0) scale(0.992, 1.012); }
 }
 
 @keyframes landing-fish-swim {
@@ -1443,6 +1717,30 @@ body {
   }
   100% {
     transform: translate3d(108vw, 0.7rem, 0) rotate(-2deg) scale(var(--creature-scale, 1));
+  }
+}
+
+@keyframes landing-whale-swim {
+  0% {
+    transform: translate3d(-18rem, 0, 0) scale(var(--creature-scale, 1));
+  }
+  45% {
+    transform: translate3d(46vw, 1.4rem, 0) scale(var(--creature-scale, 1));
+  }
+  100% {
+    transform: translate3d(118vw, -0.85rem, 0) scale(var(--creature-scale, 1));
+  }
+}
+
+@keyframes landing-title-whale-swim {
+  0% {
+    transform: translate3d(-32%, 0.1rem, 0) rotate(-0.5deg) scale(var(--creature-scale, 1));
+  }
+  50% {
+    transform: translate3d(10%, -0.34rem, 0) rotate(0.45deg) scale(var(--creature-scale, 1));
+  }
+  100% {
+    transform: translate3d(52%, 0.12rem, 0) rotate(-0.35deg) scale(var(--creature-scale, 1));
   }
 }
 
@@ -1516,6 +1814,8 @@ body {
   .landing-fish,
   .landing-creature,
   .landing-art,
+  .landing-art-body,
+  .landing-math-bubble,
   .landing-jellyfish,
   .landing-jelly-tentacle,
   .landing-coral,
