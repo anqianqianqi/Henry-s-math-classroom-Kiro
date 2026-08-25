@@ -1,6 +1,7 @@
 'use client'
 
 import { landingTheme, type LandingAsset, type LandingIconId } from '@/lib/landing/scene'
+import { getOceanTimeClass } from '@/lib/landing/timeOfDay'
 import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import {
   CalendarDays,
@@ -12,7 +13,7 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react'
-import type { CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 
 type LandingCssVars = CSSProperties & Record<`--${string}`, string | number | undefined>
 
@@ -197,6 +198,7 @@ function assetLayer(asset: LandingAsset): 'background' | 'panel' | 'seabed' {
 
 export default function Home() {
   const { t } = useLanguage()
+  const [oceanTimeClass, setOceanTimeClass] = useState('landing-ocean-day')
   const LoginIcon = iconMap.login
   const SignupIcon = iconMap.userPlus
   const preview = landingTheme.dashboardPreview
@@ -204,8 +206,18 @@ export default function Home() {
   const panelAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'panel')
   const seabedAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'seabed')
 
+  useEffect(() => {
+    setOceanTimeClass(getOceanTimeClass())
+
+    const interval = window.setInterval(() => {
+      setOceanTimeClass(getOceanTimeClass())
+    }, 60_000)
+
+    return () => window.clearInterval(interval)
+  }, [])
+
   return (
-    <main className={`${landingTheme.className} relative min-h-screen overflow-hidden text-white`} style={themeVars()}>
+    <main className={`${landingTheme.className} ${oceanTimeClass} relative min-h-screen overflow-hidden text-white`} style={themeVars()}>
       <div className="landing-sunbeams" aria-hidden="true" />
       <div className="landing-current landing-current-one" aria-hidden="true" />
       <div className="landing-current landing-current-two" aria-hidden="true" />
@@ -213,7 +225,7 @@ export default function Home() {
       {floatingAssets.map(renderAsset)}
 
       <section className="relative z-10 flex min-h-screen items-center px-5 py-8 sm:px-8 sm:py-14 lg:px-14">
-        <div className="mx-auto grid w-full max-w-7xl items-center gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.72fr)]">
+        <div className="mx-auto grid w-full max-w-[88rem] items-center gap-6 sm:gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(28rem,0.95fr)]">
           <div className="max-w-3xl pt-6 sm:pt-0">
             <h1 className="max-w-4xl text-4xl font-black leading-[0.98] tracking-normal text-white drop-shadow-2xl sm:text-6xl lg:text-7xl">
               {t(landingTheme.content.headline)}
@@ -237,7 +249,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="landing-aquarium-panel relative mx-auto w-full max-w-xl overflow-hidden rounded-lg border border-white/30 bg-white/16 p-3 shadow-2xl shadow-cyan-950/35 backdrop-blur-xl sm:p-4">
+          <div className="landing-aquarium-panel relative mx-auto w-full max-w-2xl overflow-hidden rounded-lg border border-white/30 bg-white/16 p-3 shadow-2xl shadow-cyan-950/35 backdrop-blur-xl sm:p-5">
             {panelAssets.map(renderAsset)}
             <div className="relative z-10">
               <div className="flex items-center justify-between gap-4">
@@ -246,15 +258,15 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="landing-dashboard mt-3 rounded-lg p-2.5 text-cyan-50 sm:mt-4 sm:p-3">
-                <div className="grid grid-cols-[0.9fr_1.25fr] gap-3">
+              <div className="landing-dashboard mt-3 rounded-lg p-2.5 text-cyan-50 sm:mt-4 sm:p-4">
+                <div className="grid grid-cols-[0.9fr_1.35fr] gap-3 sm:gap-4">
                   <div>
                     <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-cyan-100/82">
                       {t('dash.yourProblems')}
                     </p>
                     <div className="space-y-2">
                       {preview.problems.map(problem => (
-                        <div key={problem.title} className="landing-problem-row rounded-lg border px-3 py-2">
+                        <div key={problem.title} className="landing-problem-row rounded-lg border px-3 py-2.5">
                           <div className="mb-1 flex flex-wrap items-center gap-1.5">
                             <span className="text-[9px] font-black uppercase tracking-widest text-cyan-100/78">
                               {problem.dateKey === 'dash.today' ? `🎯 ${t(problem.dateKey)}` : `📅 ${t(problem.dateKey)}`}
@@ -270,7 +282,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="landing-calendar-shell rounded-lg border p-2">
+                  <div className="landing-calendar-shell rounded-lg border p-2 sm:p-3">
                     <div className="mb-2 flex items-center gap-2">
                       <span className="flex-1 font-serif text-sm font-semibold text-white">August 2026</span>
                       <span className="grid h-6 w-6 place-items-center rounded-full border border-cyan-100/28 text-xs text-cyan-100/76">‹</span>
@@ -306,7 +318,7 @@ export default function Home() {
                     const StatIcon = iconMap[stat.icon]
 
                     return (
-                      <div key={stat.labelKey} className="landing-stat-tile rounded-lg border px-2.5 py-2 text-center">
+                      <div key={stat.labelKey} className="landing-stat-tile rounded-lg border px-2.5 py-2.5 text-center">
                         <div className="mb-1 flex items-center justify-center gap-1.5">
                           <StatIcon className="h-4 w-4 text-cyan-100" aria-hidden="true" />
                           <span className="text-lg font-black leading-none text-white">{stat.value}</span>

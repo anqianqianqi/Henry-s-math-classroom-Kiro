@@ -86,7 +86,7 @@ export const auth = {
     zh: '欢迎来到您的数学学习平台',
   },
   'auth.landingHeadline': {
-    en: 'Henry Math Classroom',
+    en: "Henry's Math Classroom",
     zh: 'Henry 数学教室',
   },
   'auth.landingPrimaryCta': { en: 'Enter classroom', zh: '进入教室' },

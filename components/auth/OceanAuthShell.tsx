@@ -1,7 +1,8 @@
 'use client'
 
 import { landingTheme, type LandingAsset } from '@/lib/landing/scene'
-import type { CSSProperties, ReactNode } from 'react'
+import { getOceanTimeClass } from '@/lib/landing/timeOfDay'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 
 type LandingCssVars = CSSProperties & Record<`--${string}`, string | number | undefined>
 
@@ -174,11 +175,22 @@ function assetLayer(asset: LandingAsset): 'background' | 'panel' | 'seabed' {
 }
 
 export function OceanAuthShell({ children }: { children: ReactNode }) {
+  const [oceanTimeClass, setOceanTimeClass] = useState('landing-ocean-day')
   const floatingAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'background')
   const seabedAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'seabed')
 
+  useEffect(() => {
+    setOceanTimeClass(getOceanTimeClass())
+
+    const interval = window.setInterval(() => {
+      setOceanTimeClass(getOceanTimeClass())
+    }, 60_000)
+
+    return () => window.clearInterval(interval)
+  }, [])
+
   return (
-    <main className={`${landingTheme.className} relative min-h-screen overflow-hidden text-white`} style={themeVars()}>
+    <main className={`${landingTheme.className} ${oceanTimeClass} relative min-h-screen overflow-hidden text-white`} style={themeVars()}>
       <div className="landing-sunbeams" aria-hidden="true" />
       <div className="landing-current landing-current-one" aria-hidden="true" />
       <div className="landing-current landing-current-two" aria-hidden="true" />
