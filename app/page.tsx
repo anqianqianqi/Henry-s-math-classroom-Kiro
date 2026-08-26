@@ -435,14 +435,14 @@ export default function Home() {
         <div className="mx-auto grid w-full max-w-[88rem] items-center gap-6 sm:gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(28rem,0.95fr)]">
           <div className="relative max-w-3xl pt-6 sm:pt-0">
             <div className="landing-title-wrap relative">
-              <h1 className="relative z-0 max-w-4xl text-4xl font-black leading-[0.98] tracking-normal text-white drop-shadow-2xl sm:text-6xl lg:text-7xl">
+              <h1 className="relative z-10 max-w-4xl text-4xl font-black leading-[0.98] tracking-normal text-white drop-shadow-2xl sm:text-6xl lg:text-7xl">
                 {t(landingTheme.content.headline)}
               </h1>
 
               {titleWhaleAsset ? renderAsset(Object.assign({}, titleWhaleAsset, { className: titleWhaleClassName, delay: titleWhaleDelay }) as LandingAsset, 0) : null}
             </div>
 
-            <div className="relative z-30 mt-20 flex flex-col gap-3 sm:mt-24 sm:flex-row sm:justify-end">
+            <div className="relative z-30 mt-20 flex flex-col gap-3 sm:mt-24 sm:flex-row sm:justify-start">
               <a
                 href="/login"
                 className="landing-primary-cta inline-flex min-h-14 items-center justify-center gap-2 rounded-full px-7 text-base font-black shadow-[0_7px_0_rgba(110,71,0,0.28)] transition hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-white/60 active:translate-y-1 active:shadow-none"
