@@ -392,11 +392,14 @@ export default function Home() {
   const { t } = useLanguage()
   const [oceanTimeClass, setOceanTimeClass] = useState('landing-ocean-day')
   const [calendarDate, setCalendarDate] = useState(() => new Date())
+  const [titleWhaleIntro, setTitleWhaleIntro] = useState(true)
   const LoginIcon = iconMap.login
   const SignupIcon = iconMap.userPlus
   const preview = landingTheme.dashboardPreview
   const previewCalendar = useMemo(() => buildCalendarPreview(calendarDate), [calendarDate])
   const titleWhaleAsset = landingTheme.assets.find(asset => asset.kind === 'whale')
+  const titleWhaleClassName = `landing-title-whale ${titleWhaleIntro ? 'landing-title-whale-intro' : 'landing-title-whale-running'}`
+  const titleWhaleDelay = titleWhaleIntro ? '0s' : '-28s'
   const floatingAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'background' && asset.kind !== 'whale')
   const panelAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'panel')
   const seabedAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'seabed')
@@ -405,12 +408,19 @@ export default function Home() {
     setOceanTimeClass(getOceanTimeClass())
     setCalendarDate(new Date())
 
+    const titleWhaleIntroTimeout = window.setTimeout(() => {
+      setTitleWhaleIntro(false)
+    }, 18_000)
+
     const interval = window.setInterval(() => {
       setOceanTimeClass(getOceanTimeClass())
       setCalendarDate(new Date())
     }, 60_000)
 
-    return () => window.clearInterval(interval)
+    return () => {
+      window.clearTimeout(titleWhaleIntroTimeout)
+      window.clearInterval(interval)
+    }
   }, [])
 
   return (
@@ -429,7 +439,7 @@ export default function Home() {
                 {t(landingTheme.content.headline)}
               </h1>
 
-              {titleWhaleAsset ? renderAsset(Object.assign({}, titleWhaleAsset, { className: 'landing-title-whale' }) as LandingAsset, 0) : null}
+              {titleWhaleAsset ? renderAsset(Object.assign({}, titleWhaleAsset, { className: titleWhaleClassName, delay: titleWhaleDelay }) as LandingAsset, 0) : null}
             </div>
 
             <div className="relative z-30 mt-20 flex flex-col gap-3 sm:mt-24 sm:flex-row sm:justify-end">

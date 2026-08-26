@@ -967,6 +967,15 @@ body {
   animation: landing-title-whale-swim 56s linear infinite !important;
 }
 
+.landing-title-whale-intro {
+  animation: landing-title-whale-intro-swim 18s linear 1 forwards !important;
+  animation-delay: 0s !important;
+}
+
+.landing-title-whale-running {
+  animation-delay: -28s !important;
+}
+
 .landing-art-starfish {
   width: 3.6rem;
   height: 3.6rem;
@@ -1748,11 +1757,7 @@ body {
     opacity: 0.75;
     transform: translate3d(-108%, 0.1rem, 0) rotate(-0.5deg) scale(var(--creature-scale, 1));
   }
-  5% {
-    opacity: 0.75;
-    transform: translate3d(-108%, 0.06rem, 0) rotate(-0.45deg) scale(var(--creature-scale, 1));
-  }
-  10% {
+  4% {
     opacity: 0.75;
     transform: translate3d(-96%, 0.02rem, 0) rotate(-0.38deg) scale(var(--creature-scale, 1));
   }
@@ -1763,6 +1768,17 @@ body {
   100% {
     opacity: 0.75;
     transform: translate3d(calc(100vw + 100%), 0.12rem, 0) rotate(-0.35deg) scale(var(--creature-scale, 1));
+  }
+}
+
+@keyframes landing-title-whale-intro-swim {
+  0% {
+    opacity: 0.75;
+    transform: translate3d(-50%, 0.04rem, 0) rotate(-0.35deg) scale(var(--creature-scale, 1));
+  }
+  100% {
+    opacity: 0.75;
+    transform: translate3d(46vw, -0.34rem, 0) rotate(0.45deg) scale(var(--creature-scale, 1));
   }
 }
 
