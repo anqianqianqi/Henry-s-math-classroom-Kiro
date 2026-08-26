@@ -847,7 +847,7 @@ body {
 }
 
 .landing-art-body-has-frame .landing-art-frame:not(:first-child) {
-  animation: landing-art-frame-overlay var(--frame-cycle, 2.4s) ease-in-out infinite;
+  animation: landing-art-frame-overlay var(--frame-cycle, 2.4s) steps(1, end) infinite;
   animation-delay: calc(var(--frame-cycle, 2.4s) / -4 * var(--frame-index, 0));
   opacity: 0;
 }
@@ -857,7 +857,7 @@ body {
 }
 
 .landing-art-fish {
-  left: -7rem;
+  left: 0;
   width: 5.5rem;
   height: 2.75rem;
   --frame-cycle: 1.36s;
@@ -869,7 +869,7 @@ body {
 }
 
 .landing-art-clownfish {
-  left: -6rem;
+  left: 0;
   width: 5.6rem;
   height: 2.8rem;
   --frame-cycle: 1.48s;
@@ -881,7 +881,7 @@ body {
 }
 
 .landing-art-seahorse {
-  left: -4rem;
+  left: 0;
   width: 3.2rem;
   height: 5.35rem;
   --frame-cycle: 1.9s;
@@ -894,7 +894,7 @@ body {
 }
 
 .landing-art-turtle {
-  left: -6rem;
+  left: 0;
   width: 6rem;
   height: 3.6rem;
   --frame-cycle: 2.15s;
@@ -906,7 +906,7 @@ body {
 }
 
 .landing-art-ray {
-  left: -7rem;
+  left: 0;
   width: 6.8rem;
   height: 3.4rem;
   --frame-cycle: 2.35s;
@@ -919,7 +919,7 @@ body {
 }
 
 .landing-art-octopus {
-  left: -4rem;
+  left: 0;
   width: 4rem;
   height: 4rem;
   --frame-cycle: 1.72s;
@@ -932,7 +932,7 @@ body {
 }
 
 .landing-art-whale {
-  left: -18rem;
+  left: 0;
   z-index: 0;
   width: min(38vw, 30rem);
   min-width: 21rem;
@@ -950,8 +950,8 @@ body {
 
 .landing-title-whale {
   position: absolute;
-  left: auto;
-  top: calc(100% - clamp(1.05rem, 2.5vw, 2.15rem)) !important;
+  left: 0;
+  top: calc(100% - clamp(1.95rem, 3.7vw, 3.35rem)) !important;
   z-index: 1;
   display: block;
   width: clamp(17rem, 44vw, 31rem);
@@ -959,10 +959,12 @@ body {
   height: clamp(8rem, 20.5vw, 14.4rem);
   min-height: 0;
   margin-top: 0;
-  margin-left: clamp(0.1rem, 2vw, 1.4rem);
+  margin-left: 0;
   opacity: 0.75;
   --frame-cycle: 4.8s;
-  animation: landing-title-whale-swim 24s linear infinite !important;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 7%, #000 93%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 7%, #000 93%, transparent 100%);
+  animation: landing-title-whale-swim 56s linear infinite !important;
 }
 
 .landing-art-starfish {
@@ -1595,8 +1597,8 @@ body {
 
 @keyframes landing-art-frame-overlay {
   0%, 100% { opacity: 0; }
-  18%, 32% { opacity: 0.42; }
-  46% { opacity: 0; }
+  18%, 34% { opacity: 0.68; }
+  52% { opacity: 0; }
 }
 
 @keyframes landing-art-gentle-pulse {
@@ -1605,38 +1607,47 @@ body {
 }
 
 @keyframes landing-fish-body-swim {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.4deg) scale(1); }
-  50% { transform: translate3d(0.04rem, -0.02rem, 0) rotate(0.6deg) scale(1.012, 0.994); }
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-1.2deg) scale(1); }
+  28% { transform: translate3d(0.12rem, -0.04rem, 0) rotate(1.6deg) scale(1.034, 0.976); }
+  58% { transform: translate3d(-0.04rem, 0.03rem, 0) rotate(-1deg) scale(0.988, 1.012); }
+  78% { transform: translate3d(0.08rem, -0.02rem, 0) rotate(1.2deg) scale(1.02, 0.986); }
 }
 
 @keyframes landing-clownfish-body-swim {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.5deg) scale(1); }
-  50% { transform: translate3d(0.05rem, -0.02rem, 0) rotate(0.8deg) scale(1.014, 0.992); }
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-1.4deg) scale(1); }
+  25% { transform: translate3d(0.13rem, -0.04rem, 0) rotate(1.8deg) scale(1.036, 0.974); }
+  55% { transform: translate3d(-0.05rem, 0.03rem, 0) rotate(-1.2deg) scale(0.99, 1.014); }
+  78% { transform: translate3d(0.09rem, -0.03rem, 0) rotate(1.4deg) scale(1.024, 0.984); }
 }
 
 @keyframes landing-seahorse-body-swim {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.8deg) scale(1); }
-  50% { transform: translate3d(0.04rem, -0.07rem, 0) rotate(1deg) scale(1.01, 0.996); }
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-1.5deg) scale(1); }
+  32% { transform: translate3d(0.08rem, -0.16rem, 0) rotate(2.2deg) scale(1.018, 0.99); }
+  62% { transform: translate3d(-0.05rem, 0.06rem, 0) rotate(-1deg) scale(0.992, 1.012); }
 }
 
 @keyframes landing-turtle-body-swim {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.4deg) scale(1); }
-  50% { transform: translate3d(0.04rem, -0.03rem, 0) rotate(0.6deg) scale(1.008, 0.996); }
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.8deg) scale(1); }
+  35% { transform: translate3d(0.1rem, -0.07rem, 0) rotate(1.4deg) scale(1.018, 0.988); }
+  68% { transform: translate3d(-0.04rem, 0.04rem, 0) rotate(-0.7deg) scale(0.994, 1.006); }
 }
 
 @keyframes landing-ray-body-glide {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1, 1) rotate(0deg); }
-  50% { transform: translate3d(0, -0.06rem, 0) scale(1.012, 0.988) rotate(0.4deg); }
+  32% { transform: translate3d(0.08rem, -0.12rem, 0) scale(1.028, 0.964) rotate(0.8deg); }
+  64% { transform: translate3d(-0.04rem, 0.05rem, 0) scale(0.992, 1.018) rotate(-0.5deg); }
 }
 
 @keyframes landing-octopus-body-pulse {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1, 1) rotate(-0.4deg); }
-  50% { transform: translate3d(0.02rem, -0.06rem, 0) scale(1.014, 0.992) rotate(0.6deg); }
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1, 1) rotate(-0.8deg); }
+  36% { transform: translate3d(0.06rem, -0.13rem, 0) scale(1.03, 0.972) rotate(1.3deg); }
+  68% { transform: translate3d(-0.04rem, 0.05rem, 0) scale(0.988, 1.016) rotate(-0.6deg); }
 }
 
 @keyframes landing-whale-body-swim {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.2deg) scale(1); }
-  50% { transform: translate3d(0.06rem, -0.04rem, 0) rotate(0.25deg) scale(1.004, 0.998); }
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.35deg) scale(1); }
+  38% { transform: translate3d(0.12rem, -0.08rem, 0) rotate(0.55deg) scale(1.01, 0.994); }
+  70% { transform: translate3d(-0.04rem, 0.04rem, 0) rotate(-0.25deg) scale(0.996, 1.004); }
 }
 
 @keyframes landing-seabed-soft-wiggle {
@@ -1662,85 +1673,96 @@ body {
 
 @keyframes landing-fish-swim {
   0% {
-    transform: translate3d(-7rem, 0, 0) scale(var(--fish-scale, 1));
+    transform: translate3d(-100%, 0, 0) scale(var(--fish-scale, 1));
   }
   48% {
     transform: translate3d(52vw, 1.25rem, 0) scale(var(--fish-scale, 1));
   }
   100% {
-    transform: translate3d(110vw, -0.7rem, 0) scale(var(--fish-scale, 1));
+    transform: translate3d(calc(100vw + 100%), -0.7rem, 0) scale(var(--fish-scale, 1));
   }
 }
 
 @keyframes landing-creature-swim {
   0% {
-    transform: translate3d(-6rem, 0, 0) scale(var(--creature-scale, 1));
+    transform: translate3d(-100%, 0, 0) scale(var(--creature-scale, 1));
   }
   45% {
     transform: translate3d(48vw, -0.85rem, 0) scale(var(--creature-scale, 1));
   }
   100% {
-    transform: translate3d(110vw, 0.7rem, 0) scale(var(--creature-scale, 1));
+    transform: translate3d(calc(100vw + 100%), 0.7rem, 0) scale(var(--creature-scale, 1));
   }
 }
 
 @keyframes landing-seahorse-swim {
   0% {
-    transform: translate3d(-4rem, 0, 0) rotate(-3deg) scale(var(--creature-scale, 1));
+    transform: translate3d(-100%, 0, 0) rotate(-3deg) scale(var(--creature-scale, 1));
   }
   50% {
     transform: translate3d(54vw, 1.15rem, 0) rotate(4deg) scale(var(--creature-scale, 1));
   }
   100% {
-    transform: translate3d(108vw, -0.65rem, 0) rotate(-2deg) scale(var(--creature-scale, 1));
+    transform: translate3d(calc(100vw + 100%), -0.65rem, 0) rotate(-2deg) scale(var(--creature-scale, 1));
   }
 }
 
 @keyframes landing-ray-glide {
   0% {
-    transform: translate3d(-7rem, 0, 0) scale(var(--creature-scale, 1));
+    transform: translate3d(-100%, 0, 0) scale(var(--creature-scale, 1));
   }
   50% {
-    transform: translate3d(55vw, -1.4rem, 0) scale(var(--creature-scale, 1.04));
+    transform: translate3d(55vw, -1.4rem, 0) scale(var(--creature-scale, 1));
   }
   100% {
-    transform: translate3d(110vw, 0.8rem, 0) scale(var(--creature-scale, 1));
+    transform: translate3d(calc(100vw + 100%), 0.8rem, 0) scale(var(--creature-scale, 1));
   }
 }
 
 @keyframes landing-octopus-drift {
   0% {
-    transform: translate3d(-4rem, 0, 0) rotate(-4deg) scale(var(--creature-scale, 1));
+    transform: translate3d(-100%, 0, 0) rotate(-4deg) scale(var(--creature-scale, 1));
   }
   48% {
     transform: translate3d(52vw, -0.9rem, 0) rotate(5deg) scale(var(--creature-scale, 1));
   }
   100% {
-    transform: translate3d(108vw, 0.7rem, 0) rotate(-2deg) scale(var(--creature-scale, 1));
+    transform: translate3d(calc(100vw + 100%), 0.7rem, 0) rotate(-2deg) scale(var(--creature-scale, 1));
   }
 }
 
 @keyframes landing-whale-swim {
   0% {
-    transform: translate3d(-18rem, 0, 0) scale(var(--creature-scale, 1));
+    transform: translate3d(-100%, 0, 0) scale(var(--creature-scale, 1));
   }
   45% {
     transform: translate3d(46vw, 1.4rem, 0) scale(var(--creature-scale, 1));
   }
   100% {
-    transform: translate3d(118vw, -0.85rem, 0) scale(var(--creature-scale, 1));
+    transform: translate3d(calc(100vw + 100%), -0.85rem, 0) scale(var(--creature-scale, 1));
   }
 }
 
 @keyframes landing-title-whale-swim {
   0% {
-    transform: translate3d(-32%, 0.1rem, 0) rotate(-0.5deg) scale(var(--creature-scale, 1));
+    opacity: 0.75;
+    transform: translate3d(-108%, 0.1rem, 0) rotate(-0.5deg) scale(var(--creature-scale, 1));
+  }
+  5% {
+    opacity: 0.75;
+    transform: translate3d(-108%, 0.06rem, 0) rotate(-0.45deg) scale(var(--creature-scale, 1));
+  }
+  10% {
+    opacity: 0.75;
+    transform: translate3d(-96%, 0.02rem, 0) rotate(-0.38deg) scale(var(--creature-scale, 1));
   }
   50% {
-    transform: translate3d(10%, -0.34rem, 0) rotate(0.45deg) scale(var(--creature-scale, 1));
+    opacity: 0.75;
+    transform: translate3d(46vw, -0.34rem, 0) rotate(0.45deg) scale(var(--creature-scale, 1));
   }
   100% {
-    transform: translate3d(52%, 0.12rem, 0) rotate(-0.35deg) scale(var(--creature-scale, 1));
+    opacity: 0.75;
+    transform: translate3d(calc(100vw + 100%), 0.12rem, 0) rotate(-0.35deg) scale(var(--creature-scale, 1));
   }
 }
 

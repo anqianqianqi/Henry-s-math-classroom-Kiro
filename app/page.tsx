@@ -432,7 +432,7 @@ export default function Home() {
               {titleWhaleAsset ? renderAsset(Object.assign({}, titleWhaleAsset, { className: 'landing-title-whale' }) as LandingAsset, 0) : null}
             </div>
 
-            <div className="relative z-30 mt-10 flex flex-col gap-3 sm:mt-12 sm:flex-row sm:justify-end">
+            <div className="relative z-30 mt-20 flex flex-col gap-3 sm:mt-24 sm:flex-row sm:justify-end">
               <a
                 href="/login"
                 className="landing-primary-cta inline-flex min-h-14 items-center justify-center gap-2 rounded-full px-7 text-base font-black shadow-[0_7px_0_rgba(110,71,0,0.28)] transition hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-white/60 active:translate-y-1 active:shadow-none"
