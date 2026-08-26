@@ -34,7 +34,13 @@ const iconMap = {
   users: Users,
 } satisfies Record<LandingIconId, typeof CalendarDays>
 
-function themeVars(): LandingCssVars {
+function getSwimDurationScale() {
+  if (typeof window === 'undefined') return 1
+
+  return Math.min(1.75, Math.max(0.72, window.innerWidth / 1440))
+}
+
+function themeVars(swimDurationScale = 1): LandingCssVars {
   const { colors } = landingTheme
 
   return {
@@ -51,10 +57,30 @@ function themeVars(): LandingCssVars {
     '--landing-cta-text': colors.ctaText,
     '--landing-icon-ink': colors.iconInk,
     '--landing-panel-ink': colors.panelInk,
+    '--landing-swim-duration-scale': swimDurationScale,
+    '--landing-title-whale-duration': `${56 * swimDurationScale}s`,
+    '--landing-title-whale-delay': `${-28 * swimDurationScale}s`,
   }
 }
 
-function assetStyle(asset: LandingAsset): LandingCssVars {
+function scaledSwimTime(time: string, swimDurationScale: number) {
+  const seconds = Number(time.replace(/s$/, ''))
+
+  if (!Number.isFinite(seconds)) {
+    return time
+  }
+
+  return `${seconds * swimDurationScale}s`
+}
+
+function swimTiming(asset: Extract<LandingAsset, { delay: string; speed: string }>, swimDurationScale: number): LandingCssVars {
+  return {
+    animationDelay: scaledSwimTime(asset.delay, swimDurationScale),
+    animationDuration: scaledSwimTime(asset.speed, swimDurationScale),
+  }
+}
+
+function assetStyle(asset: LandingAsset, swimDurationScale = 1): LandingCssVars {
   if (asset.kind === 'bubble') {
     return {
       left: asset.left,
@@ -77,8 +103,7 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
   if (asset.kind === 'fish') {
     return {
       top: asset.top,
-      animationDelay: asset.delay,
-      animationDuration: asset.speed,
+      ...swimTiming(asset, swimDurationScale),
       '--fish-scale': asset.scale ?? 1,
       '--art-image': asset.src ? `url(${asset.src})` : undefined,
       '--art-frame-image': asset.frameSrcs?.[0] ? `url(${asset.frameSrcs[0]})` : asset.frameSrc ? `url(${asset.frameSrc})` : undefined,
@@ -101,8 +126,7 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
       left: asset.left,
       top: asset.top,
       bottom: asset.bottom,
-      animationDelay: asset.delay,
-      animationDuration: asset.speed,
+      ...swimTiming(asset, swimDurationScale),
       '--creature-scale': asset.scale ?? 1,
       '--art-image': asset.src ? `url(${asset.src})` : undefined,
       '--art-frame-image': asset.frameSrcs?.[0] ? `url(${asset.frameSrcs[0]})` : asset.frameSrc ? `url(${asset.frameSrc})` : undefined,
@@ -134,14 +158,22 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
   return {}
 }
 
-function renderAsset(asset: LandingAsset, index: number) {
+function assetDepthClass(asset: LandingAsset) {
+  if ('depth' in asset && asset.depth) {
+    return `landing-art-depth-${asset.depth}`
+  }
+
+  return ''
+}
+
+function renderAsset(asset: LandingAsset, index: number, swimDurationScale = 1) {
   if (asset.kind === 'bubble') {
     return (
       <span
         key={`bubble-${index}`}
         className="landing-air-bubble"
         aria-hidden="true"
-        style={assetStyle(asset)}
+        style={assetStyle(asset, swimDurationScale)}
       />
     )
   }
@@ -152,7 +184,7 @@ function renderAsset(asset: LandingAsset, index: number) {
         key={`math-${index}`}
         className={`landing-math-bubble ${asset.className ?? ''}`}
         aria-hidden="true"
-        style={assetStyle(asset)}
+        style={assetStyle(asset, swimDurationScale)}
       >
         <span className="landing-math-bubble-symbol">{asset.symbol}</span>
       </span>
@@ -165,9 +197,9 @@ function renderAsset(asset: LandingAsset, index: number) {
       return (
         <span
           key={`fish-${index}`}
-          className={`landing-art landing-art-fish ${asset.className ?? ''}`}
+          className={`landing-art landing-art-fish ${assetDepthClass(asset)} ${asset.className ?? ''}`}
           aria-hidden="true"
-          style={assetStyle(asset)}
+          style={assetStyle(asset, swimDurationScale)}
         >
           <span className={`landing-art-body ${frames.length > 1 ? 'landing-art-body-has-frame' : ''}`}>
             {frames.map((src, frameIndex) => (
@@ -190,7 +222,7 @@ function renderAsset(asset: LandingAsset, index: number) {
         key={`fish-${index}`}
         className="landing-fish"
         aria-hidden="true"
-        style={assetStyle(asset)}
+        style={assetStyle(asset, swimDurationScale)}
       >
         <span className="landing-creature-detail" />
         <span className="landing-creature-symbol">=</span>
@@ -206,7 +238,7 @@ function renderAsset(asset: LandingAsset, index: number) {
           key={`jellyfish-${index}`}
           className={`landing-art landing-art-jellyfish ${asset.className ?? ''}`}
           aria-hidden="true"
-          style={assetStyle(asset)}
+          style={assetStyle(asset, swimDurationScale)}
         >
           <span className={`landing-art-body ${frames.length > 1 ? 'landing-art-body-has-frame' : ''}`}>
             {frames.map((src, frameIndex) => (
@@ -254,9 +286,9 @@ function renderAsset(asset: LandingAsset, index: number) {
       return (
         <span
           key={`${asset.kind}-${index}`}
-          className={`landing-art landing-art-${asset.kind} ${asset.className ?? ''}`}
+          className={`landing-art landing-art-${asset.kind} ${assetDepthClass(asset)} ${asset.className ?? ''}`}
           aria-hidden="true"
-          style={assetStyle(asset)}
+          style={assetStyle(asset, swimDurationScale)}
         >
           <span className={`landing-art-body ${frames.length > 1 ? 'landing-art-body-has-frame' : ''}`}>
             {frames.map((src, frameIndex) => (
@@ -279,7 +311,7 @@ function renderAsset(asset: LandingAsset, index: number) {
         key={`${asset.kind}-${index}`}
         className={`landing-creature landing-${asset.kind}`}
         aria-hidden="true"
-        style={assetStyle(asset)}
+        style={assetStyle(asset, swimDurationScale)}
       >
         <span className="landing-creature-detail" />
         <span className="landing-creature-symbol">{creatureSymbol(asset.kind)}</span>
@@ -294,7 +326,7 @@ function renderAsset(asset: LandingAsset, index: number) {
         className={`landing-image-asset ${asset.className ?? ''}`}
         aria-label={asset.alt || undefined}
         aria-hidden={asset.alt ? undefined : true}
-        style={assetStyle(asset)}
+        style={assetStyle(asset, swimDurationScale)}
       />
     )
   }
@@ -304,7 +336,7 @@ function renderAsset(asset: LandingAsset, index: number) {
       key={`${asset.kind}-${index}`}
       className={`landing-${asset.kind} ${asset.className ?? ''}`}
       aria-hidden="true"
-      style={assetStyle(asset)}
+      style={assetStyle(asset, swimDurationScale)}
     />
   )
 }
@@ -393,6 +425,7 @@ export default function Home() {
   const [oceanTimeClass, setOceanTimeClass] = useState('landing-ocean-day')
   const [calendarDate, setCalendarDate] = useState(() => new Date())
   const [titleWhaleIntro, setTitleWhaleIntro] = useState(true)
+  const [swimDurationScale, setSwimDurationScale] = useState(1)
   const LoginIcon = iconMap.login
   const SignupIcon = iconMap.userPlus
   const preview = landingTheme.dashboardPreview
@@ -407,10 +440,17 @@ export default function Home() {
   useEffect(() => {
     setOceanTimeClass(getOceanTimeClass())
     setCalendarDate(new Date())
+    setSwimDurationScale(getSwimDurationScale())
 
     const titleWhaleIntroTimeout = window.setTimeout(() => {
       setTitleWhaleIntro(false)
     }, 18_000)
+
+    const updateSwimDurationScale = () => {
+      setSwimDurationScale(getSwimDurationScale())
+    }
+
+    window.addEventListener('resize', updateSwimDurationScale)
 
     const interval = window.setInterval(() => {
       setOceanTimeClass(getOceanTimeClass())
@@ -419,17 +459,18 @@ export default function Home() {
 
     return () => {
       window.clearTimeout(titleWhaleIntroTimeout)
+      window.removeEventListener('resize', updateSwimDurationScale)
       window.clearInterval(interval)
     }
   }, [])
 
   return (
-    <main className={`${landingTheme.className} ${oceanTimeClass} relative min-h-screen overflow-hidden text-white`} style={themeVars()}>
+    <main className={`${landingTheme.className} ${oceanTimeClass} relative min-h-screen overflow-hidden text-white`} style={themeVars(swimDurationScale)}>
       <div className="landing-sunbeams" aria-hidden="true" />
       <div className="landing-current landing-current-one" aria-hidden="true" />
       <div className="landing-current landing-current-two" aria-hidden="true" />
 
-      {floatingAssets.map(renderAsset)}
+      {floatingAssets.map((asset, index) => renderAsset(asset, index, swimDurationScale))}
 
       <section className="relative flex min-h-screen items-center px-5 py-8 sm:px-8 sm:py-14 lg:px-14">
         <div className="mx-auto grid w-full max-w-[88rem] items-center gap-6 sm:gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(28rem,0.95fr)]">
@@ -439,7 +480,7 @@ export default function Home() {
                 {t(landingTheme.content.headline)}
               </h1>
 
-              {titleWhaleAsset ? renderAsset(Object.assign({}, titleWhaleAsset, { className: titleWhaleClassName, delay: titleWhaleDelay }) as LandingAsset, 0) : null}
+              {titleWhaleAsset ? renderAsset(Object.assign({}, titleWhaleAsset, { className: titleWhaleClassName, delay: titleWhaleDelay }) as LandingAsset, 0, swimDurationScale) : null}
             </div>
 
             <div className="relative z-30 mt-20 flex flex-col gap-3 sm:mt-24 sm:flex-row sm:justify-start">
@@ -465,7 +506,7 @@ export default function Home() {
           </div>
 
           <div className="landing-aquarium-panel relative z-30 mx-auto w-full max-w-2xl overflow-hidden rounded-lg border border-white/30 bg-white/16 p-3 shadow-2xl shadow-cyan-950/35 backdrop-blur-xl sm:p-5">
-            {panelAssets.map(renderAsset)}
+            {panelAssets.map((asset, index) => renderAsset(asset, index, swimDurationScale))}
             <div className="relative z-10">
               <div className="flex items-center justify-between gap-4">
                 <p className="text-sm font-bold uppercase tracking-[0.18em] text-cyan-100/85">
@@ -551,7 +592,7 @@ export default function Home() {
       </section>
 
       <div className="landing-seabed" aria-hidden="true">
-        {seabedAssets.map(renderAsset)}
+        {seabedAssets.map((asset, index) => renderAsset(asset, index, swimDurationScale))}
       </div>
     </main>
   )

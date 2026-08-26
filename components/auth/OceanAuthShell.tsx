@@ -6,7 +6,13 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 
 type LandingCssVars = CSSProperties & Record<`--${string}`, string | number | undefined>
 
-function themeVars(): LandingCssVars {
+function getSwimDurationScale() {
+  if (typeof window === 'undefined') return 1
+
+  return Math.min(1.75, Math.max(0.72, window.innerWidth / 1440))
+}
+
+function themeVars(swimDurationScale = 1): LandingCssVars {
   const { colors } = landingTheme
 
   return {
@@ -23,10 +29,28 @@ function themeVars(): LandingCssVars {
     '--landing-cta-text': colors.ctaText,
     '--landing-icon-ink': colors.iconInk,
     '--landing-panel-ink': colors.panelInk,
+    '--landing-swim-duration-scale': swimDurationScale,
   }
 }
 
-function assetStyle(asset: LandingAsset): LandingCssVars {
+function scaledSwimTime(time: string, swimDurationScale: number) {
+  const seconds = Number(time.replace(/s$/, ''))
+
+  if (!Number.isFinite(seconds)) {
+    return time
+  }
+
+  return `${seconds * swimDurationScale}s`
+}
+
+function swimTiming(asset: Extract<LandingAsset, { delay: string; speed: string }>, swimDurationScale: number): LandingCssVars {
+  return {
+    animationDelay: scaledSwimTime(asset.delay, swimDurationScale),
+    animationDuration: scaledSwimTime(asset.speed, swimDurationScale),
+  }
+}
+
+function assetStyle(asset: LandingAsset, swimDurationScale = 1): LandingCssVars {
   if (asset.kind === 'bubble') {
     return {
       left: asset.left,
@@ -49,8 +73,7 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
   if (asset.kind === 'fish') {
     return {
       top: asset.top,
-      animationDelay: asset.delay,
-      animationDuration: asset.speed,
+      ...swimTiming(asset, swimDurationScale),
       '--fish-scale': asset.scale ?? 1,
       '--art-image': asset.src ? `url(${asset.src})` : undefined,
       '--art-frame-image': asset.frameSrcs?.[0] ? `url(${asset.frameSrcs[0]})` : asset.frameSrc ? `url(${asset.frameSrc})` : undefined,
@@ -73,8 +96,7 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
       left: asset.left,
       top: asset.top,
       bottom: asset.bottom,
-      animationDelay: asset.delay,
-      animationDuration: asset.speed,
+      ...swimTiming(asset, swimDurationScale),
       '--creature-scale': asset.scale ?? 1,
       '--art-image': asset.src ? `url(${asset.src})` : undefined,
       '--art-frame-image': asset.frameSrcs?.[0] ? `url(${asset.frameSrcs[0]})` : asset.frameSrc ? `url(${asset.frameSrc})` : undefined,
@@ -106,14 +128,14 @@ function assetStyle(asset: LandingAsset): LandingCssVars {
   return {}
 }
 
-function renderAsset(asset: LandingAsset, index: number) {
+function renderAsset(asset: LandingAsset, index: number, swimDurationScale = 1) {
   if (asset.kind === 'bubble') {
     return (
       <span
         key={`bubble-${index}`}
         className="landing-air-bubble"
         aria-hidden="true"
-        style={assetStyle(asset)}
+        style={assetStyle(asset, swimDurationScale)}
       />
     )
   }
@@ -124,7 +146,7 @@ function renderAsset(asset: LandingAsset, index: number) {
         key={`math-${index}`}
         className={`landing-math-bubble ${asset.className ?? ''}`}
         aria-hidden="true"
-        style={assetStyle(asset)}
+        style={assetStyle(asset, swimDurationScale)}
       >
         <span className="landing-math-bubble-symbol">{asset.symbol}</span>
       </span>
@@ -139,7 +161,7 @@ function renderAsset(asset: LandingAsset, index: number) {
           key={`fish-${index}`}
           className={`landing-art landing-art-fish ${asset.className ?? ''}`}
           aria-hidden="true"
-          style={assetStyle(asset)}
+          style={assetStyle(asset, swimDurationScale)}
         >
           <span className={`landing-art-body ${frames.length > 1 ? 'landing-art-body-has-frame' : ''}`}>
             {frames.map((src, frameIndex) => (
@@ -162,7 +184,7 @@ function renderAsset(asset: LandingAsset, index: number) {
         key={`fish-${index}`}
         className="landing-fish"
         aria-hidden="true"
-        style={assetStyle(asset)}
+        style={assetStyle(asset, swimDurationScale)}
       >
         <span className="landing-creature-detail" />
         <span className="landing-creature-symbol">=</span>
@@ -178,7 +200,7 @@ function renderAsset(asset: LandingAsset, index: number) {
           key={`jellyfish-${index}`}
           className={`landing-art landing-art-jellyfish ${asset.className ?? ''}`}
           aria-hidden="true"
-          style={assetStyle(asset)}
+          style={assetStyle(asset, swimDurationScale)}
         >
           <span className={`landing-art-body ${frames.length > 1 ? 'landing-art-body-has-frame' : ''}`}>
             {frames.map((src, frameIndex) => (
@@ -228,7 +250,7 @@ function renderAsset(asset: LandingAsset, index: number) {
           key={`${asset.kind}-${index}`}
           className={`landing-art landing-art-${asset.kind} ${asset.className ?? ''}`}
           aria-hidden="true"
-          style={assetStyle(asset)}
+          style={assetStyle(asset, swimDurationScale)}
         >
           <span className={`landing-art-body ${frames.length > 1 ? 'landing-art-body-has-frame' : ''}`}>
             {frames.map((src, frameIndex) => (
@@ -251,7 +273,7 @@ function renderAsset(asset: LandingAsset, index: number) {
         key={`${asset.kind}-${index}`}
         className={`landing-creature landing-${asset.kind}`}
         aria-hidden="true"
-        style={assetStyle(asset)}
+        style={assetStyle(asset, swimDurationScale)}
       >
         <span className="landing-creature-detail" />
         <span className="landing-creature-symbol">{creatureSymbol(asset.kind)}</span>
@@ -266,7 +288,7 @@ function renderAsset(asset: LandingAsset, index: number) {
         className={`landing-image-asset ${asset.className ?? ''}`}
         aria-label={asset.alt || undefined}
         aria-hidden={asset.alt ? undefined : true}
-        style={assetStyle(asset)}
+        style={assetStyle(asset, swimDurationScale)}
       />
     )
   }
@@ -276,7 +298,7 @@ function renderAsset(asset: LandingAsset, index: number) {
       key={`${asset.kind}-${index}`}
       className={`landing-${asset.kind} ${asset.className ?? ''}`}
       aria-hidden="true"
-      style={assetStyle(asset)}
+      style={assetStyle(asset, swimDurationScale)}
     />
   )
 }
@@ -324,32 +346,43 @@ function assetLayer(asset: LandingAsset): 'background' | 'panel' | 'seabed' {
 
 export function OceanAuthShell({ children }: { children: ReactNode }) {
   const [oceanTimeClass, setOceanTimeClass] = useState('landing-ocean-day')
+  const [swimDurationScale, setSwimDurationScale] = useState(1)
   const floatingAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'background')
   const seabedAssets = landingTheme.assets.filter(asset => assetLayer(asset) === 'seabed')
 
   useEffect(() => {
     setOceanTimeClass(getOceanTimeClass())
+    setSwimDurationScale(getSwimDurationScale())
+
+    const updateSwimDurationScale = () => {
+      setSwimDurationScale(getSwimDurationScale())
+    }
+
+    window.addEventListener('resize', updateSwimDurationScale)
 
     const interval = window.setInterval(() => {
       setOceanTimeClass(getOceanTimeClass())
     }, 60_000)
 
-    return () => window.clearInterval(interval)
+    return () => {
+      window.removeEventListener('resize', updateSwimDurationScale)
+      window.clearInterval(interval)
+    }
   }, [])
 
   return (
-    <main className={`${landingTheme.className} ${oceanTimeClass} relative min-h-screen overflow-hidden text-white`} style={themeVars()}>
+    <main className={`${landingTheme.className} ${oceanTimeClass} relative min-h-screen overflow-hidden text-white`} style={themeVars(swimDurationScale)}>
       <div className="landing-sunbeams" aria-hidden="true" />
       <div className="landing-current landing-current-one" aria-hidden="true" />
       <div className="landing-current landing-current-two" aria-hidden="true" />
-      {floatingAssets.map(renderAsset)}
+      {floatingAssets.map((asset, index) => renderAsset(asset, index, swimDurationScale))}
 
       <section className="relative z-10 flex min-h-screen items-center justify-center px-4 py-12 sm:px-6">
         {children}
       </section>
 
       <div className="landing-seabed" aria-hidden="true">
-        {seabedAssets.map(renderAsset)}
+        {seabedAssets.map((asset, index) => renderAsset(asset, index, swimDurationScale))}
       </div>
     </main>
   )
