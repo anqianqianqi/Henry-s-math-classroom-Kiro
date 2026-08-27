@@ -836,6 +836,23 @@ body {
   z-index: 40;
 }
 
+.landing-auth-shell .landing-auth-stage {
+  z-index: 30;
+}
+
+.landing-auth-shell .landing-art-depth-behind-title {
+  z-index: 6;
+}
+
+.landing-auth-shell .landing-art-depth-front-title,
+.landing-auth-shell .landing-art:not(.landing-art-depth-behind-title):not(.landing-art-depth-foreground) {
+  z-index: 12;
+}
+
+.landing-auth-shell .landing-art-depth-foreground {
+  z-index: 40;
+}
+
 .landing-art-body {
   position: absolute;
   inset: 0;
@@ -950,7 +967,7 @@ body {
   min-width: 21rem;
   height: min(17.7vw, 14rem);
   min-height: 9.8rem;
-  opacity: 0.75;
+  opacity: 1;
   --frame-cycle: 5.8s;
   animation: landing-whale-swim 96s linear infinite;
 }

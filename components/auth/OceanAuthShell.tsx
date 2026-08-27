@@ -128,6 +128,14 @@ function assetStyle(asset: LandingAsset, swimDurationScale = 1): LandingCssVars 
   return {}
 }
 
+function assetDepthClass(asset: LandingAsset) {
+  if ('depth' in asset && asset.depth) {
+    return `landing-art-depth-${asset.depth}`
+  }
+
+  return ''
+}
+
 function renderAsset(asset: LandingAsset, index: number, swimDurationScale = 1) {
   if (asset.kind === 'bubble') {
     return (
@@ -159,7 +167,7 @@ function renderAsset(asset: LandingAsset, index: number, swimDurationScale = 1) 
       return (
         <span
           key={`fish-${index}`}
-          className={`landing-art landing-art-fish ${asset.className ?? ''}`}
+          className={`landing-art landing-art-fish ${assetDepthClass(asset)} ${asset.className ?? ''}`}
           aria-hidden="true"
           style={assetStyle(asset, swimDurationScale)}
         >
@@ -248,7 +256,7 @@ function renderAsset(asset: LandingAsset, index: number, swimDurationScale = 1) 
       return (
         <span
           key={`${asset.kind}-${index}`}
-          className={`landing-art landing-art-${asset.kind} ${asset.className ?? ''}`}
+          className={`landing-art landing-art-${asset.kind} ${assetDepthClass(asset)} ${asset.className ?? ''}`}
           aria-hidden="true"
           style={assetStyle(asset, swimDurationScale)}
         >
@@ -371,13 +379,13 @@ export function OceanAuthShell({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <main className={`${landingTheme.className} ${oceanTimeClass} relative min-h-screen overflow-hidden text-white`} style={themeVars(swimDurationScale)}>
+    <main className={`${landingTheme.className} ${oceanTimeClass} landing-auth-shell relative min-h-screen overflow-hidden text-white`} style={themeVars(swimDurationScale)}>
       <div className="landing-sunbeams" aria-hidden="true" />
       <div className="landing-current landing-current-one" aria-hidden="true" />
       <div className="landing-current landing-current-two" aria-hidden="true" />
       {floatingAssets.map((asset, index) => renderAsset(asset, index, swimDurationScale))}
 
-      <section className="relative z-10 flex min-h-screen items-center justify-center px-4 py-12 sm:px-6">
+      <section className="landing-auth-stage relative z-10 flex min-h-screen items-center justify-center px-4 py-12 sm:px-6">
         {children}
       </section>
 
