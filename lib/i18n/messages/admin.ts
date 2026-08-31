@@ -4,6 +4,24 @@
  */
 
 export const admin = {
+  'manga.create': { en: 'Make manga', zh: '制作漫画' },
+  'manga.studio': { en: 'Math Manga Studio', zh: '数学漫画工作室' },
+  'manga.subtitle': { en: 'Turn this challenge into a classroom-ready comic.', zh: '把这道挑战题制作成适合课堂使用的漫画。' },
+  'manga.start': { en: 'Start workflow', zh: '开始制作' },
+  'manga.analyze': { en: 'Analyze the math', zh: '分析数学内容' },
+  'manga.answer': { en: 'Answer', zh: '答案' },
+  'manga.takeaway': { en: 'Math takeaway', zh: '数学重点' },
+  'manga.verification': { en: 'Verification', zh: '验算' },
+  'manga.approveMath': { en: 'Approve math', zh: '确认数学结论' },
+  'manga.generateStories': { en: 'Generate story ideas', zh: '生成剧情方案' },
+  'manga.chooseStory': { en: 'Choose this story', zh: '选择这个剧情' },
+  'manga.selected': { en: 'Story selected. Casting is next.', zh: '剧情已选择，下一步是选角。' },
+  'manga.loading': { en: 'The manga team is working…', zh: '漫画团队正在工作……' },
+  'manga.error': { en: 'The workflow could not continue.', zh: '漫画流程暂时无法继续。' },
+  'manga.back': { en: 'Back to challenge', zh: '返回挑战题' },
+  'manga.stepMath': { en: '1. Math', zh: '1. 数学' },
+  'manga.stepStory': { en: '2. Story', zh: '2. 剧情' },
+  'manga.stepCast': { en: '3. Cast', zh: '3. 选角' },
   'admin.title': { en: 'Admin', zh: '管理' },
   'admin.teachersOnly': {
     en: 'This page is for teachers and administrators.',
