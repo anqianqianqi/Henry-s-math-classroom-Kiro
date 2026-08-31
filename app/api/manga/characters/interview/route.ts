@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { mangaServiceDb, requireMangaTeacher } from '@/lib/manga/server'
+import { mangaServiceDb, requireMangaAdmin } from '@/lib/manga/server'
 import { characterInterviewJsonSchema, characterInterviewRequestSchema, characterInterviewResponseSchema } from '@/lib/manga/character'
 import { structuredResponse } from '@/lib/manga/openai'
 
 export async function POST(request: NextRequest) {
   try {
-    await requireMangaTeacher()
+    await requireMangaAdmin()
     const input = characterInterviewRequestSchema.parse(await request.json())
     const result = await structuredResponse({
       instructions:'You design consistent, child-safe characters for an educational math comic. Ask at most three high-value questions and give 2-4 recommendations for each. Preserve confirmed choices. A ready character needs a unique story role, reproducible personality and voice, distinct silhouette, exact palette, at least three immutable anchors, forbidden elements, and model-neutral generation prompts. Never imitate a living artist.',

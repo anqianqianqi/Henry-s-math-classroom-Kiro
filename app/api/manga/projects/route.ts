@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createProjectSchema, WorkflowState } from '@/lib/manga/domain'
 import { challengeToMangaRequest } from '@/lib/manga/contract'
-import { mangaError, mangaServiceDb, requireMangaTeacher } from '@/lib/manga/server'
+import { mangaError, mangaServiceDb, requireMangaAdmin } from '@/lib/manga/server'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
   try {
-    const { supabase } = await requireMangaTeacher()
+    const { supabase } = await requireMangaAdmin()
     const body = await request.json()
     const challengeId = typeof body.challengeId === 'string' ? body.challengeId : ''
     if (!challengeId) return NextResponse.json({ error: 'challengeId is required' }, { status: 400 })

@@ -1874,10 +1874,12 @@ export default function ChallengePage() {
               <>
                 {/* Desktop: show all buttons */}
                 <div className="hidden sm:flex items-center gap-2">
-                  <Button variant="primary" size="sm"
-                    onClick={() => router.push(`/admin/manga-studio?challengeId=${params.id}`)}>
-                    {t('manga.create')}
-                  </Button>
+                  {isAdmin && (
+                    <Button variant="primary" size="sm"
+                      onClick={() => router.push(`/admin/manga-studio?challengeId=${params.id}`)}>
+                      {t('manga.create')}
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm"
                     onClick={() => router.push(`/challenges/${params.id}/edit`)}>
                     Edit
@@ -1905,8 +1907,10 @@ export default function ChallengePage() {
                   </button>
                   {showMenu && (
                     <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[120px]">
-                      <button onClick={() => { router.push(`/admin/manga-studio?challengeId=${params.id}`); setShowMenu(false) }}
-                        className="w-full text-left px-4 py-2 text-sm font-bold text-primary-600 hover:bg-primary-50">{t('manga.create')}</button>
+                      {isAdmin && (
+                        <button onClick={() => { router.push(`/admin/manga-studio?challengeId=${params.id}`); setShowMenu(false) }}
+                          className="w-full text-left px-4 py-2 text-sm font-bold text-primary-600 hover:bg-primary-50">{t('manga.create')}</button>
+                      )}
                       <button onClick={() => { router.push(`/challenges/${params.id}/edit`); setShowMenu(false) }}
                         className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Edit</button>
                       <button onClick={() => { handleDuplicate(); setShowMenu(false) }} disabled={duplicating}

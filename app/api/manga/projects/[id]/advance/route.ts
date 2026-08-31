@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { mangaServiceDb, requireMangaTeacher } from '@/lib/manga/server'
+import { mangaServiceDb, requireMangaAdmin } from '@/lib/manga/server'
 import { workflowStateSchema } from '@/lib/manga/domain'
 
 import { analyzeMath, createStoryPitches } from '@/lib/manga/workflow'
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    await requireMangaTeacher()
+    await requireMangaAdmin()
     const db = mangaServiceDb()
     const { data, error } = await db.from('manga_projects').select('state').eq('id', params.id).single()
     if (error) throw error

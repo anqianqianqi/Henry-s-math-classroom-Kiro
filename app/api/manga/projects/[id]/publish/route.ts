@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { mangaServiceDb, requireMangaTeacher } from '@/lib/manga/server'
+import { mangaServiceDb, requireMangaAdmin } from '@/lib/manga/server'
 import { workflowStateSchema } from '@/lib/manga/domain'
 
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    await requireMangaTeacher(); const db = mangaServiceDb()
+    await requireMangaAdmin(); const db = mangaServiceDb()
     const { data, error } = await db.from('manga_projects').select('state').eq('id',params.id).single(); if (error) throw error
     const state = workflowStateSchema.parse(data.state)
     if (state.stage !== 'ready_to_publish' || state.panels.length !== 6 || state.panels.some(p => !p.imageUrl)) return NextResponse.json({ error:'A quality-approved six-panel comic is required.' }, { status:409 })

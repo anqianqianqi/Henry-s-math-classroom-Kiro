@@ -3,12 +3,12 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
-export async function requireMangaTeacher() {
+export async function requireMangaAdmin() {
   const supabase = createRouteHandlerClient({ cookies }) as any
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) throw new Error('UNAUTHORIZED')
   const { data: roles } = await supabase.from('user_roles').select('roles!inner(name)').eq('user_id', session.user.id).is('class_id', null)
-  if (!roles?.some((row: any) => row.roles?.name === 'teacher' || row.roles?.name === 'administrator')) throw new Error('FORBIDDEN')
+  if (!roles?.some((row: any) => row.roles?.name === 'administrator')) throw new Error('FORBIDDEN')
   return { user: session.user, supabase }
 }
 

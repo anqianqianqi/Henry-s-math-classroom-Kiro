@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { workflowStateSchema } from '@/lib/manga/domain'
-import { mangaError, mangaServiceDb, requireMangaTeacher } from '@/lib/manga/server'
+import { mangaError, mangaServiceDb, requireMangaAdmin } from '@/lib/manga/server'
 
 const inputSchema = z.object({ pitchId: z.string().min(1) })
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
-    await requireMangaTeacher()
+    await requireMangaAdmin()
     const input = inputSchema.parse(await request.json())
     const db = mangaServiceDb()
     const { data, error } = await db.from('manga_projects').select('state').eq('id', params.id).single()

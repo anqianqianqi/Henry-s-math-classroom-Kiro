@@ -23,4 +23,4 @@ The server loads the challenge from `daily_challenges` and creates its workflow 
 - `POST /api/manga/characters/interview` — one progressive Character Creator turn.
 - `GET/POST /api/manga/characters` — list or save Character Bibles.
 
-All endpoints require a signed-in teacher or administrator. Students read only published output through `getPublishedMangaForChallenge()` in `lib/manga/published.ts`; Supabase RLS enforces class membership.
+All authoring endpoints require a signed-in administrator. Teachers and students can only read published output through `getPublishedMangaForChallenge()` in `lib/manga/published.ts`; Supabase RLS enforces class membership.
