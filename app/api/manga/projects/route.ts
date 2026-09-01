@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createProjectSchema, WorkflowState } from '@/lib/manga/domain'
 import { challengeToMangaRequest } from '@/lib/manga/contract'
 import { mangaError, mangaServiceDb, requireMangaAdmin } from '@/lib/manga/server'
+import { DEFAULT_MANGA_RENDER_SPEC } from '@/lib/manga/preferences'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
       gradeLevel: typeof body.gradeLevel === 'string' ? body.gradeLevel : null,
       language: body.language === 'zh' || body.language === 'en' || body.language === 'bilingual' ? body.language : 'bilingual',
     }))
-    const state: WorkflowState = { stage:'math_review', ...input, mathAnalysis:null, storyPitches:[], selectedPitchId:null, cast:[], panels:[], renderSpec:{layout:'2x3',artDirection:'warm minimal hand-drawn animation comic, soft natural colors, simple clean silhouettes',aspectRatio:'3:2',answerReveal:'last_panel'} }
+    const state: WorkflowState = { stage:'math_review', ...input, mathAnalysis:null, storyPitches:[], selectedPitchId:null, cast:[], panels:[], renderSpec:{...DEFAULT_MANGA_RENDER_SPEC} }
     const { data, error: insertError } = await mangaServiceDb().from('manga_projects').insert({ source_challenge_id:input.sourceChallengeId, class_id:input.classId, stage:state.stage, state }).select('id,state').single()
     if (insertError) throw insertError
     return NextResponse.json({ projectId: data.id, challengeId, state: data.state }, { status: 201 })
