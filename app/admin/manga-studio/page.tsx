@@ -10,7 +10,7 @@ import type { WorkflowState } from '@/lib/manga/domain'
 export default function MangaStudioPage() {
   const challengeId = useSearchParams().get('challengeId') || ''
   const router = useRouter()
-  const { t, language } = useLanguage()
+  const { t } = useLanguage()
   const [projectId, setProjectId] = useState('')
   const [state, setState] = useState<WorkflowState | null>(null)
   const [busy, setBusy] = useState(false)
@@ -28,7 +28,7 @@ export default function MangaStudioPage() {
   }
 
   async function start() {
-    const data = await call('/api/manga/projects', { challengeId, language: language === 'zh' ? 'zh' : 'en' })
+    const data = await call('/api/manga/projects', { challengeId, language: 'bilingual' })
     if (data) { setProjectId(data.projectId); setState(data.state) }
   }
   async function advance() { const data = await call(`/api/manga/projects/${projectId}/advance`); if (data) setState(data) }

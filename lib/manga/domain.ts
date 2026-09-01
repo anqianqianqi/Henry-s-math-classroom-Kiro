@@ -26,7 +26,10 @@ export const workflowStateSchema = z.object({
   stage: stageSchema, sourceProblem: z.string(), sourceChallengeId: z.string().uuid().nullable(), classId: z.string().uuid().nullable(),
   gradeLevel: z.string().nullable(), language: z.enum(['zh','en','bilingual']), mathAnalysis: mathAnalysisSchema.nullable(),
   storyPitches: z.array(storyPitchSchema), selectedPitchId: z.string().nullable(), cast: z.array(z.object({ characterId: z.string().uuid(), characterVersion: z.number().int(), role: z.string() })),
-  panels: z.array(panelSchema), renderSpec: z.object({ layout: z.string(), artDirection: z.string(), aspectRatio: z.string(), answerReveal: z.string() }),
+  panels: z.array(panelSchema), renderSpec: z.object({
+    layout: z.string(), artDirection: z.string(), aspectRatio: z.string(), answerReveal: z.string(),
+    outputLanguages: z.array(z.enum(['zh','en'])).length(2), translationPolicy: z.string(),
+  }),
 })
 export type WorkflowState = z.infer<typeof workflowStateSchema>
 

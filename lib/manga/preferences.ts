@@ -23,6 +23,8 @@ export const HENRY_MANGA_VISUAL_PREFERENCE = {
     dialogue: 'Use enough short speech bubbles to establish context and connect the reasoning. Never remove an explanation merely to make the comic shorter.',
     mathText: 'show only the essential equation for the current beat; typeset exact math separately when possible',
     answerReveal: 'last_panel',
+    outputLanguages: ['zh', 'en'],
+    translationPolicy: 'After storyboard approval, render separate Chinese and English editions from the same locked panels. Translate copy only; preserve character poses, camera, visual math, pacing and answer exactly.',
   },
   artDirection: {
     summary: 'warm, cute, clean hand-drawn classroom comic with soft watercolor and gouache color',
@@ -52,6 +54,8 @@ export const DEFAULT_MANGA_RENDER_SPEC = {
   layout: HENRY_MANGA_VISUAL_PREFERENCE.format.layout,
   aspectRatio: HENRY_MANGA_VISUAL_PREFERENCE.format.aspectRatio,
   answerReveal: HENRY_MANGA_VISUAL_PREFERENCE.storytelling.answerReveal,
+  outputLanguages: [...HENRY_MANGA_VISUAL_PREFERENCE.storytelling.outputLanguages],
+  translationPolicy: HENRY_MANGA_VISUAL_PREFERENCE.storytelling.translationPolicy,
   artDirection: [
     HENRY_MANGA_VISUAL_PREFERENCE.artDirection.summary,
     HENRY_MANGA_VISUAL_PREFERENCE.artDirection.linework,
@@ -73,6 +77,7 @@ export function mangaPreferencePrompt() {
     `Story density: ${preference.storytelling.rule}; ${preference.storytelling.priority}.`,
     `Dialogue: ${preference.storytelling.dialogue}.`,
     `Math: ${preference.storytelling.mathText}.`,
+    `Languages: ${preference.storytelling.translationPolicy}`,
     `Art direction: ${preference.artDirection.summary}; ${preference.artDirection.linework}; ${preference.artDirection.palette}; ${preference.artDirection.lighting}.`,
     `Backgrounds: ${preference.artDirection.backgrounds}.`,
     `Character policy: ${preference.characterPolicy.source}`,
