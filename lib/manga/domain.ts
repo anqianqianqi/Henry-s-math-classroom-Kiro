@@ -11,12 +11,12 @@ export const mathAnalysisSchema = z.object({
 
 export const storyPitchSchema = z.object({
   id: z.string(), type: z.enum(['funny','warm','interactive','tiktok','instagram']), title: z.string(), hook: z.string(),
-  synopsis: z.string(), mathIntegration: z.string(), beats: z.array(z.string()).length(6), interaction: z.string(),
+  synopsis: z.string(), mathIntegration: z.string(), beats: z.array(z.string()).min(6).max(18), interaction: z.string(),
   tone: z.string(), recommendedTraits: z.array(z.string()), whyItFits: z.string(), riskNotes: z.array(z.string()),
 })
 
 export const panelSchema = z.object({
-  index: z.number().int().min(1).max(6), purpose: z.string(), scene: z.string(), camera: z.string(),
+  index: z.number().int().min(1).max(18), purpose: z.string(), scene: z.string(), camera: z.string(),
   characters: z.array(z.object({ characterId: z.string(), action: z.string(), expression: z.string() })),
   dialogue: z.array(z.object({ speaker: z.string(), text: z.string() })), narration: z.string(),
   mathVisual: z.string(), continuity: z.string(), imageUrl: z.string().nullable().default(null),

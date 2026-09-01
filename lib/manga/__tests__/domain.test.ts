@@ -10,7 +10,7 @@ describe('built-in manga workflow', () => {
     const result = workflowStateSchema.safeParse({
       stage:'ready_to_publish', sourceProblem:'x', sourceChallengeId:null, classId:null, gradeLevel:null, language:'zh',
       mathAnalysis:null, storyPitches:[], selectedPitchId:null, cast:[],
-      panels:[{index:7,purpose:'',scene:'',camera:'',characters:[],dialogue:[],narration:'',mathVisual:'',continuity:'',imageUrl:null}],
+      panels:[{index:19,purpose:'',scene:'',camera:'',characters:[],dialogue:[],narration:'',mathVisual:'',continuity:'',imageUrl:null}],
       renderSpec:{layout:'2x3',artDirection:'warm',aspectRatio:'3:2',answerReveal:'last_panel'},
     })
     expect(result.success).toBe(false)

@@ -5,20 +5,22 @@ export const HENRY_MANGA_VISUAL_PREFERENCE = {
   name: 'Henry warm classroom manga',
   referenceImageUrl: '/manga/preferences/henry-preferred-comic-reference.png',
   format: {
-    layout: '2x3',
-    panelsPerPage: 6,
+    layout: 'adaptive 2-column manga pages',
+    preferredPanelsPerPage: 6,
+    panelsPerPageRange: '4–8',
+    totalPanelRange: '6–18',
     aspectRatio: '3:2',
     readingOrder: 'left-to-right, top-to-bottom',
-    continuation: 'Use another 2x3 page only when six panels cannot explain the story clearly.',
+    continuation: 'Add pages freely when more context, dialogue or intermediate reasoning makes the story easier to understand.',
     gutters: 'wide warm-white gutters with thin, slightly hand-drawn black panel borders',
     numbering: 'small yellow circular panel number in the upper-left corner',
   },
   storytelling: {
-    density: 'low',
+    density: 'visually low, narratively complete',
     rule: 'one story beat, one main action and one math idea per panel',
     priority: 'story first; keep the scene cute and immediately readable',
     explanation: 'Use a simple board, card, token or transformation only when it clarifies the current math idea.',
-    dialogue: 'short speech bubbles; prefer expressions and visual action over explanation-heavy dialogue',
+    dialogue: 'Use enough short speech bubbles to establish context and connect the reasoning. Never remove an explanation merely to make the comic shorter.',
     mathText: 'show only the essential equation for the current beat; typeset exact math separately when possible',
     answerReveal: 'last_panel',
   },
@@ -65,7 +67,8 @@ export const DEFAULT_MANGA_RENDER_SPEC = {
 export function mangaPreferencePrompt() {
   const preference = HENRY_MANGA_VISUAL_PREFERENCE
   return [
-    `Format: ${preference.format.layout}, ${preference.format.panelsPerPage} panels per page, ${preference.format.readingOrder}.`,
+    `Format: ${preference.format.layout}, usually ${preference.format.preferredPanelsPerPage} panels per page (range ${preference.format.panelsPerPageRange}), ${preference.format.readingOrder}.`,
+    `Length: choose ${preference.format.totalPanelRange} total panels according to the teaching needs. ${preference.format.continuation}`,
     `Panel treatment: ${preference.format.gutters}; ${preference.format.numbering}.`,
     `Story density: ${preference.storytelling.rule}; ${preference.storytelling.priority}.`,
     `Dialogue: ${preference.storytelling.dialogue}.`,
