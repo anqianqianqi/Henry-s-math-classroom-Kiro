@@ -34,6 +34,7 @@ values (
     'panelRule', 'one story beat, one main action and one math idea per panel',
     'dialogue', 'short speech bubbles; prefer expressions and visual action',
     'mathText', 'only the essential equation for the current beat; exact typesetting when possible',
+    'propContinuity', 'When mathematical props have different capacities, lengths or sizes, give them persistently different outer silhouettes across every panel. Keep source and target direction explicit; internal fill level must never change the prop’s physical dimensions.',
     'artDirection', 'warm cute clean hand-drawn classroom comic; soft watercolor and gouache; cream, sunny yellow, sky blue and gentle pastel backgrounds; soft natural classroom light; rounded child-friendly silhouettes',
     'backgrounds', 'minimal classroom details or a soft color wash',
     'answerReveal', 'last_panel',

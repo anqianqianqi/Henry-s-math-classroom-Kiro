@@ -22,6 +22,7 @@ export const HENRY_MANGA_VISUAL_PREFERENCE = {
     explanation: 'Use a simple board, card, token or transformation only when it clarifies the current math idea.',
     dialogue: 'Use enough short speech bubbles to establish context and connect the reasoning. Never remove an explanation merely to make the comic shorter.',
     mathText: 'show only the essential equation for the current beat; typeset exact math separately when possible',
+    propContinuity: 'When mathematical props have different capacities, lengths or sizes, give them persistently different outer silhouettes across every panel. Keep source and target direction explicit; internal fill level must never change the prop’s physical dimensions.',
     answerReveal: 'last_panel',
     outputLanguages: ['zh', 'en'],
     translationPolicy: 'After storyboard approval, render separate Chinese and English editions from the same locked panels. Translate copy only; preserve character poses, camera, visual math, pacing and answer exactly.',
@@ -64,6 +65,7 @@ export const DEFAULT_MANGA_RENDER_SPEC = {
     HENRY_MANGA_VISUAL_PREFERENCE.artDirection.backgrounds,
     HENRY_MANGA_VISUAL_PREFERENCE.storytelling.rule,
     HENRY_MANGA_VISUAL_PREFERENCE.storytelling.dialogue,
+    HENRY_MANGA_VISUAL_PREFERENCE.storytelling.propContinuity,
     'Use approved Hanbao and Leo character references; the preference image controls format and mood only.',
   ].join('. '),
 }
@@ -77,6 +79,7 @@ export function mangaPreferencePrompt() {
     `Story density: ${preference.storytelling.rule}; ${preference.storytelling.priority}.`,
     `Dialogue: ${preference.storytelling.dialogue}.`,
     `Math: ${preference.storytelling.mathText}.`,
+    `Math prop continuity: ${preference.storytelling.propContinuity}`,
     `Languages: ${preference.storytelling.translationPolicy}`,
     `Art direction: ${preference.artDirection.summary}; ${preference.artDirection.linework}; ${preference.artDirection.palette}; ${preference.artDirection.lighting}.`,
     `Backgrounds: ${preference.artDirection.backgrounds}.`,

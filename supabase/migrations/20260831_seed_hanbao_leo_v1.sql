@@ -3,7 +3,7 @@
 
 insert into public.manga_characters (id, name, status, current_version)
 values
-  ('fba00000-0000-4000-8000-000000000001', 'F-Bao / 函宝', 'approved', 1),
+  ('fba00000-0000-4000-8000-000000000001', 'Funbo / 函宝', 'approved', 1),
   ('1e000000-0000-4000-8000-000000000001', 'Leo / 乐欧', 'approved', 1)
 on conflict (id) do update set
   name = excluded.name,
@@ -17,13 +17,13 @@ values
   'fba00000-0000-4000-8000-000000000001',
   1,
   jsonb_build_object(
-    'name', 'F-Bao / 函宝',
+    'name', 'Funbo / 函宝',
     'classroomRole', 'A deterministic function robot that makes input-function-output mappings visible.',
     'coreTraits', jsonb_build_array('enthusiastic', 'food-loving', 'baby-like curiosity'),
     'strengths', jsonb_build_array('always executes the loaded function correctly', 'makes abstract mappings visible', 'welcomes unusual inputs'),
     'flaws', jsonb_build_array('does not necessarily understand why a rule is meaningful', 'gets overexcited when new input appears'),
     'desire', 'Taste every kind of input and help Leo make abstract mathematics visible.',
-    'fear', 'None: F-Bao is deterministic and never fears making a calculation mistake.',
+    'fear', 'None: Funbo is deterministic and never fears making a calculation mistake.',
     'underPressure', 'Executes the loaded rule exactly. For input outside the domain, the chamber edge glows red and the output drawer remains closed.',
     'humorMechanism', 'Treats inputs like snacks and performs computation as adorable digestion.',
     'mathRelationship', 'Embodies a deterministic function: identical function and input always produce identical output.',
@@ -59,16 +59,16 @@ values
   1,
   jsonb_build_object(
     'name', 'Leo / 乐欧',
-    'classroomRole', 'The calm student thinker who discovers patterns, explains meaning and verifies F-Bao’s deterministic output.',
+    'classroomRole', 'The calm student thinker who discovers patterns, explains meaning and verifies Funbo’s deterministic output.',
     'coreTraits', jsonb_build_array('intelligent', 'calm', 'observant'),
     'strengths', jsonb_build_array('usually reaches the correct conclusion', 'finds hidden patterns', 'checks whether output is reasonable', 'asks precise questions'),
     'flaws', jsonb_build_array('abstract ideas can remain hard to communicate without visualization', 'cannot force a unique answer from insufficient information'),
-    'desire', 'Discover patterns, understand why rules work, and test conjectures with F-Bao.',
+    'desire', 'Discover patterns, understand why rules work, and test conjectures with Funbo.',
     'fear', 'Pretending that an ambiguous problem has one certain answer.',
-    'underPressure', 'Slows down, identifies missing information, and asks F-Bao to visualize the mapping.',
-    'humorMechanism', 'Quietly gives F-Bao unusual inputs, then offers a restrained, affectionate observation.',
+    'underPressure', 'Slows down, identifies missing information, and asks Funbo to visualize the mapping.',
+    'humorMechanism', 'Quietly gives Funbo unusual inputs, then offers a restrained, affectionate observation.',
     'mathRelationship', 'Reasoning and meaning specialist; interprets and verifies rather than merely calculating.',
-    'speakingStyle', 'Brief, orderly and calm, with occasional gentle deadpan humor toward F-Bao.',
+    'speakingStyle', 'Brief, orderly and calm, with occasional gentle deadpan humor toward Funbo.',
     'catchphrases', jsonb_build_array('先看规律。', '别急，先检查 Output。'),
     'neverSays', jsonb_build_array('Just trust the machine.', 'There must always be one answer.', 'I do not need to verify it.'),
     'entityType', 'human boy, visually 10–12 years old',
