@@ -3,6 +3,20 @@
 Status: approved planning direction, implementation not started  
 Date: 2026-09-03
 
+## 2026-09-04 approved target interaction (supersedes future manual gates below)
+
+The administrator's primary conversation is with the **Math Takeaway Agent**, a user-facing entry point combining mathematical reasoning and pedagogy discussion. Other specialists should become stable background executors rather than require routine turn-by-turn interviews. This is the desired end state, NOT a claim that autonomous orchestration is implemented or validated.
+
+Target: challenge → discuss and approve teaching thesis → background story, storyboard, bilingual copy, panel art, composition and independent QA → administrator reviews the complete comic. Keep final publication an explicit admin action. The existing runtime approval gates remain unchanged until deliberately implemented and tested.
+
+The main agent hands off a locked teaching contract: problem constraints and assumptions, verified solution, transferable thinking strategy, cognitive steps, prerequisites, misconceptions, example mapping, and necessary visible intermediate states. Background agents cannot silently alter that contract. They self-critique and revise within bounds; unresolved ambiguity, a proposed teaching-goal change, or repeated revision failure returns to the Math Takeaway conversation. Human overrides remain available at every stage.
+
+The contract must explicitly separate `givenRules` from `mathTakeaway`. A condition that constrains the solution belongs in the story setup and correctness checks; it is not automatically a transferable lesson. The critic rejects takeaways that merely restate the prompt's allowed operations.
+
+Downstream responsibilities: Story (engagement and context), Storyboard (causal and state continuity), Language (natural matching English/Chinese), Image & Layout (approved characters, large typography, editable overlays, assembled pages), independent stage-specific Critic (math, pedagogy, visual and bilingual checks). Logical roles need not mean separate deployments or models.
+
+Continue console experiments on varied problems before calling these agents stable. Persist preferences, approved examples, rejected shortcuts and regression criteria, not just prompts. See [latest checkpoint](MANGA_PROGRESS_2026-09-04.md).
+
 ## Product outcome
 
 An administrator selects a Henry Math Classroom challenge and works through a deliberate, reviewable process that identifies the mathematical essence, turns it into an engaging story, generates editable panel-level artwork, produces matching Chinese and English editions, and publishes the approved comic through Supabase.
@@ -113,6 +127,8 @@ Primary teaching thesis: translate repeated physical actions into multiples and 
 ### 3. Story Agent
 
 Goal: create five genuinely different, engaging story ideas that express the approved teaching thesis.
+
+Prefer vivid story mechanisms over characters narrating an experiment. When mathematically faithful, personify or dramatize the problem objects so their actions embody the approved teaching thesis and generate the humor (for example fixed water units as passengers). Always state the mapping and preserve object counts, legal directions and stopping conditions; the critic rejects metaphors that are only decoration or corrupt the model.
 
 The Story Agent may not redefine the mathematics. Each idea must identify its hook, character roles, math integration, visual opportunity, estimated panel count and misconception risks.
 
