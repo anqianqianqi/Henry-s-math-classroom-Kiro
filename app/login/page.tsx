@@ -9,6 +9,18 @@ import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { OceanAuthShell } from '@/components/auth/OceanAuthShell'
 import { ArrowLeft } from 'lucide-react'
 
+/**
+ * Where to go after signing in: a `next` query parameter naming a page on
+ * this site, else the dashboard. The grading desk sends people here with
+ * `?next=/studio`, because it opens in a window with no address bar and the
+ * dashboard would be a dead end. Only a path is honoured, never a full URL,
+ * so the parameter cannot bounce someone to another site.
+ */
+function returnPath(): string {
+  const next = new URLSearchParams(window.location.search).get('next') || ''
+  return next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard'
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const { t } = useLanguage()
@@ -35,7 +47,7 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        router.push('/dashboard')
+        router.push(returnPath())
         router.refresh()
       }
     } catch (err) {

@@ -26,7 +26,8 @@ export default async function StudioLayout({ children }: { children: React.React
 
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  // The desk opens in a window with no address bar, so login has to bring people back here.
+  if (!user) redirect('/login?next=/studio')
 
   const { data: roles } = await supabase
     .from('user_roles')
