@@ -130,7 +130,9 @@ export default function DesktopPetWrapper() {
 
   // Don't show pet on auth pages or dashboard (dashboard has its own inline pet)
   const isAuthPage = pathname === '/' || pathname === '/login' || pathname === '/signup' ||
-    pathname === '/forgot-password' || pathname === '/reset-password'
+    pathname === '/forgot-password' || pathname === '/reset-password' ||
+    // The grading desk is a teacher's tool on their own machine; a pet in its corner is in the way.
+    (pathname ?? '').startsWith('/studio')
   const isDashboard = pathname === '/dashboard'
 
   /*

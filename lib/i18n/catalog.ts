@@ -19,6 +19,7 @@
  *   messages/shop.ts         shop and inventory
  *   messages/classes.ts      classes, enrolment, grading
  *   messages/admin.ts        teacher/admin tooling
+ *   messages/studio.ts       the grading desk (local-only, app/studio)
  *
  * ── WHAT IS NOT HERE ────────────────────────────────────────
  * Author-written content, which a catalog cannot cover: class names, challenge
@@ -40,6 +41,7 @@ import { bubbleRoom } from './messages/bubbleRoom'
 import { shop } from './messages/shop'
 import { classes } from './messages/classes'
 import { admin } from './messages/admin'
+import { studio } from './messages/studio'
 
 export type Language = 'en' | 'zh'
 
@@ -66,6 +68,7 @@ export const catalog = {
   ...shop,
   ...classes,
   ...admin,
+  ...studio,
 } as const
 
 export type TranslationKey = keyof typeof catalog

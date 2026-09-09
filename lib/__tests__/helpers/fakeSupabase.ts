@@ -38,6 +38,8 @@ export interface FakeOptions {
   updateMissing?: boolean
   /** Rows a challenge_bank select returns. */
   bankRows?: any[]
+  /** Make a write on a table fail: { challenge_submissions: { update: 'message' } }. */
+  failures?: Record<string, Partial<Record<'select' | 'insert' | 'update', string>>>
 }
 
 export function fakeSupabase(opts: FakeOptions = {}) {
@@ -45,7 +47,11 @@ export function fakeSupabase(opts: FakeOptions = {}) {
   const uploads: FakeUpload[] = []
   let tagSeq = 0
 
+  let rowSeq = 0
+
   function respond(call: FakeCall): { data: any; error: any } {
+    const failure = opts.failures?.[call.table]?.[call.op]
+    if (failure) return { data: null, error: { message: failure } }
     switch (call.table) {
       case 'user_roles':
         return { data: (opts.roles ?? ['teacher']).map(name => ({ roles: { name } })), error: null }
@@ -72,7 +78,15 @@ export function fakeSupabase(opts: FakeOptions = {}) {
         }
         return { data: opts.bankRows ?? [], error: null }
     }
-    return { data: null, error: null }
+    // Any other table: an insert echoes its row with an id, an update names
+    // the row it matched, a select is empty.
+    if (call.op === 'insert') {
+      rowSeq += 1
+      const withId = (row: any) => ({ id: `${call.table}-${rowSeq}`, ...row })
+      return { data: Array.isArray(call.payload) ? call.payload.map(withId) : withId(call.payload), error: null }
+    }
+    if (call.op === 'update') return { data: { id: call.filters.find(f => f[0] === 'id')?.[2] }, error: null }
+    return { data: [], error: null }
   }
 
   function from(table: string) {

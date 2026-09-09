@@ -10,6 +10,12 @@
       "port": 3100
     },
     {
+      "name": "studio",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/studio.mjs", "--no-open"],
+      "port": 3999
+    },
+    {
       "name": "room-preview",
       "runtimeExecutable": "node",
       "runtimeArgs": [
