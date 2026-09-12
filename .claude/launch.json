@@ -5,14 +5,20 @@
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "autoPort": true,
       "port": 3100
     },
     {
       "name": "studio",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["scripts/studio.mjs", "--no-open"],
+      "runtimeArgs": [
+        "scripts/studio.mjs",
+        "--no-open"
+      ],
       "port": 3999
     },
     {
@@ -26,6 +32,18 @@
         "47313"
       ],
       "port": 47313
+    },
+    {
+      "name": "studio-organizer-fixture",
+      "runtimeExecutable": "C:/Users/shinn/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe",
+      "runtimeArgs": [
+        "C:/Users/shinn/OneDrive/Documents/Prettify Homework/tests/organizer_browser_fixture.py",
+        "--root",
+        "C:/Users/shinn/AppData/Local/Temp/claude/C--Users-shinn-OneDrive-Documents-GitHub-Henry-s-math-classroom-Kiro/18a944f3-78eb-4139-8fb5-9168c7eb6b2b/scratchpad/organizer-library",
+        "--port",
+        "47314"
+      ],
+      "port": 47314
     },
     {
       "name": "room-preview",
