@@ -40,6 +40,8 @@ export interface FakeOptions {
   bankRows?: any[]
   /** The row a profiles lookup returns, or null for no such account. */
   profileRow?: any
+  /** Rows a select on any other table returns; a single() takes the first. */
+  rows?: Record<string, any[]>
   /** Make a write on a table fail: { challenge_submissions: { update: 'message' } }. */
   failures?: Record<string, Partial<Record<'select' | 'insert' | 'update', string>>>
 }
@@ -80,7 +82,10 @@ export function fakeSupabase(opts: FakeOptions = {}) {
           const id = call.filters.find(f => f[0] === 'id')?.[2]
           return { data: { id }, error: null }
         }
-        return { data: opts.bankRows ?? [], error: null }
+        {
+          const rows = opts.bankRows ?? opts.rows?.challenge_bank ?? []
+          return { data: call.single ? (rows[0] ?? null) : rows, error: null }
+        }
     }
     // Any other table: an insert echoes its row with an id, an update names
     // the row it matched, a select is empty.
@@ -90,7 +95,8 @@ export function fakeSupabase(opts: FakeOptions = {}) {
       return { data: Array.isArray(call.payload) ? call.payload.map(withId) : withId(call.payload), error: null }
     }
     if (call.op === 'update') return { data: { id: call.filters.find(f => f[0] === 'id')?.[2] }, error: null }
-    return { data: [], error: null }
+    const rows = opts.rows?.[call.table] ?? []
+    return { data: call.single ? (rows[0] ?? null) : rows, error: null }
   }
 
   function from(table: string) {
@@ -121,6 +127,10 @@ export function fakeSupabase(opts: FakeOptions = {}) {
       },
       not(column: string, op: string, value: unknown) {
         call.filters.push([column, `not.${op}`, value])
+        return builder
+      },
+      in(column: string, values: unknown[]) {
+        call.filters.push([column, 'in', values])
         return builder
       },
       order() {
