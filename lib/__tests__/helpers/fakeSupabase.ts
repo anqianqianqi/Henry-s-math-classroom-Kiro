@@ -38,6 +38,8 @@ export interface FakeOptions {
   updateMissing?: boolean
   /** Rows a challenge_bank select returns. */
   bankRows?: any[]
+  /** The row a profiles lookup returns, or null for no such account. */
+  profileRow?: any
   /** Make a write on a table fail: { challenge_submissions: { update: 'message' } }. */
   failures?: Record<string, Partial<Record<'select' | 'insert' | 'update', string>>>
 }
@@ -67,6 +69,8 @@ export function fakeSupabase(opts: FakeOptions = {}) {
         return { data: { id: `tag-new-${tagSeq}` }, error: null }
       case 'challenge_tag_names':
         return { data: null, error: null }
+      case 'profiles':
+        return { data: opts.profileRow ?? null, error: null }
       case 'challenge_bank':
         if (call.op === 'insert') return { data: { id: call.payload.id }, error: null }
         if (call.op === 'update') {
@@ -126,6 +130,10 @@ export function fakeSupabase(opts: FakeOptions = {}) {
         return builder
       },
       single() {
+        call.single = true
+        return builder
+      },
+      maybeSingle() {
         call.single = true
         return builder
       },
