@@ -6,7 +6,6 @@ import { useLanguage } from '@/lib/i18n/LanguageProvider'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import type { WorkflowState } from '@/lib/manga/domain'
-import type { z } from 'zod'
 
 // ── Expandable story pitch card ───────────────────────────────────────────
 
