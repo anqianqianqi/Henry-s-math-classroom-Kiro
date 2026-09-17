@@ -16,6 +16,10 @@ export default function MangaStudioPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
+  // Math review state
+  const [reviewOpen, setReviewOpen] = useState(false)
+  const [reviewNotes, setReviewNotes] = useState('')
+
   async function call(url: string, body?: unknown) {
     setBusy(true); setError('')
     try {
@@ -33,6 +37,11 @@ export default function MangaStudioPage() {
   }
   async function advance() { const data = await call(`/api/manga/projects/${projectId}/advance`); if (data) setState(data) }
   async function approveMath() { const data = await call(`/api/manga/projects/${projectId}/approve-math`); if (data) setState(data) }
+  async function reviewMath() {
+    if (!reviewNotes.trim()) return
+    const data = await call(`/api/manga/projects/${projectId}/review-math`, { reviewNotes })
+    if (data) { setState(data); setReviewOpen(false); setReviewNotes('') }
+  }
   async function selectStory(pitchId: string) { const data = await call(`/api/manga/projects/${projectId}/select-story`, { pitchId }); if (data) setState(data) }
   async function chooseRenderMode(mode: 'one_by_one' | 'bulk') { const data = await call(`/api/manga/projects/${projectId}/render-mode`, { mode }); if (data) setState(data) }
   async function generatePanels(panelIndex?: number) {
@@ -46,7 +55,65 @@ export default function MangaStudioPage() {
     {error && <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">{error}</div>}
     {!projectId && <Card className="p-8 text-center"><Button onClick={start} isLoading={busy} disabled={!challengeId}>{t('manga.start')}</Button></Card>}
     {projectId && !state?.mathAnalysis && <Card className="p-8"><h2 className="text-xl font-black">{t('manga.stepMath')}</h2><Button className="mt-5" onClick={advance} isLoading={busy}>{t('manga.analyze')}</Button></Card>}
-    {state?.mathAnalysis && !state.storyPitches.length && <Card className="p-6"><h2 className="text-xl font-black">{t('manga.stepMath')}</h2><dl className="mt-5 space-y-4"><Item label={t('manga.answer')} value={state.mathAnalysis.answer}/><Item label={t('manga.takeaway')} value={state.mathAnalysis.mathTakeaway}/><Item label={t('manga.verification')} value={state.mathAnalysis.verification}/></dl><div className="mt-6 flex gap-3">{state.stage === 'math_review' ? <Button onClick={approveMath} isLoading={busy}>{t('manga.approveMath')}</Button> : <Button onClick={advance} isLoading={busy}>{t('manga.generateStories')}</Button>}</div></Card>}
+
+    {/* Math analysis review panel */}
+    {state?.mathAnalysis && !state.storyPitches.length && (
+      <Card className="p-6">
+        <h2 className="text-xl font-black">{t('manga.stepMath')}</h2>
+        <dl className="mt-5 space-y-4">
+          <Item label={t('manga.answer')} value={state.mathAnalysis.answer}/>
+          <Item label={t('manga.takeaway')} value={state.mathAnalysis.mathTakeaway}/>
+          <Item label={t('manga.verification')} value={state.mathAnalysis.verification}/>
+          {state.mathAnalysis.ambiguities.length > 0 && (
+            <div>
+              <dt className="text-xs font-black uppercase tracking-wide text-red-500">⚠️ Ambiguities</dt>
+              <dd className="mt-1 space-y-1">
+                {state.mathAnalysis.ambiguities.map((a, i) => (
+                  <p key={i} className="text-sm text-red-700 bg-red-50 rounded-lg px-3 py-1.5">{a}</p>
+                ))}
+              </dd>
+            </div>
+          )}
+        </dl>
+
+        {/* Review textarea — shown when Review button is clicked */}
+        {reviewOpen && (
+          <div className="mt-5 space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-semibold text-amber-800">Tell the math agent what to fix:</p>
+            <textarea
+              autoFocus
+              value={reviewNotes}
+              onChange={e => setReviewNotes(e.target.value)}
+              placeholder="e.g. The answer should be C. 375, not A. 2100. Also the takeaway needs to mention place value more clearly."
+              rows={4}
+              className="w-full rounded-xl border border-amber-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+            <div className="flex gap-2">
+              <Button onClick={reviewMath} isLoading={busy} disabled={!reviewNotes.trim()}>
+                ↺ Re-run with notes
+              </Button>
+              <Button variant="outline" onClick={() => { setReviewOpen(false); setReviewNotes('') }} disabled={busy}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div className="mt-6 flex gap-3">
+          {state.stage === 'math_review'
+            ? <Button onClick={approveMath} isLoading={busy}>{t('manga.approveMath')}</Button>
+            : <Button onClick={advance} isLoading={busy}>{t('manga.generateStories')}</Button>
+          }
+          {!reviewOpen && (
+            <Button variant="outline" onClick={() => setReviewOpen(true)} disabled={busy}>
+              ✏️ Review
+            </Button>
+          )}
+        </div>
+      </Card>
+    )}
+
     {state?.storyPitches.length ? <div className="grid gap-4 md:grid-cols-2">{state.storyPitches.map(pitch => <Card key={pitch.id} className={`p-6 ${state.selectedPitchId === pitch.id ? 'ring-2 ring-primary-400' : ''}`}><div className="text-xs font-black uppercase tracking-wide text-primary-600">{pitch.type}</div><h2 className="mt-2 text-xl font-black">{pitch.title}</h2><p className="mt-2 font-medium text-gray-700">{pitch.hook}</p><p className="mt-3 text-sm text-gray-600">{pitch.synopsis}</p><Button className="mt-5" variant={state.selectedPitchId === pitch.id ? 'secondary' : 'outline'} onClick={() => selectStory(pitch.id)} disabled={busy || state.stage === 'casting'}>{state.selectedPitchId === pitch.id ? t('manga.selected') : t('manga.chooseStory')}</Button></Card>)}</div> : null}
     {state?.stage === 'render_mode_selection' && <Card className="mt-6 p-6"><h2 className="text-xl font-black">{t('manga.chooseRenderMode')}</h2><p className="mt-2 text-sm text-gray-600">{t('manga.renderModeHelp')}</p><div className="mt-5 grid gap-4 md:grid-cols-2"><button className="rounded-2xl border-2 border-sky-200 p-5 text-left hover:border-sky-500" onClick={() => chooseRenderMode('one_by_one')} disabled={busy}><span className="block font-black">{t('manga.oneByOne')}</span><span className="mt-1 block text-sm text-gray-600">{t('manga.oneByOneHelp')}</span></button><button className="rounded-2xl border-2 border-amber-200 p-5 text-left hover:border-amber-500" onClick={() => chooseRenderMode('bulk')} disabled={busy}><span className="block font-black">{t('manga.bulk')}</span><span className="mt-1 block text-sm text-gray-600">{t('manga.bulkHelp')}</span></button></div></Card>}
     {state?.renderSpec.generationMode && ['generating','panel_review'].includes(state.stage) && <Card className="mt-6 p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-black">{t('manga.panelArt')}</h2><p className="mt-1 text-sm text-gray-600">{state.renderSpec.generationMode === 'bulk' ? t('manga.bulkActive') : t('manga.oneByOneActive')}</p></div>{state.renderSpec.generationMode === 'bulk' && <Button onClick={() => generatePanels()} isLoading={busy}>{t('manga.generatePending')}</Button>}</div><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{state.panels.map(panel => <div key={panel.index} className="rounded-xl border border-gray-200 p-4"><div className="flex items-center justify-between"><strong>{t('manga.panel')} {panel.index}</strong><span className="text-xs uppercase text-gray-500">{panel.artStatus}</span></div>{panel.imageUrl && <img src={panel.imageUrl} alt={`${t('manga.panel')} ${panel.index}`} className="mt-3 aspect-[3/2] w-full rounded-lg object-cover"/>}<p className="mt-2 line-clamp-3 text-xs text-gray-500">{panel.purpose}</p>{panel.lastError && <p className="mt-2 text-xs text-red-600">{panel.lastError}</p>}{state.renderSpec.generationMode === 'one_by_one' && <Button className="mt-3" variant="outline" onClick={() => generatePanels(panel.index)} isLoading={busy}>{panel.imageUrl ? t('manga.regeneratePanel') : t('manga.generatePanel')}</Button>}</div>)}</div></Card>}
