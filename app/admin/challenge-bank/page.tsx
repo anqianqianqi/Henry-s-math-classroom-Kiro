@@ -79,6 +79,7 @@ export default function ChallengeBankPage() {
   const [publishing, setPublishing] = useState(false)
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [creatingMega, setCreatingMega] = useState<string | null>(null)
   // Preview modal
   const [previewChallenge, setPreviewChallenge] = useState<PoolChallenge | null>(null)
   const [previewImgLightbox, setPreviewImgLightbox] = useState<string | null>(null)
@@ -350,6 +351,28 @@ export default function ChallengeBankPage() {
     await supabase.from('challenge_bank').delete().eq('id', challengeId)
     setChallenges(prev => prev.filter(c => c.id !== challengeId))
     setDeleting(null)
+  }
+
+  async function handleMega(challenge: PoolChallenge) {
+    setCreatingMega(challenge.id)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not authenticated')
+      const res = await fetch('/api/mega', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ source: 'bank_item', bank_item_id: challenge.id }),
+      })
+      const data = await res.json()
+      if (!data.ok) throw new Error(data.error ?? 'Failed to create Mega')
+      router.push(`/admin/mega-materials/${data.workflow_id}`)
+    } catch (err: any) {
+      setNotification({ message: err.message, type: 'error' })
+      setCreatingMega(null)
+    }
   }
 
   async function handleDeleteTemplate(templateId: string) {
@@ -638,6 +661,9 @@ export default function ChallengeBankPage() {
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => openSubmissions(challenge.id, challenge.title)}>
                             📋 Submissions
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleMega(challenge)} disabled={creatingMega === challenge.id}>
+                            {creatingMega === challenge.id ? '...' : '📚 Mega'}
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => router.push(`/challenges/${challenge.id}/edit`)}>
                             Edit
