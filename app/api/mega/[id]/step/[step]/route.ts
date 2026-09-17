@@ -213,7 +213,7 @@ export async function PATCH(
       return NextResponse.json({ ok: true, status: current.status })
     }
 
-    return NextResponse.json({ error: 'already_resolved', current_status: current?.status }, { status: 409 })
+    return NextResponse.json({ error: 'already_resolved' }, { status: 409 })
   }
 
   return NextResponse.json({ ok: true, status: newStatus })
