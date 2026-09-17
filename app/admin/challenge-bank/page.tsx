@@ -445,12 +445,14 @@ export default function ChallengeBankPage() {
                 </Button>
               </>
             ) : (
-              <Button onClick={() => router.push('/admin/generative-templates')} size="sm">
-                + Create Template
-              </Button>
-              <Button onClick={() => router.push('/admin/mega-materials')} size="sm" variant="secondary">
-                📚 Mega Materials
-              </Button>
+              <>
+                <Button onClick={() => router.push('/admin/generative-templates')} size="sm">
+                  + Create Template
+                </Button>
+                <Button onClick={() => router.push('/admin/mega-materials')} size="sm" variant="secondary">
+                  📚 Mega Materials
+                </Button>
+              </>
             )}
           </div>
         }
