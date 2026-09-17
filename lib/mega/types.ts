@@ -133,7 +133,7 @@ export function stepFromStatus(status: MegaStatus): number {
   return 4
 }
 
-export function isStepDone(status: MegaStatus, step: number): boolean {
+export function isStepDone(status: string, step: number): boolean {
   const order: MegaStatus[] = [
     'step1_pending', 'step1_done',
     'step2_pending', 'step2_done',
