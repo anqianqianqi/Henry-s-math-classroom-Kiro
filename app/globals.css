@@ -26,6 +26,1871 @@ body {
   }
 }
 
+/* ─── Public Landing: animated undersea classroom ───────────────────────── */
+.landing-ocean {
+  background:
+    radial-gradient(circle at 14% 10%, color-mix(in srgb, var(--landing-sunlight, #ffe6a8) 58%, transparent), transparent 21rem),
+    radial-gradient(circle at 86% 18%, rgba(249, 180, 134, 0.24), transparent 16rem),
+    radial-gradient(circle at 50% 82%, rgba(185, 232, 190, 0.18), transparent 24rem),
+    linear-gradient(
+      180deg,
+      var(--landing-surface-light, #0a7ea4) 0%,
+      var(--landing-surface-mid, #075b82) 42%,
+      var(--landing-panel-ink, #08314d) 78%,
+      var(--landing-surface-deep, #06233a) 100%
+    );
+}
+
+.landing-ocean::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background-image:
+    linear-gradient(105deg, transparent 0 16%, rgba(255, 255, 255, 0.22) 18%, transparent 24%),
+    linear-gradient(72deg, transparent 0 46%, rgba(255, 255, 255, 0.14) 49%, transparent 55%),
+    radial-gradient(circle at 30% 40%, rgba(255, 246, 213, 0.12) 0 0.08rem, transparent 0.09rem),
+    radial-gradient(circle at 72% 56%, rgba(255, 255, 255, 0.1) 0 0.06rem, transparent 0.07rem);
+  background-size: auto, auto, 5.5rem 5.5rem, 4.2rem 4.2rem;
+  opacity: 0.72;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.landing-ocean::after {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  content: "";
+  background:
+    radial-gradient(ellipse at 8% 96%, rgba(255, 223, 158, 0.32), transparent 17rem),
+    radial-gradient(ellipse at 92% 92%, rgba(242, 143, 124, 0.18), transparent 14rem),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 5px);
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.landing-ocean-night {
+  background:
+    radial-gradient(circle at 15% 9%, rgba(223, 239, 255, 0.34), transparent 15rem),
+    radial-gradient(circle at 82% 18%, rgba(174, 226, 238, 0.18), transparent 16rem),
+    radial-gradient(circle at 52% 84%, rgba(123, 181, 171, 0.12), transparent 24rem),
+    linear-gradient(
+      180deg,
+      #265d78 0%,
+      #174560 42%,
+      #12344d 76%,
+      #0b2038 100%
+    );
+}
+
+.landing-ocean-night::before {
+  background-image:
+    linear-gradient(105deg, transparent 0 14%, rgba(221, 242, 255, 0.16) 17%, transparent 24%),
+    linear-gradient(72deg, transparent 0 48%, rgba(186, 226, 246, 0.12) 51%, transparent 58%),
+    radial-gradient(circle at 30% 40%, rgba(218, 241, 255, 0.2) 0 0.05rem, transparent 0.065rem),
+    radial-gradient(circle at 72% 56%, rgba(255, 255, 255, 0.16) 0 0.045rem, transparent 0.06rem);
+  background-size: auto, auto, 5rem 5rem, 3.6rem 3.6rem;
+  opacity: 0.82;
+}
+
+.landing-ocean-night::after {
+  background:
+    radial-gradient(ellipse at 8% 96%, rgba(86, 137, 128, 0.18), transparent 17rem),
+    radial-gradient(ellipse at 92% 92%, rgba(123, 181, 171, 0.12), transparent 14rem),
+    repeating-linear-gradient(0deg, rgba(224, 244, 255, 0.05) 0 1px, transparent 1px 6px);
+  opacity: 0.5;
+}
+
+.landing-sunbeams {
+  position: absolute;
+  inset: -12% -10% auto -10%;
+  height: 52vh;
+  background:
+    conic-gradient(from 210deg at 50% 0%, rgba(255, 247, 213, 0.48), transparent 10deg 25deg, rgba(255, 245, 204, 0.28) 34deg, transparent 48deg 360deg);
+  filter: blur(11px);
+  opacity: 0.88;
+  transform-origin: top center;
+  animation: landing-beams 9s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.landing-ocean-night .landing-sunbeams {
+  background:
+    conic-gradient(from 210deg at 22% 0%, rgba(221, 242, 255, 0.34), transparent 9deg 24deg, rgba(174, 226, 238, 0.2) 33deg, transparent 48deg 360deg);
+  filter: blur(14px);
+  opacity: 0.48;
+}
+
+.landing-current {
+  position: absolute;
+  left: -10%;
+  width: 120%;
+  height: 12rem;
+  border-radius: 50%;
+  background: repeating-linear-gradient(90deg, transparent 0 4rem, rgba(255, 248, 218, 0.12) 4.5rem 5rem, transparent 5.5rem 10rem);
+  filter: blur(16px);
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+.landing-current-one {
+  top: 18%;
+  animation: landing-current-drift 18s linear infinite;
+}
+
+.landing-current-two {
+  bottom: 18%;
+  animation: landing-current-drift 24s linear infinite reverse;
+}
+
+.landing-air-bubble {
+  position: absolute;
+  bottom: -3rem;
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  border-radius: 9999px;
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.12) 38%, rgba(255, 255, 255, 0.03) 68%);
+  box-shadow:
+    inset 0 0 12px rgba(255, 255, 255, 0.28),
+    0 0 18px color-mix(in srgb, var(--landing-accent, #8fe6d2) 25%, transparent);
+  animation: landing-bubble-rise 14s ease-in infinite;
+  pointer-events: none;
+}
+
+.landing-ocean-night .landing-air-bubble {
+  border-color: rgba(222, 246, 255, 0.58);
+  box-shadow:
+    inset 0 0 12px rgba(224, 244, 255, 0.26),
+    0 0 16px rgba(169, 232, 236, 0.24);
+}
+
+.landing-math-bubble {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  bottom: -4.25rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 9999px;
+  color: rgba(23, 68, 94, 0.76);
+  background:
+    radial-gradient(circle at 31% 25%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.2) 0.82rem, transparent 1.2rem),
+    radial-gradient(circle at 64% 70%, rgba(255, 255, 255, 0.22), transparent 1.45rem),
+    radial-gradient(circle at center, rgba(226, 252, 255, 0.32), rgba(255, 255, 255, 0.08) 58%, rgba(255, 255, 255, 0.02) 72%);
+  box-shadow:
+    inset 0 0 1.2rem rgba(255, 255, 255, 0.32),
+    inset -0.55rem -0.45rem 0.9rem rgba(45, 143, 166, 0.1),
+    0 0 1.4rem color-mix(in srgb, var(--landing-accent, #8fe6d2) 24%, transparent);
+  opacity: 0;
+  transform-origin: center;
+  animation: landing-math-bubble-rise 20s ease-in infinite;
+  pointer-events: none;
+}
+
+.landing-math-bubble::before {
+  position: absolute;
+  top: 0.56rem;
+  left: 0.64rem;
+  width: 0.56rem;
+  height: 0.56rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.58);
+  content: "";
+}
+
+.landing-math-bubble-symbol {
+  position: relative;
+  z-index: 2;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.62rem;
+  font-weight: 900;
+  line-height: 1;
+  opacity: 0.86;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.36),
+    0 0 0.72rem rgba(255, 255, 255, 0.28);
+  transform: rotate(-6deg);
+}
+
+.landing-math-pearl {
+  color: rgba(54, 57, 106, 0.76);
+}
+
+.landing-math-coral {
+  color: rgba(121, 55, 58, 0.74);
+}
+
+.landing-math-mint {
+  color: rgba(18, 88, 78, 0.74);
+}
+
+.landing-math-blue {
+  color: rgba(18, 72, 108, 0.74);
+}
+
+.landing-math-sun {
+  color: rgba(115, 73, 18, 0.74);
+}
+
+.landing-ocean-night .landing-math-bubble {
+  border-color: rgba(222, 246, 255, 0.52);
+  color: rgba(213, 244, 255, 0.42);
+  filter: drop-shadow(0 0 12px rgba(169, 232, 236, 0.2));
+}
+
+.landing-fish {
+  position: absolute;
+  left: -7rem;
+  z-index: 0;
+  display: block;
+  width: 5.5rem;
+  height: 2.5rem;
+  border-radius: 62% 48% 50% 64%;
+  background-image:
+    radial-gradient(circle at 80% 36%, rgba(255, 246, 213, 0.72) 0 0.05rem, transparent 0.06rem),
+    radial-gradient(circle at 78% 40%, #183344 0 0.18rem, transparent 0.2rem),
+    radial-gradient(ellipse at 86% 59%, rgba(88, 50, 42, 0.34) 0 0.16rem, transparent 0.18rem),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.16), transparent 44%);
+  box-shadow:
+    0 0 0 0.08rem rgba(65, 80, 76, 0.12),
+    inset -12px -6px 0 rgba(0, 0, 0, 0.08),
+    inset 0 -0.45rem 0 rgba(255, 255, 255, 0.12),
+    0 14px 24px rgba(52, 82, 78, 0.14);
+  opacity: 0.78;
+  animation: landing-fish-swim 22s linear infinite;
+  pointer-events: none;
+}
+
+.landing-fish::before {
+  position: absolute;
+  top: 0.46rem;
+  left: -1.18rem;
+  width: 1.86rem;
+  height: 1.64rem;
+  content: "";
+  background: inherit;
+  clip-path: polygon(100% 50%, 4% 2%, 26% 50%, 4% 98%);
+  transform-origin: right center;
+  animation: landing-tail-wag 1.8s ease-in-out infinite;
+}
+
+.landing-fish::after {
+  position: absolute;
+  top: 1.33rem;
+  right: 0.66rem;
+  width: 0.42rem;
+  height: 0.14rem;
+  content: "";
+  border-radius: 9999px;
+  background: rgba(88, 50, 42, 0.36);
+  transform: rotate(-8deg);
+}
+
+.landing-fish .landing-creature-detail {
+  position: absolute;
+  right: 2.45rem;
+  top: -0.42rem;
+  width: 1.1rem;
+  height: 1rem;
+  border-radius: 90% 90% 18% 18%;
+  background: rgba(255, 250, 222, 0.5);
+  transform: rotate(12deg);
+  box-shadow: -0.35rem 2.28rem 0 -0.18rem rgba(255, 250, 222, 0.42);
+}
+
+.landing-creature-symbol {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  color: rgba(30, 55, 64, 0.42);
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow:
+    0 1px 0 rgba(255, 250, 222, 0.18),
+    0 0 0.45rem rgba(255, 250, 222, 0.12);
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.landing-ocean-night .landing-creature-symbol {
+  color: rgba(218, 241, 255, 0.5);
+  text-shadow:
+    0 0 0.45rem rgba(169, 232, 236, 0.28),
+    0 1px 0 rgba(5, 24, 42, 0.3);
+}
+
+.landing-fish .landing-creature-symbol {
+  inset: 0.35rem 1.15rem 0.28rem 1.15rem;
+  font-size: 2.25rem;
+  transform: rotate(-3deg) scaleX(1.25);
+}
+
+.landing-creature {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  transform: scale(var(--creature-scale, 1));
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.landing-clownfish {
+  left: -6rem;
+  width: 4.9rem;
+  height: 2.32rem;
+  border-radius: 64% 48% 52% 66%;
+  background:
+    radial-gradient(circle at 82% 34%, rgba(255, 246, 213, 0.72) 0 0.045rem, transparent 0.055rem),
+    radial-gradient(circle at 80% 38%, #163342 0 0.17rem, transparent 0.19rem),
+    radial-gradient(ellipse at 88% 58%, rgba(120, 58, 35, 0.34) 0 0.16rem, transparent 0.18rem),
+    linear-gradient(90deg, transparent 0 17%, #5d3a30 17% 20%, #fff8dc 20% 33%, #5d3a30 33% 36%, transparent 36% 56%, #5d3a30 56% 59%, #fff8dc 59% 72%, #5d3a30 72% 75%, transparent 75%),
+    #ff8a28;
+  box-shadow:
+    0 0 0 0.08rem rgba(93, 58, 48, 0.16),
+    inset -10px -5px 0 rgba(0, 0, 0, 0.12),
+    inset 0 -0.32rem 0 rgba(255, 209, 102, 0.24),
+    0 12px 22px rgba(5, 35, 58, 0.18);
+  animation: landing-creature-swim 24s linear infinite;
+}
+
+.landing-clownfish::before {
+  position: absolute;
+  top: 0.42rem;
+  left: -1.14rem;
+  width: 1.72rem;
+  height: 1.46rem;
+  content: "";
+  background: #ff8a28;
+  clip-path: polygon(100% 50%, 3% 2%, 28% 50%, 3% 98%);
+  transform-origin: right center;
+  animation: landing-tail-wag 1.5s ease-in-out infinite;
+}
+
+.landing-clownfish::after {
+  position: absolute;
+  top: -0.22rem;
+  right: 1.75rem;
+  width: 1rem;
+  height: 0.78rem;
+  content: "";
+  border-radius: 9999px 9999px 0 0;
+  background: #ffb13b;
+  transform: rotate(12deg);
+  box-shadow: -0.18rem 2rem 0 -0.2rem #ffb13b;
+  animation: landing-fin-flutter 2.2s ease-in-out infinite;
+}
+
+.landing-clownfish .landing-creature-detail {
+  position: absolute;
+  right: 0.36rem;
+  top: 0.48rem;
+  width: 0.46rem;
+  height: 0.46rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 54% 52%, #163342 0 0.1rem, rgba(255, 246, 213, 0.5) 0.105rem 0.13rem, transparent 0.14rem);
+  box-shadow: 0 0 0 0.12rem rgba(93, 58, 48, 0.12);
+}
+
+.landing-clownfish .landing-creature-symbol {
+  inset: 0.14rem 1.1rem 0.18rem 1rem;
+  color: rgba(93, 58, 48, 0.72);
+  font-size: 2.1rem;
+  transform: rotate(-2deg) scaleX(1.4);
+}
+
+.landing-seahorse {
+  left: -4rem;
+  width: 2.55rem;
+  height: 4.72rem;
+  border-radius: 58% 48% 42% 54%;
+  background:
+    radial-gradient(circle at 62% 14%, rgba(255, 246, 213, 0.7) 0 0.045rem, transparent 0.055rem),
+    radial-gradient(circle at 60% 18%, #163342 0 0.17rem, transparent 0.19rem),
+    radial-gradient(circle at 72% 15%, rgba(255, 255, 255, 0.55) 0 0.18rem, transparent 0.2rem),
+    repeating-linear-gradient(180deg, transparent 0 0.34rem, rgba(148, 88, 22, 0.14) 0.34rem 0.42rem),
+    linear-gradient(180deg, #ffd166, #e5a23a);
+  box-shadow:
+    0 0 0 0.08rem rgba(128, 89, 33, 0.13),
+    inset -7px -5px 0 rgba(0, 0, 0, 0.12),
+    0 12px 20px rgba(5, 35, 58, 0.18);
+  animation: landing-seahorse-swim 32s linear infinite;
+}
+
+.landing-seahorse::before {
+  position: absolute;
+  top: 0.72rem;
+  right: -1.34rem;
+  width: 1.78rem;
+  height: 0.64rem;
+  content: "";
+  border-radius: 0.18rem 9999px 9999px 0.28rem;
+  background:
+    radial-gradient(circle at 78% 44%, rgba(255, 255, 255, 0.52) 0 0.1rem, transparent 0.12rem),
+    #ffd166;
+  transform: rotate(-5deg);
+}
+
+.landing-seahorse::after {
+  position: absolute;
+  left: 0.08rem;
+  bottom: -0.64rem;
+  width: 1.78rem;
+  height: 1.78rem;
+  content: "";
+  border: 0.34rem solid #d88931;
+  border-right-color: transparent;
+  border-radius: 9999px;
+  transform: rotate(-28deg);
+}
+
+.landing-seahorse .landing-creature-detail {
+  position: absolute;
+  left: -0.42rem;
+  top: 1.22rem;
+  width: 0.92rem;
+  height: 2rem;
+  border-radius: 9999px 0 0 9999px;
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.44) 0 0.16rem, rgba(255, 255, 255, 0.12) 0.16rem 0.3rem);
+  clip-path: polygon(100% 0, 0 12%, 72% 25%, 0 38%, 72% 52%, 0 66%, 72% 80%, 0 94%, 100% 100%);
+}
+
+.landing-seahorse .landing-creature-symbol {
+  left: 0.45rem;
+  top: 0.18rem;
+  width: 1.65rem;
+  height: 3.9rem;
+  color: rgba(116, 74, 25, 0.62);
+  font-size: 4rem;
+  transform: rotate(5deg) scaleX(0.82);
+}
+
+.landing-starfish {
+  width: 3.1rem;
+  height: 3.1rem;
+  background:
+    radial-gradient(circle at 43% 45%, #5e3d36 0 0.07rem, transparent 0.09rem),
+    radial-gradient(circle at 57% 45%, #5e3d36 0 0.07rem, transparent 0.09rem),
+    radial-gradient(ellipse at 50% 59%, rgba(94, 61, 54, 0.34) 0 0.16rem, transparent 0.18rem),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.28) 0 0.42rem, transparent 0.44rem),
+    radial-gradient(circle at 50% 18%, rgba(114, 53, 36, 0.18) 0 0.08rem, transparent 0.1rem),
+    radial-gradient(circle at 74% 38%, rgba(114, 53, 36, 0.18) 0 0.08rem, transparent 0.1rem),
+    radial-gradient(circle at 66% 70%, rgba(114, 53, 36, 0.18) 0 0.08rem, transparent 0.1rem),
+    radial-gradient(circle at 34% 70%, rgba(114, 53, 36, 0.18) 0 0.08rem, transparent 0.1rem),
+    radial-gradient(circle at 26% 38%, rgba(114, 53, 36, 0.18) 0 0.08rem, transparent 0.1rem),
+    #ff9f7a;
+  clip-path: polygon(50% 0%, 61% 34%, 98% 35%, 68% 55%, 79% 91%, 50% 68%, 21% 91%, 32% 55%, 2% 35%, 39% 34%);
+  filter: drop-shadow(0 8px 10px rgba(75, 36, 25, 0.18));
+  opacity: 0.92;
+  animation: landing-starfish-drift 22s ease-in-out infinite;
+}
+
+.landing-starfish .landing-creature-detail {
+  position: absolute;
+  inset: 0.72rem;
+  border-radius: 48% 52% 54% 46%;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 250, 222, 0.28), transparent 62%);
+}
+
+.landing-starfish .landing-creature-symbol {
+  inset: 0.08rem;
+  color: rgba(114, 53, 36, 0.52);
+  font-size: 3.1rem;
+  transform: rotate(8deg);
+}
+
+.landing-turtle {
+  left: -6rem;
+  width: 5.55rem;
+  height: 3.28rem;
+  border-radius: 62% 48% 56% 52%;
+  background:
+    radial-gradient(circle at 76% 39%, rgba(255, 255, 255, 0.68) 0 0.12rem, transparent 0.14rem),
+    radial-gradient(ellipse at 42% 52%, #8be3aa 0 38%, #64ba82 39% 56%, #2b8058 57% 100%);
+  box-shadow:
+    0 0 0 0.08rem rgba(44, 90, 67, 0.14),
+    inset -10px -8px 0 rgba(0, 0, 0, 0.14),
+    0 14px 24px rgba(5, 35, 58, 0.16);
+  animation: landing-creature-swim 36s linear infinite;
+}
+
+.landing-turtle::before {
+  position: absolute;
+  right: -1.16rem;
+  top: 0.98rem;
+  width: 1.54rem;
+  height: 1.08rem;
+  content: "";
+  border-radius: 42% 9999px 9999px 44%;
+  background:
+    radial-gradient(circle at 74% 30%, rgba(255, 246, 213, 0.68) 0 0.04rem, transparent 0.05rem),
+    radial-gradient(circle at 72% 34%, #163342 0 0.16rem, transparent 0.18rem),
+    radial-gradient(ellipse at 78% 64%, rgba(44, 55, 45, 0.36) 0 0.12rem, transparent 0.14rem),
+    radial-gradient(circle at 86% 26%, rgba(255, 255, 255, 0.52) 0 0.1rem, transparent 0.12rem),
+    #79dca4;
+  box-shadow: inset -0.22rem -0.12rem 0 rgba(0, 0, 0, 0.1);
+}
+
+.landing-turtle::after {
+  position: absolute;
+  inset: 0.48rem 1.34rem 0.48rem 0.68rem;
+  content: "";
+  border-radius: 56% 44% 52% 48%;
+  background:
+    radial-gradient(ellipse at 26% 42%, rgba(255, 250, 222, 0.18) 0 14%, transparent 15%),
+    radial-gradient(ellipse at 74% 44%, rgba(255, 250, 222, 0.14) 0 13%, transparent 14%),
+    radial-gradient(ellipse at 50% 50%, transparent 0 30%, rgba(6, 56, 45, 0.17) 31% 33%, transparent 34%),
+    linear-gradient(90deg, transparent 48%, rgba(6, 56, 45, 0.3) 49% 52%, transparent 53%),
+    linear-gradient(34deg, transparent 47%, rgba(6, 56, 45, 0.22) 48% 51%, transparent 52%),
+    linear-gradient(-34deg, transparent 47%, rgba(6, 56, 45, 0.22) 48% 51%, transparent 52%);
+  border: 0.2rem solid rgba(6, 56, 45, 0.3);
+}
+
+.landing-turtle .landing-creature-detail {
+  position: absolute;
+  left: 0.5rem;
+  top: -0.32rem;
+  width: 1.42rem;
+  height: 0.86rem;
+  border-radius: 9999px 18% 9999px 18%;
+  background: #79dca4;
+  box-shadow:
+    -0.08rem 2.86rem 0 #79dca4,
+    2.78rem 0.06rem 0 #79dca4,
+    2.84rem 2.54rem 0 #79dca4,
+    -0.76rem 1.6rem 0 -0.23rem #2b8058;
+  animation: landing-flipper 2.8s ease-in-out infinite;
+}
+
+.landing-turtle .landing-creature-symbol {
+  left: 0.84rem;
+  top: 0.42rem;
+  width: 3.1rem;
+  height: 2.1rem;
+  color: rgba(6, 56, 45, 0.42);
+  font-size: 2.35rem;
+  transform: rotate(-4deg) scaleX(1.08);
+}
+
+.landing-ray {
+  left: -7rem;
+  width: 6.2rem;
+  height: 3.08rem;
+  border-radius: 54% 54% 66% 66%;
+  background:
+    radial-gradient(circle at 62% 37%, rgba(255, 246, 213, 0.68) 0 0.035rem, transparent 0.045rem),
+    radial-gradient(circle at 76% 37%, rgba(255, 246, 213, 0.68) 0 0.035rem, transparent 0.045rem),
+    radial-gradient(circle at 61% 41%, #163342 0 0.13rem, transparent 0.15rem),
+    radial-gradient(circle at 75% 41%, #163342 0 0.13rem, transparent 0.15rem),
+    radial-gradient(ellipse at 68% 58%, rgba(22, 51, 66, 0.34) 0 0.24rem, transparent 0.26rem),
+    linear-gradient(180deg, #aee8ee, #5daebf);
+  clip-path: polygon(50% 0, 99% 45%, 72% 63%, 58% 95%, 50% 82%, 42% 95%, 28% 63%, 1% 45%);
+  opacity: 0.82;
+  filter: drop-shadow(0 16px 22px rgba(5, 35, 58, 0.18)) drop-shadow(0 0 0.08rem rgba(55, 95, 112, 0.22));
+  animation: landing-ray-glide 40s linear infinite;
+}
+
+.landing-ray::before {
+  position: absolute;
+  right: -2.65rem;
+  top: 1.42rem;
+  width: 3.35rem;
+  height: 0.16rem;
+  content: "";
+  border-radius: 9999px;
+  background: #2b8bb0;
+  transform: rotate(4deg);
+}
+
+.landing-ray::after {
+  position: absolute;
+  left: 0.6rem;
+  top: 1.04rem;
+  width: 1.6rem;
+  height: 0.48rem;
+  content: "";
+  border-radius: 50%;
+  background: rgba(255, 250, 222, 0.22);
+  box-shadow: 3.44rem 0.02rem 0 rgba(255, 250, 222, 0.16);
+}
+
+.landing-ray .landing-creature-symbol {
+  left: 1.38rem;
+  top: 0.28rem;
+  width: 3rem;
+  height: 2rem;
+  color: rgba(22, 51, 66, 0.38);
+  font-size: 2.15rem;
+  transform: rotate(3deg) scaleX(1.1);
+}
+
+.landing-octopus {
+  left: -4rem;
+  width: 3.42rem;
+  height: 3.28rem;
+  border-radius: 58% 58% 44% 46%;
+  background:
+    radial-gradient(circle at 60% 35%, rgba(255, 246, 213, 0.72) 0 0.045rem, transparent 0.055rem),
+    radial-gradient(circle at 80% 35%, rgba(255, 246, 213, 0.72) 0 0.045rem, transparent 0.055rem),
+    radial-gradient(circle at 58% 39%, #163342 0 0.18rem, transparent 0.2rem),
+    radial-gradient(circle at 78% 39%, #163342 0 0.18rem, transparent 0.2rem),
+    radial-gradient(ellipse at 68% 58%, rgba(69, 42, 82, 0.36) 0 0.22rem, transparent 0.24rem),
+    radial-gradient(circle at 72% 28%, rgba(255, 255, 255, 0.7) 0 0.13rem, transparent 0.15rem),
+    #d493ff;
+  box-shadow:
+    0 0 0 0.08rem rgba(86, 54, 101, 0.14),
+    inset -7px -5px 0 rgba(0, 0, 0, 0.12),
+    0 12px 22px rgba(5, 35, 58, 0.16);
+  animation: landing-octopus-drift 30s linear infinite;
+}
+
+.landing-octopus::before {
+  position: absolute;
+  left: 0.04rem;
+  right: 0.04rem;
+  bottom: -1.12rem;
+  height: 1.48rem;
+  content: "";
+  background:
+    radial-gradient(circle at 11% 92%, #d493ff 0 0.24rem, transparent 0.25rem),
+    radial-gradient(circle at 25% 96%, #d493ff 0 0.24rem, transparent 0.25rem),
+    radial-gradient(circle at 40% 92%, #d493ff 0 0.24rem, transparent 0.25rem),
+    radial-gradient(circle at 55% 96%, #d493ff 0 0.24rem, transparent 0.25rem),
+    radial-gradient(circle at 70% 92%, #d493ff 0 0.24rem, transparent 0.25rem),
+    radial-gradient(circle at 85% 96%, #d493ff 0 0.24rem, transparent 0.25rem),
+    repeating-linear-gradient(90deg, #d493ff 0 0.25rem, transparent 0.25rem 0.5rem);
+  border-radius: 0 0 9999px 9999px;
+  animation: landing-tentacle 2.4s ease-in-out infinite;
+}
+
+.landing-octopus::after {
+  position: absolute;
+  right: 1rem;
+  top: 1.46rem;
+  width: 0.82rem;
+  height: 0.18rem;
+  content: "";
+  border-radius: 9999px;
+  background: rgba(6, 35, 58, 0.48);
+}
+
+.landing-octopus .landing-creature-detail {
+  position: absolute;
+  left: 0.72rem;
+  top: -0.38rem;
+  width: 1.3rem;
+  height: 0.68rem;
+  border-radius: 9999px 9999px 0 0;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.landing-octopus .landing-creature-symbol {
+  left: 0.36rem;
+  top: 0.35rem;
+  width: 2.7rem;
+  height: 2.05rem;
+  color: rgba(69, 42, 82, 0.44);
+  font-size: 2.7rem;
+  transform: rotate(-3deg);
+}
+
+.landing-crab {
+  width: 3.6rem;
+  height: 1.75rem;
+  border-radius: 9999px 9999px 46% 46%;
+  background:
+    radial-gradient(circle at 41% 19%, rgba(255, 246, 213, 0.68) 0 0.035rem, transparent 0.045rem),
+    radial-gradient(circle at 63% 19%, rgba(255, 246, 213, 0.68) 0 0.035rem, transparent 0.045rem),
+    radial-gradient(circle at 40% 23%, #163342 0 0.13rem, transparent 0.15rem),
+    radial-gradient(circle at 62% 23%, #163342 0 0.13rem, transparent 0.15rem),
+    radial-gradient(ellipse at 51% 50%, rgba(88, 50, 42, 0.36) 0 0.2rem, transparent 0.22rem),
+    #ff7a7a;
+  box-shadow:
+    0 0 0 0.08rem rgba(129, 68, 62, 0.14),
+    inset -6px -4px 0 rgba(0, 0, 0, 0.1),
+    0 8px 12px rgba(75, 36, 25, 0.16);
+  animation: landing-crab-scuttle 14s ease-in-out infinite;
+}
+
+.landing-crab::before,
+.landing-crab::after {
+  position: absolute;
+  top: -0.5rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  content: "";
+  border: 0.3rem solid #ff7a7a;
+  border-bottom-color: transparent;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 0.06rem rgba(129, 68, 62, 0.12);
+}
+
+.landing-crab::before {
+  left: -0.65rem;
+  transform: rotate(-38deg);
+}
+
+.landing-crab::after {
+  right: -0.65rem;
+  transform: rotate(38deg);
+}
+
+.landing-crab .landing-creature-detail {
+  position: absolute;
+  left: 0.34rem;
+  top: 1.1rem;
+  width: 0.54rem;
+  height: 0.16rem;
+  border-radius: 9999px;
+  background: #d9535f;
+  box-shadow:
+    0.65rem 0.16rem 0 #d9535f,
+    1.3rem -0.02rem 0 #d9535f,
+    1.95rem 0.16rem 0 #d9535f,
+    2.6rem -0.02rem 0 #d9535f;
+}
+
+.landing-crab .landing-creature-symbol {
+  left: 0.52rem;
+  top: 0.05rem;
+  width: 2.5rem;
+  height: 1.5rem;
+  color: rgba(96, 45, 42, 0.48);
+  font-size: 1.8rem;
+  transform: rotate(-4deg) scaleX(1.2);
+}
+
+.landing-shell {
+  width: 3.1rem;
+  height: 2.35rem;
+  border-radius: 9999px 9999px 0.55rem 0.55rem;
+  background:
+    radial-gradient(circle at 42% 64%, rgba(94, 61, 54, 0.32) 0 0.06rem, transparent 0.08rem),
+    radial-gradient(circle at 58% 64%, rgba(94, 61, 54, 0.32) 0 0.06rem, transparent 0.08rem),
+    radial-gradient(ellipse at 50% 75%, rgba(94, 61, 54, 0.22) 0 0.12rem, transparent 0.14rem),
+    radial-gradient(circle at 50% 86%, rgba(255, 255, 255, 0.42) 0 0.2rem, transparent 0.22rem),
+    repeating-radial-gradient(ellipse at 50% 100%, rgba(255, 255, 255, 0.32) 0 0.18rem, transparent 0.18rem 0.42rem),
+    linear-gradient(180deg, #ffd9a6, #f0a56f);
+  box-shadow:
+    0 0 0 0.08rem rgba(117, 70, 42, 0.12),
+    inset -5px -4px 0 rgba(0, 0, 0, 0.1),
+    0 7px 10px rgba(75, 36, 25, 0.14);
+  clip-path: polygon(50% 0, 92% 22%, 100% 100%, 0 100%, 8% 22%);
+  animation: landing-shell-rock 18s ease-in-out infinite;
+}
+
+.landing-shell .landing-creature-detail {
+  position: absolute;
+  left: 50%;
+  bottom: 0.18rem;
+  width: 0.18rem;
+  height: 1.8rem;
+  background: rgba(117, 70, 42, 0.22);
+  transform: translateX(-50%);
+  box-shadow: -0.72rem 0.14rem 0 rgba(117, 70, 42, 0.15), 0.72rem 0.14rem 0 rgba(117, 70, 42, 0.15);
+}
+
+.landing-shell .landing-creature-symbol {
+  inset: 0.26rem 0.4rem 0.25rem;
+  color: rgba(117, 70, 42, 0.42);
+  font-size: 2.5rem;
+  transform: rotate(1deg) scaleX(1.12);
+}
+
+.landing-image-asset {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  aspect-ratio: 1;
+  max-width: min(36vw, 22rem);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0.9;
+  transform: scale(var(--asset-scale, 1));
+  animation: landing-float var(--speed, 7s) ease-in-out infinite;
+  pointer-events: none;
+}
+
+.landing-art {
+  position: absolute;
+  z-index: 12;
+  display: block;
+  filter: drop-shadow(0 12px 18px rgba(5, 35, 58, 0.16));
+  pointer-events: none;
+}
+
+.landing-art-depth-behind-title {
+  z-index: 6;
+}
+
+.landing-art-depth-front-title {
+  z-index: 12;
+}
+
+.landing-art-depth-foreground {
+  z-index: 40;
+}
+
+.landing-auth-shell .landing-auth-stage {
+  z-index: 30;
+}
+
+.landing-auth-shell .landing-art-depth-behind-title {
+  z-index: 6;
+}
+
+.landing-auth-shell .landing-art-depth-front-title,
+.landing-auth-shell .landing-art:not(.landing-art-depth-behind-title):not(.landing-art-depth-foreground) {
+  z-index: 12;
+}
+
+.landing-auth-shell .landing-art-depth-foreground {
+  z-index: 40;
+}
+
+.landing-art-body {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-origin: 52% 52%;
+}
+
+.landing-art-frame {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background-image: var(--frame-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0;
+}
+
+.landing-art-frame:first-child {
+  opacity: 1;
+}
+
+.landing-art-body-has-frame .landing-art-frame:not(:first-child) {
+  animation: landing-art-frame-overlay var(--frame-cycle, 2.4s) steps(1, end) infinite;
+  animation-delay: calc(var(--frame-cycle, 2.4s) / -4 * var(--frame-index, 0));
+  opacity: 0;
+}
+
+.landing-ocean-night .landing-art {
+  filter: drop-shadow(0 0 14px rgba(169, 232, 236, 0.2)) drop-shadow(0 12px 18px rgba(5, 22, 38, 0.2));
+}
+
+.landing-art-fish {
+  left: 0;
+  width: 5.5rem;
+  height: 2.75rem;
+  --frame-cycle: 1.36s;
+  animation: landing-fish-swim 22s linear infinite;
+}
+
+.landing-art-fish .landing-art-body {
+  animation: landing-fish-body-swim 1.25s ease-in-out infinite;
+}
+
+.landing-art-clownfish {
+  left: 0;
+  width: 5.6rem;
+  height: 2.8rem;
+  --frame-cycle: 1.48s;
+  animation: landing-creature-swim 24s linear infinite;
+}
+
+.landing-art-clownfish .landing-art-body {
+  animation: landing-clownfish-body-swim 1.3s ease-in-out infinite;
+}
+
+.landing-art-seahorse {
+  left: 0;
+  width: 3.2rem;
+  height: 5.35rem;
+  --frame-cycle: 1.9s;
+  animation: landing-seahorse-swim 32s linear infinite;
+}
+
+.landing-art-seahorse .landing-art-body {
+  transform-origin: 48% 58%;
+  animation: landing-seahorse-body-swim 2.4s ease-in-out infinite;
+}
+
+.landing-art-turtle {
+  left: 0;
+  width: 6rem;
+  height: 3.6rem;
+  --frame-cycle: 2.15s;
+  animation: landing-creature-swim 36s linear infinite;
+}
+
+.landing-art-turtle .landing-art-body {
+  animation: landing-turtle-body-swim 2.4s ease-in-out infinite;
+}
+
+.landing-art-ray {
+  left: 0;
+  width: 6.8rem;
+  height: 3.4rem;
+  --frame-cycle: 2.35s;
+  animation: landing-ray-glide 40s linear infinite;
+}
+
+.landing-art-ray .landing-art-body {
+  transform-origin: 50% 46%;
+  animation: landing-ray-body-glide 2.8s ease-in-out infinite;
+}
+
+.landing-art-octopus {
+  left: 0;
+  width: 4rem;
+  height: 4rem;
+  --frame-cycle: 1.72s;
+  animation: landing-octopus-drift 30s linear infinite;
+}
+
+.landing-art-octopus .landing-art-body {
+  transform-origin: 50% 38%;
+  animation: landing-octopus-body-pulse 2.4s ease-in-out infinite;
+}
+
+.landing-art-whale {
+  left: 0;
+  z-index: 0;
+  width: min(38vw, 30rem);
+  min-width: 21rem;
+  height: min(17.7vw, 14rem);
+  min-height: 9.8rem;
+  opacity: 1;
+  --frame-cycle: 5.8s;
+  animation: landing-whale-swim 96s linear infinite;
+}
+
+.landing-art-whale .landing-art-body {
+  transform-origin: 48% 52%;
+  animation: landing-whale-body-swim 6.4s ease-in-out infinite;
+}
+
+.landing-title-whale {
+  position: absolute;
+  left: 0;
+  top: calc(100% - clamp(1.65rem, 3.25vw, 2.95rem)) !important;
+  z-index: 1;
+  display: block;
+  width: clamp(17rem, 44vw, 31rem);
+  min-width: 0;
+  height: clamp(8rem, 20.5vw, 14.4rem);
+  min-height: 0;
+  margin-top: 0;
+  margin-left: 0;
+  opacity: 1;
+  --frame-cycle: 4.8s;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 7%, #000 93%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 7%, #000 93%, transparent 100%);
+  animation: landing-title-whale-swim var(--landing-title-whale-duration, 56s) linear infinite !important;
+}
+
+.landing-title-whale-intro {
+  animation: landing-title-whale-intro-swim 18s linear 1 forwards !important;
+  animation-delay: 0s !important;
+}
+
+.landing-title-whale-running {
+  animation-delay: var(--landing-title-whale-delay, -28s) !important;
+}
+
+.landing-art-starfish {
+  width: 3.6rem;
+  height: 3.6rem;
+  --frame-cycle: 2.8s;
+  animation: landing-starfish-drift 22s ease-in-out infinite;
+}
+
+.landing-art-starfish .landing-art-body {
+  animation: landing-seabed-soft-wiggle 3.6s ease-in-out infinite;
+}
+
+.landing-art-crab {
+  width: 4.2rem;
+  height: 3rem;
+  --frame-cycle: 1.42s;
+  animation: landing-crab-scuttle 14s ease-in-out infinite;
+}
+
+.landing-art-crab .landing-art-body {
+  animation: landing-crab-body-scuttle 1.4s ease-in-out infinite;
+}
+
+.landing-art-shell {
+  width: 3.45rem;
+  height: 2.6rem;
+  --frame-cycle: 3.1s;
+  animation: landing-shell-rock 18s ease-in-out infinite;
+}
+
+.landing-art-shell .landing-art-body {
+  animation: landing-shell-body-rock 4s ease-in-out infinite;
+}
+
+.landing-art-jellyfish {
+  right: 1.1rem;
+  bottom: 1.2rem;
+  z-index: 0;
+  width: 6.3rem;
+  height: 8.7rem;
+  opacity: 0.86;
+  --frame-cycle: 2s;
+  animation: landing-jelly-drift 7s ease-in-out infinite;
+}
+
+.landing-art-jellyfish .landing-art-body {
+  transform-origin: 50% 28%;
+  animation: landing-jelly-body-pulse 2.2s ease-in-out infinite;
+}
+
+.landing-primary-cta {
+  position: relative;
+  overflow: hidden;
+  color: var(--landing-cta-text, #13334c);
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 253, 238, 0.6), transparent 1.8rem),
+    radial-gradient(circle at 76% 92%, rgba(229, 166, 88, 0.2), transparent 2.8rem),
+    repeating-linear-gradient(115deg, rgba(126, 97, 48, 0.035) 0 1px, transparent 1px 8px),
+    var(--landing-cta, #ffd166);
+  box-shadow:
+    0 7px 0 rgba(126, 97, 48, 0.22),
+    0 16px 32px rgba(70, 96, 88, 0.18);
+}
+
+.landing-primary-cta::before,
+.landing-secondary-cta::before {
+  position: absolute;
+  inset: 0.12rem;
+  content: "";
+  border-radius: inherit;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.24), transparent 36%),
+    radial-gradient(ellipse at 70% 110%, rgba(255, 255, 255, 0.16), transparent 42%);
+  pointer-events: none;
+}
+
+.landing-primary-cta:hover {
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 253, 238, 0.72), transparent 1.8rem),
+    radial-gradient(circle at 76% 92%, rgba(229, 166, 88, 0.18), transparent 2.8rem),
+    repeating-linear-gradient(115deg, rgba(126, 97, 48, 0.03) 0 1px, transparent 1px 8px),
+    var(--landing-cta-hover, #ffe08a);
+}
+
+.landing-secondary-cta {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 253, 238, 0.18), transparent 1.9rem),
+    radial-gradient(circle at 86% 92%, rgba(185, 232, 190, 0.18), transparent 2.7rem),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 8px),
+    rgba(255, 255, 255, 0.14);
+}
+
+.landing-secondary-cta:hover {
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 253, 238, 0.24), transparent 1.9rem),
+    radial-gradient(circle at 86% 92%, rgba(185, 232, 190, 0.24), transparent 2.7rem),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 8px),
+    rgba(255, 255, 255, 0.22);
+}
+
+.landing-cta-icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 1.95rem;
+  height: 1.95rem;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 44% 56% 48% 52%;
+  color: color-mix(in srgb, var(--landing-cta-text, #35505b) 86%, #6aa195);
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 253, 238, 0.86), transparent 0.52rem),
+    radial-gradient(circle at 72% 82%, rgba(185, 232, 190, 0.42), transparent 0.74rem),
+    rgba(255, 253, 238, 0.34);
+  box-shadow:
+    inset 0 0 0 1px rgba(126, 97, 48, 0.08),
+    0 0.18rem 0.5rem rgba(70, 96, 88, 0.13);
+  transform: rotate(-4deg);
+}
+
+.landing-cta-icon svg {
+  stroke-width: 2.8;
+  filter: drop-shadow(0 1px 0 rgba(255, 253, 238, 0.42));
+}
+
+.landing-cta-icon-secondary {
+  color: rgba(245, 255, 252, 0.92);
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 253, 238, 0.28), transparent 0.52rem),
+    radial-gradient(circle at 72% 82%, rgba(185, 232, 190, 0.3), transparent 0.74rem),
+    rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 0.18rem 0.5rem rgba(8, 49, 77, 0.16);
+  transform: rotate(4deg);
+}
+
+.landing-auth-card {
+  position: relative;
+  color: #08314d;
+  border-color: rgba(255, 255, 255, 0.58) !important;
+  background: rgba(255, 253, 238, 0.68) !important;
+  box-shadow:
+    0 26px 60px rgba(47, 86, 92, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.landing-ocean-night .landing-auth-card {
+  color: #e7f8ff;
+  border-color: rgba(202, 235, 247, 0.34) !important;
+  background: rgba(19, 52, 76, 0.66) !important;
+  box-shadow:
+    0 26px 60px rgba(4, 20, 36, 0.34),
+    inset 0 1px 0 rgba(222, 246, 255, 0.18);
+}
+
+.landing-auth-card::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background:
+    radial-gradient(circle at 18% 0%, rgba(185, 232, 190, 0.26), transparent 10rem),
+    radial-gradient(circle at 90% 100%, rgba(255, 230, 168, 0.34), transparent 9rem),
+    repeating-linear-gradient(115deg, rgba(126, 97, 48, 0.04) 0 1px, transparent 1px 8px);
+  pointer-events: none;
+}
+
+.landing-auth-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.landing-auth-form label {
+  color: rgba(8, 49, 77, 0.86);
+  font-weight: 800;
+}
+
+.landing-ocean-night .landing-auth-form label {
+  color: rgba(231, 248, 255, 0.88);
+}
+
+.landing-auth-form label span {
+  color: var(--landing-accent, #8fe6d2);
+}
+
+.landing-auth-form input {
+  min-height: 2.85rem;
+  border-color: rgba(8, 49, 77, 0.2);
+  background: rgba(255, 255, 255, 0.82);
+  color: #08314d;
+}
+
+.landing-ocean-night .landing-auth-form input {
+  border-color: rgba(202, 235, 247, 0.24);
+  background: rgba(242, 251, 255, 0.88);
+  color: #0e2a40;
+}
+
+.landing-auth-form input::placeholder {
+  color: rgba(8, 49, 77, 0.36);
+}
+
+.landing-auth-form input:focus {
+  border-color: var(--landing-accent, #8fe6d2);
+  --tw-ring-color: var(--landing-accent, #8fe6d2);
+}
+
+.landing-auth-submit,
+.landing-auth-form button[type="submit"] {
+  background: var(--landing-cta, #ffd166) !important;
+  box-shadow: 0 7px 0 rgba(110, 71, 0, 0.18);
+}
+
+.landing-auth-submit:hover,
+.landing-auth-form button[type="submit"]:hover {
+  background: var(--landing-cta-hover, #ffe08a) !important;
+}
+
+.landing-auth-form p {
+  font-weight: 600;
+}
+
+.landing-dashboard {
+  background:
+    radial-gradient(circle at 16% 10%, rgba(255, 250, 222, 0.34), transparent 8rem),
+    radial-gradient(circle at 88% 84%, rgba(185, 232, 190, 0.25), transparent 8rem),
+    repeating-linear-gradient(120deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 9px),
+    linear-gradient(135deg, rgba(64, 132, 143, 0.76), rgba(47, 111, 130, 0.86));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 253, 238, 0.3),
+    inset 0 -14px 34px rgba(47, 86, 92, 0.2);
+}
+
+.landing-ocean-night .landing-dashboard {
+  background:
+    radial-gradient(circle at 16% 10%, rgba(218, 241, 255, 0.2), transparent 8rem),
+    radial-gradient(circle at 88% 84%, rgba(129, 223, 216, 0.18), transparent 8rem),
+    repeating-linear-gradient(120deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 9px),
+    linear-gradient(135deg, rgba(28, 80, 103, 0.82), rgba(13, 43, 70, 0.92));
+  box-shadow:
+    inset 0 0 0 1px rgba(218, 241, 255, 0.18),
+    inset 0 -14px 34px rgba(4, 20, 36, 0.24);
+}
+
+.landing-problem-row,
+.landing-stat-tile {
+  border-color: rgba(255, 253, 238, 0.28);
+  background: rgba(255, 253, 238, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 8px 18px rgba(47, 86, 92, 0.1);
+}
+
+.landing-ocean-night .landing-problem-row,
+.landing-ocean-night .landing-stat-tile {
+  border-color: rgba(218, 241, 255, 0.2);
+  background: rgba(218, 241, 255, 0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 8px 18px rgba(4, 20, 36, 0.14);
+}
+
+.landing-status-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.125rem;
+  border-radius: 9999px;
+  padding: 0.0625rem 0.375rem;
+  font-size: 0.5625rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.landing-status-todo {
+  color: #45535b;
+  background: #ffe39a;
+}
+
+.landing-status-done {
+  color: #315c51;
+  background: #c4edc1;
+}
+
+.landing-status-comment {
+  color: #6c3f4b;
+  background: #ffd1c9;
+}
+
+.landing-calendar-shell {
+  border-color: rgba(255, 253, 238, 0.36);
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 230, 168, 0.2), transparent 5.5rem),
+    radial-gradient(circle at 88% 86%, rgba(185, 232, 190, 0.2), transparent 5rem),
+    linear-gradient(180deg, rgba(73, 137, 148, 0.72), rgba(47, 100, 122, 0.84));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 10px 26px rgba(47, 86, 92, 0.18);
+}
+
+.landing-ocean-night .landing-calendar-shell {
+  border-color: rgba(218, 241, 255, 0.24);
+  background:
+    radial-gradient(circle at 18% 18%, rgba(218, 241, 255, 0.14), transparent 5.5rem),
+    radial-gradient(circle at 88% 86%, rgba(129, 223, 216, 0.14), transparent 5rem),
+    linear-gradient(180deg, rgba(25, 76, 101, 0.78), rgba(10, 37, 63, 0.9));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 10px 26px rgba(4, 20, 36, 0.22);
+}
+
+.landing-calendar-cell {
+  min-height: 2.45rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 253, 238, 0.23);
+  border-radius: 0.375rem;
+  background: rgba(255, 253, 238, 0.12);
+  padding: 0.125rem 0.1875rem;
+  color: rgba(236, 254, 255, 0.9);
+}
+
+.landing-ocean-night .landing-calendar-cell {
+  border-color: rgba(218, 241, 255, 0.16);
+  background: rgba(218, 241, 255, 0.08);
+}
+
+.landing-calendar-today {
+  border-width: 2px;
+  border-color: #ffe39a;
+  background: rgba(255, 227, 154, 0.24);
+  box-shadow: 0 0 18px rgba(255, 227, 154, 0.26);
+}
+
+.landing-calendar-problem {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 0.25rem;
+  padding: 0.0625rem 0.1875rem;
+  font-size: 0.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.landing-calendar-todo {
+  color: #45535b;
+  background: #ffe39a;
+}
+
+.landing-calendar-done {
+  color: #315c51;
+  background: #c4edc1;
+}
+
+.landing-calendar-comment {
+  color: #6c3f4b;
+  background: #ffd1c9;
+}
+
+.landing-calendar-locked {
+  color: rgba(236, 254, 255, 0.74);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.landing-calendar-class {
+  color: #35505b;
+  background: #c8edf0;
+}
+
+.landing-aquarium-panel::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background:
+    radial-gradient(circle at 20% 22%, rgba(255, 253, 238, 0.28), transparent 9rem),
+    radial-gradient(circle at 84% 78%, rgba(185, 232, 190, 0.2), transparent 9rem),
+    repeating-linear-gradient(130deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 7px);
+  pointer-events: none;
+}
+
+.landing-ocean-night .landing-aquarium-panel::before {
+  background:
+    radial-gradient(circle at 20% 22%, rgba(218, 241, 255, 0.18), transparent 9rem),
+    radial-gradient(circle at 84% 78%, rgba(129, 223, 216, 0.16), transparent 9rem),
+    repeating-linear-gradient(130deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 7px);
+}
+
+.landing-jellyfish {
+  position: absolute;
+  right: 1.3rem;
+  bottom: 1.5rem;
+  z-index: 0;
+  width: 6rem;
+  height: 8rem;
+  border-radius: 50% 50% 45% 45%;
+  background:
+    radial-gradient(circle at 43% 30%, rgba(255, 246, 213, 0.68) 0 0.04rem, transparent 0.05rem),
+    radial-gradient(circle at 59% 30%, rgba(255, 246, 213, 0.68) 0 0.04rem, transparent 0.05rem),
+    radial-gradient(circle at 42% 34%, #5f5361 0 0.15rem, transparent 0.17rem),
+    radial-gradient(circle at 58% 34%, #5f5361 0 0.15rem, transparent 0.17rem),
+    radial-gradient(ellipse at 50% 48%, rgba(95, 83, 97, 0.22) 0 0.24rem, transparent 0.26rem),
+    radial-gradient(circle at 50% 28%, rgba(255, 253, 238, 0.78), rgba(242, 143, 124, 0.38) 48%, rgba(242, 143, 124, 0.14) 70%);
+  filter: drop-shadow(0 0 22px rgba(255, 209, 201, 0.38)) drop-shadow(0 0 0.08rem rgba(120, 78, 88, 0.18));
+  opacity: 0.84;
+  animation: landing-jelly-drift 7s ease-in-out infinite;
+}
+
+.landing-ocean-night .landing-jellyfish {
+  filter: drop-shadow(0 0 26px rgba(172, 235, 239, 0.56)) drop-shadow(0 0 0.1rem rgba(218, 241, 255, 0.24));
+  opacity: 0.92;
+}
+
+.landing-jellyfish .landing-jelly-tentacle {
+  position: absolute;
+  top: 5.5rem;
+  width: 0.28rem;
+  height: 4.2rem;
+  border-radius: 9999px;
+  background: linear-gradient(rgba(255, 255, 255, 0.68), transparent);
+  transform-origin: top center;
+  animation: landing-tentacle 2.8s ease-in-out infinite;
+}
+
+.landing-jellyfish .landing-jelly-tentacle:nth-child(1) {
+  left: 1.7rem;
+}
+
+.landing-jellyfish .landing-jelly-tentacle:nth-child(2) {
+  left: 2.9rem;
+  animation-delay: -0.9s;
+}
+
+.landing-jellyfish .landing-jelly-tentacle:nth-child(3) {
+  left: 4.1rem;
+  animation-delay: -1.8s;
+}
+
+.landing-jellyfish .landing-creature-symbol {
+  left: 1.2rem;
+  top: 0.7rem;
+  width: 3.6rem;
+  height: 4.1rem;
+  color: rgba(95, 83, 97, 0.34);
+  font-size: 4.1rem;
+  transform: rotate(-7deg) scaleY(1.08);
+}
+
+.landing-ocean-night .landing-jellyfish .landing-creature-symbol {
+  color: rgba(218, 241, 255, 0.44);
+}
+
+.landing-seabed {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 1;
+  height: 9.5rem;
+  background:
+    radial-gradient(ellipse at 20% 100%, color-mix(in srgb, var(--landing-sand, #f3dba0) 82%, white) 0 28%, transparent 29%),
+    radial-gradient(ellipse at 58% 105%, color-mix(in srgb, var(--landing-sand-deep, #b8895d) 42%, var(--landing-sand, #f3dba0)) 0 31%, transparent 32%),
+    radial-gradient(ellipse at 88% 100%, var(--landing-sand, #f3dba0) 0 26%, transparent 27%),
+    repeating-linear-gradient(90deg, rgba(119, 86, 53, 0.07) 0 1px, transparent 1px 18px),
+    linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--landing-sand-deep, #b8895d) 44%, var(--landing-sand, #f3dba0)) 68%, var(--landing-sand-deep, #b8895d) 100%);
+  pointer-events: none;
+}
+
+.landing-ocean-night .landing-seabed {
+  background:
+    radial-gradient(ellipse at 20% 100%, rgba(148, 126, 83, 0.5) 0 28%, transparent 29%),
+    radial-gradient(ellipse at 58% 105%, rgba(105, 82, 67, 0.46) 0 31%, transparent 32%),
+    radial-gradient(ellipse at 88% 100%, rgba(160, 135, 89, 0.44) 0 26%, transparent 27%),
+    repeating-linear-gradient(90deg, rgba(234, 218, 174, 0.045) 0 1px, transparent 1px 18px),
+    linear-gradient(180deg, transparent 0%, rgba(106, 85, 71, 0.58) 68%, rgba(78, 59, 58, 0.72) 100%);
+}
+
+.landing-ocean-night .landing-fish,
+.landing-ocean-night .landing-creature {
+  filter: drop-shadow(0 0 10px rgba(169, 232, 236, 0.16));
+}
+
+.landing-coral,
+.landing-kelp {
+  position: absolute;
+  bottom: 1rem;
+  filter: drop-shadow(0 0.5rem 0.65rem rgba(70, 96, 88, 0.15));
+  transform-origin: bottom center;
+}
+
+.landing-coral {
+  width: 5.2rem;
+  height: 5.8rem;
+  border-radius: 9999px 9999px 0.7rem 0.7rem;
+  background:
+    radial-gradient(ellipse at 22% 72%, color-mix(in srgb, var(--landing-coral, #f28f7c) 82%, white) 0 0.62rem, transparent 0.66rem),
+    radial-gradient(ellipse at 39% 42%, color-mix(in srgb, var(--landing-coral, #f28f7c) 88%, white) 0 0.56rem, transparent 0.6rem),
+    radial-gradient(ellipse at 55% 24%, color-mix(in srgb, var(--landing-coral, #f28f7c) 78%, white) 0 0.62rem, transparent 0.66rem),
+    radial-gradient(ellipse at 76% 52%, color-mix(in srgb, var(--landing-coral, #f28f7c) 86%, white) 0 0.58rem, transparent 0.62rem),
+    linear-gradient(90deg, transparent 0 15%, var(--landing-coral, #f28f7c) 16% 28%, transparent 29% 36%, color-mix(in srgb, var(--landing-coral, #f28f7c) 88%, #d86f6f) 37% 50%, transparent 51% 58%, var(--landing-coral, #f28f7c) 59% 72%, transparent 73%),
+    linear-gradient(180deg, color-mix(in srgb, var(--landing-coral, #f28f7c) 86%, white), var(--landing-coral, #f28f7c));
+  clip-path: polygon(46% 100%, 46% 68%, 17% 51%, 12% 33%, 29% 36%, 47% 49%, 47% 18%, 57% 8%, 65% 20%, 63% 50%, 82% 34%, 94% 38%, 86% 55%, 61% 72%, 61% 100%);
+  opacity: 0.9;
+  animation: landing-kelp-sway 4.8s ease-in-out infinite;
+}
+
+.landing-coral-left {
+  left: 7%;
+}
+
+.landing-coral-right {
+  right: 10%;
+  width: 5.7rem;
+  height: 6.4rem;
+  background:
+    radial-gradient(ellipse at 22% 72%, color-mix(in srgb, var(--landing-sunlight, #ffe6a8) 86%, white) 0 0.62rem, transparent 0.66rem),
+    radial-gradient(ellipse at 39% 42%, color-mix(in srgb, var(--landing-sunlight, #ffe6a8) 76%, #f28f7c) 0 0.56rem, transparent 0.6rem),
+    radial-gradient(ellipse at 55% 24%, color-mix(in srgb, var(--landing-sunlight, #ffe6a8) 88%, white) 0 0.62rem, transparent 0.66rem),
+    radial-gradient(ellipse at 76% 52%, color-mix(in srgb, var(--landing-sunlight, #ffe6a8) 78%, #f28f7c) 0 0.58rem, transparent 0.62rem),
+    linear-gradient(90deg, transparent 0 15%, var(--landing-sunlight, #ffe6a8) 16% 28%, transparent 29% 36%, color-mix(in srgb, var(--landing-sunlight, #ffe6a8) 82%, #d89b5f) 37% 50%, transparent 51% 58%, var(--landing-sunlight, #ffe6a8) 59% 72%, transparent 73%),
+    linear-gradient(180deg, color-mix(in srgb, var(--landing-sunlight, #ffe6a8) 86%, white), var(--landing-sunlight, #ffe6a8));
+  animation-delay: -1.8s;
+}
+
+.landing-kelp {
+  width: 1.45rem;
+  height: 7.2rem;
+  border-radius: 9999px 9999px 0.35rem 0.35rem;
+  background:
+    radial-gradient(ellipse at 36% 15%, rgba(255, 253, 238, 0.18), transparent 1.4rem),
+    linear-gradient(color-mix(in srgb, var(--landing-accent, #8fe6d2) 68%, #6acb87), #178762);
+  opacity: 0.88;
+  animation: landing-kelp-sway 5.4s ease-in-out infinite;
+}
+
+.landing-kelp::before,
+.landing-kelp::after {
+  position: absolute;
+  width: 1.4rem;
+  height: 2.8rem;
+  content: "";
+  border-radius: 9999px 12% 9999px 18%;
+  background:
+    radial-gradient(ellipse at 34% 22%, rgba(255, 253, 238, 0.18), transparent 0.8rem),
+    color-mix(in srgb, var(--landing-accent, #8fe6d2) 62%, #59d68a);
+}
+
+.landing-kelp::before {
+  left: -1rem;
+  top: 1.1rem;
+  transform: rotate(-28deg);
+}
+
+.landing-kelp::after {
+  right: -1rem;
+  top: 3.2rem;
+  transform: rotate(28deg) scaleX(-1);
+}
+
+.landing-kelp-one {
+  left: 18%;
+}
+
+.landing-kelp-two {
+  left: 74%;
+  height: 6rem;
+  animation-delay: -2s;
+}
+
+.landing-kelp-three {
+  left: 86%;
+  height: 7.8rem;
+  animation-delay: -3.2s;
+}
+
+@keyframes landing-beams {
+  from { transform: rotate(-2deg) scaleX(1); }
+  to { transform: rotate(3deg) scaleX(1.08); }
+}
+
+@keyframes landing-current-drift {
+  from { transform: translateX(-6%); }
+  to { transform: translateX(6%); }
+}
+
+@keyframes landing-bubble-rise {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.7);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.86;
+  }
+  55% {
+    transform: translate3d(1.5rem, -54vh, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(-1rem, -106vh, 0) scale(0.55);
+    opacity: 0;
+  }
+}
+
+@keyframes landing-math-bubble-rise {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(-4deg) scale(calc(var(--math-bubble-scale, 1) * 0.8));
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.78;
+  }
+  54% {
+    transform: translate3d(1.7rem, -54vh, 0) rotate(7deg) scale(var(--math-bubble-scale, 1));
+    opacity: 0.72;
+  }
+  100% {
+    transform: translate3d(-1.1rem, -108vh, 0) rotate(-8deg) scale(calc(var(--math-bubble-scale, 1) * 0.62));
+    opacity: 0;
+  }
+}
+
+@keyframes landing-tail-wag {
+  0%, 100% { transform: rotate(-6deg) scaleY(1); }
+  50% { transform: rotate(8deg) scaleY(0.94); }
+}
+
+@keyframes landing-fin-flutter {
+  0%, 100% { transform: rotate(8deg); }
+  50% { transform: rotate(18deg) translateY(0.08rem); }
+}
+
+@keyframes landing-art-frame-overlay {
+  0%, 100% { opacity: 0; }
+  18%, 34% { opacity: 0.68; }
+  52% { opacity: 0; }
+}
+
+@keyframes landing-art-gentle-pulse {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.4deg) scale(1); }
+  50% { transform: translate3d(0, -0.05rem, 0) rotate(0.5deg) scale(1.01, 0.994); }
+}
+
+@keyframes landing-fish-body-swim {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-1.2deg) scale(1); }
+  28% { transform: translate3d(0.12rem, -0.04rem, 0) rotate(1.6deg) scale(1.034, 0.976); }
+  58% { transform: translate3d(-0.04rem, 0.03rem, 0) rotate(-1deg) scale(0.988, 1.012); }
+  78% { transform: translate3d(0.08rem, -0.02rem, 0) rotate(1.2deg) scale(1.02, 0.986); }
+}
+
+@keyframes landing-clownfish-body-swim {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-1.4deg) scale(1); }
+  25% { transform: translate3d(0.13rem, -0.04rem, 0) rotate(1.8deg) scale(1.036, 0.974); }
+  55% { transform: translate3d(-0.05rem, 0.03rem, 0) rotate(-1.2deg) scale(0.99, 1.014); }
+  78% { transform: translate3d(0.09rem, -0.03rem, 0) rotate(1.4deg) scale(1.024, 0.984); }
+}
+
+@keyframes landing-seahorse-body-swim {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-1.5deg) scale(1); }
+  32% { transform: translate3d(0.08rem, -0.16rem, 0) rotate(2.2deg) scale(1.018, 0.99); }
+  62% { transform: translate3d(-0.05rem, 0.06rem, 0) rotate(-1deg) scale(0.992, 1.012); }
+}
+
+@keyframes landing-turtle-body-swim {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.8deg) scale(1); }
+  35% { transform: translate3d(0.1rem, -0.07rem, 0) rotate(1.4deg) scale(1.018, 0.988); }
+  68% { transform: translate3d(-0.04rem, 0.04rem, 0) rotate(-0.7deg) scale(0.994, 1.006); }
+}
+
+@keyframes landing-ray-body-glide {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1, 1) rotate(0deg); }
+  32% { transform: translate3d(0.08rem, -0.12rem, 0) scale(1.028, 0.964) rotate(0.8deg); }
+  64% { transform: translate3d(-0.04rem, 0.05rem, 0) scale(0.992, 1.018) rotate(-0.5deg); }
+}
+
+@keyframes landing-octopus-body-pulse {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1, 1) rotate(-0.8deg); }
+  36% { transform: translate3d(0.06rem, -0.13rem, 0) scale(1.03, 0.972) rotate(1.3deg); }
+  68% { transform: translate3d(-0.04rem, 0.05rem, 0) scale(0.988, 1.016) rotate(-0.6deg); }
+}
+
+@keyframes landing-whale-body-swim {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.35deg) scale(1); }
+  38% { transform: translate3d(0.12rem, -0.08rem, 0) rotate(0.55deg) scale(1.01, 0.994); }
+  70% { transform: translate3d(-0.04rem, 0.04rem, 0) rotate(-0.25deg) scale(0.996, 1.004); }
+}
+
+@keyframes landing-seabed-soft-wiggle {
+  0%, 100% { transform: rotate(-2deg) scale(1); }
+  50% { transform: rotate(3deg) scale(1.025); }
+}
+
+@keyframes landing-crab-body-scuttle {
+  0%, 100% { transform: translateX(-0.04rem) rotate(-1deg) scale(1); }
+  50% { transform: translateX(0.12rem) rotate(1.4deg) scale(1.015, 0.985); }
+}
+
+@keyframes landing-shell-body-rock {
+  0%, 100% { transform: rotate(-1.5deg) scale(1); }
+  50% { transform: rotate(2deg) scale(1.01); }
+}
+
+@keyframes landing-jelly-body-pulse {
+  0%, 100% { transform: translate3d(0, 0.08rem, 0) scale(1, 1); }
+  45% { transform: translate3d(0, -0.08rem, 0) scale(1.018, 0.99); }
+  70% { transform: translate3d(0, -0.02rem, 0) scale(0.992, 1.012); }
+}
+
+@keyframes landing-fish-swim {
+  0% {
+    transform: translate3d(-100%, 0, 0) scale(var(--fish-scale, 1));
+  }
+  48% {
+    transform: translate3d(52vw, 1.25rem, 0) scale(var(--fish-scale, 1));
+  }
+  100% {
+    transform: translate3d(calc(100vw + 100%), -0.7rem, 0) scale(var(--fish-scale, 1));
+  }
+}
+
+@keyframes landing-creature-swim {
+  0% {
+    transform: translate3d(-100%, 0, 0) scale(var(--creature-scale, 1));
+  }
+  45% {
+    transform: translate3d(48vw, -0.85rem, 0) scale(var(--creature-scale, 1));
+  }
+  100% {
+    transform: translate3d(calc(100vw + 100%), 0.7rem, 0) scale(var(--creature-scale, 1));
+  }
+}
+
+@keyframes landing-seahorse-swim {
+  0% {
+    transform: translate3d(-100%, 0, 0) rotate(-3deg) scale(var(--creature-scale, 1));
+  }
+  50% {
+    transform: translate3d(54vw, 1.15rem, 0) rotate(4deg) scale(var(--creature-scale, 1));
+  }
+  100% {
+    transform: translate3d(calc(100vw + 100%), -0.65rem, 0) rotate(-2deg) scale(var(--creature-scale, 1));
+  }
+}
+
+@keyframes landing-ray-glide {
+  0% {
+    transform: translate3d(-100%, 0, 0) scale(var(--creature-scale, 1));
+  }
+  50% {
+    transform: translate3d(55vw, -1.4rem, 0) scale(var(--creature-scale, 1));
+  }
+  100% {
+    transform: translate3d(calc(100vw + 100%), 0.8rem, 0) scale(var(--creature-scale, 1));
+  }
+}
+
+@keyframes landing-octopus-drift {
+  0% {
+    transform: translate3d(-100%, 0, 0) rotate(-4deg) scale(var(--creature-scale, 1));
+  }
+  48% {
+    transform: translate3d(52vw, -0.9rem, 0) rotate(5deg) scale(var(--creature-scale, 1));
+  }
+  100% {
+    transform: translate3d(calc(100vw + 100%), 0.7rem, 0) rotate(-2deg) scale(var(--creature-scale, 1));
+  }
+}
+
+@keyframes landing-whale-swim {
+  0% {
+    transform: translate3d(-100%, 0, 0) scale(var(--creature-scale, 1));
+  }
+  45% {
+    transform: translate3d(46vw, 1.4rem, 0) scale(var(--creature-scale, 1));
+  }
+  100% {
+    transform: translate3d(calc(100vw + 100%), -0.85rem, 0) scale(var(--creature-scale, 1));
+  }
+}
+
+@keyframes landing-title-whale-swim {
+  0% {
+    opacity: 1;
+    transform: translate3d(-108%, 0.1rem, 0) rotate(-0.5deg) scale(var(--creature-scale, 1));
+  }
+  4% {
+    opacity: 1;
+    transform: translate3d(-96%, 0.02rem, 0) rotate(-0.38deg) scale(var(--creature-scale, 1));
+  }
+  50% {
+    opacity: 1;
+    transform: translate3d(46vw, -0.34rem, 0) rotate(0.45deg) scale(var(--creature-scale, 1));
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(100vw, 0.12rem, 0) rotate(-0.35deg) scale(var(--creature-scale, 1));
+  }
+}
+
+@keyframes landing-title-whale-intro-swim {
+  0% {
+    opacity: 1;
+    transform: translate3d(-50%, 0.04rem, 0) rotate(-0.35deg) scale(var(--creature-scale, 1));
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(46vw, -0.34rem, 0) rotate(0.45deg) scale(var(--creature-scale, 1));
+  }
+}
+
+@keyframes landing-starfish-drift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(-8deg) scale(var(--creature-scale, 1));
+  }
+  50% {
+    transform: translate3d(1.2rem, -0.35rem, 0) rotate(10deg) scale(var(--creature-scale, 1));
+  }
+}
+
+@keyframes landing-flipper {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(10deg); }
+}
+
+@keyframes landing-crab-scuttle {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(var(--creature-scale, 1));
+  }
+  50% {
+    transform: translate3d(1.35rem, -0.12rem, 0) scale(var(--creature-scale, 1));
+  }
+}
+
+@keyframes landing-shell-rock {
+  0%, 100% {
+    transform: rotate(-4deg) scale(var(--creature-scale, 1));
+  }
+  50% {
+    transform: rotate(5deg) scale(var(--creature-scale, 1));
+  }
+}
+
+@keyframes landing-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-0.55rem); }
+}
+
+@keyframes landing-jelly-drift {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-1rem) scale(1.04); }
+}
+
+@keyframes landing-tentacle {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(8deg); }
+}
+
+@keyframes landing-kelp-sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(5deg); }
+}
+
+@media (max-width: 640px) {
+  .landing-seabed {
+    height: 6.5rem;
+  }
+
+  .landing-coral-right,
+  .landing-kelp-two {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-sunbeams,
+  .landing-current,
+  .landing-air-bubble,
+  .landing-fish,
+  .landing-creature,
+  .landing-art,
+  .landing-art-body,
+  .landing-math-bubble,
+  .landing-jellyfish,
+  .landing-jelly-tentacle,
+  .landing-coral,
+  .landing-kelp {
+    animation: none !important;
+  }
+}
+
 /* ─── Bubble Room: floating bubble animation ────────────────────────────────
  *
  * .bubble-rise is applied to each QuestionBubble <div>.
@@ -548,4 +2413,253 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .paper-raise { transition: none; }
   .paper-raise:hover { transform: none; }
+}
+
+/* ── The grading desk (app/studio) ───────────────────────────────────────────
+   The desk wears the worksheet's own palette, set as --sd-* variables on
+   .studio by app/studio/layout.tsx from lib/henry-theme, so the tool and the
+   printed sheet it shows are one object. No Tailwind colour tokens here on
+   purpose: the site's green-and-blue chrome is the student-facing direction,
+   and a marking tool sits beside paper.
+
+   Buttons are the calendar's raised sheet (.dash-problem-btn) redone for a
+   cream ground: a lit top edge, a shadow beneath, pressed INTO the sheet on
+   click. No gloss, no hard offset shadow. */
+.studio {
+  background: var(--sd-paper);
+  color: var(--sd-ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans SC", sans-serif;
+  min-height: 100vh;
+}
+.studio-grid {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr) 380px;
+  height: 100vh;
+}
+.studio-rail, .studio-work, .studio-actions { overflow-y: auto; min-height: 0; }
+.studio-rail {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--sd-rule);
+  background: color-mix(in srgb, var(--sd-paper) 88%, var(--sd-card));
+}
+.studio-rail-head { padding: 1rem 1rem 0.75rem; }
+.studio-filters { padding: 0 1rem 0.75rem; border-bottom: 1px solid var(--sd-rule); }
+.studio-rail-list { flex: 1; overflow-y: auto; padding-bottom: 0.5rem; }
+.studio-rail-foot { padding: 0.75rem 1rem 1rem; border-top: 1px solid var(--sd-rule); }
+.studio-work { padding: 1rem 1.5rem 3rem; }
+.studio-actions { padding: 1rem 1rem 3rem; border-left: 1px solid var(--sd-rule); }
+
+@media (max-width: 1180px) {
+  .studio-grid { grid-template-columns: 1fr; height: auto; }
+  .studio-rail { border-right: 0; border-bottom: 1px solid var(--sd-rule); max-height: 50vh; }
+  .studio-actions { border-left: 0; border-top: 1px solid var(--sd-rule); }
+}
+
+.studio-muted { color: var(--sd-muted); }
+.studio-error { color: #8a3b2a; }
+.studio-ok { color: var(--sd-green); }
+.studio-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sd-muted);
+}
+.studio-link { color: var(--sd-green); text-decoration: underline; text-underline-offset: 2px; }
+.studio-link:hover { color: var(--sd-ink); }
+
+.studio-card {
+  background: var(--sd-card);
+  border: 1px solid var(--sd-rule);
+  border-radius: 0.8rem;
+  /* Pigment settling at the rim: the paper cards' resting pool, at lower strength. */
+  box-shadow: inset 0 0 22px 4px rgba(176, 138, 88, 0.09);
+}
+.studio-section { padding: 1rem 1.1rem; }
+.studio-section + .studio-section { margin-top: 0.9rem; }
+.studio-work-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0.25rem 0.9rem;
+}
+.studio-plain-problem { font-family: Georgia, "Times New Roman", serif; line-height: 1.7; }
+
+.studio-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  padding: 0.5em 0.95em;
+  border-radius: 0.6em;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--sd-ink);
+  background: linear-gradient(180deg, #fffdf8, #f3ecdf);
+  border: 1px solid var(--sd-rule);
+  border-bottom-color: rgba(47, 51, 43, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 1px 2px rgba(47, 51, 43, 0.12);
+  transition: transform 0.09s ease, box-shadow 0.09s ease, background 0.09s ease;
+}
+.studio-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 4px rgba(47, 51, 43, 0.16);
+}
+.studio-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 3px rgba(47, 51, 43, 0.22);
+}
+.studio-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.studio-btn:focus-visible { outline: 2px solid var(--sd-green); outline-offset: 2px; }
+.studio-btn-sm { padding: 0.3em 0.6em; font-size: 0.8rem; }
+.studio-btn-primary {
+  color: #fffdf8;
+  background: linear-gradient(180deg, #5b7552, var(--sd-green));
+  border-color: #3f5239;
+  border-bottom-color: #2e3d2a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 2px rgba(47, 51, 43, 0.2);
+}
+.studio-btn-accent {
+  background: linear-gradient(180deg, #f3b26c, var(--sd-orange));
+  border-color: #c98436;
+  border-bottom-color: #a86a26;
+}
+
+.studio-tab {
+  flex: 1;
+  padding: 0.35em 0.6em;
+  border-radius: 0.6em;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--sd-muted);
+  border: 1px solid transparent;
+}
+.studio-tab-active { background: var(--sd-card); color: var(--sd-ink); border-color: var(--sd-rule); }
+.studio-count {
+  display: inline-block;
+  margin-left: 0.4em;
+  min-width: 1.5em;
+  padding: 0 0.4em;
+  border-radius: 999px;
+  background: var(--sd-mint);
+  color: var(--sd-green);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.studio-input {
+  background: var(--sd-card);
+  border: 1px solid var(--sd-rule);
+  border-radius: 0.5rem;
+  padding: 0.45em 0.6em;
+  color: var(--sd-ink);
+  font: inherit;
+}
+.studio-input:focus { outline: none; border-color: var(--sd-green); box-shadow: 0 0 0 3px rgba(73, 95, 66, 0.18); }
+.studio-input:disabled { opacity: 0.6; }
+.studio-score { width: 6rem; font-size: 1.9rem; font-weight: 700; text-align: center; padding: 0.15em 0.3em; }
+.studio-label { display: block; font-size: 0.75rem; color: var(--sd-muted); }
+.studio-label > span { display: block; margin-bottom: 0.2rem; }
+
+.studio-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--sd-ink);
+  position: sticky;
+  top: 0;
+  background: color-mix(in srgb, var(--sd-paper) 88%, var(--sd-card));
+}
+.studio-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 1rem 0.45rem 0.9rem;
+  border-left: 3px solid transparent;
+  text-align: left;
+  font-size: 0.9rem;
+}
+.studio-row:hover { background: rgba(73, 95, 66, 0.06); }
+.studio-row[aria-current="true"] { background: var(--sd-mint); border-left-color: var(--sd-green); }
+.studio-row-name { min-width: 0; font-weight: 600; }
+.studio-row-meta { display: flex; flex-shrink: 0; align-items: center; gap: 0.4rem; font-size: 0.75rem; }
+
+.studio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.1em 0.6em;
+  border-radius: 999px;
+  border: 1px solid var(--sd-rule);
+  background: var(--sd-card);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.studio-chip-high { background: var(--sd-mint); border-color: #bccfb0; }
+.studio-chip-mid { background: var(--sd-yellow); border-color: #e3c85a; }
+.studio-chip-low { background: var(--sd-rose); border-color: #e2a693; }
+.studio-ta-high { border-color: #bccfb0; }
+.studio-ta-mid { border-color: #e3c85a; }
+.studio-ta-low { border-color: #e2a693; }
+.studio-note { color: #8a5a1c; }
+
+.studio-kbd {
+  display: inline-block;
+  padding: 0 0.4em;
+  border: 1px solid var(--sd-rule);
+  border-bottom-width: 2px;
+  border-radius: 0.35em;
+  background: var(--sd-card);
+  color: var(--sd-muted);
+  font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+.studio-kbd-onprimary { background: rgba(255, 253, 248, 0.2); border-color: rgba(255, 253, 248, 0.5); color: #fffdf8; }
+.studio-keys { margin-top: 1rem; padding: 0 0.25rem; }
+.studio-keys dl { margin-top: 0.4rem; display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.75rem; font-size: 0.8rem; }
+.studio-keys dl > div { display: contents; }
+.studio-keys dd { color: var(--sd-muted); }
+
+.studio-photo { display: block; width: 100%; cursor: zoom-in; border-radius: 0.6rem; overflow: hidden; border: 1px solid var(--sd-rule); background: #fff; }
+.studio-photo img { display: block; width: 100%; height: auto; }
+.studio-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 3.5rem 2rem 2rem;
+  background: rgba(47, 51, 43, 0.88);
+  cursor: zoom-out;
+}
+.studio-lightbox-img { max-width: none; width: auto; height: auto; cursor: default; background: #fff; border-radius: 0.4rem; }
+.studio-lightbox-close { position: fixed; top: 1rem; right: 1rem; }
+
+.studio-comment { padding: 0.5rem 0.7rem; border-radius: 0.5rem; background: rgba(73, 95, 66, 0.05); }
+.studio-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; color: var(--sd-muted); }
+.studio-empty-mark { font-size: 3rem; opacity: 0.35; margin-bottom: 0.5rem; }
+.studio-progress { height: 6px; border-radius: 999px; background: var(--sd-rule); overflow: hidden; }
+.studio-progress-fill { height: 100%; background: var(--sd-green); transition: width 0.3s ease; }
+
+/* The assistant is reading: a slow breath on the sentence, and nothing else moves. */
+@keyframes studio-thinking { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+.studio-thinking { animation: studio-thinking 1.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-btn { transition: box-shadow 0.09s ease, background 0.09s ease; }
+  .studio-btn:hover:not(:disabled), .studio-btn:active:not(:disabled) { transform: none; }
+  .studio-thinking { animation: none; }
+  .studio-progress-fill { transition: none; }
 }

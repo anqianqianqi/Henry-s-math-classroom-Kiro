@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grading desk — preview</title>
+<!--
+  Standalone preview of app/studio, the grading desk.
+
+  Same stylesheet section as app/globals.css (copied, not linked, so this file
+  opens from disk with no server) and the same palette variables that
+  app/studio/layout.tsx sets from lib/henry-theme. The markup mirrors the three
+  components under components/studio/ with sample data; the worksheet is a
+  static stand-in for HenryProblemSheet. Kept next to the other previews in
+  docs/ so the desk can be looked at without signing in and enabling STUDIO.
+-->
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+  h1, h2, h3, p, dl, dd, dt, figure { margin: 0; }
+  .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .flex { display: flex; } .items-start { align-items: flex-start; } .items-center { align-items: center; }
+  .items-baseline { align-items: baseline; } .justify-between { justify-content: space-between; }
+  .gap-1 { gap: .25rem; } .gap-2 { gap: .5rem; } .flex-wrap { flex-wrap: wrap; } .block { display: block; } .w-full { width: 100%; }
+  .min-w-0 { min-width: 0; } .shrink-0 { flex-shrink: 0; } .grid { display: grid; } .grid-cols-2 { grid-template-columns: 1fr 1fr; }
+  .col-span-2 { grid-column: span 2; } .space-y-2 > * + * { margin-top: .5rem; }
+  .text-xs { font-size: .75rem; } .text-sm { font-size: .875rem; } .text-lg { font-size: 1.125rem; } .text-xl { font-size: 1.25rem; }
+  .text-2xl { font-size: 1.5rem; } .font-semibold { font-weight: 600; } .font-normal { font-weight: 400; } .italic { font-style: italic; }
+  .leading-tight { line-height: 1.25; } .leading-relaxed { line-height: 1.625; } .whitespace-pre-wrap { white-space: pre-wrap; }
+  .mt-1 { margin-top: .25rem; } .mt-2 { margin-top: .5rem; } .mt-3 { margin-top: .75rem; } .mt-4 { margin-top: 1rem; }
+  .mb-1 { margin-bottom: .25rem; } .mb-2 { margin-bottom: .5rem; } .p-4 { padding: 1rem; }
+  ul { list-style: none; padding: 0; margin: 0; }
+  textarea, input, select { font: inherit; }
+
+  /* ── Copied from app/globals.css: "The grading desk (app/studio)" ── */
+  .studio { background: var(--sd-paper); color: var(--sd-ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans SC", sans-serif; min-height: 100vh; }
+  .studio-grid { display: grid; grid-template-columns: 320px minmax(0, 1fr) 380px; height: 100vh; }
+  .studio-rail, .studio-work, .studio-actions { overflow-y: auto; min-height: 0; }
+  .studio-rail { display: flex; flex-direction: column; border-right: 1px solid var(--sd-rule); background: color-mix(in srgb, var(--sd-paper) 88%, var(--sd-card)); }
+  .studio-rail-head { padding: 1rem 1rem 0.75rem; }
+  .studio-filters { padding: 0 1rem 0.75rem; border-bottom: 1px solid var(--sd-rule); }
+  .studio-rail-list { flex: 1; overflow-y: auto; padding-bottom: 0.5rem; }
+  .studio-rail-foot { padding: 0.75rem 1rem 1rem; border-top: 1px solid var(--sd-rule); }
+  .studio-work { padding: 1rem 1.5rem 3rem; }
+  .studio-actions { padding: 1rem 1rem 3rem; border-left: 1px solid var(--sd-rule); }
+  @media (max-width: 1180px) {
+    .studio-grid { grid-template-columns: 1fr; height: auto; }
+    .studio-rail { border-right: 0; border-bottom: 1px solid var(--sd-rule); max-height: 50vh; }
+    .studio-actions { border-left: 0; border-top: 1px solid var(--sd-rule); }
+  }
+  .studio-muted { color: var(--sd-muted); }
+  .studio-error { color: #8a3b2a; }
+  .studio-ok { color: var(--sd-green); }
+  .studio-eyebrow { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sd-muted); }
+  .studio-link { color: var(--sd-green); text-decoration: underline; text-underline-offset: 2px; }
+  .studio-link:hover { color: var(--sd-ink); }
+  .studio-card { background: var(--sd-card); border: 1px solid var(--sd-rule); border-radius: 0.8rem; box-shadow: inset 0 0 22px 4px rgba(176, 138, 88, 0.09); }
+  .studio-section { padding: 1rem 1.1rem; }
+  .studio-section + .studio-section { margin-top: 0.9rem; }
+  .studio-work-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 0.25rem 0.25rem 0.9rem; }
+  .studio-btn { display: inline-flex; align-items: center; gap: 0.45em; padding: 0.5em 0.95em; border-radius: 0.6em; font-weight: 600; font-size: 0.9rem; color: var(--sd-ink); background: linear-gradient(180deg, #fffdf8, #f3ecdf); border: 1px solid var(--sd-rule); border-bottom-color: rgba(47, 51, 43, 0.24); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 1px 2px rgba(47, 51, 43, 0.12); transition: transform 0.09s ease, box-shadow 0.09s ease, background 0.09s ease; }
+  .studio-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 4px rgba(47, 51, 43, 0.16); }
+  .studio-btn:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 1px 3px rgba(47, 51, 43, 0.22); }
+  .studio-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .studio-btn-sm { padding: 0.3em 0.6em; font-size: 0.8rem; }
+  .studio-btn-primary { color: #fffdf8; background: linear-gradient(180deg, #5b7552, var(--sd-green)); border-color: #3f5239; border-bottom-color: #2e3d2a; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 2px rgba(47, 51, 43, 0.2); }
+  .studio-btn-accent { background: linear-gradient(180deg, #f3b26c, var(--sd-orange)); border-color: #c98436; border-bottom-color: #a86a26; }
+  .studio-tab { flex: 1; padding: 0.35em 0.6em; border-radius: 0.6em; font-size: 0.85rem; font-weight: 600; color: var(--sd-muted); border: 1px solid transparent; }
+  .studio-tab-active { background: var(--sd-card); color: var(--sd-ink); border-color: var(--sd-rule); }
+  .studio-count { display: inline-block; margin-left: 0.4em; min-width: 1.5em; padding: 0 0.4em; border-radius: 999px; background: var(--sd-mint); color: var(--sd-green); font-size: 0.72rem; font-weight: 700; text-align: center; }
+  .studio-input { background: var(--sd-card); border: 1px solid var(--sd-rule); border-radius: 0.5rem; padding: 0.45em 0.6em; color: var(--sd-ink); font: inherit; }
+  .studio-input:focus { outline: none; border-color: var(--sd-green); box-shadow: 0 0 0 3px rgba(73, 95, 66, 0.18); }
+  .studio-score { width: 6rem; font-size: 1.9rem; font-weight: 700; text-align: center; padding: 0.15em 0.3em; }
+  .studio-label { display: block; font-size: 0.75rem; color: var(--sd-muted); }
+  .studio-label > span { display: block; margin-bottom: 0.2rem; }
+  .studio-group-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.7rem 1rem 0.3rem; font-size: 0.8rem; font-weight: 700; color: var(--sd-ink); position: sticky; top: 0; background: color-mix(in srgb, var(--sd-paper) 88%, var(--sd-card)); }
+  .studio-row { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.45rem 1rem 0.45rem 0.9rem; border-left: 3px solid transparent; text-align: left; font-size: 0.9rem; }
+  .studio-row:hover { background: rgba(73, 95, 66, 0.06); }
+  .studio-row[aria-current="true"] { background: var(--sd-mint); border-left-color: var(--sd-green); }
+  .studio-row-name { min-width: 0; font-weight: 600; }
+  .studio-row-meta { display: flex; flex-shrink: 0; align-items: center; gap: 0.4rem; font-size: 0.75rem; }
+  .studio-chip { display: inline-flex; align-items: center; gap: 0.3em; padding: 0.1em 0.6em; border-radius: 999px; border: 1px solid var(--sd-rule); background: var(--sd-card); font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+  .studio-chip-high { background: var(--sd-mint); border-color: #bccfb0; }
+  .studio-chip-mid { background: var(--sd-yellow); border-color: #e3c85a; }
+  .studio-chip-low { background: var(--sd-rose); border-color: #e2a693; }
+  .studio-ta-high { border-color: #bccfb0; }
+  .studio-note { color: #8a5a1c; }
+  .studio-kbd { display: inline-block; padding: 0 0.4em; border: 1px solid var(--sd-rule); border-bottom-width: 2px; border-radius: 0.35em; background: var(--sd-card); color: var(--sd-muted); font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; font-size: 0.7rem; line-height: 1.5; }
+  .studio-kbd-onprimary { background: rgba(255, 253, 248, 0.2); border-color: rgba(255, 253, 248, 0.5); color: #fffdf8; }
+  .studio-keys { margin-top: 1rem; padding: 0 0.25rem; }
+  .studio-keys dl { margin-top: 0.4rem; display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.75rem; font-size: 0.8rem; }
+  .studio-keys dl > div { display: contents; }
+  .studio-keys dd { color: var(--sd-muted); }
+  .studio-photo { display: block; width: 100%; cursor: zoom-in; border-radius: 0.6rem; overflow: hidden; border: 1px solid var(--sd-rule); background: #fff; }
+  .studio-comment { padding: 0.5rem 0.7rem; border-radius: 0.5rem; background: rgba(73, 95, 66, 0.05); }
+  .studio-progress { height: 6px; border-radius: 999px; background: var(--sd-rule); overflow: hidden; }
+  .studio-progress-fill { height: 100%; background: var(--sd-green); }
+
+  /* ── Stand-in for HenryProblemSheet, in the worksheet's own palette ── */
+  .sheet { background: var(--sd-paper); border-radius: 0.8em; padding: 0.9em 1em 1em; font-family: Georgia, "Times New Roman", serif; }
+  .sheet-banner { display: flex; align-items: center; justify-content: space-between; height: 2.9em; padding: 0 1em; border-radius: 0.6em; background: var(--sd-green); color: #fffdf8; font-weight: 700; letter-spacing: .02em; }
+  .sheet-banner small { font-weight: 400; opacity: .85; }
+  .sheet-title { display: flex; justify-content: space-between; align-items: baseline; margin: 0.8em 0 0.5em; padding-bottom: 0.4em; border-bottom: 2px solid var(--sd-green); font-size: 1.1em; font-weight: 700; }
+  .sheet-title span:last-child { font-weight: 400; color: var(--sd-muted); font-size: .9em; }
+  .sheet-panel { background: var(--sd-card); border: 1px solid var(--sd-rule); border-radius: 0.5em; padding: 0.75em 1em; line-height: 1.6; }
+  .sheet-panel + .sheet-panel { margin-top: 0.6em; }
+  .sheet-tags { margin-top: 0.7em; font-size: .8em; color: var(--sd-muted); }
+  .sheet-tags b { color: var(--sd-ink); }
+  .photo-stand-in { height: 260px; display: grid; place-items: center; color: var(--sd-muted); font-family: "Segoe Print", "Comic Sans MS", cursive; font-size: 1.4rem; background: repeating-linear-gradient(180deg, #fff 0 27px, #eef1f5 27px 28px); }
+</style>
+</head>
+<body>
+<div class="studio" style="--sd-paper:#F6F0E6;--sd-card:#FFFDF8;--sd-ink:#2F332B;--sd-muted:#6F706A;--sd-rule:#DDD4C7;--sd-green:#495F42;--sd-orange:#E69542;--sd-yellow:#F8D978;--sd-mint:#DDEAD7;--sd-rose:#F4C4B5;--sd-blue:#7F98C6">
+<div class="studio-grid">
+
+  <aside class="studio-rail">
+    <header class="studio-rail-head">
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <h1 class="text-xl font-semibold leading-tight">Grading desk</h1>
+          <p class="studio-muted text-xs mt-1">One student at a time, the problem beside the work.</p>
+        </div>
+        <button class="studio-btn studio-btn-sm" title="Refresh">↻</button>
+      </div>
+      <div class="mt-3 flex gap-1">
+        <button class="studio-tab studio-tab-active">To grade<span class="studio-count">12</span></button>
+        <button class="studio-tab">Graded</button>
+      </div>
+    </header>
+    <div class="studio-filters">
+      <input type="search" class="studio-input w-full" placeholder="Find a student or a problem…">
+      <div class="mt-2 grid grid-cols-2 gap-2">
+        <label class="studio-label col-span-2"><span>Class</span><select class="studio-input w-full"><option>All classes</option><option>Algebra 1</option></select></label>
+        <label class="studio-label"><span>From</span><input type="date" class="studio-input w-full"></label>
+        <label class="studio-label"><span>To</span><input type="date" class="studio-input w-full"></label>
+      </div>
+      <div class="mt-2 flex items-center justify-between"><span class="studio-muted text-xs">Showing 12</span></div>
+    </div>
+    <div class="studio-rail-list">
+      <section>
+        <h2 class="studio-group-head"><span class="truncate">Exponent 11</span><span class="studio-count">4</span></h2>
+        <button class="studio-row"><span class="studio-row-name truncate">Ada Lovelace</span><span class="studio-row-meta"><span class="studio-muted">2h ago</span><span class="studio-chip studio-chip-high">9/10 · 92%</span></span></button>
+        <button class="studio-row" aria-current="true"><span class="studio-row-name truncate">Ben Chen</span><span class="studio-row-meta"><span class="studio-muted">3h ago</span><span class="studio-chip studio-chip-high">8/10 · 88%</span></span></button>
+        <button class="studio-row"><span class="studio-row-name truncate">Chloe Wu</span><span class="studio-row-meta"><span class="studio-muted">5h ago</span><span class="studio-chip studio-chip-mid">6/10 · 71%</span></span></button>
+        <button class="studio-row"><span class="studio-row-name truncate">Diego Ramos</span><span class="studio-row-meta"><span class="studio-muted">1d ago</span><span>🔒</span></span></button>
+      </section>
+      <section>
+        <h2 class="studio-group-head"><span class="truncate">Angle Chasing 3</span><span class="studio-count">8</span></h2>
+        <button class="studio-row"><span class="studio-row-name truncate">Ada Lovelace</span><span class="studio-row-meta"><span class="studio-muted">1d ago</span><span class="studio-chip studio-chip-low">2/5 · 48%</span></span></button>
+        <button class="studio-row"><span class="studio-row-name truncate">Ben Chen</span><span class="studio-row-meta"><span class="studio-muted">1d ago</span></span></button>
+        <button class="studio-row"><span class="studio-row-name truncate">Chloe Wu</span><span class="studio-row-meta"><span class="studio-muted">2d ago</span></span></button>
+      </section>
+    </div>
+    <footer class="studio-rail-foot">
+      <button class="studio-btn w-full">Ask the assistant about all 5</button>
+    </footer>
+  </aside>
+
+  <main class="studio-work">
+    <header class="studio-work-head">
+      <div class="min-w-0">
+        <h2 class="text-lg font-semibold leading-tight truncate">Ben Chen <span class="studio-muted text-sm font-normal">· ben@example.com</span></h2>
+        <p class="studio-muted text-sm truncate">Exponent 11 · Set for Sep 8, 2026</p>
+      </div>
+      <div class="flex shrink-0 items-center gap-2 text-sm">
+        <span class="studio-chip">2 of 12</span>
+        <span class="studio-muted">Handed in 3h ago</span>
+        <a class="studio-link" href="#">Open on the site ↗</a>
+      </div>
+    </header>
+
+    <section class="studio-card studio-section">
+      <div class="sheet">
+        <div class="sheet-banner"><span>Henry's Math <small>(Henry's 数学)</small></span><small>Daily Problem</small></div>
+        <div class="sheet-title"><span>Exponent 11</span><span>10 pts</span></div>
+        <div class="sheet-panel">If <i>2<sup>x</sup> · 4<sup>x+1</sup> = 8<sup>5</sup></i>, find <i>x</i>. Explain how you rewrote each base.</div>
+        <div class="sheet-panel" lang="zh-Hans">若 2<sup>x</sup> · 4<sup>x+1</sup> = 8<sup>5</sup>，求 x。说明你是如何改写每个底数的。</div>
+        <div class="sheet-tags"><b>Tags</b> · Algebra · Exponent</div>
+      </div>
+    </section>
+
+    <section class="studio-card studio-section">
+      <h3 class="studio-eyebrow">Student's work</h3>
+      <figure class="mt-3">
+        <figcaption class="studio-muted text-xs mb-1">Photo of the work · Click to enlarge</figcaption>
+        <div class="studio-photo"><div class="photo-stand-in">2^x · 2^(2x+2) = 2^15  →  3x + 2 = 15  →  x = 13/3</div></div>
+      </figure>
+    </section>
+
+    <section class="studio-card studio-section">
+      <h3 class="studio-eyebrow">Comments (1)</h3>
+      <ul class="mt-2 space-y-2">
+        <li class="studio-comment"><div class="flex items-baseline justify-between gap-2"><span class="text-sm font-semibold">Ben Chen</span><span class="studio-muted text-xs">3h ago</span></div><p class="text-sm">I wasn't sure whether to leave 13/3 as a fraction.</p></li>
+      </ul>
+    </section>
+  </main>
+
+  <aside class="studio-actions">
+    <div class="studio-card studio-section studio-ta studio-ta-high">
+      <div class="flex items-start justify-between gap-2">
+        <div><h3 class="studio-eyebrow">Teaching assistant</h3><p class="text-2xl font-semibold leading-tight">Suggests 8 of 10</p></div>
+        <span class="studio-chip studio-chip-high">88% sure · confident</span>
+      </div>
+      <div class="mt-3"><p class="studio-muted text-xs">Suggested comment</p><p class="text-sm italic">Your rewriting of every base as a power of 2 is exactly right, and 3x + 2 = 15 follows. Look once more at the exponent on the right: is 8<sup>5</sup> really 2<sup>15</sup>?</p></div>
+      <div class="mt-3"><p class="studio-muted text-xs">Where it went wrong</p><p class="text-sm">8<sup>5</sup> was rewritten as 2<sup>15</sup>, which is correct, but the left side collapsed to 2<sup>3x+2</sup> only after a dropped bracket was silently fixed.</p></div>
+      <div class="mt-3"><p class="studio-muted text-xs">Henry's view</p><p class="text-sm">The idea is fully there; the fraction is fine as an answer.</p></div>
+      <div class="mt-3"><button class="studio-link text-xs">Show the solution</button></div>
+    </div>
+
+    <div class="studio-card studio-section">
+      <label class="block"><span class="studio-eyebrow">Score</span>
+        <div class="mt-1 flex items-baseline gap-2"><input class="studio-input studio-score" value="8"><span class="studio-muted text-sm">out of 10</span></div>
+      </label>
+      <p class="studio-muted mt-1 text-xs">Type digits anywhere to set the score.</p>
+      <label class="mt-4 block"><span class="studio-eyebrow">Comment to the student</span>
+        <textarea class="studio-input mt-1 w-full" rows="5">Your rewriting of every base as a power of 2 is exactly right, and 3x + 2 = 15 follows. Look once more at the exponent on the right: is 8^5 really 2^15?</textarea>
+      </label>
+      <p class="studio-muted mt-1 text-xs">Optional. Posted as a comment on their answer.</p>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button class="studio-btn studio-btn-primary">Save grade <kbd class="studio-kbd studio-kbd-onprimary">Enter</kbd></button>
+        <button class="studio-btn studio-btn-accent">Accept the assistant's grade <kbd class="studio-kbd">A</kbd></button>
+        <button class="studio-btn">Skip <kbd class="studio-kbd">S</kbd></button>
+        <button class="studio-btn">Flag for the assistant <kbd class="studio-kbd">F</kbd></button>
+      </div>
+      <p class="mt-3 text-sm studio-ok">Saved 9 of 10 for Ada Lovelace.</p>
+    </div>
+
+    <div class="studio-keys">
+      <p class="studio-eyebrow">Keys</p>
+      <dl>
+        <div><dt><kbd class="studio-kbd">J</kbd> <kbd class="studio-kbd">K</kbd></dt><dd>next · previous</dd></div>
+        <div><dt><kbd class="studio-kbd">0</kbd>–<kbd class="studio-kbd">9</kbd></dt><dd>score</dd></div>
+        <div><dt><kbd class="studio-kbd">Enter</kbd></dt><dd>save</dd></div>
+        <div><dt><kbd class="studio-kbd">A</kbd></dt><dd>accept the assistant</dd></div>
+        <div><dt><kbd class="studio-kbd">C</kbd></dt><dd>write a comment</dd></div>
+        <div><dt><kbd class="studio-kbd">F</kbd></dt><dd>flag</dd></div>
+        <div><dt><kbd class="studio-kbd">S</kbd></dt><dd>skip</dd></div>
+        <div><dt><kbd class="studio-kbd">T</kbd></dt><dd>ask the assistant</dd></div>
+      </dl>
+      <p class="studio-muted mt-1 text-xs">They work while no box has focus. Esc leaves a box.</p>
+    </div>
+  </aside>
+
+</div>
+</div>
+</body>
+</html>

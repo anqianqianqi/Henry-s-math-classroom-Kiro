@@ -65,6 +65,13 @@ export interface StoredHenryProblem {
   problem: HenryProblemFields
   source_basename?: string
   created_at?: string
+  /**
+   * Content hash the Studio's ledger keeps for the snapshot this row came
+   * from (sha256 over `problem` + `graph`). Lets a later sync tell whether the
+   * bank row is current without re-uploading; absent on rows the website
+   * imported itself.
+   */
+  source_revision?: string
 }
 
 export interface ParsedHenryProblem {
@@ -159,7 +166,14 @@ export function parseHenryProblem(text: string): ParsedHenryProblem {
   } catch {
     throw new HenryProblemError('This file is not valid JSON — it may be damaged.')
   }
+  return parseHenryProblemValue(payload)
+}
 
+/**
+ * Same as parseHenryProblem, for a snapshot that already arrived as a JSON
+ * value — the Studio import route receives it inside a larger request body.
+ */
+export function parseHenryProblemValue(payload: unknown): ParsedHenryProblem {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     throw new HenryProblemError('This is not a Henry Math editable problem file.')
   }
@@ -262,6 +276,7 @@ export function readStoredHenryProblem(value: unknown): StoredHenryProblem | nul
     version: Number(raw.version) || HENRY_PROBLEM_VERSION,
     source_basename: raw.source_basename ? String(raw.source_basename) : undefined,
     created_at: raw.created_at ? String(raw.created_at) : undefined,
+    source_revision: raw.source_revision ? String(raw.source_revision) : undefined,
     problem: {
       mode: normalizeMode(rawProblem.mode),
       title: String(rawProblem.title ?? '').trim(),

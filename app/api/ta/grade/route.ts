@@ -22,6 +22,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
+import { isImportKey } from '@/lib/studio/auth'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -575,7 +576,8 @@ export async function POST(req: NextRequest) {
 
   const token = authHeader.replace('Bearer ', '')
   const bootstrapSecret = process.env.BOOTSTRAP_SECRET
-  const isSecretAuth = bootstrapSecret && token === bootstrapSecret
+  // The Studio's import key counts too: it is a teacher's standing, held by a tool.
+  const isSecretAuth = (bootstrapSecret && token === bootstrapSecret) || isImportKey(token)
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
   if (!isSecretAuth) {

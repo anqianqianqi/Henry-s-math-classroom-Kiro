@@ -1,0 +1,254 @@
+import type { TranslationKey } from '@/lib/i18n/catalog'
+
+/**
+ * Public landing scene config.
+ *
+ * Future visual swaps should start here: update colors, add/remove `assets`,
+ * or point an `image` asset at a file in `public/`. The page renderer and CSS
+ * already know how to place each supported asset kind.
+ */
+export type LandingIconId =
+  | 'calendar'
+  | 'graduation'
+  | 'login'
+  | 'message'
+  | 'shopping'
+  | 'target'
+  | 'userPlus'
+  | 'users'
+
+export type LandingAsset =
+  | {
+      kind: 'bubble'
+      layer?: 'background'
+      left: string
+      size: string
+      delay: string
+      speed: string
+    }
+  | {
+      kind: 'math'
+      layer?: 'background'
+      symbol: string
+      left: string
+      top: string
+      delay: string
+      speed: string
+      scale?: number
+      className?: string
+    }
+  | {
+      kind: 'fish'
+      layer?: 'background'
+      top: string
+      color: string
+      delay: string
+      speed: string
+      scale?: number
+      src?: string
+      frameSrc?: string
+      frameSrcs?: string[]
+      depth?: 'behind-title' | 'front-title' | 'foreground'
+      className?: string
+    }
+  | {
+      kind: 'clownfish' | 'seahorse' | 'turtle' | 'ray' | 'octopus' | 'whale'
+      layer?: 'background'
+      left?: string
+      top: string
+      bottom?: string
+      delay: string
+      speed: string
+      scale?: number
+      className?: string
+      src?: string
+      frameSrc?: string
+      frameSrcs?: string[]
+      depth?: 'behind-title' | 'front-title' | 'foreground'
+    }
+  | {
+      kind: 'starfish' | 'crab' | 'shell'
+      layer?: 'background' | 'seabed'
+      left?: string
+      top?: string
+      bottom?: string
+      delay: string
+      speed: string
+      scale?: number
+      className?: string
+      src?: string
+      frameSrc?: string
+      frameSrcs?: string[]
+    }
+  | {
+      kind: 'jellyfish'
+      layer?: 'background' | 'panel'
+      className?: string
+      src?: string
+      frameSrc?: string
+      frameSrcs?: string[]
+    }
+  | {
+      kind: 'coral' | 'kelp'
+      layer?: 'seabed'
+      className?: string
+    }
+  | {
+      kind: 'image'
+      layer?: 'background' | 'panel' | 'seabed'
+      src: string
+      alt: string
+      className?: string
+      left?: string
+      top?: string
+      right?: string
+      bottom?: string
+      width?: string
+      height?: string
+      delay?: string
+      speed?: string
+      scale?: number
+    }
+
+export interface LandingTheme {
+  className: string
+  colors: {
+    surfaceDeep: string
+    surfaceMid: string
+    surfaceLight: string
+    sunlight: string
+    accent: string
+    coral: string
+    sand: string
+    sandDeep: string
+    cta: string
+    ctaHover: string
+    ctaText: string
+    iconInk: string
+    panelInk: string
+  }
+  content: {
+    headline: TranslationKey
+    primaryCta: TranslationKey
+    secondaryCta: TranslationKey
+  }
+  assets: LandingAsset[]
+  dashboardPreview: {
+    problems: {
+      dateKey: TranslationKey
+      title: string
+      statusKey: TranslationKey
+      statusTone: 'todo' | 'done' | 'comment'
+    }[]
+    calendar: {
+      day: string
+      problem?: string
+      status?: 'todo' | 'done' | 'comment' | 'locked'
+      today?: boolean
+    }[]
+    stats: {
+      labelKey: TranslationKey
+      value: string
+      icon: LandingIconId
+    }[]
+  }
+}
+
+export const landingTheme: LandingTheme = {
+  className: 'landing-ocean',
+  colors: {
+    surfaceDeep: '#285f72',
+    surfaceMid: '#4aa0ac',
+    surfaceLight: '#9bd8d0',
+    sunlight: '#ffe6a8',
+    accent: '#b9e8be',
+    coral: '#f28f7c',
+    sand: '#f3dba0',
+    sandDeep: '#b8895d',
+    cta: '#ffe39a',
+    ctaHover: '#fff0bc',
+    ctaText: '#35505b',
+    iconInk: '#397f74',
+    panelInk: '#2f6f82',
+  },
+  content: {
+    headline: 'auth.landingHeadline',
+    primaryCta: 'auth.landingPrimaryCta',
+    secondaryCta: 'auth.landingSecondaryCta',
+  },
+  assets: [
+    { kind: 'bubble', left: '8%', size: '12px', delay: '-2s', speed: '12s' },
+    { kind: 'bubble', left: '18%', size: '7px', delay: '-8s', speed: '15s' },
+    { kind: 'bubble', left: '31%', size: '15px', delay: '-4s', speed: '18s' },
+    { kind: 'bubble', left: '43%', size: '9px', delay: '-10s', speed: '13s' },
+    { kind: 'bubble', left: '58%', size: '13px', delay: '-6s', speed: '16s' },
+    { kind: 'bubble', left: '72%', size: '8px', delay: '-11s', speed: '14s' },
+    { kind: 'bubble', left: '86%', size: '16px', delay: '-5s', speed: '19s' },
+    { kind: 'bubble', left: '94%', size: '10px', delay: '-9s', speed: '17s' },
+    { kind: 'math', symbol: 'π', left: '12%', top: '25%', delay: '-6.4s', speed: '18s', scale: 0.74, className: 'landing-math-pearl' },
+    { kind: 'math', symbol: '∞', left: '78%', top: '21%', delay: '-14.2s', speed: '22s', scale: 0.88, className: 'landing-math-coral' },
+    { kind: 'math', symbol: '√', left: '69%', top: '63%', delay: '-9.6s', speed: '20s', scale: 0.56, className: 'landing-math-mint' },
+    { kind: 'math', symbol: '∑', left: '23%', top: '66%', delay: '-17.8s', speed: '24s', scale: 0.68, className: 'landing-math-blue' },
+    { kind: 'math', symbol: '+', left: '88%', top: '44%', delay: '-3.8s', speed: '19s', scale: 0.82, className: 'landing-math-sun' },
+    { kind: 'math', symbol: 'π', left: '44%', top: '54%', delay: '-12.1s', speed: '21s', scale: 0.5, className: 'landing-math-blue' },
+    { kind: 'math', symbol: '+', left: '56%', top: '30%', delay: '-20.2s', speed: '25s', scale: 0.62, className: 'landing-math-mint' },
+    { kind: 'math', symbol: '∞', left: '34%', top: '42%', delay: '-2.8s', speed: '23s', scale: 0.48, className: 'landing-math-pearl' },
+    { kind: 'whale', top: '18%', delay: '-44s', speed: '96s', scale: 1.08, src: '/landing/creatures/whale.png', frameSrcs: ['/landing/creatures/swim-frames/whale-1.png', '/landing/creatures/swim-frames/whale-2.png', '/landing/creatures/swim-frames/whale-3.png'] },
+    { kind: 'fish', top: '16%', delay: '-1.7s', speed: '23s', scale: 0.58, color: '#f8b45f', src: '/landing/creatures/small-fish-gold.png', frameSrcs: ['/landing/creatures/swim-frames/small-fish-gold-1.png', '/landing/creatures/swim-frames/small-fish-gold-2.png', '/landing/creatures/swim-frames/small-fish-gold-3.png'], depth: 'foreground' },
+    { kind: 'fish', top: '38%', delay: '-17.4s', speed: '31s', scale: 0.92, color: '#ef8f84', src: '/landing/creatures/small-fish-coral.png', frameSrcs: ['/landing/creatures/swim-frames/small-fish-coral-1.png', '/landing/creatures/swim-frames/small-fish-coral-2.png', '/landing/creatures/swim-frames/small-fish-coral-3.png'], depth: 'foreground' },
+    { kind: 'fish', top: '58%', delay: '-8.6s', speed: '27s', scale: 0.7, color: '#a7dca9', src: '/landing/creatures/small-fish-gold.png', frameSrcs: ['/landing/creatures/swim-frames/small-fish-gold-1.png', '/landing/creatures/swim-frames/small-fish-gold-2.png', '/landing/creatures/swim-frames/small-fish-gold-3.png'], depth: 'behind-title' },
+    { kind: 'clownfish', top: '27%', delay: '-12.9s', speed: '26s', scale: 0.86, src: '/landing/creatures/clownfish.png', frameSrcs: ['/landing/creatures/swim-frames/clownfish-1.png', '/landing/creatures/swim-frames/clownfish-2.png', '/landing/creatures/swim-frames/clownfish-3.png'] },
+    { kind: 'clownfish', top: '69%', delay: '-3.4s', speed: '36s', scale: 0.54, src: '/landing/creatures/clownfish.png', frameSrcs: ['/landing/creatures/swim-frames/clownfish-1.png', '/landing/creatures/swim-frames/clownfish-2.png', '/landing/creatures/swim-frames/clownfish-3.png'], depth: 'behind-title' },
+    { kind: 'seahorse', top: '45%', delay: '-24.2s', speed: '43s', scale: 0.68, src: '/landing/creatures/seahorse.png', frameSrcs: ['/landing/creatures/swim-frames/seahorse-1.png', '/landing/creatures/swim-frames/seahorse-2.png', '/landing/creatures/swim-frames/seahorse-3.png'], depth: 'behind-title' },
+    { kind: 'turtle', top: '31%', delay: '-6.8s', speed: '49s', scale: 0.8, src: '/landing/creatures/sea-turtle.png', frameSrcs: ['/landing/creatures/swim-frames/sea-turtle-1.png', '/landing/creatures/swim-frames/sea-turtle-2.png', '/landing/creatures/swim-frames/sea-turtle-3.png'] },
+    { kind: 'ray', top: '53%', delay: '-29.5s', speed: '54s', scale: 0.72, src: '/landing/creatures/manta-ray.png', frameSrcs: ['/landing/creatures/swim-frames/manta-ray-1.png', '/landing/creatures/swim-frames/manta-ray-2.png', '/landing/creatures/swim-frames/manta-ray-3.png'], depth: 'behind-title' },
+    { kind: 'octopus', top: '74%', delay: '-18.1s', speed: '39s', scale: 0.58, src: '/landing/creatures/octopus.png', frameSrcs: ['/landing/creatures/swim-frames/octopus-1.png', '/landing/creatures/swim-frames/octopus-2.png', '/landing/creatures/swim-frames/octopus-3.png'] },
+    { kind: 'starfish', layer: 'seabed', left: '36%', bottom: '2.2rem', delay: '-11.3s', speed: '23s', scale: 0.7, src: '/landing/creatures/starfish.png' },
+    { kind: 'crab', layer: 'seabed', left: '58%', bottom: '1.5rem', delay: '-2.6s', speed: '19s', scale: 0.62, src: '/landing/creatures/crab.png' },
+    { kind: 'shell', layer: 'seabed', left: '24%', bottom: '1.15rem', delay: '-15.8s', speed: '21s', scale: 0.84, src: '/landing/creatures/shell.png' },
+    { kind: 'jellyfish', layer: 'panel', src: '/landing/creatures/jellyfish.png', frameSrcs: ['/landing/creatures/swim-frames/jellyfish-1.png', '/landing/creatures/swim-frames/jellyfish-2.png', '/landing/creatures/swim-frames/jellyfish-3.png'] },
+    { kind: 'coral', className: 'landing-coral-left' },
+    { kind: 'coral', className: 'landing-coral-right' },
+    { kind: 'kelp', className: 'landing-kelp-one' },
+    { kind: 'kelp', className: 'landing-kelp-two' },
+    { kind: 'kelp', className: 'landing-kelp-three' },
+  ],
+  dashboardPreview: {
+    problems: [
+      {
+        dateKey: 'dash.today',
+        title: 'Linear equations review',
+        statusKey: 'dash.statusTodo',
+        statusTone: 'todo',
+      },
+      {
+        dateKey: 'auth.landingPreviewDateRecent',
+        title: 'Fraction word problems',
+        statusKey: 'dash.newComment',
+        statusTone: 'comment',
+      },
+    ],
+    calendar: [
+      { day: '18' },
+      { day: '19', problem: 'Ratios', status: 'done' },
+      { day: '20' },
+      { day: '21' },
+      { day: '22' },
+      { day: '23', problem: 'Fractions', status: 'done' },
+      { day: '24', today: true, problem: 'Linear', status: 'todo' },
+      { day: '25', problem: 'Locked', status: 'locked' },
+      { day: '26' },
+      { day: '27', problem: 'Class 4:30' },
+      { day: '28' },
+      { day: '29', problem: 'Graphing', status: 'todo' },
+      { day: '30' },
+      { day: '31' },
+    ],
+    stats: [
+      { labelKey: 'nav.challenges', value: '8', icon: 'target' },
+      { labelKey: 'dash.totalScore', value: '320', icon: 'target' },
+      { labelKey: 'dash.shopBalance', value: '210', icon: 'shopping' },
+      { labelKey: 'dash.grade', value: 'A-', icon: 'graduation' },
+    ],
+  },
+}
