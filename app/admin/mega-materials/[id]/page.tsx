@@ -31,7 +31,7 @@ const STEP_LABELS = ['Math Solver', 'Takeaway', 'Story', 'Mega']
 
 function StepStepper({ status }: { status: string }) {
   function getStepState(n: number): 'done' | 'active' | 'locked' {
-    if (isStepDone({ status } as any, n)) return 'done'
+    if (isStepDone(status, n)) return 'done'
     const activeMap: Record<string, number> = {
       step1_pending: 1, step1_done: 1,
       step2_pending: 2, step2_done: 2,
@@ -65,7 +65,7 @@ function StepStepper({ status }: { status: string }) {
             </div>
             {i < 3 && (
               <div className={`flex-1 h-0.5 mx-1 mb-4 ${
-                isStepDone({ status } as any, n) ? 'bg-green-400' : 'bg-gray-200'
+                isStepDone(status, n) ? 'bg-green-400' : 'bg-gray-200'
               }`} />
             )}
           </div>
@@ -251,7 +251,7 @@ function StepPanel({
   onResetConfirm: () => void
   onResetCancel: () => void
 }) {
-  const isDone    = isStepDone(workflow, step)
+  const isDone    = isStepDone(workflow.status, step)
   const approvedOutput = (workflow as any)[`step${step}_output`]
   const displayOutput  = rawOutput ?? (workflow as any)[`step${step}_raw`]
   const hasOutput      = !!displayOutput
