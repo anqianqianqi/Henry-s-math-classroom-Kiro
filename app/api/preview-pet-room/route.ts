@@ -109,7 +109,7 @@ export async function POST(request: Request) {
       // Upload intermediate room so images.edit can fetch it via URL
       const roomBuf = Buffer.from(roomB64, 'base64')
       const roomFile = `${uid}/pet-room-step1-${ts}.png`
-      const { error: r1Err } = await supabase.storage.from('challenge-images').upload(roomFile, roomBuf, { contentType: 'image/png', upsert: false })
+      const { error: r1Err } = await supabase.storage.from('challenge-images').upload(roomFile, roomBuf, { contentType: 'image/png', upsert: false, cacheControl: '31536000' })
       if (r1Err) throw new Error('Step1 upload failed: ' + r1Err.message)
       const { data: { publicUrl: roomUrl } } = supabase.storage.from('challenge-images').getPublicUrl(roomFile)
 
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
     // Upload final combined image
     const finalBuf = Buffer.from(finalB64, 'base64')
     const finalFile = `${uid}/pet-room-preview-${ts}.png`
-    const { error: finalErr } = await supabase.storage.from('challenge-images').upload(finalFile, finalBuf, { contentType: 'image/png', upsert: false })
+    const { error: finalErr } = await supabase.storage.from('challenge-images').upload(finalFile, finalBuf, { contentType: 'image/png', upsert: false, cacheControl: '31536000' })
     if (finalErr) return NextResponse.json({ error: 'Final upload failed: ' + finalErr.message }, { status: 500 })
     const { data: { publicUrl: finalUrl } } = supabase.storage.from('challenge-images').getPublicUrl(finalFile)
 

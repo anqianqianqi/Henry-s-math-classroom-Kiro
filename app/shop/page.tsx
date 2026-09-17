@@ -59,7 +59,7 @@ function ShopCoverZoom({ skin }: { skin: BookSkinItem }) {
       <style id="szp-kf">{SHOP_ZP_KEYFRAMES}</style>
       <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={skin.image_url} alt={skin.name} style={{ display: 'block', width: '100%', height: 'auto' }} draggable={false} />
+        <img src={skin.image_url} alt={skin.name} style={{ display: 'block', width: '100%', height: 'auto' }} draggable={false} loading="lazy" />
         {overlays.map(obj => {
           const cfg = obj.overlay_config
           if (!cfg) return null
@@ -212,7 +212,7 @@ function BookCoverBrowseModal({
                       onClick={() => setPreviewSkin(skin)}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={skin.image_url} alt={skin.name}
-                        className="absolute inset-0 w-full h-full object-contain" />
+                        className="absolute inset-0 w-full h-full object-contain" loading="lazy" />
                       <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         <span className="bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">🔍 Preview</span>
                       </div>
@@ -339,7 +339,7 @@ function RoomBrowseModal({
                       onClick={() => setPreviewBg(bg)}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={bg.image_url} alt={bg.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                       <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/10">
                         <span className="bg-black/60 text-white text-xs font-semibold px-2.5 py-1 rounded-full">🔍 Preview</span>
                       </div>
@@ -1852,7 +1852,7 @@ export default function ShopPage() {
                     {isBlindbox ? (
                       item.image_url ? (
                         <div className="relative w-full h-full">
-                          <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                           {/* Mystery box overlay badge */}
                           <div className="absolute bottom-2 right-2 bg-purple-600/80 backdrop-blur-sm text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
                             🎁 Mystery
@@ -1866,7 +1866,7 @@ export default function ShopPage() {
                     ) : isPhysical ? (
                       <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100 group-hover:from-amber-100 group-hover:to-amber-200 transition-colors">
                         {item.image_url ? (
-                          <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                         ) : (
                           <>
                             <span className="text-5xl mb-1">📦</span>
@@ -1876,7 +1876,7 @@ export default function ShopPage() {
                       </div>
                     ) : (
                       item.image_url ? (
-                        <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-5xl select-none">🎁</div>
                       )

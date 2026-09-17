@@ -106,7 +106,7 @@ The transparent background outside the book must remain fully transparent. No te
     const strippedFile = `cover/${uid}/${ts}-stripped.png`
     const { error: strippedUploadErr } = await supabase.storage
       .from('book-skins')
-      .upload(strippedFile, strippedBuf, { contentType: 'image/png', upsert: false })
+      .upload(strippedFile, strippedBuf, { contentType: 'image/png', upsert: false, cacheControl: '31536000' })
     if (strippedUploadErr) throw new Error('Stripped cover upload failed: ' + strippedUploadErr.message)
     const { data: { publicUrl: strippedUrl } } = supabase.storage.from('book-skins').getPublicUrl(strippedFile)
 
@@ -132,7 +132,7 @@ The transparent background outside the book must remain fully transparent. No te
       const objFile = `overlays/${uid}/${ts}-${label.replace(/\s+/g, '-').toLowerCase()}.png`
       const { error: objUploadErr } = await supabase.storage
         .from('book-skins')
-        .upload(objFile, objBuf, { contentType: 'image/png', upsert: false })
+        .upload(objFile, objBuf, { contentType: 'image/png', upsert: false, cacheControl: '31536000' })
       if (objUploadErr) {
         console.warn(`[extract-cover-objects] Upload failed for "${label}":`, objUploadErr.message)
         continue

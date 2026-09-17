@@ -373,7 +373,7 @@ export function QuestionDetailModal({
         const path = `responses/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
         const { error: uploadError } = await supabaseClient.storage
           .from('bubble-room-images')
-          .upload(path, responseImageFile, { cacheControl: '3600', upsert: false })
+          .upload(path, responseImageFile, { cacheControl: '31536000', upsert: false })
         if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`)
         const { data: { publicUrl } } = supabaseClient.storage
           .from('bubble-room-images')

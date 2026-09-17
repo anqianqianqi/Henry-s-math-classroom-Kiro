@@ -151,7 +151,7 @@ export function QuestionCompositionForm({
         const path = `questions/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
         const { error: uploadError } = await supabase.storage
           .from('bubble-room-images')
-          .upload(path, imageFile, { cacheControl: '3600', upsert: false })
+          .upload(path, imageFile, { cacheControl: '31536000', upsert: false })
         if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`)
         const { data: { publicUrl } } = supabase.storage
           .from('bubble-room-images')

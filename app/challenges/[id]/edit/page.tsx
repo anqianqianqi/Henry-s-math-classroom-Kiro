@@ -268,7 +268,8 @@ export default function EditChallengePage() {
         .from('challenge-images')
         .upload(fileName, imageFile, {
           upsert: true,
-          contentType: imageFile.type
+          contentType: imageFile.type,
+          cacheControl: '31536000',
         })
 
       if (error) {

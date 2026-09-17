@@ -92,7 +92,7 @@ The transparent background outside the book must remain fully transparent. No te
     const strippedBuf = Buffer.from(strippedResult.value, 'base64')
     const strippedFile = `${uid}/book-cover-preview-stripped-${ts}.png`
     const { error: strErr } = await supabase.storage
-      .from('book-skins').upload(strippedFile, strippedBuf, { contentType: 'image/png', upsert: false })
+      .from('book-skins').upload(strippedFile, strippedBuf, { contentType: 'image/png', upsert: false, cacheControl: '31536000' })
     if (strErr) throw new Error('Stripped cover upload failed: ' + strErr.message)
     const { data: { publicUrl: strippedUrl } } = supabase.storage.from('book-skins').getPublicUrl(strippedFile)
 
@@ -108,7 +108,7 @@ The transparent background outside the book must remain fully transparent. No te
       const objBuf = Buffer.from(result.value, 'base64')
       const objFile = `${uid}/book-cover-preview-obj-${ts}-${i}-${label.replace(/\s+/g, '-')}.png`
       const { error: objErr } = await supabase.storage
-        .from('book-skins').upload(objFile, objBuf, { contentType: 'image/png', upsert: false })
+        .from('book-skins').upload(objFile, objBuf, { contentType: 'image/png', upsert: false, cacheControl: '31536000' })
       if (objErr) { console.warn(`Upload failed for "${label}":`, objErr.message); continue }
       const { data: { publicUrl: objUrl } } = supabase.storage.from('book-skins').getPublicUrl(objFile)
       objects.push({ label, imageUrl: objUrl })

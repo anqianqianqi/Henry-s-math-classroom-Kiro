@@ -1377,7 +1377,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
       )
 
       const fileName = `cover/${user.id}/${Date.now()}.png`
-      const { error: uploadErr } = await supabase.storage.from('book-skins').upload(fileName, paddedBlob, { contentType: 'image/png', upsert: false })
+      const { error: uploadErr } = await supabase.storage.from('book-skins').upload(fileName, paddedBlob, { contentType: 'image/png', upsert: false, cacheControl: '31536000' })
       if (uploadErr) throw new Error('Upload failed: ' + uploadErr.message)
       const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(fileName)
       const { data: newSkin, error: insertErr } = await supabase.from('book_skins').insert({
@@ -1431,7 +1431,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
               const filePath = `${uid}/overlay-${ts}-${i}-${slug}.png`
               const { error: upErr } = await supabase.storage
                 .from('book-skins')
-                .upload(filePath, bytes, { contentType: 'image/png', upsert: false })
+                .upload(filePath, bytes, { contentType: 'image/png', upsert: false, cacheControl: '31536000' })
 
               if (upErr) throw new Error(`Upload failed for "${obj.label}": ${upErr.message}`)
 
@@ -1526,7 +1526,7 @@ function AdminUploadBanner({ onSaved }: { onSaved?: () => void }) {
 
       const resizedBlob = await resizeImageToBlob(file, targetW, targetH)
       const fileName = `${uploadType}/${user.id}/${Date.now()}.png`
-      const { error: uploadErr } = await supabase.storage.from('book-skins').upload(fileName, resizedBlob, { contentType: 'image/png', upsert: false })
+      const { error: uploadErr } = await supabase.storage.from('book-skins').upload(fileName, resizedBlob, { contentType: 'image/png', upsert: false, cacheControl: '31536000' })
       if (uploadErr) throw new Error('Storage upload failed: ' + uploadErr.message)
       const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(fileName)
 

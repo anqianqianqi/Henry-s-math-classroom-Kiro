@@ -87,7 +87,7 @@ export async function POST(request: Request) {
 
     const { error: uploadErr } = await supabase.storage
       .from('challenge-images')
-      .upload(fileName, buffer, { contentType: 'image/png', upsert: false })
+      .upload(fileName, buffer, { contentType: 'image/png', upsert: false, cacheControl: '31536000' })
 
     if (uploadErr) {
       console.error('[generate-pet-room] Storage upload error:', uploadErr)

@@ -271,7 +271,7 @@ export default function BatchImportPage() {
           const path = `${userId}/${created.id}.png`
           const { error: uploadError } = await supabase.storage
             .from('challenge-images')
-            .upload(path, blob, { upsert: true, contentType: 'image/png' })
+            .upload(path, blob, { upsert: true, contentType: 'image/png', cacheControl: '31536000' })
 
           if (!uploadError) {
             const { data: { publicUrl } } = supabase.storage

@@ -307,7 +307,7 @@ export default function PetRoomPage() {
     setUploadError(null); setUploading(true)
     try {
       const fileName = `${userId}/pet-room-upload-${Date.now()}`
-      const { error: storageErr } = await supabase.storage.from('challenge-images').upload(fileName, uploadFile, { contentType: uploadFile.type, upsert: false })
+      const { error: storageErr } = await supabase.storage.from('challenge-images').upload(fileName, uploadFile, { contentType: uploadFile.type, upsert: false, cacheControl: '31536000' })
       if (storageErr) throw new Error('Upload failed: ' + storageErr.message)
       const { data: { publicUrl } } = supabase.storage.from('challenge-images').getPublicUrl(fileName)
       if (uploadSetDefault) await supabase.from('pet_room_backgrounds').update({ is_default: false }).eq('is_default', true)

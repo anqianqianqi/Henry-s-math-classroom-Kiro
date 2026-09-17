@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { compressImage } from '@/lib/utils/imageCompression'
 
 interface SubmissionFormProps {
   assignmentId: string
@@ -111,9 +112,15 @@ export default function SubmissionForm({
 
       // Upload file if needed
       if (submissionType === 'file' && file) {
-        const fileExt = file.name.split('.').pop()
+        // Compress images before upload — reduces storage and egress significantly
+        const fileToUpload = await compressImage(file, {
+          maxDimension: 2000,
+          quality: 0.85,
+          skipBelowBytes: 500 * 1024,
+        })
+
         const timestamp = Date.now()
-        const fileName = `${timestamp}-${file.name}`
+        const fileName = `${timestamp}-${fileToUpload.name}`
         const filePath = `${assignmentId}/${user.id}/${fileName}`
 
         setUploadProgress(30)
@@ -132,8 +139,8 @@ export default function SubmissionForm({
 
         const { error: uploadError } = await supabase.storage
           .from('homework-submissions')
-          .upload(filePath, file, {
-            cacheControl: '3600',
+          .upload(filePath, fileToUpload, {
+            cacheControl: '86400',
             upsert: true
           })
 
@@ -141,11 +148,17 @@ export default function SubmissionForm({
 
         setUploadProgress(60)
 
-        const { data: { publicUrl } } = supabase.storage
+        // Use signed URLs for homework submissions — they are private content
+        // and should not be served through the public CDN (reduces egress + improves security)
+        const { data: signedData, error: signedError } = await supabase.storage
           .from('homework-submissions')
-          .getPublicUrl(filePath)
+          .createSignedUrl(filePath, 60 * 60 * 24 * 365) // 1 year expiry — teacher needs permanent access
 
-        fileUrl = publicUrl
+        if (signedError || !signedData) {
+          throw new Error('Failed to generate file URL')
+        }
+
+        fileUrl = signedData.signedUrl
       }
 
       setUploadProgress(80)

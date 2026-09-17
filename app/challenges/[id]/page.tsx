@@ -20,6 +20,7 @@ import { ChallengeLoader, useLoaderVisible } from '@/components/challenge-room/C
 import { bookModelUrl } from '@/lib/challengeRoom/model'
 import { challengeAssetTasks, preloadAll, usesRoom } from '@/lib/challengeRoom/preload'
 import { RADIO_MODEL_URL, radioPaletteUrl } from '@/lib/challengeRoom/radio'
+import { compressImage } from '@/lib/utils/imageCompression'
 
 interface Challenge {
   id: string
@@ -821,11 +822,17 @@ export default function ChallengePage() {
       // Upload comment image if provided
       let commentImageUrl: string | null = null
       if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop()
+        // Compress before upload — comment images are often full-res phone photos
+        const compressed = await compressImage(imageFile, {
+          maxDimension: 1600,
+          quality: 0.82,
+          skipBelowBytes: 300 * 1024,
+        })
+        const fileExt = compressed.name.split('.').pop()
         const fileName = `${userId}/comment-${submissionId}-${Date.now()}.${fileExt}`
         const { error: uploadError } = await supabase.storage
           .from('challenge-images')
-          .upload(fileName, imageFile, { contentType: imageFile.type })
+          .upload(fileName, compressed, { contentType: compressed.type, cacheControl: '31536000' })
         if (!uploadError) {
           const { data: urlData } = supabase.storage
             .from('challenge-images')
@@ -1010,11 +1017,17 @@ export default function ChallengePage() {
       // Upload image if provided
       let imageUrl: string | null = null
       if (solutionImage) {
-        const fileExt = solutionImage.name.split('.').pop()
+        // Compress before upload — student solution photos are often full-res
+        const compressed = await compressImage(solutionImage, {
+          maxDimension: 2000,
+          quality: 0.85,
+          skipBelowBytes: 500 * 1024,
+        })
+        const fileExt = compressed.name.split('.').pop()
         const fileName = `${userId}/${params.id}-${Date.now()}.${fileExt}`
         const { error: uploadError } = await supabase.storage
           .from('challenge-images')
-          .upload(fileName, solutionImage, { contentType: solutionImage.type })
+          .upload(fileName, compressed, { contentType: compressed.type, cacheControl: '31536000' })
         
         if (!uploadError) {
           const { data: urlData } = supabase.storage
@@ -1446,11 +1459,17 @@ export default function ChallengePage() {
 
     // Upload new hint image if selected
     if (hintImageFile) {
-      const fileExt = hintImageFile.name.split('.').pop()
+      // Compress hint images — typically teacher photos of handwritten hints
+      const compressed = await compressImage(hintImageFile, {
+        maxDimension: 1600,
+        quality: 0.85,
+        skipBelowBytes: 300 * 1024,
+      })
+      const fileExt = compressed.name.split('.').pop()
       const fileName = `hints/${challenge.id}/${Date.now()}.${fileExt}`
       const { error: uploadError } = await supabase.storage
         .from('challenge-images')
-        .upload(fileName, hintImageFile, { upsert: true })
+        .upload(fileName, compressed, { upsert: true, cacheControl: '31536000' })
       if (!uploadError) {
         const { data: { publicUrl } } = supabase.storage
           .from('challenge-images')

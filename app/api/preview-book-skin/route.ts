@@ -155,7 +155,7 @@ export async function POST(request: Request) {
     const finalFile = `${uid}/book-cover-preview-${ts}.png`
     const { error: uploadErr } = await supabase.storage
       .from('book-skins')
-      .upload(finalFile, finalBuf, { contentType: 'image/png', upsert: false })
+      .upload(finalFile, finalBuf, { contentType: 'image/png', upsert: false, cacheControl: '31536000' })
     if (uploadErr) return NextResponse.json({ error: 'Upload failed: ' + uploadErr.message }, { status: 500 })
     const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(finalFile)
 

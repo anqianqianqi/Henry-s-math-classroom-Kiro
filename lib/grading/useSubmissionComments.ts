@@ -101,7 +101,7 @@ export function useSubmissionComments(submissionIds: string[], userId: string | 
         const path = `${userId}/comment-${submissionId}-${Date.now()}.${ext}`
         const { error: uploadError } = await supabase.storage
           .from('challenge-images')
-          .upload(path, imageFile, { contentType: imageFile.type })
+          .upload(path, imageFile, { contentType: imageFile.type, cacheControl: '31536000' })
         if (!uploadError) {
           imageUrl = supabase.storage.from('challenge-images').getPublicUrl(path).data.publicUrl
         }

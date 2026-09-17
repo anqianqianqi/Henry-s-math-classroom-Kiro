@@ -228,7 +228,7 @@ export default function BookSkinsAdminPage() {
         // Use frame 0 as the cover image_url
         const frame0 = await resizeImageToBlob(frameFiles[0], COVER_W, COVER_H)
         const f0Name = `cover/${user.id}/${Date.now()}-f0.png`
-        const { error: f0Err } = await supabase.storage.from('book-skins').upload(f0Name, frame0, { contentType: 'image/png' })
+        const { error: f0Err } = await supabase.storage.from('book-skins').upload(f0Name, frame0, { contentType: 'image/png', cacheControl: '31536000' })
         if (f0Err) throw new Error('Frame 0 upload failed: ' + f0Err.message)
         const { data: { publicUrl: f0Url } } = supabase.storage.from('book-skins').getPublicUrl(f0Name)
 
@@ -254,7 +254,7 @@ export default function BookSkinsAdminPage() {
         for (let i = 0; i < frameFiles.length; i++) {
           const blob = await resizeImageToBlob(frameFiles[i], COVER_W, COVER_H)
           const fName = `cover/${user.id}/${Date.now()}-frame${i}.png`
-          await supabase.storage.from('book-skins').upload(fName, blob, { contentType: 'image/png' })
+          await supabase.storage.from('book-skins').upload(fName, blob, { contentType: 'image/png', cacheControl: '31536000' })
           const { data: { publicUrl: fUrl } } = supabase.storage.from('book-skins').getPublicUrl(fName)
           await supabase.from('book_skin_frames').insert({ skin_id: newSkin.id, sort_order: i, image_url: fUrl })
         }
@@ -270,7 +270,7 @@ export default function BookSkinsAdminPage() {
       // ── Single image mode (original) ──
       const resizedBlob = await resizeImageToBlob(file!, targetW, targetH)
       const fileName = `${uploadType}/${user.id}/${Date.now()}.png`
-      const { error: uploadErr } = await supabase.storage.from('book-skins').upload(fileName, resizedBlob, { contentType: 'image/png', upsert: false })
+      const { error: uploadErr } = await supabase.storage.from('book-skins').upload(fileName, resizedBlob, { contentType: 'image/png', upsert: false, cacheControl: '31536000' })
       if (uploadErr) throw new Error('Storage upload failed: ' + uploadErr.message)
       const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(fileName)
 

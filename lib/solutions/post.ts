@@ -75,7 +75,7 @@ export async function postCrops(userId: string, crops: AcceptedCrop[]): Promise<
       const path = cropPath(userId, crop.challengeId)
       const { error: uploadError } = await supabase.storage
         .from('challenge-images')
-        .upload(path, crop.blob, { contentType: 'image/jpeg' })
+        .upload(path, crop.blob, { contentType: 'image/jpeg', cacheControl: '31536000' })
       if (uploadError) throw new Error(uploadError.message)
 
       const { data: urlData } = supabase.storage.from('challenge-images').getPublicUrl(path)

@@ -128,7 +128,7 @@ CRITICAL RENDERING REQUIREMENTS:
 // ── Upload helper ──────────────────────────────────────────────────────────
 async function uploadPng(supabase: any, b64: string, path: string): Promise<string> {
   const buf = Buffer.from(b64, 'base64')
-  const { error } = await supabase.storage.from('book-skins').upload(path, buf, { contentType: 'image/png', upsert: false })
+  const { error } = await supabase.storage.from('book-skins').upload(path, buf, { contentType: 'image/png', upsert: false, cacheControl: '31536000' })
   if (error) throw new Error('Upload failed: ' + error.message)
   const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(path)
   return publicUrl

@@ -130,7 +130,7 @@ export async function POST(request: Request) {
 
     const { error: uploadErr } = await supabase.storage
       .from('book-skins')
-      .upload(fileName, buffer, { contentType: 'image/png', upsert: false })
+      .upload(fileName, buffer, { contentType: 'image/png', upsert: false, cacheControl: '31536000' })
 
     if (uploadErr) {
       console.error('[preview-book-bundle] Storage upload error:', uploadErr)

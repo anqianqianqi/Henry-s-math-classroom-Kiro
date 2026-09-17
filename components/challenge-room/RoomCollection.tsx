@@ -186,7 +186,7 @@ export function RoomCollection({
                   className="block w-full text-left disabled:cursor-not-allowed"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={room.room_url} alt={room.name} className="aspect-[3/2] w-full object-cover" />
+                  <img src={room.room_url} alt={room.name} className="aspect-[3/2] w-full object-cover" loading="lazy" />
                   <div className="flex items-center justify-between gap-2 px-3 py-2">
                     <span className="truncate text-sm font-semibold text-gray-900">{room.name}</span>
                     {selected && <span className="shrink-0 text-xs font-bold text-primary-600">✓ Active</span>}
@@ -234,7 +234,7 @@ export function RoomCollection({
             </div>
 
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={manage.room_url} alt={manage.name} className="aspect-[3/2] w-full object-cover" />
+            <img src={manage.room_url} alt={manage.name} className="aspect-[3/2] w-full object-cover" loading="lazy" />
 
             <div className="space-y-2 p-4">
               {error && <p role="alert" className="text-sm text-red-600">{error}</p>}

@@ -755,7 +755,7 @@ export default function AdminShopPage() {
         const fileName = `${user.id}/${Date.now()}.${fileExt}`
         const { error: uploadError } = await supabase.storage
           .from('shop-images')
-          .upload(fileName, imageFile)
+          .upload(fileName, imageFile, { cacheControl: '31536000', upsert: false })
         setUploadingImage(false)
         if (uploadError) {
           setError('Failed to upload image: ' + uploadError.message)
@@ -846,7 +846,7 @@ export default function AdminShopPage() {
               const file = draft.newFiles[i]
               const fileExt = file.name.split('.').pop()
               const fileName = `blindbox/${editingId}/${setDbId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
-              const { error: uploadErr } = await supabase.storage.from('shop-images').upload(fileName, file)
+              const { error: uploadErr } = await supabase.storage.from('shop-images').upload(fileName, file, { cacheControl: '31536000', upsert: false })
               if (uploadErr) {
                 setError('Failed to upload image to set "' + draft.name + '": ' + uploadErr.message)
                 setUploadingBlindbox(false)
@@ -921,7 +921,7 @@ export default function AdminShopPage() {
               const file = draft.newFiles[i]
               const fileExt = file.name.split('.').pop()
               const fileName = `blindbox/${newItem.id}/${setDbId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
-              const { error: uploadErr } = await supabase.storage.from('shop-images').upload(fileName, file)
+              const { error: uploadErr } = await supabase.storage.from('shop-images').upload(fileName, file, { cacheControl: '31536000', upsert: false })
               if (!uploadErr) {
                 const { data: { publicUrl } } = supabase.storage.from('shop-images').getPublicUrl(fileName)
                 await supabase.from('blindbox_images').insert({

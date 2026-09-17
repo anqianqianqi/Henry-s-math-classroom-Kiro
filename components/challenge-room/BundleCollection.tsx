@@ -158,9 +158,9 @@ export function BundleCollection({ isAdmin, selectedId, onSelect, hasRoom }: Bun
                       one would not tell you what you are choosing. */}
                   <div className="grid grid-cols-2 gap-px bg-gray-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={bundle.cover_url} alt={`${bundle.name} cover`} className="aspect-[3/4] w-full object-cover" />
+                    <img src={bundle.cover_url} alt={`${bundle.name} cover`} className="aspect-[3/4] w-full object-cover" loading="lazy" />
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={bundle.inner_url} alt={`${bundle.name} inner page`} className="aspect-[3/4] w-full object-cover" />
+                    <img src={bundle.inner_url} alt={`${bundle.name} inner page`} className="aspect-[3/4] w-full object-cover" loading="lazy" />
                   </div>
                   <div className="flex items-center justify-between gap-2 px-3 py-2">
                     <span className="truncate text-sm font-semibold text-gray-900">{bundle.name}</span>
@@ -211,9 +211,9 @@ export function BundleCollection({ isAdmin, selectedId, onSelect, hasRoom }: Bun
 
             <div className="grid grid-cols-2 gap-px bg-gray-100">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={manage.cover_url} alt="cover" className="aspect-[3/4] w-full object-cover" />
+              <img src={manage.cover_url} alt="cover" className="aspect-[3/4] w-full object-cover" loading="lazy" />
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={manage.inner_url} alt="inner page" className="aspect-[3/4] w-full object-cover" />
+              <img src={manage.inner_url} alt="inner page" className="aspect-[3/4] w-full object-cover" loading="lazy" />
             </div>
 
             <div className="space-y-2 p-4">

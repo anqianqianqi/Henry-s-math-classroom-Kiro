@@ -173,7 +173,7 @@ export default function EditClassPage() {
         
         const { error: uploadError } = await supabase.storage
           .from('class-covers')
-          .upload(fileName, coverImage)
+          .upload(fileName, coverImage, { cacheControl: '31536000', upsert: false })
 
         if (uploadError) throw uploadError
 

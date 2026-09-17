@@ -144,7 +144,7 @@ export async function uploadMaterial(
     const { error: uploadError } = await supabase.storage
       .from('session-materials')
       .upload(filePath, file, {
-        cacheControl: '3600',
+        cacheControl: '604800',
         upsert: false
       })
 
