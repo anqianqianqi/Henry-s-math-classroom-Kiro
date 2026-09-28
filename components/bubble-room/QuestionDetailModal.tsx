@@ -89,14 +89,28 @@ export function QuestionDetailModal({
   } | null>(null)
   const responseInputRef = useRef<HTMLTextAreaElement>(null)
   const responseFileInputRef = useRef<HTMLInputElement>(null)
+  const viewedQuestionRef = useRef<string | null>(null)
+
+  // Realtime rides a websocket, which a network that blocks Supabase blocks
+  // too — and unlike the rest of the app it cannot be proxied through our own
+  // domain. When the channel does not come up, fall back to re-reading the
+  // responses on a timer: slower than live, but the replies do arrive.
+  const [realtimeDown, setRealtimeDown] = useState(false)
+  const [pollTick, setPollTick] = useState(0)
+
   const supabase = createClient()
   const { t, language } = useLanguage()
   const local = useOnDemandTranslation('question', question.id, question, language)
 
   // ── On mount: record view + fetch responses + open Realtime channel ──────
   useEffect(() => {
-    // Fire-and-forget engagement tracking (Req: engagement scoring)
-    recordView(question.id).catch(() => {})
+    // Fire-and-forget engagement tracking (Req: engagement scoring).
+    // Once per question — this effect re-runs on every poll when Realtime is
+    // unavailable, and a view recorded every fifteen seconds is not a view.
+    if (viewedQuestionRef.current !== question.id) {
+      viewedQuestionRef.current = question.id
+      recordView(question.id).catch(() => {})
+    }
 
     // Fetch challenge context if this bubble is linked to a challenge
     if (question.challenge_id) {
@@ -290,12 +304,29 @@ export function QuestionDetailModal({
           setResponses((prev) => prev.filter((r) => r.id !== (payload.old as any).id))
         },
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') setRealtimeDown(false)
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeDown(true)
+      })
+
+    // A blocked websocket often just hangs rather than reporting an error, so
+    // give it a grace period and then assume it is not coming up.
+    const graceTimer = setTimeout(() => {
+      if (channel.state !== 'joined') setRealtimeDown(true)
+    }, 12_000)
 
     return () => {
+      clearTimeout(graceTimer)
       supabase.removeChannel(channel)
     }
-  }, [question.id])
+  }, [question.id, pollTick])
+
+  // Re-read responses on a timer for as long as Realtime is unavailable.
+  useEffect(() => {
+    if (!realtimeDown) return
+    const interval = setInterval(() => setPollTick((tick) => tick + 1), 15_000)
+    return () => clearInterval(interval)
+  }, [realtimeDown])
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 

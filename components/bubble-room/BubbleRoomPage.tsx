@@ -13,6 +13,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { BubbleQuestion, DuplicateMatch } from '@/lib/types/bubbleRoom'
 import { postQuestion, searchQuestions } from '@/lib/actions/bubbleRoom'
@@ -129,6 +130,25 @@ export function BubbleRoomPage({
   }, [taPending, currentUserRole, refreshBadgeStatus])
 
   const supabase = createClient()
+  const router = useRouter()
+
+  // Realtime rides a websocket, which a network that blocks Supabase blocks
+  // too — and unlike the rest of the app it cannot be proxied through our own
+  // domain. When the channel does not come up, fall back to asking the server
+  // for the room again on a timer: slower than live, but bubbles do appear.
+  const [realtimeDown, setRealtimeDown] = useState(false)
+
+  useEffect(() => {
+    if (!realtimeDown) return
+    const interval = setInterval(() => router.refresh(), 20_000)
+    return () => clearInterval(interval)
+  }, [realtimeDown, router])
+
+  // While polling, the server's list is the truth — Realtime is not there to
+  // keep local state honest. Untouched when the channel is healthy.
+  useEffect(() => {
+    if (realtimeDown) setQuestions(initialQuestions)
+  }, [initialQuestions, realtimeDown])
 
   // ── Realtime subscription: global questions channel ──────────────────────
   useEffect(() => {
@@ -197,9 +217,19 @@ export function BubbleRoomPage({
           }
         },
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') setRealtimeDown(false)
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeDown(true)
+      })
+
+    // A blocked websocket often just hangs rather than reporting an error, so
+    // give it a grace period and then assume it is not coming up.
+    const graceTimer = setTimeout(() => {
+      if (channel.state !== 'joined') setRealtimeDown(true)
+    }, 12_000)
 
     return () => {
+      clearTimeout(graceTimer)
       supabase.removeChannel(channel)
     }
   }, [])
