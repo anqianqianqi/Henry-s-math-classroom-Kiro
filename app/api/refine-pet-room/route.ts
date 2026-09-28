@@ -17,6 +17,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { PET_AREA_REFINE_CONTEXT as PET_AREA_CONTEXT, PET_ROOM_IMAGE_SIZE } from '@/lib/petRoom/promptContext'
+import { toBrowserPublicUrl } from '@/lib/supabase/publicUrl'
 
 export const dynamic = 'force-dynamic'
 
@@ -115,9 +116,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to upload image: ' + uploadErr.message }, { status: 500 })
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('challenge-images')
-      .getPublicUrl(fileName)
+    const publicUrl = toBrowserPublicUrl(supabase.storage.from('challenge-images').getPublicUrl(fileName).data.publicUrl)
 
     // ── Clear default if requested ────────────────────────────────────────────
     if (setDefault) {

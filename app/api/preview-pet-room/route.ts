@@ -15,6 +15,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { PET_AREA_CONTEXT, PET_ROOM_IMAGE_SIZE } from '@/lib/petRoom/promptContext'
+import { toBrowserPublicUrl } from '@/lib/supabase/publicUrl'
 
 export const dynamic = 'force-dynamic'
 
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
       const roomFile = `${uid}/pet-room-step1-${ts}.png`
       const { error: r1Err } = await supabase.storage.from('challenge-images').upload(roomFile, roomBuf, { contentType: 'image/png', upsert: false })
       if (r1Err) throw new Error('Step1 upload failed: ' + r1Err.message)
-      const { data: { publicUrl: roomUrl } } = supabase.storage.from('challenge-images').getPublicUrl(roomFile)
+      const roomUrl = toBrowserPublicUrl(supabase.storage.from('challenge-images').getPublicUrl(roomFile).data.publicUrl)
 
       // Step 2: bake frame onto the room
       finalB64 = await callEdit(apiKey, roomUrl, FRAME_EDIT_PROMPT)
@@ -123,7 +124,7 @@ export async function POST(request: Request) {
     const finalFile = `${uid}/pet-room-preview-${ts}.png`
     const { error: finalErr } = await supabase.storage.from('challenge-images').upload(finalFile, finalBuf, { contentType: 'image/png', upsert: false })
     if (finalErr) return NextResponse.json({ error: 'Final upload failed: ' + finalErr.message }, { status: 500 })
-    const { data: { publicUrl: finalUrl } } = supabase.storage.from('challenge-images').getPublicUrl(finalFile)
+    const finalUrl = toBrowserPublicUrl(supabase.storage.from('challenge-images').getPublicUrl(finalFile).data.publicUrl)
 
     return NextResponse.json({
       image_url: finalUrl,

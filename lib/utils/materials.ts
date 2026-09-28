@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import { toBrowserPublicUrl } from '@/lib/supabase/publicUrl'
 
 export interface MaterialUploadOptions {
   occurrenceId: string
@@ -153,9 +154,7 @@ export async function uploadMaterial(
     }
 
     // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('session-materials')
-      .getPublicUrl(filePath)
+    const publicUrl = toBrowserPublicUrl(supabase.storage.from('session-materials').getPublicUrl(filePath).data.publicUrl)
 
     // Create database record
     const { data: material, error: dbError } = await supabase

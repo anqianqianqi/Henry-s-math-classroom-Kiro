@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { WorkflowState } from './domain'
 import { renderModeSchema } from './domain'
+import { toBrowserPublicUrl } from '@/lib/supabase/publicUrl'
 
 export const chooseRenderModeSchema = z.object({ mode: renderModeSchema })
 export const generatePanelsSchema = z.object({ panelIndex: z.number().int().min(1).max(18).optional() })
@@ -77,5 +78,5 @@ export async function uploadPanelImage(
   const bucket = db.storage.from('manga-panels')
   const { error } = await bucket.upload(path, image, { contentType: 'image/png', upsert: false })
   if (error) throw error
-  return bucket.getPublicUrl(path).data.publicUrl
+  return toBrowserPublicUrl(bucket.getPublicUrl(path).data.publicUrl)
 }

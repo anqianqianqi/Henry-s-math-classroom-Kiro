@@ -12,6 +12,7 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { toBrowserPublicUrl } from '@/lib/supabase/publicUrl'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -94,7 +95,7 @@ The transparent background outside the book must remain fully transparent. No te
     const { error: strErr } = await supabase.storage
       .from('book-skins').upload(strippedFile, strippedBuf, { contentType: 'image/png', upsert: false })
     if (strErr) throw new Error('Stripped cover upload failed: ' + strErr.message)
-    const { data: { publicUrl: strippedUrl } } = supabase.storage.from('book-skins').getPublicUrl(strippedFile)
+    const strippedUrl = toBrowserPublicUrl(supabase.storage.from('book-skins').getPublicUrl(strippedFile).data.publicUrl)
 
     // Upload each object to preview path
     const objects: { label: string; imageUrl: string }[] = []
@@ -110,7 +111,7 @@ The transparent background outside the book must remain fully transparent. No te
       const { error: objErr } = await supabase.storage
         .from('book-skins').upload(objFile, objBuf, { contentType: 'image/png', upsert: false })
       if (objErr) { console.warn(`Upload failed for "${label}":`, objErr.message); continue }
-      const { data: { publicUrl: objUrl } } = supabase.storage.from('book-skins').getPublicUrl(objFile)
+      const objUrl = toBrowserPublicUrl(supabase.storage.from('book-skins').getPublicUrl(objFile).data.publicUrl)
       objects.push({ label, imageUrl: objUrl })
     }
 

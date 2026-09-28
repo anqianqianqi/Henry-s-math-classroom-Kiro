@@ -13,6 +13,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { compileCoverPrompt, compileInnerPrompt, validateBookSpec } from '@/lib/challengeRoom/bookPrompt'
 import type { BookSpec } from '@/lib/types/challengeRoom'
+import { toBrowserPublicUrl } from '@/lib/supabase/publicUrl'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -137,7 +138,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Upload failed: ' + uploadErr.message }, { status: 500 })
     }
 
-    const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(fileName)
+    const publicUrl = toBrowserPublicUrl(supabase.storage.from('book-skins').getPublicUrl(fileName).data.publicUrl)
 
     return NextResponse.json({ image_url: publicUrl, prompt: accumulatedPrompt })
   } catch (err: any) {

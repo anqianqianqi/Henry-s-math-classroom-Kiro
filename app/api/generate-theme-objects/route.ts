@@ -13,6 +13,7 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { toBrowserPublicUrl } from '@/lib/supabase/publicUrl'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 180
@@ -130,7 +131,7 @@ async function uploadPng(supabase: any, b64: string, path: string): Promise<stri
   const buf = Buffer.from(b64, 'base64')
   const { error } = await supabase.storage.from('book-skins').upload(path, buf, { contentType: 'image/png', upsert: false })
   if (error) throw new Error('Upload failed: ' + error.message)
-  const { data: { publicUrl } } = supabase.storage.from('book-skins').getPublicUrl(path)
+  const publicUrl = toBrowserPublicUrl(supabase.storage.from('book-skins').getPublicUrl(path).data.publicUrl)
   return publicUrl
 }
 

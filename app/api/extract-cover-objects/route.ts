@@ -18,6 +18,7 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { toBrowserPublicUrl } from '@/lib/supabase/publicUrl'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120  // long-running: N+1 parallel image edits
@@ -108,7 +109,7 @@ The transparent background outside the book must remain fully transparent. No te
       .from('book-skins')
       .upload(strippedFile, strippedBuf, { contentType: 'image/png', upsert: false })
     if (strippedUploadErr) throw new Error('Stripped cover upload failed: ' + strippedUploadErr.message)
-    const { data: { publicUrl: strippedUrl } } = supabase.storage.from('book-skins').getPublicUrl(strippedFile)
+    const strippedUrl = toBrowserPublicUrl(supabase.storage.from('book-skins').getPublicUrl(strippedFile).data.publicUrl)
 
     // Update book_skins.image_url to the stripped cover and mark has_overlays
     const { error: skinUpdateErr } = await supabase
@@ -138,7 +139,7 @@ The transparent background outside the book must remain fully transparent. No te
         continue
       }
 
-      const { data: { publicUrl: objUrl } } = supabase.storage.from('book-skins').getPublicUrl(objFile)
+      const objUrl = toBrowserPublicUrl(supabase.storage.from('book-skins').getPublicUrl(objFile).data.publicUrl)
 
       const { error: insertErr } = await supabase.from('book_skin_overlays').insert({
         skin_id: skinId,

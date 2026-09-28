@@ -26,6 +26,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { FULL_CROP, type HenryGraphCrop, type ParsedHenryProblem } from '../henryproblem'
 import { createChallengeTags, resolveTagNames, type KnownTag } from '../challenge-tags'
+import { toBrowserPublicUrl } from '@/lib/supabase/publicUrl'
 
 /** Any client will do; the schema is not typed for these tables. */
 type Db = SupabaseClient<any, any, any>
@@ -174,7 +175,7 @@ export async function importProblemToBank(
       .from(BANK_IMAGE_BUCKET)
       .upload(path, picture.bytes, { upsert: true, contentType })
     if (error) throw new BankImportError(`The diagram could not be uploaded: ${error.message}`)
-    imageUrl = supabase.storage.from(BANK_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl
+    imageUrl = toBrowserPublicUrl(supabase.storage.from(BANK_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl)
   }
 
   const title =
